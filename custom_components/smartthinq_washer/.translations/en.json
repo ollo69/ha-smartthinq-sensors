@@ -1,0 +1,40 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Only a single configuration of SmartThinQ LGE Washer is allowed."
+        },
+        "error": {
+            "invalid_region": "Invalid region format.",
+            "invalid_language": "Invalid language format.",
+            "invalid_url": "Invalid redirection URL.",
+            "invalid_credentials": "Invalid SmartThinQ credentials."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "region": "Region (e.g. US)",
+                    "language": "Language (e.g. en-US)",
+                    "token": "Access Token"
+                },
+                "description": "Fill in your SmartThinQ access information. If you don't have an access token, leave it empty to start the process for generating a new one.",
+                "title": "SmartThinQ LGE Washer"
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ login URL",
+                    "callback_url": "Redirection URL"
+                },
+                "description": "Use the URL in the first field to perform login to SmartThinQ with your credentials, then paste the URL where the browser is redirected after the login in the second field.",
+                "title": "SmartThinQ LGE Washer - Token generation"
+            },
+            "token": {
+                "data": {
+                    "token": "Access Token"
+                },
+                "description": "Save the generated token for future use, then confirm to complete the configuration.",
+                "title": "SmartThinQ LGE Washer - New token"
+            }
+        },
+        "title": "SmartThinQ LGE Washer"
+    }
+}

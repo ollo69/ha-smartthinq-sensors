@@ -1,0 +1,9 @@
+{
+  "domain": "smartthinq_washer",
+  "name": "SmartThinQ LGE Washer",
+  "documentation": "https://github.com/ollo69/ha-smartthinq-washer",
+  "dependencies": [],
+  "codeowners": ["@ollo69"],
+  "requirements": [],
+  "config_flow": true
+}
