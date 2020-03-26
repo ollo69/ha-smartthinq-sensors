@@ -848,6 +848,10 @@ class DeviceInfo(object):
     @property
     def model_name(self):
         return self.data['modelNm']
+
+    @property
+    def firmware(self):
+        return self.data.get('fwVer', '')
     
     @property
     def type(self):
@@ -1199,6 +1203,12 @@ class WasherStatus(object):
     def __init__(self, washer, data):
         self.washer = washer
         self.data = data
+
+    def _get_data_key(self, keys):
+        for key in keys:
+            if key in self.data:
+                return key
+        return ""
     
     def lookup_enum(self, key):
         return self.washer.model.enum_name(key, self.data[key])
@@ -1254,7 +1264,10 @@ class WasherStatus(object):
 
     @property
     def current_course(self):
-        course = self.lookup_reference('Course')
+        course = '-'
+        key = self._get_data_key(['APCourse', 'Course'])
+        if key:
+            course = self.lookup_reference(key)
         if course == '-':
             return 'OFF'
         else:

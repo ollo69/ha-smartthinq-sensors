@@ -63,7 +63,7 @@ LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=30)
     
 class LGEWASHERDEVICE(LGEDevice):
-    def __init__(self, client, device, name, model_type):
+    def __init__(self, client, device, name, model):
         
         """initialize a LGE Washer Device."""
         LGEDevice.__init__(self, client, device)
@@ -78,7 +78,9 @@ class LGEWASHERDEVICE(LGEDevice):
         self._name = name
         self._device_id = device.id
         self._mac = device.macaddress
-        self._model = model_type
+        self._firmware = device.firmware
+        
+        self._model = model
         self._id = "%s:%s" % ("washer", device.id)
 
         self._state = None
@@ -110,13 +112,16 @@ class LGEWASHERDEVICE(LGEDevice):
 
     @property
     def device_info(self):
-        return {
+        data = {
             'identifiers': {(DOMAIN, self._device_id)},
             'name': self._name,
             'manufacturer': 'LG',
             'model': 'Washer %s (MAC: %s)' % (self._model, self._mac)
-            #'sw_version': 'N/A'
         }
+        if self._firmware:
+            data['sw_version'] = self._firmware
+            
+        return data
 
     @property
     def state_attributes(self):
@@ -451,28 +456,28 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     LOGGER.info("Starting smartthinq sensors...")
 
     client = hass.data[DOMAIN][CLIENT]
-    washers = []
+    lge_sensors = []
 
     for device in client.devices:
-        model_id = device.id
-        model_name = device.name
-        model_info = device.model_name
-        model_mac = device.macaddress
+        device_id = device.id
+        device_name = device.name
+        device_mac = device.macaddress
+        model_name = device.model_name
 
         if device.type == DeviceType.WASHER:
 
-            base_name = model_name
-            model = client.model_info(device)
-            model_type = model_info + '-' + model.model_type
+            base_name = device_name
+            model_info = client.model_info(device)
+            model = model_name + '-' + model_info.model_type
             
-            w = LGEWASHERDEVICE(client, device, base_name, model_type)
-            washers.append(w)
+            w = LGEWASHERDEVICE(client, device, base_name, model)
+            lge_sensors.append(w)
             hass.data[DOMAIN][LGE_DEVICES][w.unique_id] = w
 
-            LOGGER.info("LGE Washer added. Name: %s - Model: %s - Mac: %s - ID: %s", base_name, model_type, model_mac, model_id)
+            LOGGER.info("LGE Washer added. Name: %s - Model: %s - Mac: %s - ID: %s", base_name, model, device_mac, device_id)
 
-    if washers:
-        async_add_entities(washers)
+    if lge_sensors:
+        async_add_entities(lge_sensors)
     
     return True
 
