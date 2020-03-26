@@ -82,7 +82,7 @@ class LGEAuthentication:
         client = None
         try:
             client = Client.from_token(token, self._region, self._language)
-        except (NotConnectError, TokenError):
+        except:
             pass
             
         return client
@@ -110,7 +110,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
             lgeauth.createClientFromToken, refresh_token
         )
     if not client:
-        _LOGGER.info('Connection not available. LGE platform not ready.')
+        _LOGGER.warning('Connection not available. SmartthinQ platform not ready.')
         raise ConfigEntryNotReady()
 
     hass.data.setdefault(DOMAIN, {}).update({CLIENT: client})
