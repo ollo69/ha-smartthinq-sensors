@@ -22,6 +22,9 @@ OAUTH_SECRET_KEY = 'c053c2a6ddeb7ad97cb0eed0dcb31cf8'
 OAUTH_CLIENT_KEY = 'LGAO221A02'
 DATE_FORMAT = '%a, %d %b %Y %H:%M:%S +0000'
 
+DEFAULT_TIMEOUT = 10 # seconds
+DEFAULT_REFRESH_TIMEOUT = 20 # seconds
+
 """WASHER STATE"""
 STATE_OPTIONITEM_ON = 'On'
 STATE_OPTIONITEM_OFF = 'Off'
@@ -272,7 +275,7 @@ def lgedm_post(url, data=None, access_token=None, session_id=None):
     if session_id:
         headers['x-thinq-jsessionId'] = session_id
 
-    res = requests.post(url, json={DATA_ROOT: data}, headers=headers)
+    res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
     out = res.json()[DATA_ROOT]
 
     # Check for API errors.
@@ -390,7 +393,7 @@ def refresh_auth(oauth_root, refresh_token):
         'Accept': 'application/json',
     }
 
-    res = requests.post(token_url, data=data, headers=headers)
+    res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
     res_data = res.json()
 
     if res_data['status'] != 1:
@@ -826,7 +829,7 @@ class DeviceInfo(object):
         """Load JSON data describing the model's capabilities.
         """
 
-        return requests.get(self.model_info_url).json()
+        return requests.get(self.model_info_url, timeout = DEFAULT_TIMEOUT).json()
 
 
 EnumValue = namedtuple('EnumValue', ['options'])
