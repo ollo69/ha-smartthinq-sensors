@@ -10,6 +10,23 @@ from collections import namedtuple
 import enum
 import time
 
+import logging
+
+from .wideq_states import (
+    STATE_OPTIONITEM_ON,
+    STATE_OPTIONITEM_OFF,
+    STATE_WASHER,
+    STATE_WASHER_ERROR,
+    WASHERSTATES,
+    WASHERWATERTEMPS,
+    WASHERSPINSPEEDS,
+    WASHREFERRORS,
+    WASHERERRORS,
+)
+
+class STATE_UNKNOWN(enum.Enum):
+    UNKNOWN = 'unknown'
+
 GATEWAY_URL = 'https://kic.lgthinq.com:46030/api/common/gatewayUriList'
 APP_KEY = 'wideq'
 SECURITY_KEY = 'nuts_securitykey'
@@ -25,164 +42,8 @@ DATE_FORMAT = '%a, %d %b %Y %H:%M:%S +0000'
 DEFAULT_TIMEOUT = 10 # seconds
 DEFAULT_REFRESH_TIMEOUT = 20 # seconds
 
-"""WASHER STATE"""
-STATE_OPTIONITEM_ON = 'On'
-STATE_OPTIONITEM_OFF = 'Off'
+_LOGGER = logging.getLogger(__name__)
 
-STATE_WASHER_POWER_OFF = 'Off'
-STATE_WASHER_INITIAL = 'Select Course'
-STATE_WASHER_PAUSE = 'Paused'
-STATE_WASHER_ERROR_AUTO_OFF = 'Automatic Poweroff Error'
-STATE_WASHER_RESERVE = 'Reserved'
-STATE_WASHER_DETECTING = 'Detecting'
-STATE_WASHER_ADD_DRAIN = 'ADD_DRAIN'
-STATE_WASHER_DETERGENT_AMOUT = 'Detergent Amount'
-STATE_WASHER_RUNNING = 'Washing'
-STATE_WASHER_PREWASH = 'Pre-Wash'
-STATE_WASHER_RINSING = 'Rinsing'
-STATE_WASHER_RINSE_HOLD = 'Rinsing [On Hold]'
-STATE_WASHER_SPINNING = 'Spinning'
-STATE_WASHER_DRYING = 'Drying'
-STATE_WASHER_END = 'End'
-STATE_WASHER_REFRESHWITHSTEAM = 'Refreshing with steam'
-STATE_WASHER_COOLDOWN = 'Cooldown'
-STATE_WASHER_STEAMSOFTENING = 'Using softener with steam'
-STATE_WASHER_ERRORSTATE = 'An error occured'
-STATE_WASHER_TCL_ALARM_NORMAL = 'Pipe Clogged'
-STATE_WASHER_FROZEN_PREVENT_INITIAL = 'Error during initialization'
-STATE_WASHER_FROZEN_PREVENT_RUNNING = 'Unfreezing system, please wait'
-STATE_WASHER_FROZEN_PREVENT_PAUSE = 'System is being unfrozen, you cannot pause this operation.'
-STATE_WASHER_ERROR = 'Error'
-
-STATE_WASHER_WATERTEMP_COLD = 'Cold'
-STATE_WASHER_WATERTEMP_20 = '20℃'
-STATE_WASHER_WATERTEMP_30 = '30℃'
-STATE_WASHER_WATERTEMP_40 = '40℃'
-STATE_WASHER_WATERTEMP_60 = '60℃'
-STATE_WASHER_WATERTEMP_95 = '95℃'
-
-STATE_WASHER_SPINSPEED_NOSPIN = 'No Spin'
-STATE_WASHER_SPINSPEED_400 = '400 RPM'
-STATE_WASHER_SPINSPEED_800 = '800 RPM'
-STATE_WASHER_SPINSPEED_1000 = '1000 RPM'
-STATE_WASHER_SPINSPEED_1200 = '1200 RPM'
-STATE_WASHER_SPINSPEED_1400 = '1400 RPM'
-
-STATE_WASHER_NO_ERROR = 'Normal'
-STATE_WASHER_ERROR_dE2 = 'Door open - Please close the door'
-STATE_WASHER_ERROR_IE = 'No water - Please make sure the water has enough pressure to reach the washer.'
-STATE_WASHER_ERROR_OE = 'Drain error - Please make sure the pipe is not clogged/frozen'
-STATE_WASHER_ERROR_UE = 'Laundry trim'
-STATE_WASHER_ERROR_FE = 'FE - Contact Service Center'
-STATE_WASHER_ERROR_PE = 'PE - Contact Service Center'
-STATE_WASHER_ERROR_LE = 'LE - Contact Service Center'
-STATE_WASHER_ERROR_tE = 'tE - Contact Service Center'
-STATE_WASHER_ERROR_dHE = 'dHE - Contact Service Center'
-STATE_WASHER_ERROR_CE = 'CE - Contact Service Center'
-STATE_WASHER_ERROR_PF = 'PF - Contact Service Center'
-STATE_WASHER_ERROR_FF = 'The washer is frozen, please warm up the surrounding area.'
-STATE_WASHER_ERROR_dCE = 'dCE - Contact Service Center'
-STATE_WASHER_ERROR_EE = 'EE - Contact Service Center'
-STATE_WASHER_ERROR_PS = 'PS - Contact Service Center'
-STATE_WASHER_ERROR_dE1 = 'Door open - Please close the door'
-STATE_WASHER_ERROR_LOE = 'Detergent door is open - Please close the detergent door'
-STATE_NO_ERROR = 'Normal'
-
-STATE_WASHER_SMARTCOURSE_SILENT = 'Silent'
-STATE_WASHER_SMARTCOURSE_SMALL_LOAD = 'Small Load'
-STATE_WASHER_SMARTCOURSE_SKIN_CARE = 'Skin Care'
-STATE_WASHER_SMARTCOURSE_RAINY_SEASON = 'Rainy Season'
-STATE_WASHER_SMARTCOURSE_SWEAT_STAIN = 'Sweat/Stains Removal'
-STATE_WASHER_SMARTCOURSE_SINGLE_GARMENT = 'Single Garment'
-STATE_WASHER_SMARTCOURSE_SCHOOL_UNIFORM = 'School Uniform'
-STATE_WASHER_SMARTCOURSE_STATIC_REMOVAL = 'Static Removal'
-STATE_WASHER_SMARTCOURSE_COLOR_CARE = 'Color Care'
-STATE_WASHER_SMARTCOURSE_SPIN_ONLY = 'Spin Only'
-STATE_WASHER_SMARTCOURSE_DEODORIZATION = 'Deodorization'
-STATE_WASHER_SMARTCOURSE_BEDDING_CARE = 'Bedding Care'
-STATE_WASHER_SMARTCOURSE_CLOTH_CARE = 'Cloth Care'
-STATE_WASHER_SMARTCOURSE_SMART_RINSE = 'Smart Rinse'
-STATE_WASHER_SMARTCOURSE_ECO_WASH = 'Economy Wash'
-
-STATE_WASHER_TERM_NO_SELECT = 'Nothing selected yet'
-
-STATE_WASHER_OPTIONITEM_ON = 'On'
-STATE_WASHER_OPTIONITEM_OFF = 'Off'
-
-RUNSTATES = {
-    'OFF': STATE_WASHER_POWER_OFF,
-    'INITIAL': STATE_WASHER_INITIAL,
-    'PAUSE': STATE_WASHER_PAUSE,
-    'ERROR_AUTO_OFF': STATE_WASHER_ERROR_AUTO_OFF,
-    'RESERVE': STATE_WASHER_RESERVE,
-    'DETECTING': STATE_WASHER_DETECTING,
-    'ADD_DRAIN': STATE_WASHER_ADD_DRAIN,
-    'DETERGENT_AMOUNT': STATE_WASHER_DETERGENT_AMOUT,
-    'RUNNING': STATE_WASHER_RUNNING,
-    'PREWASH': STATE_WASHER_PREWASH,
-    'RINSING': STATE_WASHER_RINSING,
-    'RINSE_HOLD': STATE_WASHER_RINSE_HOLD,
-    'SPINNING': STATE_WASHER_SPINNING,
-    'DRYING': STATE_WASHER_DRYING,
-    'END': STATE_WASHER_END,
-    'REFRESHWITHSTEAM': STATE_WASHER_REFRESHWITHSTEAM,
-    'COOLDOWN': STATE_WASHER_COOLDOWN,
-    'STEAMSOFTENING': STATE_WASHER_STEAMSOFTENING,
-    'ERRORSTATE': STATE_WASHER_ERRORSTATE,
-    'TCL_ALARM_NORMAL': STATE_WASHER_TCL_ALARM_NORMAL,
-    'FROZEN_PREVENT_INITIAL': STATE_WASHER_FROZEN_PREVENT_INITIAL,
-    'FROZEN_PREVENT_RUNNING': STATE_WASHER_FROZEN_PREVENT_RUNNING,
-    'FROZEN_PREVENT_PAUSE': STATE_WASHER_FROZEN_PREVENT_PAUSE,
-    'ERROR': STATE_WASHER_ERROR,
-}
-
-WATERTEMPSTATES = {
-    'NO_SELECT': STATE_WASHER_TERM_NO_SELECT,
-    'COLD' : STATE_WASHER_WATERTEMP_COLD,
-    'TWENTY' : STATE_WASHER_WATERTEMP_20,
-    'THIRTY' : STATE_WASHER_WATERTEMP_30,
-    'FOURTY' : STATE_WASHER_WATERTEMP_40,
-    'SIXTY': STATE_WASHER_WATERTEMP_60,
-    'NINTYFIVE': STATE_WASHER_WATERTEMP_95,
-    'OFF': STATE_WASHER_POWER_OFF,
-
-}
-
-SPINSPEEDSTATES = {
-    'NOSPIN': STATE_WASHER_SPINSPEED_NOSPIN,
-    'SPIN_400' : STATE_WASHER_SPINSPEED_400,
-    'SPIN_800' : STATE_WASHER_SPINSPEED_800,
-    'SPIN_1000' : STATE_WASHER_SPINSPEED_1000,
-    'SPIN_1200': STATE_WASHER_SPINSPEED_1200,
-    'SPIN_1400': STATE_WASHER_SPINSPEED_1400,
-    'OFF': STATE_WASHER_POWER_OFF,
-}
-
-ERRORS = {
-    'ERROR_dE2' : STATE_WASHER_ERROR_dE2,
-    'ERROR_IE' : STATE_WASHER_ERROR_IE,
-    'ERROR_OE' : STATE_WASHER_ERROR_OE,
-    'ERROR_UE' : STATE_WASHER_ERROR_UE,
-    'ERROR_FE' : STATE_WASHER_ERROR_FE,
-    'ERROR_PE' : STATE_WASHER_ERROR_PE,
-    'ERROR_tE' : STATE_WASHER_ERROR_tE,
-    'ERROR_LE' : STATE_WASHER_ERROR_LE,
-    'ERROR_CE' : STATE_WASHER_ERROR_CE,
-    'ERROR_PF' : STATE_WASHER_ERROR_PF,
-    'ERROR_FF' : STATE_WASHER_ERROR_FF,
-    'ERROR_dCE' : STATE_WASHER_ERROR_dCE,
-    'ERROR_EE' : STATE_WASHER_ERROR_EE,
-    'ERROR_PS' : STATE_WASHER_ERROR_PS,
-    'ERROR_dE1' : STATE_WASHER_ERROR_dE1,
-    'ERROR_LOE' : STATE_WASHER_ERROR_LOE,
-    'NO_ERROR' : STATE_NO_ERROR,
-    'OFF': STATE_WASHER_POWER_OFF,
-}
-
-OPTIONITEMMODES = {
-    'ON': STATE_OPTIONITEM_ON,
-    'OFF': STATE_OPTIONITEM_OFF,
-}
 
 def gen_uuid():
     return str(uuid.uuid4())
@@ -1029,6 +890,9 @@ class Device(object):
         self.client = client
         self.device = device
         self.model = client.model_info(device)
+        
+        # for logging unknown states received
+        self._unknown_states = []
 
     def _set_control(self, key, value):
         """Set a device's control for `key` to `value`.
@@ -1065,102 +929,20 @@ class Device(object):
         _, value = data[1:-1].split(':')
         return value
 
-
     def _delete_permission(self):
         self.client.session.delete_permission(
             self.device.id,
         )
 
+    def is_unknown_status(self, status):
+    
+        if status in self._unknown_states:
+            return False
+            
+        self._unknown_states.append(status)
+        return True
+
 """------------------for Washer"""
-
-class WASHERSTATE(enum.Enum):
-    
-    OFF = "@WM_STATE_POWER_OFF_W"
-    INITIAL = "@WM_STATE_INITIAL_W"
-    PAUSE = "@WM_STATE_PAUSE_W"
-    ERROR_AUTO_OFF = "@WM_STATE_ERROR_AUTO_OFF_W"
-    RESERVE = "@WM_STATE_RESERVE_W"
-    DETECTING = "@WM_STATE_DETECTING_W"
-    ADD_DRAIN = "WM_STATE_ADD_DRAIN_W"
-    DETERGENT_AMOUNT = "@WM_STATE_DETERGENT_AMOUNT_W"
-    RUNNING = "@WM_STATE_RUNNING_W"
-    PREWASH = "@WM_STATE_PREWASH_W"
-    RINSING = "@WM_STATE_RINSING_W"
-    RINSE_HOLD = "@WM_STATE_RINSEHOLD_W"
-    SPINNING = "@WM_STATE_SPINNING_W"
-    DRYING = "@WM_STATE_DRYING_W"
-    END = "@WM_STATE_END_W"
-    REFRESHWITHSTEAM = "@WM_STATE_REFRESHING_W"
-    STEAMSOFTENING = "@WM_STATE_STEAMSOFTENING_W"
-    COOLDOWN = "@WM_STATE_COOLDOWN_W"
-    ERRORSTATE = "@WM_STATE_ERROR_W"
-    TCL_ALARM_NORMAL = "TCL_ALARM_NORMAL"
-    FROZEN_PREVENT_INITIAL = "@WM_STATE_FROZEN_PREVENT_INITIAL_W"
-    FROZEN_PREVENT_RUNNING = "@WM_STATE_FROZEN_PREVENT_RUNNING_W"
-    FROZEN_PREVENT_PAUSE = "@WM_STATE_FROZEN_PREVENT_PAUSE_W"
-
-    
-class WASHERWATERTEMP(enum.Enum):
-    
-    NO_SELECT = "@WM_TERM_NO_SELECT_W"
-    COLD = "@WM_TITAN2_OPTION_TEMP_COLD_W"
-    TWENTY = "@WM_TITAN2_OPTION_TEMP_20_W"
-    THIRTY = "@WM_TITAN2_OPTION_TEMP_30_W"
-    FOURTY = "@WM_TITAN2_OPTION_TEMP_40_W"
-    SIXTY = "@WM_TITAN2_OPTION_TEMP_60_W"
-    NINTYFIVE = "@WM_TITAN2_OPTION_TEMP_95_W"
-
-class WASHERSPINSPEED(enum.Enum):
-    
-    NOSPIN = "@WM_TITAN2_OPTION_SPIN_NO_SPIN_W"
-    SPIN_400 = "@WM_TITAN2_OPTION_SPIN_400_W"
-    SPIN_800 = "@WM_TITAN2_OPTION_SPIN_800_W"
-    SPIN_1000 = "@WM_TITAN2_OPTION_SPIN_1000_W"
-    SPIN_1200 = "@WM_TITAN2_OPTION_SPIN_1200_W"
-    SPIN_1400 = "@WM_TITAN2_OPTION_SPIN_1400_W"
-
-class WASHERERROR(enum.Enum):
-    
-    ERROR_dE2 = "@WM_WW_FL_ERROR_DE2_W"
-    ERROR_IE = "@WM_WW_FL_ERROR_IE_W"
-    ERROR_OE = "@WM_WW_FL_ERROR_OE_W"
-    ERROR_UE = "@WM_WW_FL_ERROR_UE_W"
-    ERROR_FE = "@WM_WW_FL_ERROR_FE_W"
-    ERROR_PE = "@WM_WW_FL_ERROR_PE_W"
-    ERROR_tE = "@WM_WW_FL_ERROR_TE_W"
-    ERROR_LE = "@WM_WW_FL_ERROR_LE_W"
-    ERROR_CE = "@WM_WW_FL_ERROR_CE_W"
-    ERROR_dHE = "@WM_WW_FL_ERROR_DHE_W"
-    ERROR_PF = "@WM_WW_FL_ERROR_PF_W"
-    ERROR_FF = "@WM_WW_FL_ERROR_FF_W"
-    ERROR_dCE = "@WM_WW_FL_ERROR_DCE_W"
-    ERROR_EE = "@WM_WW_FL_ERROR_EE_W"
-    ERROR_PS = "@WM_WW_FL_ERROR_PS_W"
-    ERROR_dE1 = "@WM_WW_FL_ERROR_DE1_W"
-    ERROR_LOE = "@WM_WW_FL_ERROR_LOE_W"
-
-class WASHREFERROR(enum.Enum):
-    
-    ERROR_dE2 = "DE2 Error"
-    ERROR_IE = "IE Error"
-    ERROR_OE = "OE Error"
-    ERROR_UE = "UE Error"
-    ERROR_FE = "FE Error"
-    ERROR_PE = "PE Error"
-    ERROR_tE = "TE Error"
-    ERROR_LE = "LE Error"
-    ERROR_CE = "CE Error"
-    ERROR_dHE = "DHE Error"
-    ERROR_PF = "PF Error"
-    ERROR_FF = "FF Error"
-    ERROR_dCE = "DCE Error"
-    ERROR_EE = "EE Error"
-    ERROR_PS = "PS Error"
-    ERROR_dE1 = "DE1 Error"
-    ERROR_LOE = "LOE Error"
-    NO_ERROR = "No Error"
-    OFF = "-"
-
 
 class WasherDevice(Device):
     
@@ -1203,13 +985,43 @@ class WasherStatus(object):
     def __init__(self, washer, data):
         self.washer = washer
         self.data = data
+        self._run_state = None
+        self._pre_state = None
+        self._error = None
 
     def _get_data_key(self, keys):
         for key in keys:
             if key in self.data:
                 return key
         return ""
-    
+        
+    def _set_unknown(self, state, key, type):
+        if state:
+            return state
+
+        if self.washer.is_unknown_status(key):
+            _LOGGER.warning("Wideq: received unknown status '%s' of type '%s'", key, type)
+
+        return STATE_UNKNOWN.UNKNOWN
+
+    def _get_run_state(self):
+        if not self._run_state:
+            state = self.lookup_enum('State')
+            self._run_state = self._set_unknown(WASHERSTATES.get(state, None), state, 'status')
+        return self._run_state
+
+    def _get_pre_state(self):
+        if not self._pre_state:
+            state = self.lookup_enum('PreState')
+            self._pre_state = self._set_unknown(WASHERSTATES.get(state, None), state, 'status')
+        return self._pre_state
+
+    def _get_error(self):
+        if not self._error:
+            error = self.lookup_reference('Error')
+            self._error = self._set_unknown(WASHREFERRORS.get(error, None), error, 'error_status')
+        return self._error
+        
     def lookup_enum(self, key):
         return self.washer.model.enum_name(key, self.data[key])
     
@@ -1227,17 +1039,79 @@ class WasherStatus(object):
 
     @property
     def is_on(self):
-        run_state = WASHERSTATE(self.lookup_enum('State'))
-        return run_state != WASHERSTATE.OFF
+        run_state = self._get_run_state()
+        return run_state != STATE_WASHER.POWER_OFF
+
+    @property
+    def is_wash_completed(self):
+        run_state = self._get_run_state()
+        pre_state = self._get_pre_state()
+        if (run_state == STATE_WASHER.END or (run_state == STATE_WASHER.POWER_OFF and pre_state == STATE_WASHER.END)):
+            return True
+        return False
+
+    @property
+    def is_error(self):
+        error = self._get_error()
+        if (error != STATE_WASHER_ERROR.NO_ERROR and error != STATE_WASHER_ERROR.OFF):
+            return True
+        return False
         
     @property
     def run_state(self):
-        return WASHERSTATE(self.lookup_enum('State'))
+        run_state = self._get_run_state()
+        return run_state.value
 
     @property
     def pre_state(self):
-        return WASHERSTATE(self.lookup_enum('PreState'))
-    
+        pre_state = self._get_pre_state()
+        return pre_state.value
+
+    @property
+    def error_state(self):
+        error = self._get_error()
+        return error.value
+    #    error = self.lookup_reference('Error')
+    #    if error == '-':
+    #        return 'OFF'
+    #    elif error == 'No Error':
+    #        return 'NO_ERROR'
+    #    else:
+    #        return WASHERERROR(error)
+
+    @property
+    def spin_option_state(self):
+        spinspeed = self.lookup_enum('SpinSpeed')
+        if spinspeed == '-':
+            return 'OFF'
+        return self._set_unknown(WASHERSPINSPEEDS.get(spinspeed, None), spinspeed, 'spin_option').value
+
+    @property
+    def water_temp_option_state(self):
+        water_temp = self.lookup_enum('WaterTemp')
+        if water_temp == '-':
+            return 'OFF'
+        return self._set_unknown(WASHERWATERTEMPS.get(water_temp, None), water_temp, 'water_temp').value
+
+    @property
+    def current_course(self):
+        course = '-'
+        key = self._get_data_key(['APCourse', 'Course'])
+        if key:
+            course = self.lookup_reference(key)
+        if course == '-':
+            return 'OFF'
+        else:
+            return course
+   
+    @property
+    def current_smartcourse(self):
+        smartcourse = self.lookup_reference('SmartCourse')
+        if smartcourse == '-':
+            return 'OFF'
+        else:
+            return smartcourse
+
     @property
     def remaintime_hour(self):
         return self.data['Remain_Time_H']
@@ -1261,50 +1135,6 @@ class WasherStatus(object):
     @property
     def reservetime_min(self):
         return self.data['Reserve_Time_M']
-
-    @property
-    def current_course(self):
-        course = '-'
-        key = self._get_data_key(['APCourse', 'Course'])
-        if key:
-            course = self.lookup_reference(key)
-        if course == '-':
-            return 'OFF'
-        else:
-            return course
-
-    @property
-    def error_state(self):
-        return WASHREFERROR(self.lookup_reference('Error'))
-    #    error = self.lookup_reference('Error')
-    #    if error == '-':
-    #        return 'OFF'
-    #    elif error == 'No Error':
-    #        return 'NO_ERROR'
-    #    else:
-    #        return WASHERERROR(error)
-    
-    @property
-    def spin_option_state(self):
-        spinspeed = self.lookup_enum('SpinSpeed')
-        if spinspeed == '-':
-            return 'OFF'
-        return WASHERSPINSPEED(spinspeed)
-
-    @property
-    def water_temp_option_state(self):
-        water_temp = self.lookup_enum('WaterTemp')
-        if water_temp == '-':
-            return 'OFF'
-        return WASHERWATERTEMP(water_temp)
-   
-    @property
-    def current_smartcourse(self):
-        smartcourse = self.lookup_reference('SmartCourse')
-        if smartcourse == '-':
-            return 'OFF'
-        else:
-            return smartcourse
 
     @property
     def creasecare_state(self):

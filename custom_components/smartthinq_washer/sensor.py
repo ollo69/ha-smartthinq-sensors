@@ -10,13 +10,14 @@ import time
 from .wideq import (
     DeviceType,
     WasherDevice,
-    RUNSTATES,
-    WATERTEMPSTATES,
-    SPINSPEEDSTATES,
-    ERRORS,
-    OPTIONITEMMODES,
     NotLoggedInError,
     NotConnectError,
+)
+
+from .wideq_states import (
+    STATE_OPTIONITEM_ON,
+    STATE_OPTIONITEM_OFF,
+    OPTIONITEMMODES,
 )
 
 from homeassistant.components import sensor
@@ -166,9 +167,7 @@ class LGEWASHERDEVICE(LGEDevice):
     @property
     def wash_completed(self):
         if self._state:
-            run = self._state.run_state
-            pre = self._state.pre_state
-            if (run.name == 'END' or (run.name == 'OFF' and pre.name == 'END')):
+            if self._state.is_wash_completed:
                 return SENSORMODES['ON']
                 
         return SENSORMODES['OFF']
@@ -177,23 +176,23 @@ class LGEWASHERDEVICE(LGEDevice):
     def current_run_state(self):
         if self._state:
             if self._state.is_on:
-                run = self._state.run_state
-                return RUNSTATES[run.name]
+                run_state = self._state.run_state
+                return run_state
                 
         return '-'
 
-    @property
-    def run_list(self):
-        return list(RUNSTATES.values())
+    #@property
+    #def run_list(self):
+    #    return list(RUNSTATES.values())
 
     @property
     def pre_state(self):
         if self._state:
-            pre = self._state.pre_state
-            if pre.name == 'OFF':
+            pre_state = self._state.pre_state
+            if pre_state == STATE_OPTIONITEM_OFF:
                 return '-'
             else:
-                return RUNSTATES[pre.name]
+                return pre_state
                 
         return '-'
 
@@ -254,9 +253,8 @@ class LGEWASHERDEVICE(LGEDevice):
     @property
     def error_state(self):
         if self._state:
-            error = self._state.error_state
             if self._state.is_on:
-                if (error.name != 'NO_ERROR' and error.name != 'OFF'):
+                if self._state.is_error:
                     return SENSORMODES['ON']
 
         return SENSORMODES['OFF']
@@ -264,9 +262,9 @@ class LGEWASHERDEVICE(LGEDevice):
     @property
     def error_msg(self):
         if self._state:
-            error = self._state.error_state
             if self._state.is_on:
-                return ERRORS[error.name]
+                error = self._state.error_state
+                return error
                 
         return '-'
 
@@ -277,7 +275,7 @@ class LGEWASHERDEVICE(LGEDevice):
             if spin_option == 'OFF':
                 return '-'
             else:
-                return SPINSPEEDSTATES[spin_option.name]
+                return spin_option
         else:
             return '-'
 
@@ -288,7 +286,7 @@ class LGEWASHERDEVICE(LGEDevice):
             if watertemp_option == 'OFF':
                 return '-'
             else:
-                return WATERTEMPSTATES[watertemp_option.name]
+                return watertemp_option
         else:
             return '-'
 
