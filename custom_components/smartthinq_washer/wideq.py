@@ -1088,7 +1088,10 @@ class WasherStatus(object):
 
     @property
     def water_temp_option_state(self):
-        water_temp = self.lookup_enum('WaterTemp')
+        water_temp = '-'
+        key = self._get_data_key(['WTemp', 'WaterTemp'])
+        if key:
+            water_temp = self.lookup_enum(key)
         if water_temp == '-':
             return 'OFF'
         return self._set_unknown(WASHERWATERTEMPS.get(water_temp, None), water_temp, 'water_temp').value
@@ -1101,8 +1104,7 @@ class WasherStatus(object):
             course = self.lookup_reference(key)
         if course == '-':
             return 'OFF'
-        else:
-            return course
+        return course
    
     @property
     def current_smartcourse(self):
