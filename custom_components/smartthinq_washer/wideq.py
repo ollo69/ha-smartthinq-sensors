@@ -39,10 +39,8 @@ OAUTH_SECRET_KEY = 'c053c2a6ddeb7ad97cb0eed0dcb31cf8'
 OAUTH_CLIENT_KEY = 'LGAO221A02'
 DATE_FORMAT = '%a, %d %b %Y %H:%M:%S +0000'
 
-#DEFAULT_TIMEOUT = 10 # seconds
-#DEFAULT_REFRESH_TIMEOUT = 20 # seconds
-DEFAULT_TIMEOUT = 120 # seconds
-DEFAULT_REFRESH_TIMEOUT = 120 # seconds
+DEFAULT_TIMEOUT = 10 # seconds
+DEFAULT_REFRESH_TIMEOUT = 20 # seconds
 
 _LOGGER = logging.getLogger(__name__)
 
