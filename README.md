@@ -7,7 +7,7 @@ Install via HACS (https://hacs.xyz/):
 
 Add cutsom repository -- 
 HACS --> settings --> CUSTOM REPOSITORY:
-ADD CUSTOM REPOSITORY of https://github.com/ollo69/ha-smartthinq-washer with a catagory of Integration,
+ADD CUSTOM REPOSITORY of https://github.com/ollo69/ha-smartthinq-washer with a category of Integration,
 Press the save icon
 
 Install --
