@@ -15,7 +15,7 @@ A Homeassistant custom component to monitor LG Washer using SmartThinQ API (exte
 You can install this component in two ways: via HACS (as custom repository for the moment) or manually.
 
 ### Option A: Installing via HACS
-If you have HACS, you must add this repository ("https://github.com/ollo69/ha-smartthiq-washer") to your Custom Repository selecting the Configuration Tab in the HACS page. Set with a category of Integration and then pust save button.
+If you have HACS, you must add this repository ("https://github.com/ollo69/ha-smartthiq-washer") to your Custom Repository selecting the Configuration Tab in the HACS page. Set with a category of Integration and then push save button.
 After this you can go in the Integration Tab and search the "SmartThinQ LG Washer" component to install it.
 
 ### Option B: Manually installation (custom_component)
@@ -48,7 +48,7 @@ There are two ways of doing so:
 - Manually editing the configuration.yaml file
 
 ### Option A: Configuration using the web UI [recommended]
-Simply add a new "integration" and look for "SmartThinQ LGW Washer" among the proposed ones.
+Simply add a new "integration" and look for "SmartThinQ LGE Washer" among the proposed ones.
 
 Using UI you have the option to **generate a new access token** if you don't already have one. Just leave empty the token field and **follow setup worflow**.<br/>
 
