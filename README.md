@@ -15,12 +15,12 @@ A Homeassistant custom component to monitor LG Washer using SmartThinQ API (exte
 You can install this component in two ways: via HACS (as custom repository for the moment) or manually.
 
 ### Option A: Installing via HACS
-If you have HACS, you must add this repository ("https://github.com/ollo69/ha-smartthiq-washer") to your Custom Repository selecting the Configuration Tab in the HACS page. Set with a category of Integration and then push save button.
+If you have HACS, you must add this repository ("https://github.com/ollo69/ha-smartthinq-washer") to your Custom Repository selecting the Configuration Tab in the HACS page. Set with a category of Integration and then push save button.
 After this you can go in the Integration Tab and search the "SmartThinQ LG Washer" component to install it.
 
 ### Option B: Manually installation (custom_component)
 1. Clone the git master branch.
-2. Unzip/copy the melcloud_custom direcotry within the `custom_components` directory of your homeassistant installation.
+2. Unzip/copy the smartthinq_washer direcotry within the `custom_components` directory of your homeassistant installation.
 The `custom_components` directory resides within your homeassistant configuration directory.
 Usually, the configuration directory is within your home (`~/.homeassistant/`).
 In other words, the configuration directory of homeassistant is where the configuration.yaml file is located.
