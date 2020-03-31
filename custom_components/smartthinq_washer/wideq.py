@@ -1,4 +1,7 @@
+import ssl
 import requests
+from urllib3.poolmanager import PoolManager
+from requests.adapters import HTTPAdapter
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 import uuid
 import base64
@@ -26,6 +29,13 @@ from .wideq_states import (
 
 class STATE_UNKNOWN(enum.Enum):
     UNKNOWN = 'unknown'
+
+class Tlsv1HttpAdapter(HTTPAdapter):
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = PoolManager(
+            num_pools=connections, maxsize=maxsize,
+            block=block, ssl_version=ssl.PROTOCOL_TLSv1)
+
 
 GATEWAY_URL = 'https://kic.lgthinq.com:46030/api/common/gatewayUriList'
 APP_KEY = 'wideq'
@@ -136,8 +146,17 @@ def lgedm_post(url, data=None, access_token=None, session_id=None):
     if session_id:
         headers['x-thinq-jsessionId'] = session_id
 
-    res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
+    try:
+        s = requests.Session()
+        s.mount(url, Tlsv1HttpAdapter())
+        res = s.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
+        #res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
+    except Exception as ex:
+        _LOGGER.error(ex)
+        raise
+
     out = res.json()[DATA_ROOT]
+    _LOGGER.debug(out)
 
     # Check for API errors.
     if 'returnCd' in out:
@@ -150,7 +169,6 @@ def lgedm_post(url, data=None, access_token=None, session_id=None):
                 raise NotConnectError()
             else:
                 raise APIError(code, message)
-
 
     return out
 
@@ -254,8 +272,17 @@ def refresh_auth(oauth_root, refresh_token):
         'Accept': 'application/json',
     }
 
-    res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
+    try:
+        s = requests.Session()
+        s.mount(token_url, Tlsv1HttpAdapter())
+        res = s.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
+        #res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
+    except Exception as ex:
+        _LOGGER.error(ex)
+        raise
+    
     res_data = res.json()
+    _LOGGER.debug(res_data)
 
     if res_data['status'] != 1:
         raise TokenError()
