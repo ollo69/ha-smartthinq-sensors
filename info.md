@@ -1,7 +1,7 @@
 # SmartThinQ LG Washer integration for HomeAssistant
 A Homeassistant custom component to monitor LG Washer using SmartThinQ API (extension to other device will be managed with future development).<br/>
 
-**Note1**: Currently working with Home Assistant Core and potentially not working with Home Assistant (Hass.io). Home Assistant is returning "Invalid SmartThinQ credentials."<br/>
+**Note1**: Some LG account return "Invalid SmartThinQ credentials. Investigation are in progress"<br/>
 
 **Note2**: some device status may not be correctly detected, this depend on Washer model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
 
