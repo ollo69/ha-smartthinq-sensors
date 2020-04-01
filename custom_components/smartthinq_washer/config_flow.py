@@ -85,13 +85,18 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _save_config_entry(self):
         # Test the connection to the SmartThinQ.
-        result = await self.hass.async_add_executor_job(
-                self._test_authorization, self._token, self._region, self._language
+        lgauth = LGEAuthentication(self._region, self._language)
+        client = await self.hass.async_add_executor_job(
+                        lgauth.createClientFromToken, self._token
             )
             
-        if result == False:
+        if not client:
             _LOGGER.error("LGE Washer: Invalid Login info!")
             return self._show_form({"base": "invalid_credentials"})
+
+        if not client.hasdevices:
+            _LOGGER.error("No SmartThinQ devices found. Component setup aborted.")
+            return self.async_abort(reason="no_smartthinq_devices")
 
         return self.async_create_entry(
             title="LGE Washers",
@@ -101,12 +106,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_LANGUAGE: self._language
             }
         )
-
-    @staticmethod
-    def _test_authorization(token, region, language):
-        lgeauth = LGEAuthentication(region, language)
-        client = lgeauth.createClientFromToken(token)
-        return (client != None)
 
     @callback
     def _show_form(self, errors=None, step_id="user"):

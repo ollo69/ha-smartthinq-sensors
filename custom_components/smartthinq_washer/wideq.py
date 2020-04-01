@@ -146,14 +146,10 @@ def lgedm_post(url, data=None, access_token=None, session_id=None):
     if session_id:
         headers['x-thinq-jsessionId'] = session_id
 
-    try:
-        s = requests.Session()
-        s.mount(url, Tlsv1HttpAdapter())
-        res = s.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
-        #res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
-    except Exception as ex:
-        _LOGGER.error(ex)
-        raise
+    s = requests.Session()
+    s.mount(url, Tlsv1HttpAdapter())
+    res = s.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
+    #res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
 
     out = res.json()[DATA_ROOT]
     _LOGGER.debug(out)
@@ -272,14 +268,10 @@ def refresh_auth(oauth_root, refresh_token):
         'Accept': 'application/json',
     }
 
-    try:
-        s = requests.Session()
-        s.mount(token_url, Tlsv1HttpAdapter())
-        res = s.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
-        #res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
-    except Exception as ex:
-        _LOGGER.error(ex)
-        raise
+    s = requests.Session()
+    s.mount(token_url, Tlsv1HttpAdapter())
+    res = s.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
+    #res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
     
     res_data = res.json()
     _LOGGER.debug(res_data)
@@ -329,7 +321,8 @@ class Auth(object):
         session_info = login(self.gateway.api_root, self.access_token,
                              self.gateway.country, self.gateway.language)
         session_id = session_info['jsessionId']
-        return Session(self, session_id), as_list(session_info['item'])
+        devices = session_info.get('item', [])
+        return Session(self, session_id), as_list(devices)
 
     def refresh(self):
         """Refresh the authentication, returning a new Auth object.
@@ -361,7 +354,8 @@ class Session(object):
         Return a list of dicts with information about the devices.
         """
 
-        return as_list(self.post('device/deviceList')['item'])
+        devices = self.post('device/deviceList').get('item', [])
+        return as_list(devices)
 
     def monitor_start(self, device_id):
         """Begin monitoring a device's status.
@@ -551,13 +545,17 @@ class Client(object):
         if not self._session:
             self._session, self._devices = self.auth.start_session()
         return self._session
-    
+
+    @property
+    def hasdevices(self):
+        return True if self._devices else False
+
     @property
     def devices(self):
         """DeviceInfo objects describing the user's devices.
             """
         
-        if not self._devices:
+        if self._devices is None:
             self._devices = self.session.get_devices()
         return (DeviceInfo(d) for d in self._devices)
     

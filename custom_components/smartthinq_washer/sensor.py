@@ -406,6 +406,9 @@ class LGEWASHERDEVICE(LGEDevice):
                     
                 self._retrycount = 0
                 self._restart_monitor()
+            
+            if self._disconected:
+                return
 
             if not (self._disconected or self._notlogged):
                 try:
@@ -418,7 +421,8 @@ class LGEWASHERDEVICE(LGEDevice):
 
                 except NotConnectError:
                     self._disconected = True
-                    time.sleep(1)
+                    return
+                    #time.sleep(1)
 
                 except:
                     LOGGER.warn('Generic Wideq Error.')

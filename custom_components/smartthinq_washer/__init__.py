@@ -82,7 +82,8 @@ class LGEAuthentication:
         client = None
         try:
             client = Client.from_token(token, self._region, self._language)
-        except:
+        except Exception as ex:
+            _LOGGER.error(ex)
             pass
             
         return client
@@ -112,6 +113,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     if not client:
         _LOGGER.warning('Connection not available. SmartthinQ platform not ready.')
         raise ConfigEntryNotReady()
+
+    if not client.hasdevices:
+        _LOGGER.error("No SmartThinQ devices found. Component setup aborted.")
+        return False
 
     hass.data.setdefault(DOMAIN, {}).update({CLIENT: client})
     _LOGGER.info("Smartthinq client connected.")
