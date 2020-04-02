@@ -1,14 +1,13 @@
 # SmartThinQ LG Washer integration for HomeAssistant
 A Homeassistant custom component to monitor LG Washer using SmartThinQ API (extension to other device will be managed with future development).<br/>
 
-**Note1**: If during configuration you receive the message "No SmartThinQ devices found", try the following:
+**Important**: The component will **not work if you have logged into the ThinQ application and registered your devices using a social network account** (google, facebook or amazon). In order to use the component you need to create a new independent LG account and make sure you log into the Thinq app and associate your devices with it.
+If during configuration you receive the message "No SmartThinQ devices found", probably your device are still associated with the social network account. To solve the problem perform the following step:
 - remove your devices from the ThinQ app
-- logout from the app and login again 
+- logout from the app and login again with the independent LG account
 - reconnect the devices in the app
 
-In some case this solve the problem.<br/>
-
-**Note2**: some device status may not be correctly detected, this depend on Washer model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
+**Note**: some device status may not be correctly detected, this depend on Washer model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
 
 ## Component configuration    
 Once the component has been installed, you need to configure it in order to make it work.
