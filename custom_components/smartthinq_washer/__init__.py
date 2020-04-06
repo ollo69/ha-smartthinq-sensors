@@ -6,10 +6,13 @@ Support for LG Smartthinq washer device.
 import asyncio
 import logging
 
-from .wideq import (
+from .wideq.core import(
     Client,
     parse_oauth_callback,
-    NotConnectError,
+)
+
+from .wideq.core_exceptions import(
+    NotConnectedError,
     TokenError,
 )
 

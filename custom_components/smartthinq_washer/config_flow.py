@@ -3,14 +3,21 @@ import logging
 import re
 
 import voluptuous as vol
+from aiohttp import client, web
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.const import CONF_REGION, CONF_TOKEN
+from homeassistant.components.http import HomeAssistantView
+from homeassistant.helpers import config_entry_oauth2_flow as oauth2_flow
+from yarl import URL
+from typing import Any, Awaitable, Callable, Dict, Optional, cast
+
 from .const import DOMAIN, CONF_LANGUAGE 
 from . import LGEAuthentication
 
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
+AUTH_CALLBACK_PATH = "/auth/external/thinq/callback"
 
 INIT_SCHEMA = vol.Schema({
     vol.Required(CONF_REGION): str,
@@ -20,9 +27,74 @@ INIT_SCHEMA = vol.Schema({
 
 _LOGGER = logging.getLogger(__name__)
 
-class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle SmartThinQ config flow."""
+class ThinQOAuth2Implementation(oauth2_flow.AbstractOAuth2Implementation):
+    """Thinq OAuth2 implementation."""
 
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        domain: str,
+        authorize_url: str,
+    ):
+        """Initialize local auth implementation."""
+        self.hass = hass
+        self._domain = domain
+        self.authorize_url = authorize_url
+
+    @property
+    def name(self) -> str:
+        """Name of the implementation."""
+        return "ThinQOAuth2"
+
+    @property
+    def domain(self) -> str:
+        """Domain providing the implementation."""
+        return self._domain
+
+    @property
+    def redirect_uri(self) -> str:
+        """Return the redirect uri."""
+        return f"{self.hass.config.api.base_url}{AUTH_CALLBACK_PATH}"  # type: ignore
+
+    async def async_generate_authorize_url(self, flow_id: str) -> str:
+        """Generate a url for the user to authorize."""
+        ori_url = URL(self.authorize_url)
+        _LOGGER.info("ori url parameters: %s", str(ori_url.query))
+        
+        url = str(
+            URL(self.authorize_url).update_query(
+                {
+                    #"show_select_country": "Y",
+                    "callbackUrl": self.redirect_uri,
+                    "oauth2State": oauth2_flow._encode_jwt(self.hass, {"flow_id": flow_id}),
+                }
+            )
+        )
+        
+        _LOGGER.info("authorize_url: %s", url)
+        return url
+
+    async def async_resolve_external_data(self, external_data: Any) -> dict:
+        """Resolve the authorization code to tokens."""
+        _LOGGER.info("external_data: %s", str(external_data))
+        return {
+            "expires_in": 365,
+            "refresh_token": external_data,
+        }
+
+    async def _async_refresh_token(self, token: dict) -> dict:
+        """Refresh tokens."""
+        return
+
+    async def _token_request(self, data: dict) -> dict:
+        """Make a token request."""
+        return
+
+@config_entries.HANDLERS.register(DOMAIN)
+class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
+    """Handle SmartThinQ config flow."""
+    
+    DOMAIN = DOMAIN
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
@@ -32,6 +104,11 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._language = None
         self._token = None
         self._loginurl = None
+
+    @property
+    def logger(self) -> logging.Logger:
+        """Return logger."""
+        return logging.getLogger(__name__)
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user interface"""
@@ -62,9 +139,26 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._loginurl = await self.hass.async_add_executor_job(
                     lgauth.getLoginUrl
                 )
-            return self._show_form(errors=None, step_id="url")
+            
+            use_oauth2 = False #force not use
+            url_scheme = URL(self.hass.config.api.base_url).scheme
+            if use_oauth2 and url_scheme == "https":
+                flow_impl = ThinQOAuth2Implementation(self.hass, DOMAIN, self._loginurl)
+                async_register_implementation(self.hass, DOMAIN, flow_impl)
+                return await super().async_step_user() 
+            else:
+                return self._show_form(errors=None, step_id="url")
 
         return await self._save_config_entry()
+
+    async def async_oauth_create_entry(self, data: dict) -> dict:
+        _LOGGER.info(data)
+        token = data.get("refresh_token", None)
+        if not token:
+            return self._show_form(errors={"base": "invalid_credentials"})
+        
+        self._token = token
+        return self._show_form(errors=None, step_id="token")
 
     async def async_step_url(self, user_input=None):
 
@@ -136,5 +230,48 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_user(import_config)
 
+@callback
+def async_register_implementation(
+    hass: HomeAssistant, domain: str, implementation: oauth2_flow.AbstractOAuth2Implementation
+) -> None:
+    """Register an OAuth2 flow implementation for an integration."""
+    if isinstance(implementation, ThinQOAuth2Implementation) and not hass.data.setdefault(domain, {}).get(
+        oauth2_flow.DATA_VIEW_REGISTERED, False
+    ):
+        hass.http.register_view(ThinQAuthorizeCallbackView())  # type: ignore
+        hass.data.setdefault(domain, {})[oauth2_flow.DATA_VIEW_REGISTERED] = True
 
+    implementations = hass.data.setdefault(oauth2_flow.DATA_IMPLEMENTATIONS, {})
+    implementations.setdefault(domain, {})[implementation.domain] = implementation
+
+
+class ThinQAuthorizeCallbackView(HomeAssistantView):
+    """ThinQ Authorization Callback View."""
+
+    requires_auth = False
+    url = AUTH_CALLBACK_PATH
+    name = "auth:external:callback"
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Receive authorization code."""
+        if "oauth2State" not in request.query or "refresh_token" not in request.query:
+            return web.Response(
+                text=f"Missing token or state parameter in {request.url}"
+            )
+
+        hass = request.app["hass"]
+
+        state = oauth2_flow._decode_jwt(hass, request.query["oauth2State"])
+
+        if state is None:
+            return web.Response(text=f"Invalid state")
+
+        await hass.config_entries.flow.async_configure(
+            flow_id=state["flow_id"], user_input=request.query["refresh_token"]
+        )
+
+        return web.Response(
+            headers={"content-type": "text/html"},
+            text="<script>window.close()</script>",
+        )
 

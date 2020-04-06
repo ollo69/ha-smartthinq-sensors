@@ -7,17 +7,20 @@ import json
 from datetime import timedelta
 import time
 
-from .wideq import (
-    DeviceType,
-    WasherDevice,
-    NotLoggedInError,
-    NotConnectError,
-)
-
-from .wideq_states import (
+from .wideq.device import(
+    OPTIONITEMMODES,
     STATE_OPTIONITEM_ON,
     STATE_OPTIONITEM_OFF,
-    OPTIONITEMMODES,
+    DeviceType,
+)
+
+from .wideq.core_exceptions import(
+    NotLoggedInError,
+    NotConnectedError,
+)
+
+from .wideq.washer import (
+    WasherDevice,
 )
 
 from homeassistant.components import sensor
@@ -62,7 +65,42 @@ MAX_LOOP_WARN = 2
 
 LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=30)
+
+def setup_platform(hass, config, async_add_entities, discovery_info=None):
+    pass
+
+
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the LGE Washer components."""
+    LOGGER.info("Starting smartthinq sensors...")
+
+    client = hass.data[DOMAIN][CLIENT]
+    lge_sensors = []
+
+    for device in client.devices:
+        device_id = device.id
+        device_name = device.name
+        device_mac = device.macaddress
+        model_name = device.model_name
+
+        if device.type == DeviceType.WASHER:
+
+            base_name = device_name
+            model_info = client.model_info(device)
+            model = model_name + '-' + model_info.model_type
+            
+            w = LGEWASHERDEVICE(client, device, base_name, model)
+            lge_sensors.append(w)
+            hass.data[DOMAIN][LGE_DEVICES][w.unique_id] = w
+
+            LOGGER.info("LGE Washer added. Name: %s - Model: %s - Mac: %s - ID: %s", base_name, model, device_mac, device_id)
+
+    if lge_sensors:
+        async_add_entities(lge_sensors)
     
+    return True
+
+
 class LGEWASHERDEVICE(LGEDevice):
     def __init__(self, client, device, name, model):
         
@@ -373,7 +411,7 @@ class LGEWASHERDEVICE(LGEDevice):
             #self._washer.delete_permission()
             self._disconected = False
         
-        except NotConnectError:
+        except NotConnectedError:
             LOGGER.debug('Connection not available. Status update failed.')
             self._disconected = True
             #self._state = None
@@ -419,7 +457,7 @@ class LGEWASHERDEVICE(LGEDevice):
                     #self._restart_monitor()
                     self._notlogged = True
 
-                except NotConnectError:
+                except NotConnectedError:
                     self._disconected = True
                     return
                     #time.sleep(1)
@@ -452,36 +490,3 @@ class LGEWASHERDEVICE(LGEDevice):
         else:
             self._retrycount += 1
             LOGGER.debug('Status update failed.')
-
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the LGE Washer components."""
-    LOGGER.info("Starting smartthinq sensors...")
-
-    client = hass.data[DOMAIN][CLIENT]
-    lge_sensors = []
-
-    for device in client.devices:
-        device_id = device.id
-        device_name = device.name
-        device_mac = device.macaddress
-        model_name = device.model_name
-
-        if device.type == DeviceType.WASHER:
-
-            base_name = device_name
-            model_info = client.model_info(device)
-            model = model_name + '-' + model_info.model_type
-            
-            w = LGEWASHERDEVICE(client, device, base_name, model)
-            lge_sensors.append(w)
-            hass.data[DOMAIN][LGE_DEVICES][w.unique_id] = w
-
-            LOGGER.info("LGE Washer added. Name: %s - Model: %s - Mac: %s - ID: %s", base_name, model, device_mac, device_id)
-
-    if lge_sensors:
-        async_add_entities(lge_sensors)
-    
-    return True
-
-def setup_platform(hass, config, async_add_entities, discovery_info=None):
-    pass
