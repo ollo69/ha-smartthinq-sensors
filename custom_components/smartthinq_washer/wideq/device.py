@@ -16,16 +16,18 @@ from .core_exceptions import MonitorError
 DEFAULT_TIMEOUT = 10 # seconds
 DEFAULT_REFRESH_TIMEOUT = 20 # seconds
 
-STATE_OPTIONITEM_ON = 'On'
-STATE_OPTIONITEM_OFF = 'Off'
+STATE_OPTIONITEM_ON = "On"
+STATE_OPTIONITEM_OFF = "Off"
+STATE_OPTIONITEM_UNKNOWN = "unknown"
 
 OPTIONITEMMODES = {
-    'ON': STATE_OPTIONITEM_ON,
-    'OFF': STATE_OPTIONITEM_OFF,
+    "ON": STATE_OPTIONITEM_ON,
+    "OFF": STATE_OPTIONITEM_OFF,
 }
 
+
 class STATE_UNKNOWN(enum.Enum):
-    UNKNOWN = 'unknown'
+    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
 class DeviceType(enum.Enum):
@@ -62,6 +64,7 @@ class DeviceType(enum.Enum):
     PURICARE_AIR_DETECTOR = 4004
     V2PHONE = 6001
     HOMEROBOT = 9000
+    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -125,49 +128,67 @@ class DeviceInfo(object):
         
     This is populated from a JSON dictionary provided by the API.
     """
-    
     def __init__(self, data: Dict[str, Any]) -> None:
         self.data = data
-    
+
+    def _get_data_key(self, keys):
+        for key in keys:
+            if key in self.data:
+                return key
+        return ""
+
+    def _get_data_value(self, key):
+        vkey = ""
+        if isinstance(key, list):
+            vkey = self._get_data_key(key)
+        elif key in self.data:
+            vkey = key
+
+        if not vkey:
+            return STATE_OPTIONITEM_UNKNOWN
+        return self.data[vkey]
+
     @property
     def model_id(self) -> str:
-        return self.data['modelNm']
-    
+        return self._get_data_value(['modelName', 'modelNm'])
+
     @property
     def id(self) -> str:
-        return self.data['deviceId']
+        return self._get_data_value('deviceId')
     
     @property
     def model_info_url(self) -> str:
-        return self.data['modelJsonUrl']
+        return self._get_data_value(['modelJsonUrl', 'modelJsonUri'])
     
     @property
     def name(self) -> str:
-        return self.data['alias']
+        return self._get_data_value('alias')
 
     @property
     def macaddress(self) -> str:
-        return self.data['macAddress']
+        return self._get_data_value('macAddress')
 
     @property
     def model_name(self) -> str:
-        return self.data['modelNm']
+        return self._get_data_value(['modelName', 'modelNm'])
 
     @property
     def firmware(self) -> str:
-        return self.data.get('fwVer', '')
+        return self._get_data_value('fwVer')
     
     @property
     def type(self) -> DeviceType:
         """The kind of device, as a `DeviceType` value."""
         
-        return DeviceType(self.data['deviceType'])
+        return DeviceType(self._get_data_value('deviceType'))
     
     def load_model_info(self):
         """Load JSON data describing the model's capabilities.
         """
-
-        return requests.get(self.model_info_url, timeout = DEFAULT_TIMEOUT).json()
+        info_url = self.model_info_url
+        if info_url == STATE_OPTIONITEM_UNKNOWN:
+            return {}
+        return requests.get(info_url, timeout = DEFAULT_TIMEOUT).json()
 
 
 EnumValue = namedtuple('EnumValue', ['options'])
@@ -404,12 +425,16 @@ class DeviceStatus(object):
         self.device = device
         self.data = data
 
-    def get_data_key(self, keys):
-        for key in keys:
-            if key in self.data:
-                return key
+    def _get_data_key(self, keys):
+        if isinstance(keys, list):
+            for key in keys:
+                if key in self.data:
+                    return key
+        elif keys in self.data:
+            return keys
+
         return ""
-        
+
     def set_unknown(self, state, key, type):
         if state:
             return state
@@ -420,12 +445,21 @@ class DeviceStatus(object):
         return STATE_UNKNOWN.UNKNOWN
 
     def lookup_enum(self, key):
-        return self.device.model.enum_name(key, self.data[key])
+        curr_key = self._get_data_key(key)
+        if not curr_key:
+            return STATE_OPTIONITEM_UNKNOWN
+        return self.device.model.enum_name(curr_key, self.data[curr_key])
 
     def lookup_reference(self, key):
-        return self.device.model.reference_name(key, self.data[key])
+        curr_key = self._get_data_key(key)
+        if not curr_key:
+            return STATE_OPTIONITEM_UNKNOWN
+        return self.device.model.reference_name(curr_key, self.data[curr_key])
 
     def lookup_bit(self, key, index):
+        bit_value = int(self.data.get(key, -1))
+        if bit_value == -1:
+            return STATE_OPTIONITEM_UNKNOWN
         bit_value = int(self.data[key])
         bit_index = 2 ** index
         mode = bin(bit_value & bit_index)

@@ -5,21 +5,20 @@ import requests
 from urllib3.poolmanager import PoolManager
 from requests.adapters import HTTPAdapter
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
-import uuid
 import base64
 import json
 import hashlib
 import hmac
 import datetime
-from collections import namedtuple
 import enum
 import time
+import logging
 from typing import Any, Dict, Generator, List, Optional
 
+from . import as_list, gen_uuid
 from . import core_exceptions as exc
 from .device import DeviceInfo, ModelInfo, DEFAULT_TIMEOUT, DEFAULT_REFRESH_TIMEOUT
 
-import logging
 
 class Tlsv1HttpAdapter(HTTPAdapter):
     def init_poolmanager(self, connections, maxsize, block=False):
@@ -51,10 +50,6 @@ API_ERRORS = {
 _LOGGER = logging.getLogger(__name__)
 
 
-def gen_uuid():
-    return str(uuid.uuid4())
-
-
 def oauth2_signature(message, secret):
     """Get the base64-encoded SHA-1 HMAC digest of a string, as used in
     OAauth2 request signatures.
@@ -69,20 +64,7 @@ def oauth2_signature(message, secret):
     return base64.b64encode(digest)
 
 
-def as_list(obj):
-    """Wrap non-lists in lists.
-
-    If `obj` is a list, return it unchanged. Otherwise, return a
-    single-element list containing it.
-    """
-
-    if isinstance(obj, list):
-        return obj
-    else:
-        return [obj]
-
-
-def lgedm_post(url, data=None, access_token=None, session_id=None):
+def lgedm_post(url, data=None, access_token=None, session_id=None, use_tlsv1=True):
     """Make an HTTP request in the format used by the API servers.
 
     In this format, the request POST data sent as JSON under a special
@@ -105,7 +87,8 @@ def lgedm_post(url, data=None, access_token=None, session_id=None):
         headers['x-thinq-jsessionId'] = session_id
 
     s = requests.Session()
-    s.mount(url, Tlsv1HttpAdapter())
+    if use_tlsv1:
+        s.mount(url, Tlsv1HttpAdapter())
     res = s.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
     #res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
 
@@ -191,7 +174,7 @@ def login(api_root, access_token, country, language):
     return lgedm_post(url, data)
 
 
-def refresh_auth(oauth_root, refresh_token):
+def refresh_auth(oauth_root, refresh_token, use_tlsv1=True):
     """Get a new access_token using a refresh_token.
 
     May raise a `TokenError`.
@@ -225,7 +208,8 @@ def refresh_auth(oauth_root, refresh_token):
     }
 
     s = requests.Session()
-    s.mount(token_url, Tlsv1HttpAdapter())
+    if use_tlsv1:
+        s.mount(token_url, Tlsv1HttpAdapter())
     res = s.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
     #res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
     
@@ -583,7 +567,15 @@ class Client(object):
         client._auth = Auth(client.gateway, None, refresh_token)
         client.refresh()
         return client
-    
+
+    @classmethod
+    def oauthinfo_from_url(cls, url):
+        """Create an authentication using an OAuth callback URL.
+        """
+        access_token, refresh_token = parse_oauth_callback(url)
+
+        return {"access_token": access_token, "refresh_token": refresh_token}
+
     def model_info(self, device) -> 'ModelInfo':
         """For a DeviceInfo object, get a ModelInfo object describing
             the model's capabilities.

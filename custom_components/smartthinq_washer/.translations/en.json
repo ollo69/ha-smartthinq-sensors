@@ -15,7 +15,8 @@
                 "data": {
                     "region": "Region (e.g. US)",
                     "language": "Language (e.g. en-US)",
-                    "token": "Access Token"
+                    "token": "Access Token (only for API v1)",
+                    "use_api_v2": "Use API v2 (experimental)"
                 },
                 "description": "Fill in your SmartThinQ access information. If you don't have an access token, leave it empty to start the process for generating a new one.",
                 "title": "SmartThinQ LGE Washer"

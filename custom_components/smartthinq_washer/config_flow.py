@@ -4,15 +4,17 @@ import re
 
 import voluptuous as vol
 from aiohttp import client, web
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.const import CONF_REGION, CONF_TOKEN
-from homeassistant.components.http import HomeAssistantView
-from homeassistant.helpers import config_entry_oauth2_flow as oauth2_flow
 from yarl import URL
 from typing import Any, Awaitable, Callable, Dict, Optional, cast
 
-from .const import DOMAIN, CONF_LANGUAGE 
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.components.http import HomeAssistantView
+from homeassistant.helpers import config_entry_oauth2_flow as oauth2_flow
+
+from homeassistant.const import CONF_REGION, CONF_TOKEN
+
+from .const import DOMAIN, CONF_LANGUAGE, CONF_OAUTH_URL, CONF_OAUTH_USER_NUM, CONF_USE_API_V2
 from . import LGEAuthentication
 
 CONF_LOGIN = "login_url"
@@ -23,6 +25,7 @@ INIT_SCHEMA = vol.Schema({
     vol.Required(CONF_REGION): str,
     vol.Required(CONF_LANGUAGE): str,
     vol.Optional(CONF_TOKEN): str,
+    vol.Required(CONF_USE_API_V2, default=False): bool,
 })
 
 _LOGGER = logging.getLogger(__name__)
@@ -103,6 +106,10 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         self._region = None
         self._language = None
         self._token = None
+        self._oauth_url = None
+        self._oauth_user_num = None
+        self._use_api_v2 = False
+
         self._loginurl = None
 
     @property
@@ -112,6 +119,7 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user interface"""
+
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
@@ -121,6 +129,10 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         region = user_input[CONF_REGION]
         language = user_input[CONF_LANGUAGE]
         refresh_token = user_input.get(CONF_TOKEN, "")
+        self._use_api_v2 = user_input[CONF_USE_API_V2]
+        
+        if self._use_api_v2:
+            refresh_token = ""
 
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
@@ -135,7 +147,7 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         self._token = refresh_token
 
         if not self._token:
-            lgauth = LGEAuthentication(self._region, self._language)
+            lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
             self._loginurl = await self.hass.async_add_executor_job(
                     lgauth.getLoginUrl
                 )
@@ -152,6 +164,8 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         return await self._save_config_entry()
 
     async def async_oauth_create_entry(self, data: dict) -> dict:
+        """Create new entry from oauth2 callback data."""
+
         _LOGGER.info(data)
         token = data.get("refresh_token", None)
         if not token:
@@ -161,27 +175,36 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         return self._show_form(errors=None, step_id="token")
 
     async def async_step_url(self, user_input=None):
+        """Parse the response url for oauth data and submit for save."""
 
-        lgauth = LGEAuthentication(self._region, self._language)
+        lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         url = user_input[CONF_URL]
-        token = await self.hass.async_add_executor_job(
-                lgauth.getTokenFromUrl, url
+        oauth_info = await self.hass.async_add_executor_job(
+                lgauth.getOAuthInfoFromUrl, url
             )
-        if not token:
+        if not oauth_info:
             return self._show_form(errors={"base": "invalid_url"}, step_id="url")
 
-        self._token = token
+        self._token = oauth_info["refresh_token"]
+        self._oauth_url = oauth_info.get("oauth_url")
+        self._oauth_user_num = oauth_info.get("user_number")
+        
+        if self._use_api_v2:
+            return await self._save_config_entry()
+ 
         return self._show_form(errors=None, step_id="token")
 
     async def async_step_token(self, user_input=None):
+        """Show result token and submit for save."""
         self._token = user_input[CONF_TOKEN]
         return await self._save_config_entry()
 
     async def _save_config_entry(self):
-        # Test the connection to the SmartThinQ.
-        lgauth = LGEAuthentication(self._region, self._language)
+        """Test the connection to the SmartThinQ and save the entry."""
+
+        lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         client = await self.hass.async_add_executor_job(
-                        lgauth.createClientFromToken, self._token
+                        lgauth.createClientFromToken, self._token, self._oauth_url, self._oauth_user_num
             )
             
         if not client:
@@ -192,13 +215,21 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
             _LOGGER.error("No SmartThinQ devices found. Component setup aborted.")
             return self.async_abort(reason="no_smartthinq_devices")
 
+        data={
+            CONF_TOKEN: self._token,
+            CONF_REGION: self._region,
+            CONF_LANGUAGE: self._language,
+            CONF_USE_API_V2: self._use_api_v2,
+        }
+        if self._use_api_v2:
+            data.update({
+                CONF_OAUTH_URL: self._oauth_url,
+                CONF_OAUTH_USER_NUM: self._oauth_user_num,
+            })
+
         return self.async_create_entry(
             title="LGE Washers",
-            data={
-                CONF_TOKEN: self._token,
-                CONF_REGION: self._region,
-                CONF_LANGUAGE: self._language
-            }
+            data=data,
         )
 
     @callback

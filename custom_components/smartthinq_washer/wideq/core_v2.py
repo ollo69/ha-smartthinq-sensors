@@ -1,13 +1,17 @@
 """A low-level, general abstraction for the LG SmartThinQ API.
 """
+import ssl
+import requests
 import base64
 import uuid
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
 import hashlib
 import hmac
 import datetime
-import requests
+import logging
+from typing import Any, Dict, Generator, List, Optional
 
+from . import as_list, gen_uuid
 from . import core_exceptions as exc
 from . import core
 from .device import DeviceInfo, ModelInfo, DEFAULT_TIMEOUT
@@ -34,9 +38,12 @@ CLIENT_ID = 'LGAO221A02'
 OAUTH_SECRET_KEY = 'c053c2a6ddeb7ad97cb0eed0dcb31cf8'
 DATE_FORMAT = '%a, %d %b %Y %H:%M:%S +0000'
 
+API2_ERRORS = {
+    "0102": exc.NotLoggedInError,
+    "0106": exc.NotConnectedError,
+}
 
-def gen_uuid():
-    return str(uuid.uuid4())
+_LOGGER = logging.getLogger(__name__)
 
 
 def oauth2_signature(message, secret):
@@ -53,25 +60,7 @@ def oauth2_signature(message, secret):
     return base64.b64encode(digest)
 
 
-def get_list(obj, key):
-    """Look up a list using a key from an object.
-
-    If `obj[key]` is a list, return it unchanged. If is something else,
-    return a single-element list containing it. If the key does not
-    exist, return an empty list.
-    """
-    try:
-        val = obj[key]
-    except KeyError:
-        return []
-
-    if isinstance(val, list):
-        return val
-    else:
-        return [val]
-
-
-def thinq2_headers(extra_headers={}, access_token=None, user_number=None, country="US", language="en-US"):
+def thinq2_headers(extra_headers={}, access_token=None, user_number=None, country=core.DEFAULT_COUNTRY, language=core.DEFAULT_COUNTRY):
     
     headers = {
         'Accept': 'application/json',
@@ -98,8 +87,18 @@ def thinq2_headers(extra_headers={}, access_token=None, user_number=None, countr
 
     return { **headers, **extra_headers }
 
-def thinq2_get(url, access_token=None, user_number=None, headers={}, country="US", language="en-US"):
-    
+def thinq2_get(url, access_token=None, user_number=None, headers={}, country=core.DEFAULT_COUNTRY, language=core.DEFAULT_COUNTRY):
+
+    # this code to avoid ssl error 'dh key too small'
+    requests.packages.urllib3.disable_warnings()
+    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += 'HIGH:!DH:!aNULL'
+    try:
+        requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += 'HIGH:!DH:!aNULL'
+    except AttributeError:
+        # no pyopenssl support used / needed / available
+        pass        
+    # this code to avoid ssl error 'dh key too small'
+
     res = requests.get(
         url,
         headers=thinq2_headers(
@@ -109,14 +108,13 @@ def thinq2_get(url, access_token=None, user_number=None, headers={}, country="US
     )
 
     out = res.json()
+    _LOGGER.debug(out)
 
     if 'resultCode' in out:
         code = out['resultCode']
         if code != '0000':
-            if code == "0102":
-                raise exc.NotLoggedInError()
-            elif code == "0106":
-                raise exc.NotConnectedError()
+            if code in API2_ERRORS:
+                raise API2_ERRORS[code]()
             else:
                 raise exc.APIError(code, "error")
     
@@ -158,7 +156,10 @@ def auth_request(oauth_url, data):
     if res.status_code != 200:
         raise exc.TokenError()
 
-    return res.json()
+    res_data = res.json()
+    _LOGGER.debug(res_data)
+
+    return res_data
 
 def login(oauth_url, auth_code):
     """Get a new access_token using an authorization_code
@@ -244,8 +245,7 @@ class Auth(object):
         #access_token, refresh_token = login(self.oauth_url, self.auth_code,
         #                     self.gateway.country, self.gateway.language)
         #session_id = session_info['jsessionId']
-        return Session(self), []
-        #return Session(self, session_id), get_list(session_info, 'item')
+        return Session(self)
 
     def refresh(self):
         """Refresh the authentication, returning a new Auth object.
@@ -280,11 +280,11 @@ class Session(object):
         """
 
         url = urljoin(self.auth.gateway.api_root + '/', path)
-        return lgedm_post(url, data, self.auth.access_token, self.session_id)
+        return core.lgedm_post(url, data, self.auth.access_token, self.session_id, use_tlsv1=False)
 
     def post2(self, path, data=None):
         url = urljoin(self.auth.gateway.api_root + '/', path)
-        return lgedm_post(url, data, self.auth.access_token, self.session_id)
+        return core.lgedm_post(url, data, self.auth.access_token, self.session_id, use_tlsv1=False)
 
     def get2(self, path):
         url = urljoin(self.auth.gateway.api_root + '/', path)
@@ -295,7 +295,8 @@ class Session(object):
 
         Return a list of dicts with information about the devices.
         """
-        return get_list(self.get2('service/application/dashboard'), 'item')
+        devices = self.get2('service/application/dashboard').get('item', [])
+        return as_list(devices)
 
     def monitor_start(self, device_id):
         """Begin monitoring a device's status.
@@ -399,8 +400,8 @@ class ClientV2(object):
                  gateway: Optional[Gateway] = None,
                  auth: Optional[Auth] = None,
                  session: Optional[Session] = None,
-                 country: str = DEFAULT_COUNTRY,
-                 language: str = DEFAULT_LANGUAGE) -> None:
+                 country: str = core.DEFAULT_COUNTRY,
+                 language: str = core.DEFAULT_LANGUAGE) -> None:
         # The three steps required to get access to call the API.
         self._gateway: Optional[Gateway] = gateway
         self._auth: Optional[Auth] = auth
@@ -417,7 +418,11 @@ class ClientV2(object):
         # Locale information used to discover a gateway, if necessary.
         self._country = country
         self._language = language
-        
+
+    def _load_devices(self):
+        if self._session and self._devices is None:
+            self._devices = self._session.get_devices()
+    
     @property
     def gateway(self) -> Gateway:
         if not self._gateway:
@@ -435,7 +440,8 @@ class ClientV2(object):
     @property
     def session(self) -> Session:
         if not self._session:
-            self._session, self._devices = self.auth.start_session()
+            self._session = self.auth.start_session()
+            self._load_devices()
         return self._session
 
     @property
@@ -446,9 +452,8 @@ class ClientV2(object):
     def devices(self) -> Generator['DeviceInfo', None, None]:
         """DeviceInfo objects describing the user's devices.
             """
-        
         if self._devices is None:
-            self._devices = self.session.get_devices()
+            self._load_devices()
         return (DeviceInfo(d) for d in self._devices)
     
     def get_device(self, device_id) -> Optional['DeviceInfo']:
@@ -456,7 +461,6 @@ class ClientV2(object):
             
             Return None if the device does not exist.
             """
-        
         for device in self.devices:
             if device.id == device_id:
                 return device
@@ -473,8 +477,8 @@ class ClientV2(object):
             data = state['gateway']
             client._gateway = Gateway(
                 data['auth_base'], data['api_root'], data['oauth_root'],
-                data.get('country', DEFAULT_COUNTRY),
-                data.get('language', DEFAULT_LANGUAGE),
+                data.get('country', core.DEFAULT_COUNTRY),
+                data.get('language', core.DEFAULT_LANGUAGE),
             )
         
         if 'auth' in state:
@@ -529,10 +533,11 @@ class ClientV2(object):
     
     def refresh(self) -> None:
         self._auth = self.auth.refresh()
-        self._session, self._devices = self.auth.start_session()
-    
+        self._session = self.auth.start_session()
+        self._load_devices()
+
     @classmethod
-    def from_token(cls, refresh_token, country=None, language=None) -> 'Client':
+    def from_token(cls, oauth_url, refresh_token, user_number, country=None, language=None) -> 'Client':
         """Construct a client using just a refresh token.
             
             This allows simpler state storage (e.g., for human-written
@@ -541,13 +546,22 @@ class ClientV2(object):
             """
         
         client = cls(
-            country=country or DEFAULT_COUNTRY,
-            language=language or DEFAULT_LANGUAGE,
+            country=country or core.DEFAULT_COUNTRY,
+            language=language or core.DEFAULT_LANGUAGE,
         )
-        client._auth = Auth(client.gateway, None, refresh_token)
+        client._auth = Auth(client.gateway, oauth_url, None, refresh_token, user_number)
         client.refresh()
         return client
-    
+
+    @classmethod
+    def oauthinfo_from_url(cls, url):
+        """Create an authentication using an OAuth callback URL.
+        """
+        oauth_url, auth_code, user_number = parse_oauth_callback(url)
+        access_token, refresh_token = login(oauth_url, auth_code)
+
+        return {"oauth_url": oauth_url, "user_number": user_number, "access_token": access_token, "refresh_token": refresh_token}
+
     def model_info(self, device) -> 'ModelInfo':
         """For a DeviceInfo object, get a ModelInfo object describing
             the model's capabilities.

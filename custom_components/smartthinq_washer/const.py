@@ -1,10 +1,15 @@
-DOMAIN = 'smartthinq_washer'
+DOMAIN = "smartthinq_washer"
+
+CONF_LANGUAGE = "language"
+CONF_OAUTH_URL = "outh_url"
+CONF_OAUTH_USER_NUM = "outh_user_num"
+CONF_USE_API_V2 = "use_api_v2"
+
 ATTR_CONFIG = "config"
 CLIENT = "client"
-CONF_LANGUAGE = 'language'
-LGE_DEVICES = 'lge_devices'
+LGE_DEVICES = "lge_devices"
 
 SMARTTHINQ_COMPONENTS = [
-    'sensor',
+    "sensor",
 ]
 

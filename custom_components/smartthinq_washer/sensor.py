@@ -421,8 +421,8 @@ class LGEWASHERDEVICE(LGEDevice):
             #self._client.refresh()
             self._notlogged = True
             
-        except:
-            LOGGER.warn('Generic Wideq Error. Exiting.')
+        except Exception as ex:
+            LOGGER.warn('Generic Wideq Error - [%s]. Exiting', str(ex))
             self._notlogged = True
 
     def update(self):

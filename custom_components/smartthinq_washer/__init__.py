@@ -6,10 +6,8 @@ Support for LG Smartthinq washer device.
 import asyncio
 import logging
 
-from .wideq.core import(
-    Client,
-    parse_oauth_callback,
-)
+from .wideq.core import Client
+from .wideq.core_v2 import ClientV2
 
 from .wideq.core_exceptions import(
     NotConnectedError,
@@ -28,12 +26,15 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.const import CONF_REGION, CONF_TOKEN
 
 from .const import (
-    DOMAIN,
     ATTR_CONFIG,
     CLIENT,
     CONF_LANGUAGE,
-    SMARTTHINQ_COMPONENTS,
+    CONF_OAUTH_URL,
+    CONF_OAUTH_USER_NUM,
+    CONF_USE_API_V2,
+    DOMAIN,
     LGE_DEVICES,
+    SMARTTHINQ_COMPONENTS,
 )
 
 SMARTTHINQ_SCHEMA = vol.Schema({
@@ -51,44 +52,63 @@ CONFIG_SCHEMA = vol.Schema(
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class LGEAuthentication:
-    def __init__(self, region, language):
+
+    def __init__(self, region, language, use_api_v2=False):
         self._region = region
         self._language = language
+        self._use_api_v2 = use_api_v2
 
+    def _create_client(self):
+        if self._use_api_v2:
+            client = ClientV2(country=self._region, language=self._language)
+        else:
+            client = Client(country=self._region, language=self._language)
+
+        return client
+    
     def getLoginUrl(self) -> str:
 
         login_url = None
+        client = self._create_client()
+
         try:
-            client = Client(
-                country=self._region,
-                language=self._language,
-            )
             login_url = client.gateway.oauth_url()
         except:
             pass
             
         return login_url
 
-    def getTokenFromUrl(self, callback_url) -> str:
-        
+    def getOAuthInfoFromUrl(self, callback_url) -> str:
+
         refresh_token = None
-        try:
-            access_token, refresh_token = parse_oauth_callback(callback_url)
-        except:
-            pass
+        client = self._create_client()
 
-        return refresh_token
-        
-    def createClientFromToken(self, token):
-
-        client = None
+        oauth_info = None
         try:
-            client = Client.from_token(token, self._region, self._language)
+            if self._use_api_v2:
+                oauth_info = ClientV2.oauthinfo_from_url(callback_url)
+            else:
+                oauth_info = Client.oauthinfo_from_url(callback_url)
         except Exception as ex:
             _LOGGER.error(ex)
             pass
-            
+
+        return oauth_info
+        
+    def createClientFromToken(self, token, oauth_url = None, oauth_user_num = None):
+
+        client = None
+        try:
+            if self._use_api_v2:
+                client = ClientV2.from_token(oauth_url, token, oauth_user_num, self._region, self._language)
+            else:
+                client = Client.from_token(token, self._region, self._language)
+        except Exception as ex:
+            _LOGGER.error(ex)
+            pass
+
         return client
 
 
@@ -102,6 +122,9 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     refresh_token = config_entry.data.get(CONF_TOKEN)
     region = config_entry.data.get(CONF_REGION)
     language = config_entry.data.get(CONF_LANGUAGE)
+    use_apiv2 = config_entry.data.get(CONF_USE_API_V2, False)
+    oauth_url = config_entry.data.get(CONF_OAUTH_URL)
+    oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
 
     _LOGGER.info("Initializing smartthinq platform with region: %s - language: %s", region, language)
 
@@ -109,9 +132,9 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
 
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
-    lgeauth = LGEAuthentication(region, language)
+    lgeauth = LGEAuthentication(region, language, use_apiv2)
     client = await hass.async_add_executor_job(
-            lgeauth.createClientFromToken, refresh_token
+            lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
         )
     if not client:
         _LOGGER.warning('Connection not available. SmartthinQ platform not ready.')
