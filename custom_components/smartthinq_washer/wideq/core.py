@@ -76,6 +76,8 @@ def lgedm_post(url, data=None, access_token=None, session_id=None, use_tlsv1=Tru
     the gateway server data or to start a session.
     """
 
+    _LOGGER.debug("lgedm_post before: %s", url)
+
     headers = {
         'x-thinq-application-key': APP_KEY,
         'x-thinq-security-key': SECURITY_KEY,
@@ -92,20 +94,23 @@ def lgedm_post(url, data=None, access_token=None, session_id=None, use_tlsv1=Tru
     res = s.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
     #res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
 
-    out = res.json()[DATA_ROOT]
-    _LOGGER.debug(out)
+    out = res.json()
+    _LOGGER.debug("lgedm2_post after: %s", out)
+
+    msg=out.get(DATA_ROOT)
+    if not msg:
+        raise exc.APIError("-1", out)
 
     # Check for API errors.
-    if 'returnCd' in out:
-        code = out['returnCd']
+    if 'returnCd' in msg:
+        code = msg['returnCd']
         if code != '0000':
-            message = out['returnMsg']
+            message = msg['returnMsg']
             if code in API_ERRORS:
                 raise API_ERRORS[code]()
-            else:
-                raise exc.APIError(code, message)
+            raise exc.APIError(code, message)
 
-    return out
+    return msg
 
 
 def gateway_info(country, language):

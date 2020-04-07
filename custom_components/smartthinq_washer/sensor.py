@@ -412,7 +412,7 @@ class LGEWASHERDEVICE(LGEDevice):
             self._disconected = False
         
         except NotConnectedError:
-            LOGGER.debug('Connection not available. Status update failed.')
+            LOGGER.debug('Device not connected. Status not available.')
             self._disconected = True
             #self._state = None
 

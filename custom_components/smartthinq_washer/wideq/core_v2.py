@@ -2,6 +2,8 @@
 """
 import ssl
 import requests
+from urllib3.poolmanager import PoolManager
+from requests.adapters import HTTPAdapter
 import base64
 import uuid
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
@@ -16,6 +18,7 @@ from . import core_exceptions as exc
 from . import core
 from .device import DeviceInfo, ModelInfo, DEFAULT_TIMEOUT
 
+
 #v2
 V2_API_KEY = 'VGhpblEyLjAgU0VSVklDRQ=='
 V2_CLIENT_ID = '65260af7e8e6547b51fdccf930097c51eb9885a508d3fddfa9ee6cdec22ae1bd'
@@ -25,7 +28,6 @@ V2_APP_LEVEL = 'PRD'
 V2_APP_OS = 'LINUX'
 V2_APP_TYPE = 'NUTS'
 V2_APP_VER = '3.0.1700'
-V2_DATA_ROOT = 'result'
 
 # new
 V2_GATEWAY_URL = 'https://route.lgthinq.com:46030/v1/service/application/gateway-uri'
@@ -61,7 +63,8 @@ def oauth2_signature(message, secret):
 
 
 def thinq2_headers(extra_headers={}, access_token=None, user_number=None, country=core.DEFAULT_COUNTRY, language=core.DEFAULT_COUNTRY):
-    
+    """Prepare API2 header."""
+
     headers = {
         'Accept': 'application/json',
         'Content-type': 'application/json;charset=UTF-8',
@@ -87,7 +90,9 @@ def thinq2_headers(extra_headers={}, access_token=None, user_number=None, countr
 
     return { **headers, **extra_headers }
 
+
 def thinq2_get(url, access_token=None, user_number=None, headers={}, country=core.DEFAULT_COUNTRY, language=core.DEFAULT_COUNTRY):
+    """Make an HTTP request in the format used by the API2 servers."""
 
     # this code to avoid ssl error 'dh key too small'
     requests.packages.urllib3.disable_warnings()
@@ -99,32 +104,79 @@ def thinq2_get(url, access_token=None, user_number=None, headers={}, country=cor
         pass        
     # this code to avoid ssl error 'dh key too small'
 
+    _LOGGER.debug("thinq2_get before: %s", url)
+
     res = requests.get(
         url,
         headers=thinq2_headers(
-            access_token=access_token, user_number=user_number, extra_headers=headers, country=country, language=language
+            access_token=access_token, 
+            user_number=user_number, 
+            extra_headers=headers, 
+            country=country, 
+            language=language,
         ),
-        timeout = DEFAULT_TIMEOUT
+        timeout = DEFAULT_TIMEOUT,
     )
 
     out = res.json()
-    _LOGGER.debug(out)
+    _LOGGER.debug("thinq2_get after: %s", out)
 
-    if 'resultCode' in out:
-        code = out['resultCode']
+    if 'resultCode' not in out:
+        raise exc.APIError("-1", out)
+
+    code = out['resultCode']
+    if code != '0000':
+        if code in API2_ERRORS:
+            raise API2_ERRORS[code]()
+        raise exc.APIError(code, "error")
+    return out['result']
+
+
+def lgedm2_post(url, data=None, access_token=None, user_number=None, headers={}, country=core.DEFAULT_COUNTRY, language=core.DEFAULT_COUNTRY, use_tlsv1=True):
+    """Make an HTTP request in the format used by the API servers."""
+
+    _LOGGER.debug("lgedm2_post before: %s", url)
+
+    s = requests.Session()
+    if use_tlsv1:
+        s.mount(url, core.Tlsv1HttpAdapter())
+    res = s.post(
+        url, 
+        json={core.DATA_ROOT: data}, 
+        headers=thinq2_headers(
+            access_token=access_token, 
+            user_number=user_number, 
+            extra_headers=headers, 
+            country=country, 
+            language=language
+        ),
+        timeout = DEFAULT_TIMEOUT,
+    )
+
+    out = res.json()
+    _LOGGER.debug("lgedm2_post after: %s", out)
+
+    msg=out.get(core.DATA_ROOT)
+    if not msg:
+        raise exc.APIError("-1", out)
+
+    if 'returnCd' in msg:
+        code = msg['returnCd']
         if code != '0000':
+            message = msg['returnMsg']
             if code in API2_ERRORS:
                 raise API2_ERRORS[code]()
-            else:
-                raise exc.APIError(code, "error")
-    
-    return out['result']
+            raise exc.APIError(code, message)
+
+    return msg
+
 
 def gateway_info(country, language):
     """ TODO
     """ 
     return thinq2_get(V2_GATEWAY_URL, country=country, language=language)
-    
+
+
 def parse_oauth_callback(url):
     """Parse the URL to which an OAuth login redirected to obtain two
     tokens: an access token for API credentials, and a refresh token for
@@ -133,6 +185,7 @@ def parse_oauth_callback(url):
 
     params = parse_qs(urlparse(url).query)
     return params['oauth2_backend_url'][0], params['code'][0], params['user_number'][0]
+
 
 def auth_request(oauth_url, data):
     """Use an auth code to log into the v2 API and obtain an access token 
@@ -161,6 +214,7 @@ def auth_request(oauth_url, data):
 
     return res_data
 
+
 def login(oauth_url, auth_code):
     """Get a new access_token using an authorization_code
     
@@ -175,6 +229,7 @@ def login(oauth_url, auth_code):
     
     return out['access_token'], out['refresh_token']
 
+
 def refresh_auth(oauth_root, refresh_token):
     """Get a new access_token using a refresh_token.
 
@@ -187,11 +242,19 @@ def refresh_auth(oauth_root, refresh_token):
 
     return out['access_token']
 
-class Gateway(core.Gateway):
+
+class Gateway(object):
+    def __init__(self, auth_base, api_root, api2_root, country, language):
+        self.auth_base = auth_base
+        self.api_root = api_root
+        self.api2_root = api2_root
+        self.country = country
+        self.language = language
+
     @classmethod
     def discover(cls, country, language):
         gw = gateway_info(country, language)
-        return cls(gw['empUri'], gw['thinq2Uri'], gw['empUri'],
+        return cls(gw['empUri'], gw['thinq1Uri'], gw['thinq2Uri'],
                    country, language)
     
     def oauth_url(self):
@@ -216,10 +279,11 @@ class Gateway(core.Gateway):
         return {
             'auth_base': self.auth_base,
             'api_root': self.api_root,
-            'oauth_root': self.oauth_root,
+            'api2_root': self.api2_root,
             'country': self.country,
             'language': self.language
         }
+
 
 class Auth(object):
     def __init__(self, gateway, oauth_url, access_token, refresh_token, user_number):
@@ -267,27 +331,32 @@ class Auth(object):
     def load(cls, gateway, data):
       return cls(gateway, data['oauth_url'], data['access_token'], data['refresh_token'], data['user_number'])
 
+
 class Session(object):
     def __init__(self, auth, session_id=None):
         self.auth = auth
         self.session_id = session_id
 
     def post(self, path, data=None):
-        """Make a POST request to the API server.
+        """Make a POST request to the APIv1 server.
 
         This is like `lgedm_post`, but it pulls the context for the
         request from an active Session.
         """
 
         url = urljoin(self.auth.gateway.api_root + '/', path)
-        return core.lgedm_post(url, data, self.auth.access_token, self.session_id, use_tlsv1=False)
+        return lgedm2_post(url, data, self.auth.access_token, self.auth.user_number, country=self.auth.gateway.country, language=self.auth.gateway.language)
 
-    def post2(self, path, data=None):
+    def get(self, path):
+        """Make a GET request to the APIv1 server."""
+        
         url = urljoin(self.auth.gateway.api_root + '/', path)
-        return core.lgedm_post(url, data, self.auth.access_token, self.session_id, use_tlsv1=False)
+        return thinq2_get(url, self.auth.access_token, self.auth.user_number, country=self.auth.gateway.country, language=self.auth.gateway.language)
 
     def get2(self, path):
-        url = urljoin(self.auth.gateway.api_root + '/', path)
+        """Make a GET request to the APIv2 server."""
+        
+        url = urljoin(self.auth.gateway.api2_root + '/', path)
         return thinq2_get(url, self.auth.access_token, self.auth.user_number, country=self.auth.gateway.country, language=self.auth.gateway.language)
 
     def get_devices(self):
@@ -476,7 +545,7 @@ class ClientV2(object):
         if 'gateway' in state:
             data = state['gateway']
             client._gateway = Gateway(
-                data['auth_base'], data['api_root'], data['oauth_root'],
+                data['auth_base'], data['api_root'], data['api2_root'],
                 data.get('country', core.DEFAULT_COUNTRY),
                 data.get('language', core.DEFAULT_LANGUAGE),
             )
@@ -512,7 +581,7 @@ class ClientV2(object):
             out['gateway'] = {
                 'auth_base': self._gateway.auth_base,
                 'api_root': self._gateway.api_root,
-                'oauth_root': self._gateway.oauth_root,
+                'api2_root': self._gateway.api2_root,
                 'country': self._gateway.country,
                 'language': self._gateway.language,
         }
