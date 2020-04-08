@@ -55,7 +55,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class LGEAuthentication:
 
-    def __init__(self, region, language, use_api_v2=False):
+    def __init__(self, region, language, use_api_v2=True):
         self._region = region
         self._language = language
         self._use_api_v2 = use_api_v2

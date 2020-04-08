@@ -25,7 +25,7 @@ INIT_SCHEMA = vol.Schema({
     vol.Required(CONF_REGION): str,
     vol.Required(CONF_LANGUAGE): str,
     vol.Optional(CONF_TOKEN): str,
-    vol.Required(CONF_USE_API_V2, default=False): bool,
+    vol.Required(CONF_USE_API_V2, default=True): bool,
 })
 
 _LOGGER = logging.getLogger(__name__)
@@ -129,7 +129,7 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         region = user_input[CONF_REGION]
         language = user_input[CONF_LANGUAGE]
         refresh_token = user_input.get(CONF_TOKEN, "")
-        self._use_api_v2 = user_input[CONF_USE_API_V2]
+        self._use_api_v2 = user_input.get(CONF_USE_API_V2, False)
         
         if self._use_api_v2:
             refresh_token = ""

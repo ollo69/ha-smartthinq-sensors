@@ -20,6 +20,9 @@ STATE_OPTIONITEM_ON = "On"
 STATE_OPTIONITEM_OFF = "Off"
 STATE_OPTIONITEM_UNKNOWN = "unknown"
 
+BIT_OFF_THINQ2 = "@CP_OFF_EN_W"
+BIT_ON_THINQ2 = "@CP_ON_EN_W"
+
 OPTIONITEMMODES = {
     "ON": STATE_OPTIONITEM_ON,
     "OFF": STATE_OPTIONITEM_OFF,
@@ -237,6 +240,7 @@ class ModelInfo(object):
     
     def __init__(self, data):
         self.data = data
+        self.is_api_v2 = False
 
     @property
     def model_type(self):
@@ -383,27 +387,38 @@ class ModelInfoV2(object):
     
     def __init__(self, data):
         self.data = data
+        self.is_api_v2 = True
 
     @property
     def model_type(self):
         return self.data['Info']['modelType']
-    
-    def value_type(self, name):
-        if name in self.data['MonitoringValue']:
-            return self.data['MonitoringValue'][name]['dataType']
-        else:
-            return None
 
-    def value(self, name):
+    def value_type(self, name):
+        return None
+
+    def data_root(self, name):
+        if name in self.data['MonitoringValue']:
+            if self.data['MonitoringValue'][name].get('dataType'):
+                return self.data['MonitoringValue'][name]
+            else:
+                ref = self.data['MonitoringValue'][name].get('ref')
+                if ref:
+                    return self.data.get(ref)
+
+        return None
+
+    def value(self, data):
         """Look up information about a value.
         
         Return either an `EnumValue` or a `RangeValue`.
         """
-        d = self.data['MonitoringValue'][name]
-        if d['dataType'] in ('Enum', 'enum'):
-            return d['valueMapping']
-        elif d['dataType'] == 'range':
-            return RangeValue(d['valueMapping']['min'], d['valueMapping']['max'])
+        data_type = data.get('dataType')
+        if not data_type:
+            return data
+        elif data_type in ('Enum', 'enum'):
+            return data['valueMapping']
+        elif data_type == 'range':
+            return RangeValue(data['valueMapping']['min'], data['valueMapping']['max'])
         #elif d['dataType'] == 'Bit':
         #    bit_values = {}
         #    for bit in d['option']:
@@ -436,38 +451,57 @@ class ModelInfoV2(object):
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name.
         """
+        data = self.data_root(key)
+        if not data:
+            return str(name)
 
-        options = self.value(key)
+        options = self.value(data)
         options_inv = {v: k for k, v in options.items()}  # Invert the map.
         return options_inv[name]
 
     def enum_name(self, key, value):
         """Look up the friendly enum name for an encoded value.
         """
-        if not self.value_type(key):
+        data = self.data_root(key)
+        if not data:
             return str(value)
                 
-        options = self.value(key)
+        options = self.value(data)
         return options[value]["label"]
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
         """
         return key
-        
+
     def bit_name(self, key, bit_index, value):
         """Look up the friendly name for an encoded bit value
         """
-        return str(value)
+        return None
+
+    def bit_name_v2(self, key, value):
+        """Look up the friendly name for an encoded bit value
+        """
+        data = self.data_root(key)
+        if not data:
+            return None
+
+        bit_val = self.value(data)[value]["label"]
+        if bit_val == BIT_OFF_THINQ2:
+            return False
+        elif bit_val == BIT_ON_THINQ2:
+            return True
+
+        return None
 
     def reference_name(self, key, value):
         """Look up the friendly name for an encoded reference value
         """
-        value = str(value)
-        if not self.value_type(key):
-            return value
+        data = self.data_root(key)
+        if not data:
+            return str(value)
                 
-        reference = self.value(key)
+        reference = self.value(data)
                     
         if value in reference:
             comment = reference[value].get('_comment')
@@ -480,7 +514,7 @@ class ModelInfoV2(object):
         """Check that type of monitoring is BINARY(BYTE).
         """
         
-        return self.data['Monitoring']['type'] == 'BINARY(BYTE)'
+        return False
     
     def decode_monitor_binary(self, data):
         """Decode binary encoded status data.
@@ -533,8 +567,7 @@ class Device(object):
         else:
             self.model = ModelInfo(model_data)
         self._should_poll = (device.platform_type == PlatformType.THINQ1)
-        #self._should_poll = False
-        
+
         # for logging unknown states received
         self._unknown_states = []
 
@@ -642,6 +675,7 @@ class DeviceStatus(object):
     def __init__(self, device, data):
         self.device = device
         self.data = data
+        self.is_api_v2 = device.model.is_api_v2
 
     def _get_data_key(self, keys):
         if isinstance(keys, list):
@@ -685,3 +719,12 @@ class DeviceStatus(object):
             return 'OFF'
         else:
             return 'ON'
+
+    def lookup_bit_v2(self, key):
+        curr_key = self._get_data_key(key)
+        if not curr_key:
+            return STATE_OPTIONITEM_UNKNOWN
+        result = self.device.model.bit_name_v2(curr_key, self.data[curr_key])
+        if result is None:
+            return STATE_OPTIONITEM_UNKNOWN
+        return 'ON' if result else 'OFF'

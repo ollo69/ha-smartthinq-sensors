@@ -125,14 +125,14 @@ class WasherStatus(DeviceStatus):
 
     @property
     def current_course(self):
-        course = self.lookup_reference(['APCourse', 'Course'])
+        course = self.lookup_reference(['APCourse', 'Course', 'courseFL24inchBaseTitan'])
         if course == '-':
             return 'OFF'
         return course
    
     @property
     def current_smartcourse(self):
-        smartcourse = self.lookup_reference('SmartCourse')
+        smartcourse = self.lookup_reference(['SmartCourse', 'smartCourseFL24inchBaseTitan'])
         if smartcourse == '-':
             return 'OFF'
         else:
@@ -140,78 +140,90 @@ class WasherStatus(DeviceStatus):
 
     @property
     def remaintime_hour(self):
-        value = self.data.get('Remain_Time_H')
-        if not value:
-            value = str(int(self.data.get('remainTimeHour')))
-        return value
-    
+        if self.is_api_v2:
+            return str(int(self.data.get('remainTimeHour')))
+        return self.data.get('Remain_Time_H')
+
     @property
     def remaintime_min(self):
-        value = self.data.get('Remain_Time_M')
-        if not value:
-            value = str(int(self.data.get('remainTimeMinute')))
-        return value
+        if self.is_api_v2:
+            return str(int(self.data.get('remainTimeMinute')))
+        return self.data.get('Remain_Time_M')
 
     @property
     def initialtime_hour(self):
-        value = self.data.get('Initial_Time_H')
-        if not value:
-            value = str(int(self.data.get('initialTimeHour')))
-        return value
+        if self.is_api_v2:
+            return str(int(self.data.get('initialTimeHour')))
+        return self.data.get('Initial_Time_H')
 
     @property
     def initialtime_min(self):
-        value = self.data.get('Initial_Time_M')
-        if not value:
-            value = str(int(self.data.get('initialTimeMinute')))
-        return value
+        if self.is_api_v2:
+            return str(int(self.data.get('initialTimeMinute')))
+        return self.data.get('Initial_Time_M')
 
     @property
     def reservetime_hour(self):
-        value = self.data.get('Reserve_Time_H')
-        if not value:
-            value = str(int(self.data.get('reserveTimeHour')))
-        return value
+        if self.is_api_v2:
+            return str(int(self.data.get('reserveTimeHour')))
+        return self.data.get('Reserve_Time_H')
     
     @property
     def reservetime_min(self):
-        value = self.data.get('Reserve_Time_M')
-        if not value:
-            value = str(int(self.data.get('reserveTimeMinute')))
-        return value
+        if self.is_api_v2:
+            return str(int(self.data.get('reserveTimeMinute')))
+        return self.data.get('Reserve_Time_M')
 
     @property
     def creasecare_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('creaseCare')
         return self.lookup_bit('Option1', 1)
 
     @property
     def childlock_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('childLock')
         return self.lookup_bit('Option2', 7)
 
     @property
     def steam_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('steam')
         return self.lookup_bit('Option1', 7)
 
     @property
     def steam_softener_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('steamSoftener')
         return self.lookup_bit('Option1', 2)
 
     @property
     def doorlock_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('doorLock')
         return self.lookup_bit('Option2', 6)
 
     @property
     def prewash_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('preWash')
         return self.lookup_bit('Option1', 6)
 
     @property
     def remotestart_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('remoteStart')
         return self.lookup_bit('Option2', 1)
 
     @property
     def turbowash_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2('turboWash')
         return self.lookup_bit('Option1', 0)
 
     @property
     def tubclean_count(self):
-        return self.data['TCLCount']
+        if self.is_api_v2:
+            return str(int(self.data.get('TCLCount', -1)))
+        return self.data.get('TCLCount')
