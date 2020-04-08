@@ -59,7 +59,7 @@ SENSORMODES = {
     'OFF': STATE_OFF,
 }
 
-MAX_RETRIES = 4
+MAX_RETRIES = 3
 MAX_CONN_RETRIES = 2
 MAX_LOOP_WARN = 2
 
@@ -86,14 +86,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         if device.type == DeviceType.WASHER:
 
             base_name = device_name
-            model_info = client.model_info(device)
-            model = model_name + '-' + model_info.model_type
             
-            w = LGEWASHERDEVICE(client, device, base_name, model)
+            w = LGEWASHERDEVICE(client, device, base_name)
             lge_sensors.append(w)
             hass.data[DOMAIN][LGE_DEVICES][w.unique_id] = w
 
-            LOGGER.info("LGE Washer added. Name: %s - Model: %s - Mac: %s - ID: %s", base_name, model, device_mac, device_id)
+            LOGGER.info("LGE Washer added. Name: %s - Model: %s - Mac: %s - ID: %s", base_name, model_name, device_mac, device_id)
 
     if lge_sensors:
         async_add_entities(lge_sensors)
@@ -102,7 +100,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class LGEWASHERDEVICE(LGEDevice):
-    def __init__(self, client, device, name, model):
+    def __init__(self, client, device, name):
         
         """initialize a LGE Washer Device."""
         LGEDevice.__init__(self, client, device)
@@ -119,7 +117,7 @@ class LGEWASHERDEVICE(LGEDevice):
         self._mac = device.macaddress
         self._firmware = device.firmware
         
-        self._model = model
+        self._model = device.model_name + '-' + self._washer.model.model_type
         self._id = "%s:%s" % ("washer", device.id)
 
         self._state = None
@@ -422,8 +420,8 @@ class LGEWASHERDEVICE(LGEDevice):
             self._notlogged = True
             
         except Exception as ex:
-            LOGGER.warn('Generic Wideq Error - [%s]. Exiting', str(ex))
             self._notlogged = True
+            raise ex
 
     def update(self):
 
@@ -462,9 +460,9 @@ class LGEWASHERDEVICE(LGEDevice):
                     return
                     #time.sleep(1)
 
-                except:
-                    LOGGER.warn('Generic Wideq Error.')
+                except Exception as ex:
                     self._notlogged = True
+                    raise ex
 
                 else:
                     if state:
@@ -474,9 +472,10 @@ class LGEWASHERDEVICE(LGEDevice):
                         
                         self._retrycount = 0
                         self._state = state
-                        return
-
-                    LOGGER.debug('No status available yet.')
+                    else:
+                        LOGGER.debug('No status available yet.')
+                        
+                    return
                 
             #time.sleep(2 ** iteration)
             time.sleep(1)

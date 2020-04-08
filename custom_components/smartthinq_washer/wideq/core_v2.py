@@ -9,8 +9,8 @@ import uuid
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
 import hashlib
 import hmac
-import datetime
 import logging
+from datetime import timedelta, datetime
 from typing import Any, Dict, Generator, List, Optional
 
 from . import as_list, gen_uuid
@@ -18,6 +18,8 @@ from . import core_exceptions as exc
 from . import core
 from .device import DeviceInfo, ModelInfo, DEFAULT_TIMEOUT
 
+import os
+import json
 
 #v2
 V2_API_KEY = 'VGhpblEyLjAgU0VSVklDRQ=='
@@ -45,6 +47,7 @@ API2_ERRORS = {
     "0106": exc.NotConnectedError,
 }
 
+MIN_TIME_BETWEEN_UPDATE = 25 #seconds
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -193,7 +196,7 @@ def auth_request(oauth_url, data):
     """
     auth_path = '/oauth/1.0/oauth2/token'
     url = urljoin(oauth_url, '/oauth/1.0/oauth2/token')
-    timestamp = datetime.datetime.utcnow().strftime(DATE_FORMAT)
+    timestamp = datetime.utcnow().strftime(DATE_FORMAT)
     req_url = '{}?{}'.format(auth_path, urlencode(data))
     sig = oauth2_signature('{}\n{}'.format(req_url, timestamp), OAUTH_SECRET_KEY)
 
@@ -475,6 +478,7 @@ class ClientV2(object):
         self._gateway: Optional[Gateway] = gateway
         self._auth: Optional[Auth] = auth
         self._session: Optional[Session] = session
+        self._last_device_update = datetime.now()
         
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
@@ -488,10 +492,10 @@ class ClientV2(object):
         self._country = country
         self._language = language
 
-    def _load_devices(self):
-        if self._session and self._devices is None:
+    def _load_devices(self, force_update: bool = False):
+        if self._session and (self._devices is None or force_update):
             self._devices = self._session.get_devices()
-    
+
     @property
     def gateway(self) -> Gateway:
         if not self._gateway:
@@ -524,12 +528,31 @@ class ClientV2(object):
         if self._devices is None:
             self._load_devices()
         return (DeviceInfo(d) for d in self._devices)
-    
+
+    def _inject_thinq2_state(self):
+        """This is used only for debug"""
+        data_file = os.path.dirname(os.path.realpath(__file__)) + '/snapshot.txt'
+        with open(data_file, 'r') as f:
+            snapshot = json.load(f)
+        for d in self._devices:
+            d.update(snapshot)
+
+    def refresh_devices(self):
+        call_time = datetime.now()
+        difference = (call_time - self._last_device_update).total_seconds()
+        if difference > MIN_TIME_BETWEEN_UPDATE:
+            self._load_devices(True)
+            self._last_device_update = call_time
+            # for debug
+            #self._inject_thinq2_state()
+            #_LOGGER.debug(self._devices)
+            # for debug
+
     def get_device(self, device_id) -> Optional['DeviceInfo']:
         """Look up a DeviceInfo object by device ID.
             
-            Return None if the device does not exist.
-            """
+        Return None if the device does not exist.
+        """
         for device in self.devices:
             if device.id == device_id:
                 return device
@@ -603,6 +626,7 @@ class ClientV2(object):
     def refresh(self) -> None:
         self._auth = self.auth.refresh()
         self._session = self.auth.start_session()
+        #self._device = None
         self._load_devices()
 
     @classmethod
@@ -631,11 +655,11 @@ class ClientV2(object):
 
         return {"oauth_url": oauth_url, "user_number": user_number, "access_token": access_token, "refresh_token": refresh_token}
 
-    def model_info(self, device) -> 'ModelInfo':
+    def model_info(self, device):
         """For a DeviceInfo object, get a ModelInfo object describing
             the model's capabilities.
             """
         url = device.model_info_url
         if url not in self._model_info:
             self._model_info[url] = device.load_model_info()
-        return ModelInfo(self._model_info[url])
+        return self._model_info[url]

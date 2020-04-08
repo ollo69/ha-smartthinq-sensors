@@ -9,10 +9,10 @@ import base64
 import json
 import hashlib
 import hmac
-import datetime
 import enum
 import time
 import logging
+from datetime import timedelta, datetime
 from typing import Any, Dict, Generator, List, Optional
 
 from . import as_list, gen_uuid
@@ -95,7 +95,7 @@ def lgedm_post(url, data=None, access_token=None, session_id=None, use_tlsv1=Tru
     #res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
 
     out = res.json()
-    _LOGGER.debug("lgedm2_post after: %s", out)
+    _LOGGER.debug("lgedm_post after: %s", out)
 
     msg=out.get(DATA_ROOT)
     if not msg:
@@ -195,7 +195,7 @@ def refresh_auth(oauth_root, refresh_token, use_tlsv1=True):
     # through a request to the date/time endpoint:
     # https://us.lgeapi.com/datetime
     # But we can also just generate a timestamp.
-    timestamp = datetime.datetime.utcnow().strftime(DATE_FORMAT)
+    timestamp = datetime.utcnow().strftime(DATE_FORMAT)
 
     # The signature for the requests is on a string consisting of two
     # parts: (1) a fake request URL containing the refresh token, and (2)
@@ -475,7 +475,10 @@ class Client(object):
         if self._devices is None:
             self._devices = self.session.get_devices()
         return (DeviceInfo(d) for d in self._devices)
-    
+
+    def refresh_devices(self):
+        return
+
     def get_device(self, device_id) -> Optional['DeviceInfo']:
         """Look up a DeviceInfo object by device ID.
             
@@ -581,11 +584,11 @@ class Client(object):
 
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    def model_info(self, device) -> 'ModelInfo':
+    def model_info(self, device):
         """For a DeviceInfo object, get a ModelInfo object describing
             the model's capabilities.
             """
         url = device.model_info_url
         if url not in self._model_info:
             self._model_info[url] = device.load_model_info()
-        return ModelInfo(self._model_info[url])
+        return self._model_info[url]

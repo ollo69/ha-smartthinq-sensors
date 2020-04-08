@@ -23,6 +23,7 @@ STATE_OPTIONITEM_UNKNOWN = "unknown"
 OPTIONITEMMODES = {
     "ON": STATE_OPTIONITEM_ON,
     "OFF": STATE_OPTIONITEM_OFF,
+    "unknown": STATE_OPTIONITEM_UNKNOWN,
 }
 
 
@@ -64,6 +65,13 @@ class DeviceType(enum.Enum):
     PURICARE_AIR_DETECTOR = 4004
     V2PHONE = 6001
     HOMEROBOT = 9000
+    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
+
+
+class PlatformType(enum.Enum):
+    """The category of device."""
+    THINQ1 = "thinq1"
+    THINQ2 = "thinq2"
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
@@ -138,15 +146,12 @@ class DeviceInfo(object):
         return ""
 
     def _get_data_value(self, key):
-        vkey = ""
         if isinstance(key, list):
             vkey = self._get_data_key(key)
-        elif key in self.data:
+        else:
             vkey = key
 
-        if not vkey:
-            return STATE_OPTIONITEM_UNKNOWN
-        return self.data[vkey]
+        return self.data.get(vkey, STATE_OPTIONITEM_UNKNOWN)
 
     @property
     def model_id(self) -> str:
@@ -158,6 +163,9 @@ class DeviceInfo(object):
     
     @property
     def model_info_url(self) -> str:
+        # for debug - this is a Washer ThinQ V2
+        #return "https://objectstore.lgthinq.com/0dc06d18-81ce-4c7c-9ebc-6b2f6fd6b4bd?Expires=1645943733&Signature=hUkAOai3pKWk-O93foQxSVSPAaDHYT2vUDWxdPTd-FDype~Mr4pbfhAcSEDMu3rEixDBxE2l12ie6-czQMcPrjyxIiTojGxg~Mi~hC4zIzohrfqbgRKAJ-Hg2qd5~7Ge0uuK~6KJmxQeerI7BxedvXsP7aGmc2PloCWx7wtAPD1UsBzkrP6aACfRqQ3-0FnifULgiJenEfvJDQ6c6NjRLC0HYcdEG-vQOF~ZfslWUfyXTPNQBV~5c9mUO9J~CtPVLxRhrAvob-zbCyKhFiBw1ajRdmmRle9-mI0qjh3k58bC~5cAwzC-R~fbXuXj0GJcv-I8FXPO-Hic6AdFK44KgQ__&Key-Pair-Id=APKAI74R6YENXPGRIWLQ"
+        # for debug - this is a Washer ThinQ V2
         return self._get_data_value(['modelJsonUrl', 'modelJsonUri'])
     
     @property
@@ -175,13 +183,39 @@ class DeviceInfo(object):
     @property
     def firmware(self) -> str:
         return self._get_data_value('fwVer')
-    
+
+    @property
+    def devicestate(self) -> str:
+        """The kind of device, as a `DeviceType` value."""
+        return self._get_data_value('deviceState')
+
+    @property
+    def isonline(self) -> bool:
+        """The kind of device, as a `DeviceType` value."""
+        return self.data.get("online", False)
+
     @property
     def type(self) -> DeviceType:
         """The kind of device, as a `DeviceType` value."""
-        
         return DeviceType(self._get_data_value('deviceType'))
-    
+
+    @property
+    def platform_type(self) -> PlatformType:
+        """The kind of device, as a `DeviceType` value."""
+        # for debug
+        #return PlatformType.THINQ2
+        # for debug
+        ptype = self.data.get('platformType')
+        if not ptype:
+            return PlatformType.THINQ1    # for the moment, probably not available in APIv1
+        return PlatformType(ptype)
+
+    @property
+    def snapshot(self) -> Optional[Dict[str, Any]]:
+        if "snapshot" in self.data:
+            return self.data["snapshot"]
+        return None
+
     def load_model_info(self):
         """Load JSON data describing the model's capabilities.
         """
@@ -338,6 +372,145 @@ class ModelInfo(object):
         else:
             return self.decode_monitor_json(data)
 
+    def decode_snapshot(self, data, key):
+        """Decode  status data."""
+        return None
+
+
+class ModelInfoV2(object):
+    """A description of a device model's capabilities.
+        """
+    
+    def __init__(self, data):
+        self.data = data
+
+    @property
+    def model_type(self):
+        return self.data['Info']['modelType']
+    
+    def value_type(self, name):
+        if name in self.data['MonitoringValue']:
+            return self.data['MonitoringValue'][name]['dataType']
+        else:
+            return None
+
+    def value(self, name):
+        """Look up information about a value.
+        
+        Return either an `EnumValue` or a `RangeValue`.
+        """
+        d = self.data['MonitoringValue'][name]
+        if d['dataType'] in ('Enum', 'enum'):
+            return d['valueMapping']
+        elif d['dataType'] == 'range':
+            return RangeValue(d['valueMapping']['min'], d['valueMapping']['max'])
+        #elif d['dataType'] == 'Bit':
+        #    bit_values = {}
+        #    for bit in d['option']:
+        #        bit_values[bit['startbit']] = {
+        #        'value' : bit['value'],
+        #        'length' : bit['length'],
+        #        }
+        #    return BitValue(
+        #            bit_values
+        #            )
+        #elif d['dataType'] == 'Reference':
+        #    ref =  d['option'][0]
+        #    return ReferenceValue(
+        #            self.data[ref]
+        #            )
+        #elif d['dataType'] == 'Boolean':
+        #    return EnumValue({'0': 'False', '1' : 'True'})
+        #elif d['dataType'] == 'String':
+        #    pass
+        else:
+            assert False, "unsupported value type {}".format(d['type'])
+
+
+    def default(self, name):
+        """Get the default value, if it exists, for a given value.
+        """
+            
+        return self.data['MonitoringValue'][name]['label']
+        
+    def enum_value(self, key, name):
+        """Look up the encoded value for a friendly enum name.
+        """
+
+        options = self.value(key)
+        options_inv = {v: k for k, v in options.items()}  # Invert the map.
+        return options_inv[name]
+
+    def enum_name(self, key, value):
+        """Look up the friendly enum name for an encoded value.
+        """
+        if not self.value_type(key):
+            return str(value)
+                
+        options = self.value(key)
+        return options[value]["label"]
+
+    def range_name(self, key):
+        """Look up the value of a RangeValue.  Not very useful other than for comprehension
+        """
+        return key
+        
+    def bit_name(self, key, bit_index, value):
+        """Look up the friendly name for an encoded bit value
+        """
+        return str(value)
+
+    def reference_name(self, key, value):
+        """Look up the friendly name for an encoded reference value
+        """
+        value = str(value)
+        if not self.value_type(key):
+            return value
+                
+        reference = self.value(key)
+                    
+        if value in reference:
+            comment = reference[value].get('_comment')
+            return comment if comment else reference[value]["label"]
+        else:
+            return '-'
+
+    @property
+    def binary_monitor_data(self):
+        """Check that type of monitoring is BINARY(BYTE).
+        """
+        
+        return self.data['Monitoring']['type'] == 'BINARY(BYTE)'
+    
+    def decode_monitor_binary(self, data):
+        """Decode binary encoded status data.
+        """
+        
+        decoded = {}
+        for item in self.data['Monitoring']['protocol']:
+            key = item['value']
+            value = 0
+            for v in data[item['startByte']:item['startByte'] + item['length']]:
+                value = (value << 8) + v
+            decoded[key] = str(value)
+        return decoded
+    
+    def decode_monitor_json(self, data):
+        """Decode a bytestring that encodes JSON status data."""
+        
+        return json.loads(data.decode('utf8'))
+    
+    def decode_monitor(self, data):
+        """Decode  status data."""
+        
+        if self.binary_monitor_data:
+            return self.decode_monitor_binary(data)
+        else:
+            return self.decode_monitor_json(data)
+    
+    def decode_snapshot(self, data, key):
+        """Decode  status data."""
+        return data.get(key)
 
 class Device(object):
     """A higher-level interface to a specific device.
@@ -351,10 +524,16 @@ class Device(object):
         """Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
         """
-        
+
         self.client = client
         self.device = device
-        self.model = client.model_info(device)
+        model_data = client.model_info(device)
+        if device.platform_type == PlatformType.THINQ2:
+            self.model = ModelInfoV2(model_data)
+        else:
+            self.model = ModelInfo(model_data)
+        self._should_poll = (device.platform_type == PlatformType.THINQ1)
+        #self._should_poll = False
         
         # for logging unknown states received
         self._unknown_states = []
@@ -396,13 +575,52 @@ class Device(object):
 
     def monitor_start(self):
         """Start monitoring the device's status."""
+        if not self._should_poll:
+            return
         mon = Monitor(self.client.session, self.device.id)
         mon.start()
         self.mon = mon
 
     def monitor_stop(self):
         """Stop monitoring the device's status."""
+        if not self._should_poll:
+            return
         self.mon.stop()
+
+    def device_poll(self, snapshot_key=""):
+        """Poll the device's current state.
+        
+        Monitoring must be started first with `monitor_start`. Return
+        either a `Status` object or `None` if the status is not yet
+        available.
+        """
+        
+        # ThinQ V2 - Monitor data is with device info
+        if not self._should_poll:
+            snapshot = None
+            self.client.refresh_devices()
+            device_data = self.client.get_device(self.device.id)
+            if device_data:
+                snapshot = device_data.snapshot
+            if not snapshot:
+                return None
+            res = self.model.decode_snapshot(snapshot, snapshot_key)
+
+        # ThinQ V1 - Monitor data must be polled """
+        else:
+            # Abort if monitoring has not started yet.
+            if not hasattr(self, 'mon'):
+                return None
+            data = self.mon.poll()
+            if not data:
+                return None
+            res = self.model.decode_monitor(data)
+
+        """
+            with open('/config/wideq/washer_polled_data.json','w', encoding="utf-8") as dumpfile:
+                json.dump(res, dumpfile, ensure_ascii=False, indent="\t")
+        """
+        return res
 
     def _delete_permission(self):
         self.client.session.delete_permission(
