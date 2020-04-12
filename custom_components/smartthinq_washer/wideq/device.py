@@ -2,7 +2,8 @@
 SmartThinQ API for most use cases.
 """
 import requests
-#import base64
+
+# import base64
 import json
 import datetime
 from collections import namedtuple
@@ -13,8 +14,8 @@ from typing import Any, Dict, Generator, List, Optional
 
 from .core_exceptions import MonitorError
 
-DEFAULT_TIMEOUT = 10 # seconds
-DEFAULT_REFRESH_TIMEOUT = 20 # seconds
+DEFAULT_TIMEOUT = 10  # seconds
+DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
 STATE_OPTIONITEM_ON = "On"
 STATE_OPTIONITEM_OFF = "Off"
@@ -36,6 +37,7 @@ class STATE_UNKNOWN(enum.Enum):
 
 class DeviceType(enum.Enum):
     """The category of device."""
+
     REFRIGERATOR = 101
     KIMCHI_REFRIGERATOR = 102
     WATER_PURIFIER = 103
@@ -73,6 +75,7 @@ class DeviceType(enum.Enum):
 
 class PlatformType(enum.Enum):
     """The category of device."""
+
     THINQ1 = "thinq1"
     THINQ2 = "thinq2"
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
@@ -92,13 +95,13 @@ class Monitor(object):
     def __init__(self, session, device_id: str) -> None:
         self.session = session
         self.device_id = device_id
-    
+
     def start(self) -> None:
         self.work_id = self.session.monitor_start(self.device_id)
-    
+
     def stop(self) -> None:
         self.session.monitor_stop(self.device_id, self.work_id)
-    
+
     def poll(self) -> Optional[bytes]:
         """Get the current status data (a bytestring) or None if the
             device is not yet ready.
@@ -115,21 +118,21 @@ class Monitor(object):
     @staticmethod
     def decode_json(data: bytes) -> Dict[str, Any]:
         """Decode a bytestring that encodes JSON status data."""
-        
-        return json.loads(data.decode('utf8'))
-    
+
+        return json.loads(data.decode("utf8"))
+
     def poll_json(self) -> Optional[Dict[str, Any]]:
         """For devices where status is reported via JSON data, get the
             decoded status result (or None if status is not available).
             """
-        
+
         data = self.poll()
         return self.decode_json(data) if data else None
-    
-    def __enter__(self) -> 'Monitor':
+
+    def __enter__(self) -> "Monitor":
         self.start()
         return self
-    
+
     def __exit__(self, type, value, tb) -> None:
         self.stop()
 
@@ -139,6 +142,7 @@ class DeviceInfo(object):
         
     This is populated from a JSON dictionary provided by the API.
     """
+
     def __init__(self, data: Dict[str, Any]) -> None:
         self._data = data
 
@@ -158,39 +162,39 @@ class DeviceInfo(object):
 
     @property
     def model_id(self) -> str:
-        return self._get_data_value(['modelName', 'modelNm'])
+        return self._get_data_value(["modelName", "modelNm"])
 
     @property
     def id(self) -> str:
-        return self._get_data_value('deviceId')
-    
+        return self._get_data_value("deviceId")
+
     @property
     def model_info_url(self) -> str:
         # for debug - this is a Washer ThinQ V2
         # return "https://objectstore.lgthinq.com/0dc06d18-81ce-4c7c-9ebc-6b2f6fd6b4bd?Expires=1645943733&Signature=hUkAOai3pKWk-O93foQxSVSPAaDHYT2vUDWxdPTd-FDype~Mr4pbfhAcSEDMu3rEixDBxE2l12ie6-czQMcPrjyxIiTojGxg~Mi~hC4zIzohrfqbgRKAJ-Hg2qd5~7Ge0uuK~6KJmxQeerI7BxedvXsP7aGmc2PloCWx7wtAPD1UsBzkrP6aACfRqQ3-0FnifULgiJenEfvJDQ6c6NjRLC0HYcdEG-vQOF~ZfslWUfyXTPNQBV~5c9mUO9J~CtPVLxRhrAvob-zbCyKhFiBw1ajRdmmRle9-mI0qjh3k58bC~5cAwzC-R~fbXuXj0GJcv-I8FXPO-Hic6AdFK44KgQ__&Key-Pair-Id=APKAI74R6YENXPGRIWLQ"
         # for debug - this is a Washer ThinQ V2
-        return self._get_data_value(['modelJsonUrl', 'modelJsonUri'])
-    
+        return self._get_data_value(["modelJsonUrl", "modelJsonUri"])
+
     @property
     def name(self) -> str:
-        return self._get_data_value('alias')
+        return self._get_data_value("alias")
 
     @property
     def macaddress(self) -> str:
-        return self._get_data_value('macAddress')
+        return self._get_data_value("macAddress")
 
     @property
     def model_name(self) -> str:
-        return self._get_data_value(['modelName', 'modelNm'])
+        return self._get_data_value(["modelName", "modelNm"])
 
     @property
     def firmware(self) -> str:
-        return self._get_data_value('fwVer')
+        return self._get_data_value("fwVer")
 
     @property
     def devicestate(self) -> str:
         """The kind of device, as a `DeviceType` value."""
-        return self._get_data_value('deviceState')
+        return self._get_data_value("deviceState")
 
     @property
     def isonline(self) -> bool:
@@ -200,7 +204,7 @@ class DeviceInfo(object):
     @property
     def type(self) -> DeviceType:
         """The kind of device, as a `DeviceType` value."""
-        return DeviceType(self._get_data_value('deviceType'))
+        return DeviceType(self._get_data_value("deviceType"))
 
     @property
     def platform_type(self) -> PlatformType:
@@ -208,9 +212,11 @@ class DeviceInfo(object):
         # for debug
         # return PlatformType.THINQ2
         # for debug
-        ptype = self._data.get('platformType')
+        ptype = self._data.get("platformType")
         if not ptype:
-            return PlatformType.THINQ1    # for the moment, probably not available in APIv1
+            return (
+                PlatformType.THINQ1
+            )  # for the moment, probably not available in APIv1
         return PlatformType(ptype)
 
     @property
@@ -225,19 +231,19 @@ class DeviceInfo(object):
         info_url = self.model_info_url
         if info_url == STATE_OPTIONITEM_UNKNOWN:
             return {}
-        return requests.get(info_url, timeout = DEFAULT_TIMEOUT).json()
+        return requests.get(info_url, timeout=DEFAULT_TIMEOUT).json()
 
 
-EnumValue = namedtuple('EnumValue', ['options'])
-RangeValue = namedtuple('RangeValue', ['min', 'max', 'step'])
-BitValue = namedtuple('BitValue', ['options'])
-ReferenceValue = namedtuple('ReferenceValue', ['reference'])
+EnumValue = namedtuple("EnumValue", ["options"])
+RangeValue = namedtuple("RangeValue", ["min", "max", "step"])
+BitValue = namedtuple("BitValue", ["options"])
+ReferenceValue = namedtuple("ReferenceValue", ["reference"])
 
 
 class ModelInfo(object):
     """A description of a device model's capabilities.
         """
-    
+
     def __init__(self, data):
         self._data = data
 
@@ -247,11 +253,11 @@ class ModelInfo(object):
 
     @property
     def model_type(self):
-        return self._data.get('Info', {}).get('modelType', "")
-    
+        return self._data.get("Info", {}).get("modelType", "")
+
     def value_type(self, name):
-        if name in self._data['Value']:
-            return self._data['Value'][name]['type']
+        if name in self._data["Value"]:
+            return self._data["Value"][name]["type"]
         else:
             return None
 
@@ -260,43 +266,41 @@ class ModelInfo(object):
         
         Return either an `EnumValue` or a `RangeValue`.
         """
-        d = self._data['Value'][name]
-        if d['type'] in ('Enum', 'enum'):
-            return EnumValue(d['option'])
-        elif d['type'] == 'Range':
-            return RangeValue(d['option']['min'], d['option']['max'], d['option']['step'])
-        elif d['type'] == 'Bit':
+        d = self._data["Value"][name]
+        if d["type"] in ("Enum", "enum"):
+            return EnumValue(d["option"])
+        elif d["type"] == "Range":
+            return RangeValue(
+                d["option"]["min"], d["option"]["max"], d["option"]["step"]
+            )
+        elif d["type"] == "Bit":
             bit_values = {}
-            for bit in d['option']:
-                bit_values[bit['startbit']] = {
-                'value': bit['value'],
-                'length': bit['length'],
+            for bit in d["option"]:
+                bit_values[bit["startbit"]] = {
+                    "value": bit["value"],
+                    "length": bit["length"],
                 }
-            return BitValue(
-                    bit_values
-                    )
-        elif d['type'] == 'Reference':
-            ref =  d['option'][0]
-            return ReferenceValue(
-                    self._data[ref]
-                    )
-        elif d['type'] == 'Boolean':
-            return EnumValue({'0': 'False', '1' : 'True'})
-        elif d['type'] == 'String':
-            pass 
+            return BitValue(bit_values)
+        elif d["type"] == "Reference":
+            ref = d["option"][0]
+            return ReferenceValue(self._data[ref])
+        elif d["type"] == "Boolean":
+            return EnumValue({"0": "False", "1": "True"})
+        elif d["type"] == "String":
+            pass
         else:
-            assert False, "unsupported value type {}".format(d['type'])
+            assert False, "unsupported value type {}".format(d["type"])
 
     def default(self, name):
         """Get the default value, if it exists, for a given value.
         """
-            
-        return self._data['Value'][name]['default']
-        
+
+        return self._data["Value"][name]["default"]
+
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name.
         """
-        
+
         options = self.value(key).options
         options_inv = {v: k for k, v in options.items()}  # Invert the map.
         return options_inv[name]
@@ -306,28 +310,28 @@ class ModelInfo(object):
         """
         if not self.value_type(key):
             return str(value)
-                
+
         options = self.value(key).options
         return options[value]
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
         """
-            
+
         return key
-        
+
     def bit_name(self, key, bit_index, value):
         """Look up the friendly name for an encoded bit value
         """
         if not self.value_type(key):
             return str(value)
-        
+
         options = self.value(key).options
-        
-        if not self.value_type(options[bit_index]['value']):
+
+        if not self.value_type(options[bit_index]["value"]):
             return str(value)
-        
-        enum_options = self.value(options[bit_index]['value']).options
+
+        enum_options = self.value(options[bit_index]["value"]).options
         return enum_options[value]
 
     def reference_name(self, key, value):
@@ -336,43 +340,43 @@ class ModelInfo(object):
         value = str(value)
         if not self.value_type(key):
             return value
-                
+
         reference = self.value(key).reference
-                    
+
         if value in reference:
-            comment = reference[value]['_comment']
-            return comment if comment else reference[value]['label']
+            comment = reference[value]["_comment"]
+            return comment if comment else reference[value]["label"]
         else:
-            return '-'
+            return "-"
 
     @property
     def binary_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE).
         """
-        
-        return self._data['Monitoring']['type'] == 'BINARY(BYTE)'
-    
+
+        return self._data["Monitoring"]["type"] == "BINARY(BYTE)"
+
     def decode_monitor_binary(self, data):
         """Decode binary encoded status data.
         """
-        
+
         decoded = {}
-        for item in self._data['Monitoring']['protocol']:
-            key = item['value']
+        for item in self._data["Monitoring"]["protocol"]:
+            key = item["value"]
             value = 0
-            for v in data[item['startByte']:item['startByte'] + item['length']]:
+            for v in data[item["startByte"]: item["startByte"] + item["length"]]:
                 value = (value << 8) + v
             decoded[key] = str(value)
         return decoded
-    
+
     def decode_monitor_json(self, data):
         """Decode a bytestring that encodes JSON status data."""
-        
-        return json.loads(data.decode('utf8'))
-    
+
+        return json.loads(data.decode("utf8"))
+
     def decode_monitor(self, data):
         """Decode  status data."""
-        
+
         if self.binary_monitor_data:
             return self.decode_monitor_binary(data)
         else:
@@ -380,13 +384,13 @@ class ModelInfo(object):
 
     def decode_snapshot(self, data, key):
         """Decode  status data."""
-        return None
+        return {}
 
 
 class ModelInfoV2(object):
     """A description of a device model's capabilities.
         """
-    
+
     def __init__(self, data):
         self._data = data
 
@@ -396,17 +400,17 @@ class ModelInfoV2(object):
 
     @property
     def model_type(self):
-        return self._data.get('Info', {}).get('modelType', "")
+        return self._data.get("Info", {}).get("modelType", "")
 
     def value_type(self, name):
         return None
 
     def data_root(self, name):
-        if name in self._data['MonitoringValue']:
-            if self._data['MonitoringValue'][name].get('dataType'):
-                return self._data['MonitoringValue'][name]
+        if name in self._data["MonitoringValue"]:
+            if self._data["MonitoringValue"][name].get("dataType"):
+                return self._data["MonitoringValue"][name]
             else:
-                ref = self._data['MonitoringValue'][name].get('ref')
+                ref = self._data["MonitoringValue"][name].get("ref")
                 if ref:
                     return self._data.get(ref)
 
@@ -417,14 +421,14 @@ class ModelInfoV2(object):
         
         Return either an `EnumValue` or a `RangeValue`.
         """
-        data_type = data.get('dataType')
+        data_type = data.get("dataType")
         if not data_type:
             return data
-        elif data_type in ('Enum', 'enum'):
-            return data['valueMapping']
-        elif data_type == 'range':
-            return RangeValue(data['valueMapping']['min'], data['valueMapping']['max'])
-        #elif d['dataType'] == 'Bit':
+        elif data_type in ("Enum", "enum"):
+            return data["valueMapping"]
+        elif data_type == "range":
+            return RangeValue(data["valueMapping"]["min"], data["valueMapping"]["max"])
+        # elif d['dataType'] == 'Bit':
         #    bit_values = {}
         #    for bit in d['option']:
         #        bit_values[bit['startbit']] = {
@@ -434,24 +438,24 @@ class ModelInfoV2(object):
         #    return BitValue(
         #            bit_values
         #            )
-        #elif d['dataType'] == 'Reference':
+        # elif d['dataType'] == 'Reference':
         #    ref =  d['option'][0]
         #    return ReferenceValue(
         #            self.data[ref]
         #            )
-        #elif d['dataType'] == 'Boolean':
+        # elif d['dataType'] == 'Boolean':
         #    return EnumValue({'0': 'False', '1' : 'True'})
-        #elif d['dataType'] == 'String':
+        # elif d['dataType'] == 'String':
         #    pass
         else:
-            assert False, "unsupported value type {}".format(d['type'])
+            assert False, "unsupported value type {}".format(d["type"])
 
     def default(self, name):
         """Get the default value, if it exists, for a given value.
         """
-            
-        return self._data['MonitoringValue'][name]['label']
-        
+
+        return self._data["MonitoringValue"][name]["label"]
+
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name.
         """
@@ -469,7 +473,7 @@ class ModelInfoV2(object):
         data = self.data_root(key)
         if not data:
             return str(value)
-                
+
         options = self.value(data)
         return options[value]["label"]
 
@@ -504,41 +508,41 @@ class ModelInfoV2(object):
         data = self.data_root(key)
         if not data:
             return str(value)
-                
+
         reference = self.value(data)
-                    
+
         if value in reference:
-            comment = reference[value].get('_comment')
+            comment = reference[value].get("_comment")
             return comment if comment else reference[value]["label"]
         else:
-            return '-'
+            return "-"
 
     @property
     def binary_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE).
         """
-        
+
         return False
-    
+
     def decode_monitor_binary(self, data):
         """Decode binary encoded status data.
         """
 
         return {}
-    
+
     def decode_monitor_json(self, data):
         """Decode a bytestring that encodes JSON status data."""
-        
-        return json.loads(data.decode('utf8'))
-    
+
+        return json.loads(data.decode("utf8"))
+
     def decode_monitor(self, data):
         """Decode  status data."""
-        
+
         if self.binary_monitor_data:
             return self.decode_monitor_binary(data)
         else:
             return self.decode_monitor_json(data)
-    
+
     def decode_snapshot(self, data, key):
         """Decode  status data."""
         return data.get(key)
@@ -565,7 +569,7 @@ class Device(object):
             self._model_info = ModelInfoV2(model_data)
         else:
             self._model_info = ModelInfo(model_data)
-        self._should_poll = (device.platform_type == PlatformType.THINQ1)
+        self._should_poll = device.platform_type == PlatformType.THINQ1
 
         # for logging unknown states received
         self._unknown_states = []
@@ -589,36 +593,30 @@ class Device(object):
     def _set_control(self, key, value):
         """Set a device's control for `key` to `value`.
         """
-        
+
         self._client.session.set_device_controls(
-            self._device_info.id,
-            {key: value},
-            )
-    
+            self._device_info.id, {key: value},
+        )
+
     def _get_config(self, key):
         """Look up a device's configuration for a given value.
             
         The response is parsed as base64-encoded JSON.
         """
-        
-        data = self._client.session.get_device_config(
-               self._device_info.id,
-               key,
-        )
-        return json.loads(base64.b64decode(data).decode('utf8'))
-    
+
+        data = self._client.session.get_device_config(self._device_info.id, key,)
+        return json.loads(base64.b64decode(data).decode("utf8"))
+
     def _get_control(self, key):
         """Look up a device's control value.
             """
-        
+
         data = self._client.session.get_device_config(
-               self._device_info.id,
-                key,
-               'Control',
+            self._device_info.id, key, "Control",
         )
 
-            # The response comes in a funky key/value format: "(key:value)".
-        _, value = data[1:-1].split(':')
+        # The response comes in a funky key/value format: "(key:value)".
+        _, value = data[1:-1].split(":")
         return value
 
     def monitor_start(self):
@@ -642,7 +640,7 @@ class Device(object):
         either a `Status` object or `None` if the status is not yet
         available.
         """
-        
+
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
             snapshot = None
@@ -657,7 +655,7 @@ class Device(object):
         # ThinQ V1 - Monitor data must be polled """
         else:
             # Abort if monitoring has not started yet.
-            if not hasattr(self, 'mon'):
+            if not hasattr(self, "mon"):
                 return None
             data = self.mon.poll()
             if not data:
@@ -671,15 +669,13 @@ class Device(object):
         return res
 
     def _delete_permission(self):
-        self._client.session.delete_permission(
-            self._device_info.id,
-        )
+        self._client.session.delete_permission(self._device_info.id,)
 
     def is_unknown_status(self, status):
-    
+
         if status in self._unknown_states:
             return False
-            
+
         self._unknown_states.append(status)
         return True
 
@@ -710,7 +706,9 @@ class DeviceStatus(object):
             return state
 
         if self._device.is_unknown_status(key):
-            _LOGGER.warning("Wideq: received unknown status '%s' of type '%s'", key, type)
+            _LOGGER.warning(
+                "Wideq: received unknown status '%s' of type '%s'", key, type
+            )
 
         return STATE_UNKNOWN.UNKNOWN
 
@@ -734,9 +732,9 @@ class DeviceStatus(object):
         bit_index = 2 ** index
         mode = bin(bit_value & bit_index)
         if mode == bin(0):
-            return 'OFF'
+            return "OFF"
         else:
-            return 'ON'
+            return "ON"
 
     def lookup_bit_v2(self, key):
         curr_key = self._get_data_key(key)
@@ -745,4 +743,4 @@ class DeviceStatus(object):
         result = self._device.model_info.bit_name_v2(curr_key, self._data[curr_key])
         if result is None:
             return STATE_OPTIONITEM_UNKNOWN
-        return 'ON' if result else 'OFF'
+        return "ON" if result else "OFF"

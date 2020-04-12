@@ -3,6 +3,7 @@ Support for LG Smartthinq device.
 """
 import uuid
 
+
 def as_list(obj):
     """Wrap non-lists in lists.
 
@@ -15,6 +16,6 @@ def as_list(obj):
     else:
         return [obj]
 
+
 def gen_uuid():
     return str(uuid.uuid4())
-

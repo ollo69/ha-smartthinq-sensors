@@ -1,15 +1,16 @@
 """
 Support for LG SmartThinQ device.
 """
-#REQUIREMENTS = ['wideq']
+# REQUIREMENTS = ['wideq']
 
 import asyncio
 import logging
+import time
 
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2
 
-from .wideq.core_exceptions import(
+from .wideq.core_exceptions import (
     NotConnectedError,
     NotLoggedInError,
     TokenError,
@@ -40,26 +41,22 @@ from .const import (
 
 MAX_RETRIES = 3
 MAX_CONN_RETRIES = 2
-MAX_LOOP_WARN = 2
+MAX_LOOP_WARN = 3
 
-SMARTTHINQ_SCHEMA = vol.Schema({
-    vol.Required(CONF_TOKEN): str,
-    vol.Required(CONF_REGION): str,
-    vol.Required(CONF_LANGUAGE): str,
-})
-
-CONFIG_SCHEMA = vol.Schema(
+SMARTTHINQ_SCHEMA = vol.Schema(
     {
-        DOMAIN: SMARTTHINQ_SCHEMA
-    }, 
-    extra=vol.ALLOW_EXTRA
+        vol.Required(CONF_TOKEN): str,
+        vol.Required(CONF_REGION): str,
+        vol.Required(CONF_LANGUAGE): str,
+    }
 )
+
+CONFIG_SCHEMA = vol.Schema({DOMAIN: SMARTTHINQ_SCHEMA}, extra=vol.ALLOW_EXTRA)
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class LGEAuthentication:
-
     def __init__(self, region, language, use_api_v2=True):
         self._region = region
         self._language = language
@@ -72,7 +69,7 @@ class LGEAuthentication:
             client = Client(country=self._region, language=self._language)
 
         return client
-    
+
     def getLoginUrl(self) -> str:
 
         login_url = None
@@ -82,13 +79,10 @@ class LGEAuthentication:
             login_url = client.gateway.oauth_url()
         except:
             pass
-            
+
         return login_url
 
     def getOAuthInfoFromUrl(self, callback_url) -> str:
-
-        refresh_token = None
-        client = self._create_client()
 
         oauth_info = None
         try:
@@ -101,13 +95,15 @@ class LGEAuthentication:
             pass
 
         return oauth_info
-        
-    def createClientFromToken(self, token, oauth_url = None, oauth_user_num = None):
+
+    def createClientFromToken(self, token, oauth_url=None, oauth_user_num=None):
 
         client = None
         try:
             if self._use_api_v2:
-                client = ClientV2.from_token(oauth_url, token, oauth_user_num, self._region, self._language)
+                client = ClientV2.from_token(
+                    oauth_url, token, oauth_user_num, self._region, self._language
+                )
             else:
                 client = Client.from_token(token, self._region, self._language)
         except Exception as ex:
@@ -129,7 +125,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     oauth_url = config_entry.data.get(CONF_OAUTH_URL)
     oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
 
-    _LOGGER.info("Initializing smartthinq platform with region: %s - language: %s", region, language)
+    _LOGGER.info(
+        "Initializing smartthinq platform with region: %s - language: %s",
+        region,
+        language,
+    )
 
     hass.data.setdefault(DOMAIN, {})[LGE_DEVICES] = {}
 
@@ -137,10 +137,10 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     # raising ConfigEntryNotReady platform setup will be retried
     lgeauth = LGEAuthentication(region, language, use_apiv2)
     client = await hass.async_add_executor_job(
-            lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
-        )
+        lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
+    )
     if not client:
-        _LOGGER.warning('Connection not available. SmartthinQ platform not ready.')
+        _LOGGER.warning("Connection not available. SmartthinQ platform not ready.")
         raise ConfigEntryNotReady()
 
     if not client.hasdevices:
@@ -166,9 +166,9 @@ async def async_unload_entry(hass, config_entry):
             for platform in SMARTTHINQ_COMPONENTS
         ]
     )
-    
+
     hass.data.pop(DOMAIN)
-        
+
     return True
 
 
@@ -188,8 +188,7 @@ async def async_setup(hass, config):
     if conf is not None:
         hass.async_create_task(
             hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": config_entries.SOURCE_IMPORT},
-                data=conf
+                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=conf
             )
         )
 
@@ -206,7 +205,7 @@ class LGEDevice(Entity):
         self._mac = device.device_info.macaddress
         self._firmware = device.device_info.firmware
 
-        self._model = device.device_info.model_name + '-' + device.model_info.model_type
+        self._model = device.device_info.model_name + "-" + device.model_info.model_type
         self._id = "%s:%s" % (device.type, self._device_id)
 
         self._state = None
@@ -235,13 +234,13 @@ class LGEDevice(Entity):
     @property
     def device_info(self):
         data = {
-            'identifiers': {(DOMAIN, self._device_id)},
-            'name': self._name,
-            'manufacturer': 'LG',
-            'model': '%s (%s)' % (self._model, self._device.type)
+            "identifiers": {(DOMAIN, self._device_id)},
+            "name": self._name,
+            "manufacturer": "LG",
+            "model": "%s (%s)" % (self._model, self._device.type),
         }
         if self._firmware:
-            data['sw_version'] = self._firmware
+            data["sw_version"] = self._firmware
 
         return data
 
@@ -266,12 +265,12 @@ class LGEDevice(Entity):
             self._disconnected = False
 
         except NotConnectedError:
-            _LOGGER.debug('Device not connected. Status not available.')
+            _LOGGER.debug("Device not connected. Status not available.")
             self._disconnected = True
             # self._state = None
 
         except NotLoggedInError:
-            _LOGGER.info('Session expired. Refreshing.')
+            _LOGGER.info("Session expired. Refreshing.")
             # self._client.refresh()
             self._not_logged = True
 
@@ -281,14 +280,14 @@ class LGEDevice(Entity):
 
     def update(self):
         """Update device state"""
-        _LOGGER.debug('Updating smartthinq device %s.', self.name)
+        _LOGGER.debug("Updating smartthinq device %s.", self.name)
 
         for iteration in range(MAX_RETRIES):
-            _LOGGER.debug('Polling...')
+            _LOGGER.debug("Polling...")
 
             if self._disconnected or self._not_logged:
                 if iteration >= MAX_CONN_RETRIES and iteration > 0:
-                    _LOGGER.debug('Connection not available. Status update failed.')
+                    _LOGGER.debug("Connection not available. Status update failed.")
                     return
 
                 self._retry_count = 0
@@ -317,16 +316,16 @@ class LGEDevice(Entity):
 
                 else:
                     if state:
-                        _LOGGER.debug('Status updated: %s', state.run_state)
+                        _LOGGER.debug("Status updated: %s", state.run_state)
                         # l = dir(state)
                         # _LOGGER.debug('Status attributes: %s', l)
 
                         self._retry_count = 0
                         self._state = state
-                    else:
-                        _LOGGER.debug('No status available yet.')
 
-                    return
+                        return
+                    else:
+                        _LOGGER.debug("No status available yet.")
 
             # time.sleep(2 ** iteration)
             time.sleep(1)
@@ -336,7 +335,7 @@ class LGEDevice(Entity):
         # restart the task.
         if self._retry_count >= MAX_LOOP_WARN:
             self._retry_count = 0
-            _LOGGER.warn('Status update failed.')
+            _LOGGER.warn("Status update failed.")
         else:
             self._retry_count += 1
-            _LOGGER.debug('Status update failed.')
+            _LOGGER.debug("Status update failed.")

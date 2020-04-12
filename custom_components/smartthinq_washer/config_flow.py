@@ -14,30 +14,36 @@ from homeassistant.helpers import config_entry_oauth2_flow as oauth2_flow
 
 from homeassistant.const import CONF_REGION, CONF_TOKEN
 
-from .const import DOMAIN, CONF_LANGUAGE, CONF_OAUTH_URL, CONF_OAUTH_USER_NUM, CONF_USE_API_V2
+from .const import (
+    DOMAIN,
+    CONF_LANGUAGE,
+    CONF_OAUTH_URL,
+    CONF_OAUTH_USER_NUM,
+    CONF_USE_API_V2,
+)
 from . import LGEAuthentication
 
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
 AUTH_CALLBACK_PATH = "/auth/external/thinq/callback"
 
-INIT_SCHEMA = vol.Schema({
-    vol.Required(CONF_REGION): str,
-    vol.Required(CONF_LANGUAGE): str,
-    vol.Optional(CONF_TOKEN): str,
-    vol.Required(CONF_USE_API_V2, default=True): bool,
-})
+INIT_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_REGION): str,
+        vol.Required(CONF_LANGUAGE): str,
+        vol.Optional(CONF_TOKEN): str,
+        vol.Required(CONF_USE_API_V2, default=True): bool,
+    }
+)
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class ThinQOAuth2Implementation(oauth2_flow.AbstractOAuth2Implementation):
     """Thinq OAuth2 implementation."""
 
     def __init__(
-        self,
-        hass: HomeAssistant,
-        domain: str,
-        authorize_url: str,
+        self, hass: HomeAssistant, domain: str, authorize_url: str,
     ):
         """Initialize local auth implementation."""
         self.hass = hass
@@ -63,17 +69,19 @@ class ThinQOAuth2Implementation(oauth2_flow.AbstractOAuth2Implementation):
         """Generate a url for the user to authorize."""
         ori_url = URL(self.authorize_url)
         _LOGGER.info("ori url parameters: %s", str(ori_url.query))
-        
+
         url = str(
             URL(self.authorize_url).update_query(
                 {
-                    #"show_select_country": "Y",
+                    # "show_select_country": "Y",
                     "callbackUrl": self.redirect_uri,
-                    "oauth2State": oauth2_flow._encode_jwt(self.hass, {"flow_id": flow_id}),
+                    "oauth2State": oauth2_flow._encode_jwt(
+                        self.hass, {"flow_id": flow_id}
+                    ),
                 }
             )
         )
-        
+
         _LOGGER.info("authorize_url: %s", url)
         return url
 
@@ -93,10 +101,11 @@ class ThinQOAuth2Implementation(oauth2_flow.AbstractOAuth2Implementation):
         """Make a token request."""
         return
 
+
 @config_entries.HANDLERS.register(DOMAIN)
 class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
     """Handle SmartThinQ config flow."""
-    
+
     DOMAIN = DOMAIN
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
@@ -130,34 +139,32 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         language = user_input[CONF_LANGUAGE]
         refresh_token = user_input.get(CONF_TOKEN, "")
         self._use_api_v2 = user_input.get(CONF_USE_API_V2, False)
-        
+
         if self._use_api_v2:
             refresh_token = ""
 
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
             return self._show_form({"base": "invalid_region"})
-            
+
         language_regex = re.compile(r"^[a-z]{2,3}-[A-Z]{2,3}$")
         if not language_regex.match(language):
             return self._show_form({"base": "invalid_language"})
-        
+
         self._region = region
         self._language = language
         self._token = refresh_token
 
         if not self._token:
             lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
-            self._loginurl = await self.hass.async_add_executor_job(
-                    lgauth.getLoginUrl
-                )
-            
-            use_oauth2 = False #force not use
+            self._loginurl = await self.hass.async_add_executor_job(lgauth.getLoginUrl)
+
+            use_oauth2 = False  # force not use
             url_scheme = URL(self.hass.config.api.base_url).scheme
             if use_oauth2 and url_scheme == "https":
                 flow_impl = ThinQOAuth2Implementation(self.hass, DOMAIN, self._loginurl)
                 async_register_implementation(self.hass, DOMAIN, flow_impl)
-                return await super().async_step_user() 
+                return await super().async_step_user()
             else:
                 return self._show_form(errors=None, step_id="url")
 
@@ -170,7 +177,7 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         token = data.get("refresh_token", None)
         if not token:
             return self._show_form(errors={"base": "invalid_credentials"})
-        
+
         self._token = token
         return self._show_form(errors=None, step_id="token")
 
@@ -180,18 +187,18 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         url = user_input[CONF_URL]
         oauth_info = await self.hass.async_add_executor_job(
-                lgauth.getOAuthInfoFromUrl, url
-            )
+            lgauth.getOAuthInfoFromUrl, url
+        )
         if not oauth_info:
             return self._show_form(errors={"base": "invalid_url"}, step_id="url")
 
         self._token = oauth_info["refresh_token"]
         self._oauth_url = oauth_info.get("oauth_url")
         self._oauth_user_num = oauth_info.get("user_number")
-        
+
         if self._use_api_v2:
             return await self._save_config_entry()
- 
+
         return self._show_form(errors=None, step_id="token")
 
     async def async_step_token(self, user_input=None):
@@ -204,9 +211,12 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
 
         lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         client = await self.hass.async_add_executor_job(
-                        lgauth.createClientFromToken, self._token, self._oauth_url, self._oauth_user_num
-            )
-            
+            lgauth.createClientFromToken,
+            self._token,
+            self._oauth_url,
+            self._oauth_user_num,
+        )
+
         if not client:
             _LOGGER.error("LGE Washer: Invalid Login info!")
             return self._show_form({"base": "invalid_credentials"})
@@ -215,22 +225,21 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
             _LOGGER.error("No SmartThinQ devices found. Component setup aborted.")
             return self.async_abort(reason="no_smartthinq_devices")
 
-        data={
+        data = {
             CONF_TOKEN: self._token,
             CONF_REGION: self._region,
             CONF_LANGUAGE: self._language,
             CONF_USE_API_V2: self._use_api_v2,
         }
         if self._use_api_v2:
-            data.update({
-                CONF_OAUTH_URL: self._oauth_url,
-                CONF_OAUTH_USER_NUM: self._oauth_user_num,
-            })
+            data.update(
+                {
+                    CONF_OAUTH_URL: self._oauth_url,
+                    CONF_OAUTH_USER_NUM: self._oauth_user_num,
+                }
+            )
 
-        return self.async_create_entry(
-            title="LGE Washers",
-            data=data,
-        )
+        return self.async_create_entry(title="LGE Washers", data=data,)
 
     @callback
     def _show_form(self, errors=None, step_id="user"):
@@ -238,19 +247,17 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         schema = INIT_SCHEMA
 
         if step_id == "url":
-            schema = vol.Schema({
-                vol.Required(CONF_LOGIN, default=self._loginurl): str,
-                vol.Required(CONF_URL): str,
-            })
+            schema = vol.Schema(
+                {
+                    vol.Required(CONF_LOGIN, default=self._loginurl): str,
+                    vol.Required(CONF_URL): str,
+                }
+            )
         elif step_id == "token":
-            schema = vol.Schema({
-                vol.Required(CONF_TOKEN, default=self._token): str,
-            })
+            schema = vol.Schema({vol.Required(CONF_TOKEN, default=self._token): str,})
 
         return self.async_show_form(
-            step_id=step_id,
-            data_schema=schema,
-            errors=errors if errors else {},
+            step_id=step_id, data_schema=schema, errors=errors if errors else {},
         )
 
     async def async_step_import(self, import_config):
@@ -261,12 +268,17 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
 
         return await self.async_step_user(import_config)
 
+
 @callback
 def async_register_implementation(
-    hass: HomeAssistant, domain: str, implementation: oauth2_flow.AbstractOAuth2Implementation
+    hass: HomeAssistant,
+    domain: str,
+    implementation: oauth2_flow.AbstractOAuth2Implementation,
 ) -> None:
     """Register an OAuth2 flow implementation for an integration."""
-    if isinstance(implementation, ThinQOAuth2Implementation) and not hass.data.setdefault(domain, {}).get(
+    if isinstance(
+        implementation, ThinQOAuth2Implementation
+    ) and not hass.data.setdefault(domain, {}).get(
         oauth2_flow.DATA_VIEW_REGISTERED, False
     ):
         hass.http.register_view(ThinQAuthorizeCallbackView())  # type: ignore
@@ -305,4 +317,3 @@ class ThinQAuthorizeCallbackView(HomeAssistantView):
             headers={"content-type": "text/html"},
             text="<script>window.close()</script>",
         )
-
