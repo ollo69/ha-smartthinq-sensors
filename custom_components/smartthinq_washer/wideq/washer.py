@@ -52,19 +52,19 @@ class WasherStatus(DeviceStatus):
     def _get_run_state(self):
         if not self._run_state:
             state = self.lookup_enum(['State', 'state'])
-            self._run_state = self.set_unknown(WASHERSTATES.get(state, None), state, 'status')
+            self._run_state = self._set_unknown(WASHERSTATES.get(state, None), state, 'status')
         return self._run_state
 
     def _get_pre_state(self):
         if not self._pre_state:
             state = self.lookup_enum(['PreState', 'preState'])
-            self._pre_state = self.set_unknown(WASHERSTATES.get(state, None), state, 'status')
+            self._pre_state = self._set_unknown(WASHERSTATES.get(state, None), state, 'status')
         return self._pre_state
 
     def _get_error(self):
         if not self._error:
             error = self.lookup_reference(['Error', 'error'])
-            self._error = self.set_unknown(WASHREFERRORS.get(error, None), error, 'error_status')
+            self._error = self._set_unknown(WASHREFERRORS.get(error, None), error, 'error_status')
         return self._error
 
     @property
@@ -76,14 +76,14 @@ class WasherStatus(DeviceStatus):
     def is_wash_completed(self):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
-        if (run_state == STATE_WASHER.END or (run_state == STATE_WASHER.POWER_OFF and pre_state == STATE_WASHER.END)):
+        if run_state == STATE_WASHER.END or (run_state == STATE_WASHER.POWER_OFF and pre_state == STATE_WASHER.END):
             return True
         return False
 
     @property
     def is_error(self):
         error = self._get_error()
-        if (error != STATE_WASHER_ERROR.NO_ERROR and error != STATE_WASHER_ERROR.OFF):
+        if error != STATE_WASHER_ERROR.NO_ERROR and error != STATE_WASHER_ERROR.OFF:
             return True
         return False
         
@@ -114,14 +114,14 @@ class WasherStatus(DeviceStatus):
         spinspeed = self.lookup_enum(['SpinSpeed', 'spin'])
         if spinspeed == '-':
             return 'OFF'
-        return self.set_unknown(WASHERSPINSPEEDS.get(spinspeed, None), spinspeed, 'spin_option').value
+        return self._set_unknown(WASHERSPINSPEEDS.get(spinspeed, None), spinspeed, 'spin_option').value
 
     @property
     def water_temp_option_state(self):
         water_temp = self.lookup_enum(['WTemp', 'WaterTemp', 'temp'])
         if water_temp == '-':
             return 'OFF'
-        return self.set_unknown(WASHERWATERTEMPS.get(water_temp, None), water_temp, 'water_temp').value
+        return self._set_unknown(WASHERWATERTEMPS.get(water_temp, None), water_temp, 'water_temp').value
 
     @property
     def current_course(self):
@@ -141,38 +141,38 @@ class WasherStatus(DeviceStatus):
     @property
     def remaintime_hour(self):
         if self.is_api_v2:
-            return str(int(self.data.get('remainTimeHour')))
-        return self.data.get('Remain_Time_H')
+            return str(int(self._data.get('remainTimeHour')))
+        return self._data.get('Remain_Time_H')
 
     @property
     def remaintime_min(self):
         if self.is_api_v2:
-            return str(int(self.data.get('remainTimeMinute')))
-        return self.data.get('Remain_Time_M')
+            return str(int(self._data.get('remainTimeMinute')))
+        return self._data.get('Remain_Time_M')
 
     @property
     def initialtime_hour(self):
         if self.is_api_v2:
-            return str(int(self.data.get('initialTimeHour')))
-        return self.data.get('Initial_Time_H')
+            return str(int(self._data.get('initialTimeHour')))
+        return self._data.get('Initial_Time_H')
 
     @property
     def initialtime_min(self):
         if self.is_api_v2:
-            return str(int(self.data.get('initialTimeMinute')))
-        return self.data.get('Initial_Time_M')
+            return str(int(self._data.get('initialTimeMinute')))
+        return self._data.get('Initial_Time_M')
 
     @property
     def reservetime_hour(self):
         if self.is_api_v2:
-            return str(int(self.data.get('reserveTimeHour')))
-        return self.data.get('Reserve_Time_H')
+            return str(int(self._data.get('reserveTimeHour')))
+        return self._data.get('Reserve_Time_H')
     
     @property
     def reservetime_min(self):
         if self.is_api_v2:
-            return str(int(self.data.get('reserveTimeMinute')))
-        return self.data.get('Reserve_Time_M')
+            return str(int(self._data.get('reserveTimeMinute')))
+        return self._data.get('Reserve_Time_M')
 
     @property
     def creasecare_state(self):
@@ -225,5 +225,5 @@ class WasherStatus(DeviceStatus):
     @property
     def tubclean_count(self):
         if self.is_api_v2:
-            return str(int(self.data.get('TCLCount', -1)))
-        return self.data.get('TCLCount')
+            return str(int(self._data.get('TCLCount', -1)))
+        return self._data.get('TCLCount')

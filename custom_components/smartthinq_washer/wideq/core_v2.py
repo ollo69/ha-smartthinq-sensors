@@ -47,7 +47,7 @@ API2_ERRORS = {
     "0106": exc.NotConnectedError,
 }
 
-MIN_TIME_BETWEEN_UPDATE = 25 #seconds
+MIN_TIME_BETWEEN_UPDATE = 25  # seconds
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -91,7 +91,7 @@ def thinq2_headers(extra_headers={}, access_token=None, user_number=None, countr
     if user_number:
         headers['x-user-no'] = user_number
 
-    return { **headers, **extra_headers }
+    return {**headers, **extra_headers}
 
 
 def thinq2_get(url, access_token=None, user_number=None, headers={}, country=core.DEFAULT_COUNTRY, language=core.DEFAULT_COUNTRY):
@@ -153,7 +153,7 @@ def lgedm2_post(url, data=None, access_token=None, user_number=None, headers={},
             country=country, 
             language=language
         ),
-        timeout = DEFAULT_TIMEOUT,
+        timeout=DEFAULT_TIMEOUT,
     )
 
     out = res.json()
@@ -207,7 +207,7 @@ def auth_request(oauth_url, data):
         'Accept': 'application/json'
     }
 
-    res = requests.post(url, headers=headers, data=data, timeout = DEFAULT_TIMEOUT)
+    res = requests.post(url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT)
 
     if res.status_code != 200:
         raise exc.TokenError()
@@ -544,8 +544,8 @@ class ClientV2(object):
             self._load_devices(True)
             self._last_device_update = call_time
             # for debug
-            #self._inject_thinq2_state()
-            #_LOGGER.debug(self._devices)
+            # self._inject_thinq2_state()
+            # _LOGGER.debug(self._devices)
             # for debug
 
     def get_device(self, device_id) -> Optional['DeviceInfo']:
@@ -576,7 +576,7 @@ class ClientV2(object):
         if 'auth' in state:
             data = state['auth']
             client._auth = Auth(
-            client.gateway, data['access_token'], data['refresh_token']
+                client.gateway, data['access_token'], data['refresh_token']
             )
         
         if 'session' in state:
@@ -613,7 +613,7 @@ class ClientV2(object):
             out['auth'] = {
                 'access_token': self._auth.access_token,
                 'refresh_token': self._auth.refresh_token,
-        }
+            }
 
         if self._session:
             out['session'] = self._session.session_id
@@ -626,7 +626,7 @@ class ClientV2(object):
     def refresh(self) -> None:
         self._auth = self.auth.refresh()
         self._session = self.auth.start_session()
-        #self._device = None
+        # self._device = None
         self._load_devices()
 
     @classmethod
