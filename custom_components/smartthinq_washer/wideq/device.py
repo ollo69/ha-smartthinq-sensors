@@ -633,6 +633,11 @@ class Device(object):
             return
         self.mon.stop()
 
+    def delete_permission(self):
+        if not self._should_poll:
+            return
+        self._client.session.delete_permission(self._device_info.id)
+
     def device_poll(self, snapshot_key=""):
         """Poll the device's current state.
         
@@ -667,9 +672,6 @@ class Device(object):
                 json.dump(res, dumpfile, ensure_ascii=False, indent="\t")
         """
         return res
-
-    def delete_permission(self):
-        self._client.session.delete_permission(self._device_info.id)
 
     def is_unknown_status(self, status):
 
