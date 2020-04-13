@@ -157,6 +157,18 @@ class DryerStatus(DeviceStatus):
         return self._data.get("Initial_Time_M")
 
     @property
+    def reservetime_hour(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("reserveTimeHour")))
+        return self._data.get("Reserve_Time_H")
+
+    @property
+    def reservetime_min(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("reserveTimeMinute")))
+        return self._data.get("Reserve_Time_M")
+
+    @property
     def temp_control_option_state(self):
         temp_control = self.lookup_enum(["TempControl", "tempControl"])
         if temp_control == "-":

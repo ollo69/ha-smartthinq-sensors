@@ -379,6 +379,7 @@ class LGEDryerDevice(LGEDevice):
             ATTR_TIMEDRY_OPTION_STATE: self._timedry_option_state,
             ATTR_REMAIN_TIME: self._remain_time,
             ATTR_INITIAL_TIME: self._initial_time,
+            ATTR_RESERVE_TIME: self._reserve_time,
         }
         return data
 
@@ -434,6 +435,19 @@ class LGEDryerDevice(LGEDevice):
                     return ":0".join(initialtime)
                 else:
                     return ":".join(initialtime)
+        return "0:00"
+
+    @property
+    def _reserve_time(self):
+        if self._state:
+            if self._state.is_on:
+                reserve_hour = self._state.reservetime_hour
+                reserve_min = self._state.reservetime_min
+                reservetime = [reserve_hour, reserve_min]
+                if int(reserve_min) < 10:
+                    return ":0".join(reservetime)
+                else:
+                    return ":".join(reservetime)
         return "0:00"
 
     @property
