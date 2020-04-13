@@ -39,6 +39,9 @@ from .const import (
     SMARTTHINQ_COMPONENTS,
 )
 
+ATTR_MODEL = "model"
+ATTR_MAC_ADDRESS = "mac_address"
+
 MAX_RETRIES = 3
 MAX_CONN_RETRIES = 2
 MAX_LOOP_WARN = 3
@@ -232,6 +235,22 @@ class LGEDevice(Entity):
         return self._id
 
     @property
+    def state(self):
+        if self._state:
+            if self._state.is_on:
+                return STATE_ON
+        return STATE_OFF
+
+    @property
+    def state_attributes(self):
+        """Return the optional state attributes."""
+        data = {
+            ATTR_MODEL: self._model,
+            ATTR_MAC_ADDRESS: self._mac,
+        }
+        return data
+
+    @property
     def device_info(self):
         data = {
             "identifiers": {(DOMAIN, self._device_id)},
@@ -243,13 +262,6 @@ class LGEDevice(Entity):
             data["sw_version"] = self._firmware
 
         return data
-
-    @property
-    def state(self):
-        if self._state:
-            if self._state.is_on:
-                return STATE_ON
-        return STATE_OFF
 
     def _restart_monitor(self):
         """Restart the device monitor"""

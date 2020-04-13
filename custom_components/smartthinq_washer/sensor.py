@@ -26,12 +26,15 @@ from . import LGEDevice
 ATTR_CURRENT_STATUS = "current_status"
 ATTR_RUN_STATE = "run_state"
 ATTR_PRE_STATE = "pre_state"
+ATTR_RUN_COMPLETED = "run_completed"
 ATTR_REMAIN_TIME = "remain_time"
 ATTR_INITIAL_TIME = "initial_time"
 ATTR_RESERVE_TIME = "reserve_time"
 ATTR_CURRENT_COURSE = "current_course"
 ATTR_ERROR_STATE = "error_state"
 ATTR_ERROR_MSG = "error_message"
+
+# washer attributes
 ATTR_SPIN_OPTION_STATE = "spin_option_state"
 ATTR_WATERTEMP_OPTION_STATE = "watertemp_option_state"
 ATTR_CREASECARE_MODE = "creasecare_mode"
@@ -43,7 +46,6 @@ ATTR_PREWASH_MODE = "prewash_mode"
 ATTR_REMOTESTART_MODE = "remotestart_mode"
 ATTR_TURBOWASH_MODE = "turbowash_mode"
 ATTR_TUBCLEAN_COUNT = "tubclean_count"
-ATTR_WASH_COMPLETED = "wash_completed"
 
 SENSORMODES = {
     "ON": STATE_ON,
@@ -106,10 +108,10 @@ class LGEWasherDevice(LGEDevice):
         return "mdi:washing-machine"
 
     @property
-    def state_attributes(self):
+    def device_state_attributes(self):
         """Return the optional state attributes."""
         data = {
-            ATTR_WASH_COMPLETED: self._wash_completed,
+            ATTR_RUN_COMPLETED: self._run_completed,
             ATTR_ERROR_STATE: self._error_state,
             ATTR_ERROR_MSG: self._error_msg,
             ATTR_RUN_STATE: self._current_run_state,
@@ -138,9 +140,9 @@ class LGEWasherDevice(LGEDevice):
     #         return self._state.is_on
 
     @property
-    def _wash_completed(self):
+    def _run_completed(self):
         if self._state:
-            if self._state.is_wash_completed:
+            if self._state.is_run_completed:
                 return SENSORMODES["ON"]
 
         return SENSORMODES["OFF"]

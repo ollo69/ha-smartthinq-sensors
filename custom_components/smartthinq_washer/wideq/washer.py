@@ -82,7 +82,7 @@ class WasherStatus(DeviceStatus):
         return run_state != STATE_WASHER.POWER_OFF
 
     @property
-    def is_wash_completed(self):
+    def is_run_completed(self):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
         if run_state == STATE_WASHER.END or (
@@ -120,28 +120,6 @@ class WasherStatus(DeviceStatus):
     #        return 'NO_ERROR'
     #    else:
     #        return WASHERERROR(error)
-
-    @property
-    def spin_option_state(self):
-        spinspeed = self.lookup_enum(["SpinSpeed", "spin"])
-        if spinspeed == "-":
-            return "OFF"
-        return self._set_unknown(
-            state=WASHERSPINSPEEDS.get(spinspeed, None),
-            key=spinspeed,
-            type="spin_option",
-        ).value
-
-    @property
-    def water_temp_option_state(self):
-        water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
-        if water_temp == "-":
-            return "OFF"
-        return self._set_unknown(
-            state=WASHERWATERTEMPS.get(water_temp, None),
-            key=water_temp,
-            type="water_temp",
-        ).value
 
     @property
     def current_course(self):
@@ -197,6 +175,28 @@ class WasherStatus(DeviceStatus):
         if self.is_api_v2:
             return str(int(self._data.get("reserveTimeMinute")))
         return self._data.get("Reserve_Time_M")
+
+    @property
+    def spin_option_state(self):
+        spinspeed = self.lookup_enum(["SpinSpeed", "spin"])
+        if spinspeed == "-":
+            return "OFF"
+        return self._set_unknown(
+            state=WASHERSPINSPEEDS.get(spinspeed, None),
+            key=spinspeed,
+            type="spin_option",
+        ).value
+
+    @property
+    def water_temp_option_state(self):
+        water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
+        if water_temp == "-":
+            return "OFF"
+        return self._set_unknown(
+            state=WASHERWATERTEMPS.get(water_temp, None),
+            key=water_temp,
+            type="water_temp",
+        ).value
 
     @property
     def creasecare_state(self):
