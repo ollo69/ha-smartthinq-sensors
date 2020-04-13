@@ -6,86 +6,86 @@ from .device import STATE_OPTIONITEM_ON, STATE_OPTIONITEM_OFF
 # Washer State
 class STATE_WASHER(enum.Enum):
     POWER_OFF = STATE_OPTIONITEM_OFF
-    ADD_DRAIN = 'Add Drain'
-    COOLDOWN = 'Cooldown'
-    DETECTING = 'Detecting'
-    DETERGENT_AMOUNT = 'Detergent Amount'
-    DRYING = 'Drying'
-    END = 'End'
-    ERROR = 'Error'
-    ERRORSTATE = 'An error occurred'
-    ERROR_AUTO_OFF = 'Automatic Poweroff Error'
-    FROZEN_PREVENT_INITIAL = 'Error during initialization'
-    FROZEN_PREVENT_PAUSE = 'System is being unfrozen, you cannot pause this operation.'
-    FROZEN_PREVENT_RUNNING = 'Unfreezing system, please wait'
-    INITIAL = 'Select Course'
-    PAUSE = 'Paused'
-    PREWASH = 'Pre-Wash'
-    REFRESHWITHSTEAM = 'Refreshing with steam'
-    RESERVE = 'Reserved'
-    RINSING = 'Rinsing'
-    RINSE_HOLD = 'Rinsing [On Hold]'
-    RUNNING = 'Washing'
-    SPINNING = 'Spinning'
-    STEAMSOFTENING = 'Using softener with steam'
-    TCL_ALARM_NORMAL = 'Pipe Clogged'
+    ADD_DRAIN = "Add Drain"
+    COOLDOWN = "Cooldown"
+    DETECTING = "Detecting"
+    DETERGENT_AMOUNT = "Detergent Amount"
+    DRYING = "Drying"
+    END = "End"
+    ERROR = "Error"
+    ERRORSTATE = "An error occurred"
+    ERROR_AUTO_OFF = "Automatic Poweroff Error"
+    FROZEN_PREVENT_INITIAL = "Error during initialization"
+    FROZEN_PREVENT_PAUSE = "System is being unfrozen, you cannot pause this operation."
+    FROZEN_PREVENT_RUNNING = "Unfreezing system, please wait"
+    INITIAL = "Select Course"
+    PAUSE = "Paused"
+    PREWASH = "Pre-Wash"
+    REFRESHWITHSTEAM = "Refreshing with steam"
+    RESERVE = "Reserved"
+    RINSING = "Rinsing"
+    RINSE_HOLD = "Rinsing [On Hold]"
+    RUNNING = "Washing"
+    SPINNING = "Spinning"
+    STEAMSOFTENING = "Using softener with steam"
+    TCL_ALARM_NORMAL = "Pipe Clogged"
 
 
 # Washer Temp
 class STATE_WASHER_WATERTEMP(enum.Enum):
-    NO_SELECT = 'Not selected'
-    COLD = 'Cold'
-    EXTRA_HOT = 'Extra Hot'
-    HOT = 'Hot'
-    TAP_COLD = 'Tap Cold'
-    TEMP_20 = '20℃'
-    TEMP_30 = '30℃'
-    TEMP_40 = '40℃'
-    TEMP_60 = '60℃'
-    TEMP_95 = '95℃'
-    WARM = 'Warm'
+    NO_SELECT = "Not selected"
+    COLD = "Cold"
+    EXTRA_HOT = "Extra Hot"
+    HOT = "Hot"
+    TAP_COLD = "Tap Cold"
+    TEMP_20 = "20℃"
+    TEMP_30 = "30℃"
+    TEMP_40 = "40℃"
+    TEMP_60 = "60℃"
+    TEMP_95 = "95℃"
+    WARM = "Warm"
 
 
 # Washesr Spin
 class STATE_WASHER_SPINSPEED(enum.Enum):
-    NO_SPIN = 'No Spin'
-    SPEED_EXTRA_HIGH = 'Extra High'
-    SPEED_HIGH = 'High'
-    SPEED_LOW = 'Low'
-    SPEED_MEDIUM = 'Medium'
-    SPEED_400 = '400 RPM'
-    SPEED_800 = '800 RPM'
-    SPEED_1000 = '1000 RPM'
-    SPEED_1200 = '1200 RPM'
-    SPEED_1400 = '1400 RPM'
+    NO_SPIN = "No Spin"
+    SPEED_EXTRA_HIGH = "Extra High"
+    SPEED_HIGH = "High"
+    SPEED_LOW = "Low"
+    SPEED_MEDIUM = "Medium"
+    SPEED_400 = "400 RPM"
+    SPEED_800 = "800 RPM"
+    SPEED_1000 = "1000 RPM"
+    SPEED_1200 = "1200 RPM"
+    SPEED_1400 = "1400 RPM"
 
 
 # Washer Error
 class STATE_WASHER_ERROR(enum.Enum):
     OFF = STATE_OPTIONITEM_OFF
-    NO_ERROR = 'Normal'
-    ERROR_CE = 'CE - Contact Service Center'
-    ERROR_dE1 = 'Door open - Please close the door'
-    ERROR_dE2 = 'Door open - Please close the door'
-    ERROR_dCE = 'dCE - Contact Service Center'
-    ERROR_dHE = 'dHE - Contact Service Center'
-    ERROR_EE = 'EE - Contact Service Center'
-    ERROR_FE = 'FE - Contact Service Center'
-    ERROR_FF = 'The washer is frozen, please warm up the surrounding area.'
-    ERROR_IE = 'No water - Please make sure the water has enough pressure to reach the washer.'
-    ERROR_LE = 'LE - Contact Service Center'
-    ERROR_LOE = 'Detergent door is open - Please close the detergent door'
-    ERROR_OE = 'Drain error - Please make sure the pipe is not clogged/frozen'
-    ERROR_PE = 'PE - Contact Service Center'
-    ERROR_PF = 'PF - Contact Service Center'
-    ERROR_PS = 'PS - Contact Service Center'
-    ERROR_TE = 'tE - Contact Service Center'
-    ERROR_UE = 'Laundry trim'
+    NO_ERROR = "Normal"
+    ERROR_CE = "CE - Contact Service Center"
+    ERROR_dE1 = "Door open - Please close the door"
+    ERROR_dE2 = "Door open - Please close the door"
+    ERROR_dCE = "dCE - Contact Service Center"
+    ERROR_dHE = "dHE - Contact Service Center"
+    ERROR_EE = "EE - Contact Service Center"
+    ERROR_FE = "FE - Contact Service Center"
+    ERROR_FF = "The washer is frozen, please warm up the surrounding area."
+    ERROR_IE = "No water - Please make sure the water has enough pressure to reach the washer."
+    ERROR_LE = "LE - Contact Service Center"
+    ERROR_LOE = "Detergent door is open - Please close the detergent door"
+    ERROR_OE = "Drain error - Please make sure the pipe is not clogged/frozen"
+    ERROR_PE = "PE - Contact Service Center"
+    ERROR_PF = "PF - Contact Service Center"
+    ERROR_PS = "PS - Contact Service Center"
+    ERROR_TE = "tE - Contact Service Center"
+    ERROR_UE = "Laundry trim"
 
 
 """------------------for Washer"""
 WASHERSTATES = {
-    'ERROR': STATE_WASHER.ERROR,
+    "ERROR": STATE_WASHER.ERROR,
     "@WM_STATE_POWER_OFF_W": STATE_WASHER.POWER_OFF,
     "@WM_STATE_ADD_DRAIN_W": STATE_WASHER.ADD_DRAIN,
     "@WM_STATE_COOLDOWN_W": STATE_WASHER.COOLDOWN,
@@ -129,11 +129,11 @@ WASHERWATERTEMPS = {
 
 WASHERSPINSPEEDS = {
     "OFF": STATE_OPTIONITEM_OFF,
-    '@WM_OPTION_SPIN_NO_SPIN_W': STATE_WASHER_SPINSPEED.NO_SPIN,
-    '@WM_OPTION_SPIN_LOW_W': STATE_WASHER_SPINSPEED.SPEED_LOW,
-    '@WM_OPTION_SPIN_MEDIUM_W': STATE_WASHER_SPINSPEED.SPEED_MEDIUM,
-    '@WM_OPTION_SPIN_HIGH_W': STATE_WASHER_SPINSPEED.SPEED_HIGH,
-    '@WM_OPTION_SPIN_EXTRA_HIGH_W': STATE_WASHER_SPINSPEED.SPEED_EXTRA_HIGH,
+    "@WM_OPTION_SPIN_NO_SPIN_W": STATE_WASHER_SPINSPEED.NO_SPIN,
+    "@WM_OPTION_SPIN_LOW_W": STATE_WASHER_SPINSPEED.SPEED_LOW,
+    "@WM_OPTION_SPIN_MEDIUM_W": STATE_WASHER_SPINSPEED.SPEED_MEDIUM,
+    "@WM_OPTION_SPIN_HIGH_W": STATE_WASHER_SPINSPEED.SPEED_HIGH,
+    "@WM_OPTION_SPIN_EXTRA_HIGH_W": STATE_WASHER_SPINSPEED.SPEED_EXTRA_HIGH,
     "@WM_TITAN2_OPTION_SPIN_NO_SPIN_W": STATE_WASHER_SPINSPEED.NO_SPIN,
     "@WM_TITAN2_OPTION_SPIN_400_W": STATE_WASHER_SPINSPEED.SPEED_400,
     "@WM_TITAN2_OPTION_SPIN_800_W": STATE_WASHER_SPINSPEED.SPEED_800,
@@ -167,7 +167,7 @@ WASHREFERRORS = {
 # this is not used
 WASHERERRORS = {
     "OFF": STATE_WASHER_ERROR.OFF,
-    "NO_ERROR" : STATE_WASHER_ERROR.NO_ERROR,
+    "NO_ERROR": STATE_WASHER_ERROR.NO_ERROR,
     "@WM_WW_FL_ERROR_CE_W": STATE_WASHER_ERROR.ERROR_CE,
     "@WM_WW_FL_ERROR_DE1_W": STATE_WASHER_ERROR.ERROR_dE1,
     "@WM_WW_FL_ERROR_DE2_W": STATE_WASHER_ERROR.ERROR_dE2,
