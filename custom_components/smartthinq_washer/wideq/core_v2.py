@@ -523,6 +523,9 @@ class Session(object):
         )
         return res["returnData"]
 
+    def delete_permission(self, device_id):
+        self.post("rti/delControlPermission", {"deviceId": device_id})
+
 
 class ClientV2(object):
     """A higher-level API wrapper that provides a session more easily

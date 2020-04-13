@@ -364,7 +364,7 @@ class ModelInfo(object):
         for item in self._data["Monitoring"]["protocol"]:
             key = item["value"]
             value = 0
-            for v in data[item["startByte"]: item["startByte"] + item["length"]]:
+            for v in data[item["startByte"] : item["startByte"] + item["length"]]:
                 value = (value << 8) + v
             decoded[key] = str(value)
         return decoded
@@ -668,8 +668,8 @@ class Device(object):
         """
         return res
 
-    def _delete_permission(self):
-        self._client.session.delete_permission(self._device_info.id,)
+    def delete_permission(self):
+        self._client.session.delete_permission(self._device_info.id)
 
     def is_unknown_status(self, status):
 
@@ -707,7 +707,10 @@ class DeviceStatus(object):
 
         if self._device.is_unknown_status(key):
             _LOGGER.warning(
-                "Wideq: received unknown status '%s' of type '%s'", key, type
+                "ThinQ: received unknown %s status '%s' of type '%s'",
+                self._device.type,
+                key,
+                type,
             )
 
         return STATE_UNKNOWN.UNKNOWN

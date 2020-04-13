@@ -27,8 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class WasherDevice(Device):
-    def delete_permission(self):
-        self._delete_permission()
+    """A higher-level interface for a washer."""
 
     def poll(self) -> Optional["WasherStatus"]:
         """Poll the device's current state."""
@@ -41,6 +40,12 @@ class WasherDevice(Device):
 
 
 class WasherStatus(DeviceStatus):
+    """Higher-level information about a washer's current status.
+
+    :param device: The Device instance.
+    :param data: JSON data from the API.
+    """
+
     def __init__(self, device, data):
         super().__init__(device, data)
         self._run_state = None
@@ -51,7 +56,7 @@ class WasherStatus(DeviceStatus):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             self._run_state = self._set_unknown(
-                WASHERSTATES.get(state, None), state, "status"
+                state=WASHERSTATES.get(state, None), key=state, type="status"
             )
         return self._run_state
 
@@ -59,7 +64,7 @@ class WasherStatus(DeviceStatus):
         if not self._pre_state:
             state = self.lookup_enum(["PreState", "preState"])
             self._pre_state = self._set_unknown(
-                WASHERSTATES.get(state, None), state, "status"
+                state=WASHERSTATES.get(state, None), key=state, type="status"
             )
         return self._pre_state
 
@@ -67,7 +72,7 @@ class WasherStatus(DeviceStatus):
         if not self._error:
             error = self.lookup_reference(["Error", "error"])
             self._error = self._set_unknown(
-                WASHREFERRORS.get(error, None), error, "error_status"
+                state=WASHREFERRORS.get(error, None), key=error, type="error_status"
             )
         return self._error
 
@@ -122,7 +127,9 @@ class WasherStatus(DeviceStatus):
         if spinspeed == "-":
             return "OFF"
         return self._set_unknown(
-            WASHERSPINSPEEDS.get(spinspeed, None), spinspeed, "spin_option"
+            state=WASHERSPINSPEEDS.get(spinspeed, None),
+            key=spinspeed,
+            type="spin_option",
         ).value
 
     @property
@@ -131,7 +138,9 @@ class WasherStatus(DeviceStatus):
         if water_temp == "-":
             return "OFF"
         return self._set_unknown(
-            WASHERWATERTEMPS.get(water_temp, None), water_temp, "water_temp"
+            state=WASHERWATERTEMPS.get(water_temp, None),
+            key=water_temp,
+            type="water_temp",
         ).value
 
     @property
