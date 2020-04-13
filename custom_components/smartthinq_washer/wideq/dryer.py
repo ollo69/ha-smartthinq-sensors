@@ -1,0 +1,195 @@
+"""------------------for Dryer"""
+import datetime
+import enum
+import time
+import logging
+from typing import Optional
+
+from .device import (
+    Device,
+    DeviceStatus,
+    STATE_UNKNOWN,
+    STATE_OPTIONITEM_ON,
+    STATE_OPTIONITEM_OFF,
+)
+
+from .dryer_states import (
+    STATE_DRYER,
+    STATE_DRYER_ERROR,
+    DRYERSTATES,
+    DRYERDRYLEVELS,
+    DRYERTEMPS,
+    DRYERREFERRORS,
+    DRYERERRORS,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class DryerDevice(Device):
+    """A higher-level interface for a dryer."""
+
+    def poll(self) -> Optional["DryerStatus"]:
+        """Poll the device's current state."""
+
+        res = self.device_poll("washerDryer")
+        if not res:
+            return None
+
+        return DryerStatus(self, res)
+
+
+class DryerStatus(DeviceStatus):
+    """Higher-level information about a dryer's current status.
+
+    :param device: The Device instance.
+    :param data: JSON data from the API.
+    """
+
+    def __init__(self, device, data):
+        super().__init__(device, data)
+        self._run_state = None
+        self._pre_state = None
+        self._error = None
+
+    def _get_run_state(self):
+        if not self._run_state:
+            state = self.lookup_enum(["State", "state"])
+            self._run_state = self._set_unknown(
+                state=DRYERSTATES.get(state, None), key=state, type="status"
+            )
+        return self._run_state
+
+    def _get_pre_state(self):
+        if not self._pre_state:
+            state = self.lookup_enum(["PreState", "preState"])
+            self._pre_state = self._set_unknown(
+                state=DRYERSTATES.get(state, None), key=state, type="status"
+            )
+        return self._pre_state
+
+    def _get_error(self):
+        if not self._error:
+            error = self.lookup_reference(["Error", "error"])
+            self._error = self._set_unknown(
+                state=DRYERREFERRORS.get(error, None), key=error, type="error_status"
+            )
+        return self._error
+
+    @property
+    def is_on(self):
+        run_state = self._get_run_state()
+        return run_state != STATE_DRYER.POWER_OFF
+
+    @property
+    def is_run_completed(self):
+        run_state = self._get_run_state()
+        pre_state = self._get_pre_state()
+        if run_state == STATE_DRYER.END or (
+            run_state == STATE_DRYER.POWER_OFF and pre_state == STATE_DRYER.END
+        ):
+            return True
+        return False
+
+    @property
+    def is_error(self):
+        error = self._get_error()
+        if error != STATE_DRYER_ERROR.NO_ERROR and error != STATE_DRYER_ERROR.OFF:
+            return True
+        return False
+
+    @property
+    def run_state(self):
+        run_state = self._get_run_state()
+        return run_state.value
+
+    @property
+    def pre_state(self):
+        pre_state = self._get_pre_state()
+        return pre_state.value
+
+    @property
+    def error_state(self):
+        error = self._get_error()
+        return error.value
+
+    @property
+    def current_course(self):
+        course = self.lookup_reference(
+            ["APCourse", "Course", "courseFL24inchBaseTitan"]
+        )
+        if course == "-":
+            return "OFF"
+        return course
+
+    @property
+    def current_smartcourse(self):
+        smartcourse = self.lookup_reference(
+            ["SmartCourse", "smartCourseFL24inchBaseTitan"]
+        )
+        if smartcourse == "-":
+            return "OFF"
+        else:
+            return smartcourse
+
+    @property
+    def remaintime_hour(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("remainTimeHour")))
+        return self._data.get("Remain_Time_H")
+
+    @property
+    def remaintime_min(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("remainTimeMinute")))
+        return self._data.get("Remain_Time_M")
+
+    @property
+    def initialtime_hour(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("initialTimeHour")))
+        return self._data.get("Initial_Time_H")
+
+    @property
+    def initialtime_min(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("initialTimeMinute")))
+        return self._data.get("Initial_Time_M")
+
+    @property
+    def reservetime_hour(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("reserveTimeHour")))
+        return self._data.get("Reserve_Time_H")
+
+    @property
+    def reservetime_min(self):
+        if self.is_api_v2:
+            return str(int(self._data.get("reserveTimeMinute")))
+        return self._data.get("Reserve_Time_M")
+
+    @property
+    def temp_control_option_state(self):
+        temp_control = self.lookup_enum(["TempControl", "tempControl"])
+        if temp_control == "-":
+            return "OFF"
+        return self._set_unknown(
+            state=DRYERTEMPS.get(temp_control, None), key=temp_control, type="TempControl",
+        ).value
+
+    @property
+    def dry_level_option_state(self):
+        dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
+        if dry_level == "-":
+            return "OFF"
+        return self._set_unknown(
+            state=DRYERDRYLEVELS.get(dry_level, None), key=dry_level, type="DryLevel",
+        ).value
+
+    @property
+    def time_dry_option_state(self):
+        """Get the time dry setting."""
+        time_dry = self.lookup_enum("TimeDry")
+        if time_dry == "-":
+            return "OFF"
+        return time_dry
