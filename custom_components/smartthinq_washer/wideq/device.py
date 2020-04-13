@@ -10,6 +10,7 @@ from collections import namedtuple
 import enum
 import time
 import logging
+from numbers import Number
 from typing import Any, Dict, Generator, List, Optional
 
 from .core_exceptions import MonitorError
@@ -691,7 +692,7 @@ class DeviceStatus(object):
 
     @staticmethod
     def int_or_none(value):
-        if value and value.isnumeric():
+        if value is not None and isinstance(value, Number):
             return str(int(value))
         return None
 

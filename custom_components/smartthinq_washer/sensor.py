@@ -192,6 +192,8 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 remain_hour = self._state.remaintime_hour
                 remain_min = self._state.remaintime_min
+                if not (remain_hour and remain_min):
+                    return "0:00"
                 remaintime = [remain_hour, remain_min]
                 if int(remain_min) < 10:
                     return ":0".join(remaintime)
@@ -205,6 +207,8 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 initial_hour = self._state.initialtime_hour
                 initial_min = self._state.initialtime_min
+                if not (initial_hour and initial_min):
+                    return "0:00"
                 initialtime = [initial_hour, initial_min]
                 if int(initial_min) < 10:
                     return ":0".join(initialtime)
@@ -218,7 +222,7 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 reserve_hour = self._state.reservetime_hour
                 reserve_min = self._state.reservetime_min
-                if not (reserve_hour or reserve_min):
+                if not (reserve_hour and reserve_min):
                     return "0:00"
                 reservetime = [reserve_hour, reserve_min]
                 if int(reserve_min) < 10:
@@ -378,7 +382,7 @@ class LGEDryerDevice(LGEDevice):
             ATTR_CURRENT_COURSE: self._current_course,
             ATTR_TEMPCONTROL_OPTION_STATE: self._tempcontrol_option_state,
             ATTR_DRYLEVEL_OPTION_STATE: self._drylevel_option_state,
-            ATTR_TIMEDRY_OPTION_STATE: self._timedry_option_state,
+            # ATTR_TIMEDRY_OPTION_STATE: self._timedry_option_state,
             ATTR_REMAIN_TIME: self._remain_time,
             ATTR_INITIAL_TIME: self._initial_time,
             ATTR_RESERVE_TIME: self._reserve_time,
@@ -419,6 +423,8 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 remain_hour = self._state.remaintime_hour
                 remain_min = self._state.remaintime_min
+                if not (remain_hour and remain_min):
+                    return "0:00"
                 remaintime = [remain_hour, remain_min]
                 if int(remain_min) < 10:
                     return ":0".join(remaintime)
@@ -432,6 +438,8 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 initial_hour = self._state.initialtime_hour
                 initial_min = self._state.initialtime_min
+                if not (initial_hour and initial_min):
+                    return "0:00"
                 initialtime = [initial_hour, initial_min]
                 if int(initial_min) < 10:
                     return ":0".join(initialtime)
@@ -445,7 +453,7 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 reserve_hour = self._state.reservetime_hour
                 reserve_min = self._state.reservetime_min
-                if not (reserve_hour or reserve_min):
+                if not (reserve_hour and reserve_min):
                     return "0:00"
                 reservetime = [reserve_hour, reserve_min]
                 if int(reserve_min) < 10:
