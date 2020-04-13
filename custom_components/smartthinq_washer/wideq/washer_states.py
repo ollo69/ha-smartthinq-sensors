@@ -64,23 +64,23 @@ class STATE_WASHER_SPINSPEED(enum.Enum):
 class STATE_WASHER_ERROR(enum.Enum):
     OFF = STATE_OPTIONITEM_OFF
     NO_ERROR = 'Normal'
-    ERROR_dE2 = 'Door open - Please close the door'
-    ERROR_IE = 'No water - Please make sure the water has enough pressure to reach the washer.'
-    ERROR_OE = 'Drain error - Please make sure the pipe is not clogged/frozen'
-    ERROR_UE = 'Laundry trim'
-    ERROR_FE = 'FE - Contact Service Center'
-    ERROR_PE = 'PE - Contact Service Center'
-    ERROR_LE = 'LE - Contact Service Center'
-    ERROR_tE = 'tE - Contact Service Center'
-    ERROR_dHE = 'dHE - Contact Service Center'
     ERROR_CE = 'CE - Contact Service Center'
-    ERROR_PF = 'PF - Contact Service Center'
-    ERROR_FF = 'The washer is frozen, please warm up the surrounding area.'
-    ERROR_dCE = 'dCE - Contact Service Center'
-    ERROR_EE = 'EE - Contact Service Center'
-    ERROR_PS = 'PS - Contact Service Center'
     ERROR_dE1 = 'Door open - Please close the door'
+    ERROR_dE2 = 'Door open - Please close the door'
+    ERROR_dCE = 'dCE - Contact Service Center'
+    ERROR_dHE = 'dHE - Contact Service Center'
+    ERROR_EE = 'EE - Contact Service Center'
+    ERROR_FE = 'FE - Contact Service Center'
+    ERROR_FF = 'The washer is frozen, please warm up the surrounding area.'
+    ERROR_IE = 'No water - Please make sure the water has enough pressure to reach the washer.'
+    ERROR_LE = 'LE - Contact Service Center'
     ERROR_LOE = 'Detergent door is open - Please close the detergent door'
+    ERROR_OE = 'Drain error - Please make sure the pipe is not clogged/frozen'
+    ERROR_PE = 'PE - Contact Service Center'
+    ERROR_PF = 'PF - Contact Service Center'
+    ERROR_PS = 'PS - Contact Service Center'
+    ERROR_TE = 'tE - Contact Service Center'
+    ERROR_UE = 'Laundry trim'
 
 
 """------------------for Washer"""
@@ -145,44 +145,44 @@ WASHERSPINSPEEDS = {
 WASHREFERRORS = {
     "OFF": STATE_WASHER_ERROR.OFF,
     "No Error": STATE_WASHER_ERROR.NO_ERROR,
-    "DE2 Error": STATE_WASHER_ERROR.ERROR_dE2,
-    "IE Error": STATE_WASHER_ERROR.ERROR_IE,
-    "OE Error": STATE_WASHER_ERROR.ERROR_OE,
-    "UE Error": STATE_WASHER_ERROR.ERROR_UE,
-    "FE Error": STATE_WASHER_ERROR.ERROR_FE,
-    "PE Error": STATE_WASHER_ERROR.ERROR_PE,
-    "TE Error": STATE_WASHER_ERROR.ERROR_tE,
-    "LE Error": STATE_WASHER_ERROR.ERROR_LE,
     "CE Error": STATE_WASHER_ERROR.ERROR_CE,
-    "DHE Error": STATE_WASHER_ERROR.ERROR_dHE,
-    "PF Error": STATE_WASHER_ERROR.ERROR_PF,
-    "FF Error": STATE_WASHER_ERROR.ERROR_FF,
-    "DCE Error": STATE_WASHER_ERROR.ERROR_dCE,
-    "EE Error": STATE_WASHER_ERROR.ERROR_EE,
-    "PS Error": STATE_WASHER_ERROR.ERROR_PS,
     "DE1 Error": STATE_WASHER_ERROR.ERROR_dE1,
+    "DE2 Error": STATE_WASHER_ERROR.ERROR_dE2,
+    "DCE Error": STATE_WASHER_ERROR.ERROR_dCE,
+    "DHE Error": STATE_WASHER_ERROR.ERROR_dHE,
+    "EE Error": STATE_WASHER_ERROR.ERROR_EE,
+    "FE Error": STATE_WASHER_ERROR.ERROR_FE,
+    "FF Error": STATE_WASHER_ERROR.ERROR_FF,
+    "IE Error": STATE_WASHER_ERROR.ERROR_IE,
+    "LE Error": STATE_WASHER_ERROR.ERROR_LE,
     "LOE Error": STATE_WASHER_ERROR.ERROR_LOE,
+    "OE Error": STATE_WASHER_ERROR.ERROR_OE,
+    "PE Error": STATE_WASHER_ERROR.ERROR_PE,
+    "PF Error": STATE_WASHER_ERROR.ERROR_PF,
+    "PS Error": STATE_WASHER_ERROR.ERROR_PS,
+    "TE Error": STATE_WASHER_ERROR.ERROR_TE,
+    "UE Error": STATE_WASHER_ERROR.ERROR_UE,
 }
 
 # this is not used
 WASHERERRORS = {
     "OFF": STATE_WASHER_ERROR.OFF,
     "NO_ERROR" : STATE_WASHER_ERROR.NO_ERROR,
-    "@WM_WW_FL_ERROR_DE2_W": STATE_WASHER_ERROR.ERROR_dE2,
-    "@WM_WW_FL_ERROR_IE_W": STATE_WASHER_ERROR.ERROR_IE,
-    "@WM_WW_FL_ERROR_OE_W": STATE_WASHER_ERROR.ERROR_OE,
-    "@WM_WW_FL_ERROR_UE_W": STATE_WASHER_ERROR.ERROR_UE,
-    "@WM_WW_FL_ERROR_FE_W": STATE_WASHER_ERROR.ERROR_FE,
-    "@WM_WW_FL_ERROR_PE_W": STATE_WASHER_ERROR.ERROR_PE,
-    "@WM_WW_FL_ERROR_TE_W": STATE_WASHER_ERROR.ERROR_tE,
-    "@WM_WW_FL_ERROR_LE_W": STATE_WASHER_ERROR.ERROR_LE,
     "@WM_WW_FL_ERROR_CE_W": STATE_WASHER_ERROR.ERROR_CE,
-    "@WM_WW_FL_ERROR_DHE_W": STATE_WASHER_ERROR.ERROR_dHE,
-    "@WM_WW_FL_ERROR_PF_W": STATE_WASHER_ERROR.ERROR_PF,
-    "@WM_WW_FL_ERROR_FF_W": STATE_WASHER_ERROR.ERROR_FF,
-    "@WM_WW_FL_ERROR_DCE_W": STATE_WASHER_ERROR.ERROR_dCE,
-    "@WM_WW_FL_ERROR_EE_W": STATE_WASHER_ERROR.ERROR_EE,
-    "@WM_WW_FL_ERROR_PS_W": STATE_WASHER_ERROR.ERROR_PS,
     "@WM_WW_FL_ERROR_DE1_W": STATE_WASHER_ERROR.ERROR_dE1,
+    "@WM_WW_FL_ERROR_DE2_W": STATE_WASHER_ERROR.ERROR_dE2,
+    "@WM_WW_FL_ERROR_DCE_W": STATE_WASHER_ERROR.ERROR_dCE,
+    "@WM_WW_FL_ERROR_DHE_W": STATE_WASHER_ERROR.ERROR_dHE,
+    "@WM_WW_FL_ERROR_EE_W": STATE_WASHER_ERROR.ERROR_EE,
+    "@WM_WW_FL_ERROR_FE_W": STATE_WASHER_ERROR.ERROR_FE,
+    "@WM_WW_FL_ERROR_FF_W": STATE_WASHER_ERROR.ERROR_FF,
+    "@WM_WW_FL_ERROR_IE_W": STATE_WASHER_ERROR.ERROR_IE,
+    "@WM_WW_FL_ERROR_LE_W": STATE_WASHER_ERROR.ERROR_LE,
     "@WM_WW_FL_ERROR_LOE_W": STATE_WASHER_ERROR.ERROR_LOE,
+    "@WM_WW_FL_ERROR_OE_W": STATE_WASHER_ERROR.ERROR_OE,
+    "@WM_WW_FL_ERROR_PE_W": STATE_WASHER_ERROR.ERROR_PE,
+    "@WM_WW_FL_ERROR_PF_W": STATE_WASHER_ERROR.ERROR_PF,
+    "@WM_WW_FL_ERROR_PS_W": STATE_WASHER_ERROR.ERROR_PS,
+    "@WM_WW_FL_ERROR_TE_W": STATE_WASHER_ERROR.ERROR_tE,
+    "@WM_WW_FL_ERROR_UE_W": STATE_WASHER_ERROR.ERROR_UE,
 }
