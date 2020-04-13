@@ -689,6 +689,12 @@ class DeviceStatus(object):
         self._device = device
         self._data = data
 
+    @staticmethod
+    def int_or_none(value):
+        if value and value.isnumeric():
+            return str(int(value))
+        return None
+
     @property
     def is_api_v2(self):
         return self._device.model_info.is_api_v2

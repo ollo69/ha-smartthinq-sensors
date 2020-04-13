@@ -135,37 +135,37 @@ class DryerStatus(DeviceStatus):
     @property
     def remaintime_hour(self):
         if self.is_api_v2:
-            return str(int(self._data.get("remainTimeHour")))
+            return DeviceStatus.int_or_none(self._data.get("remainTimeHour"))
         return self._data.get("Remain_Time_H")
 
     @property
     def remaintime_min(self):
         if self.is_api_v2:
-            return str(int(self._data.get("remainTimeMinute")))
+            return DeviceStatus.int_or_none(self._data.get("remainTimeMinute"))
         return self._data.get("Remain_Time_M")
 
     @property
     def initialtime_hour(self):
         if self.is_api_v2:
-            return str(int(self._data.get("initialTimeHour")))
+            return DeviceStatus.int_or_none(self._data.get("initialTimeHour"))
         return self._data.get("Initial_Time_H")
 
     @property
     def initialtime_min(self):
         if self.is_api_v2:
-            return str(int(self._data.get("initialTimeMinute")))
+            return DeviceStatus.int_or_none(self._data.get("initialTimeMinute"))
         return self._data.get("Initial_Time_M")
 
     @property
     def reservetime_hour(self):
         if self.is_api_v2:
-            return str(int(self._data.get("reserveTimeHour")))
+            return DeviceStatus.int_or_none(self._data.get("reserveTimeHour"))
         return self._data.get("Reserve_Time_H")
 
     @property
     def reservetime_min(self):
         if self.is_api_v2:
-            return str(int(self._data.get("reserveTimeMinute")))
+            return DeviceStatus.int_or_none(self._data.get("reserveTimeMinute"))
         return self._data.get("Reserve_Time_M")
 
     @property

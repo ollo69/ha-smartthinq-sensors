@@ -218,6 +218,8 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 reserve_hour = self._state.reservetime_hour
                 reserve_min = self._state.reservetime_min
+                if not (reserve_hour or reserve_min):
+                    return "0:00"
                 reservetime = [reserve_hour, reserve_min]
                 if int(reserve_min) < 10:
                     return ":0".join(reservetime)
@@ -443,6 +445,8 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 reserve_hour = self._state.reservetime_hour
                 reserve_min = self._state.reservetime_min
+                if not (reserve_hour or reserve_min):
+                    return "0:00"
                 reservetime = [reserve_hour, reserve_min]
                 if int(reserve_min) < 10:
                     return ":0".join(reservetime)
