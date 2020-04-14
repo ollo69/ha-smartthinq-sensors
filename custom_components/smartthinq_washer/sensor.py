@@ -1,11 +1,8 @@
 # REQUIREMENTS = ['wideq']
 # DEPENDENCIES = ['smartthinq']
 
-import json
 import logging
-import voluptuous as vol
 from datetime import timedelta
-import time
 
 from .wideq.device import (
     OPTIONITEMMODES,
@@ -16,9 +13,6 @@ from .wideq.device import (
 
 from .wideq.dryer import DryerDevice
 from .wideq.washer import WasherDevice
-
-from homeassistant.components import sensor
-import homeassistant.helpers.config_validation as cv
 
 from homeassistant.const import STATE_ON, STATE_OFF
 from .const import DOMAIN, CLIENT, LGE_DEVICES
@@ -114,7 +108,6 @@ class LGEWasherDevice(LGEDevice):
     """A sensor to monitor LGE Washer devices"""
 
     def __init__(self, client, device, name):
-
         """initialize a LGE Washer Device."""
         super().__init__(WasherDevice(client, device), name)
 
@@ -159,7 +152,6 @@ class LGEWasherDevice(LGEDevice):
         if self._state:
             if self._state.is_run_completed:
                 return SENSORMODES["ON"]
-
         return SENSORMODES["OFF"]
 
     @property
@@ -168,7 +160,6 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 run_state = self._state.run_state
                 return run_state
-
         return "-"
 
     # @property
@@ -181,54 +172,37 @@ class LGEWasherDevice(LGEDevice):
             pre_state = self._state.pre_state
             if pre_state == STATE_OPTIONITEM_OFF:
                 return "-"
-            else:
-                return pre_state
-
+            return pre_state
         return "-"
 
     @property
     def _remain_time(self):
         if self._state:
             if self._state.is_on:
-                remain_hour = self._state.remaintime_hour
-                remain_min = self._state.remaintime_min
-                if not (remain_hour and remain_min):
-                    return "0:00"
-                remaintime = [remain_hour, remain_min]
-                if int(remain_min) < 10:
-                    return ":0".join(remaintime)
-                else:
-                    return ":".join(remaintime)
+                return LGEDevice.format_time(
+                    self._state.remaintime_hour,
+                    self._state.remaintime_min
+                )
         return "0:00"
 
     @property
     def _initial_time(self):
         if self._state:
             if self._state.is_on:
-                initial_hour = self._state.initialtime_hour
-                initial_min = self._state.initialtime_min
-                if not (initial_hour and initial_min):
-                    return "0:00"
-                initialtime = [initial_hour, initial_min]
-                if int(initial_min) < 10:
-                    return ":0".join(initialtime)
-                else:
-                    return ":".join(initialtime)
+                return LGEDevice.format_time(
+                    self._state.initialtime_hour,
+                    self._state.initialtime_min
+                )
         return "0:00"
 
     @property
     def _reserve_time(self):
         if self._state:
             if self._state.is_on:
-                reserve_hour = self._state.reservetime_hour
-                reserve_min = self._state.reservetime_min
-                if not (reserve_hour and reserve_min):
-                    return "0:00"
-                reservetime = [reserve_hour, reserve_min]
-                if int(reserve_min) < 10:
-                    return ":0".join(reservetime)
-                else:
-                    return ":".join(reservetime)
+                return LGEDevice.format_time(
+                    self._state.reservetime_hour,
+                    self._state.reservetime_min
+                )
         return "0:00"
 
     @property
@@ -241,9 +215,7 @@ class LGEWasherDevice(LGEDevice):
                     return smartcourse
                 elif course == "OFF":
                     return "-"
-                else:
-                    return course
-
+                return course
         return "-"
 
     @property
@@ -252,7 +224,6 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 if self._state.is_error:
                     return SENSORMODES["ON"]
-
         return SENSORMODES["OFF"]
 
     @property
@@ -261,7 +232,6 @@ class LGEWasherDevice(LGEDevice):
             if self._state.is_on:
                 error = self._state.error_state
                 return error
-
         return "-"
 
     @property
@@ -270,10 +240,8 @@ class LGEWasherDevice(LGEDevice):
             spin_option = self._state.spin_option_state
             if spin_option == "OFF":
                 return "-"
-            else:
-                return spin_option
-        else:
-            return "-"
+            return spin_option
+        return "-"
 
     @property
     def _watertemp_option_state(self):
@@ -281,80 +249,69 @@ class LGEWasherDevice(LGEDevice):
             watertemp_option = self._state.water_temp_option_state
             if watertemp_option == "OFF":
                 return "-"
-            else:
-                return watertemp_option
-        else:
-            return "-"
+            return watertemp_option
+        return "-"
 
     @property
     def _creasecare_mode(self):
         if self._state:
             mode = self._state.creasecare_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _childlock_mode(self):
         if self._state:
             mode = self._state.childlock_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _steam_mode(self):
         if self._state:
             mode = self._state.steam_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _steam_softener_mode(self):
         if self._state:
             mode = self._state.steam_softener_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _prewash_mode(self):
         if self._state:
             mode = self._state.prewash_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _doorlock_mode(self):
         if self._state:
             mode = self._state.doorlock_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _remotestart_mode(self):
         if self._state:
             mode = self._state.remotestart_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _turbowash_mode(self):
         if self._state:
             mode = self._state.turbowash_state
             return OPTIONITEMMODES[mode]
-        else:
-            return OPTIONITEMMODES["OFF"]
+        return OPTIONITEMMODES["OFF"]
 
     @property
     def _tubclean_count(self):
         if self._state:
             return self._state.tubclean_count
-
         return "N/A"
 
 
@@ -362,7 +319,6 @@ class LGEDryerDevice(LGEDevice):
     """A sensor to monitor LGE Dryer devices"""
 
     def __init__(self, client, device, name):
-
         """initialize a LGE Washer Device."""
         super().__init__(DryerDevice(client, device), name)
 
@@ -394,7 +350,6 @@ class LGEDryerDevice(LGEDevice):
         if self._state:
             if self._state.is_run_completed:
                 return SENSORMODES["ON"]
-
         return SENSORMODES["OFF"]
 
     @property
@@ -403,7 +358,6 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 run_state = self._state.run_state
                 return run_state
-
         return "-"
 
     @property
@@ -412,54 +366,37 @@ class LGEDryerDevice(LGEDevice):
             pre_state = self._state.pre_state
             if pre_state == STATE_OPTIONITEM_OFF:
                 return "-"
-            else:
-                return pre_state
-
+            return pre_state
         return "-"
 
     @property
     def _remain_time(self):
         if self._state:
             if self._state.is_on:
-                remain_hour = self._state.remaintime_hour
-                remain_min = self._state.remaintime_min
-                if not (remain_hour and remain_min):
-                    return "0:00"
-                remaintime = [remain_hour, remain_min]
-                if int(remain_min) < 10:
-                    return ":0".join(remaintime)
-                else:
-                    return ":".join(remaintime)
+                return LGEDevice.format_time(
+                    self._state.remaintime_hour,
+                    self._state.remaintime_min
+                )
         return "0:00"
 
     @property
     def _initial_time(self):
         if self._state:
             if self._state.is_on:
-                initial_hour = self._state.initialtime_hour
-                initial_min = self._state.initialtime_min
-                if not (initial_hour and initial_min):
-                    return "0:00"
-                initialtime = [initial_hour, initial_min]
-                if int(initial_min) < 10:
-                    return ":0".join(initialtime)
-                else:
-                    return ":".join(initialtime)
+                return LGEDevice.format_time(
+                    self._state.initialtime_hour,
+                    self._state.initialtime_min
+                )
         return "0:00"
 
     @property
     def _reserve_time(self):
         if self._state:
             if self._state.is_on:
-                reserve_hour = self._state.reservetime_hour
-                reserve_min = self._state.reservetime_min
-                if not (reserve_hour and reserve_min):
-                    return "0:00"
-                reservetime = [reserve_hour, reserve_min]
-                if int(reserve_min) < 10:
-                    return ":0".join(reservetime)
-                else:
-                    return ":".join(reservetime)
+                return LGEDevice.format_time(
+                    self._state.reservetime_hour,
+                    self._state.reservetime_min
+                )
         return "0:00"
 
     @property
@@ -472,9 +409,7 @@ class LGEDryerDevice(LGEDevice):
                     return smartcourse
                 elif course == "OFF":
                     return "-"
-                else:
-                    return course
-
+                return course
         return "-"
 
     @property
@@ -483,7 +418,6 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 if self._state.is_error:
                     return SENSORMODES["ON"]
-
         return SENSORMODES["OFF"]
 
     @property
@@ -492,7 +426,6 @@ class LGEDryerDevice(LGEDevice):
             if self._state.is_on:
                 error = self._state.error_state
                 return error
-
         return "-"
 
     @property
@@ -501,10 +434,8 @@ class LGEDryerDevice(LGEDevice):
             temp_option = self._state.temp_control_option_state
             if temp_option == "OFF":
                 return "-"
-            else:
-                return temp_option
-        else:
-            return "-"
+            return temp_option
+        return "-"
 
     @property
     def _drylevel_option_state(self):
@@ -512,10 +443,8 @@ class LGEDryerDevice(LGEDevice):
             drylevel_option = self._state.dry_level_option_state
             if drylevel_option == "OFF":
                 return "-"
-            else:
-                return drylevel_option
-        else:
-            return "-"
+            return drylevel_option
+        return "-"
 
     @property
     def _timedry_option_state(self):
@@ -523,7 +452,5 @@ class LGEDryerDevice(LGEDevice):
             timedry_option = self._state.time_dry_option_state
             if timedry_option == "OFF":
                 return "-"
-            else:
-                return timedry_option
-        else:
-            return "-"
+            return timedry_option
+        return "-"

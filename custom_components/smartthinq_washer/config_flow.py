@@ -3,9 +3,9 @@ import logging
 import re
 
 import voluptuous as vol
-from aiohttp import client, web
+from aiohttp import web
 from yarl import URL
-from typing import Any, Awaitable, Callable, Dict, Optional, cast
+from typing import Any
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback

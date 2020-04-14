@@ -17,11 +17,9 @@ from .wideq.core_exceptions import (
 )
 
 import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
 
 from homeassistant import config_entries
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import discovery
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import HomeAssistantType
 
@@ -263,6 +261,16 @@ class LGEDevice(Entity):
 
         return data
 
+    @staticmethod
+    def format_time(hours, minutes):
+        if not (hours and minutes):
+            return "0:00"
+        remain_time = [hours, minutes]
+        if int(minutes) < 10:
+            return ":0".join(remain_time)
+        else:
+            return ":".join(remain_time)
+
     def _restart_monitor(self):
         """Restart the device monitor"""
 
@@ -347,7 +355,7 @@ class LGEDevice(Entity):
         # restart the task.
         if self._retry_count >= MAX_LOOP_WARN:
             self._retry_count = 0
-            _LOGGER.warn("Status update failed.")
+            _LOGGER.warning("Status update failed.")
         else:
             self._retry_count += 1
             _LOGGER.debug("Status update failed.")

@@ -6,18 +6,15 @@ from urllib3.poolmanager import PoolManager
 from requests.adapters import HTTPAdapter
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 import base64
-import json
 import hashlib
 import hmac
-import enum
-import time
 import logging
-from datetime import timedelta, datetime
-from typing import Any, Dict, Generator, List, Optional
+from datetime import datetime
+from typing import Any, Dict, Generator, Optional
 
 from . import as_list, gen_uuid
 from . import core_exceptions as exc
-from .device import DeviceInfo, ModelInfo, DEFAULT_TIMEOUT, DEFAULT_REFRESH_TIMEOUT
+from .device import DeviceInfo, DEFAULT_TIMEOUT, DEFAULT_REFRESH_TIMEOUT
 
 
 class Tlsv1HttpAdapter(HTTPAdapter):

@@ -1,16 +1,10 @@
 """------------------for Washer"""
-import datetime
-import enum
-import time
 import logging
 from typing import Optional
 
 from .device import (
     Device,
     DeviceStatus,
-    STATE_UNKNOWN,
-    STATE_OPTIONITEM_ON,
-    STATE_OPTIONITEM_OFF,
 )
 
 from .washer_states import (

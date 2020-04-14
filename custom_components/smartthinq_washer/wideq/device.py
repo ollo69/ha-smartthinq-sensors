@@ -3,15 +3,13 @@ SmartThinQ API for most use cases.
 """
 import requests
 
-# import base64
+import base64
 import json
-import datetime
 from collections import namedtuple
 import enum
-import time
 import logging
 from numbers import Number
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Optional
 
 from .core_exceptions import MonitorError
 
@@ -428,7 +426,7 @@ class ModelInfoV2(object):
         elif data_type in ("Enum", "enum"):
             return data["valueMapping"]
         elif data_type == "range":
-            return RangeValue(data["valueMapping"]["min"], data["valueMapping"]["max"])
+            return RangeValue(data["valueMapping"]["min"], data["valueMapping"]["max"], 1)
         # elif d['dataType'] == 'Bit':
         #    bit_values = {}
         #    for bit in d['option']:
@@ -449,7 +447,7 @@ class ModelInfoV2(object):
         # elif d['dataType'] == 'String':
         #    pass
         else:
-            assert False, "unsupported value type {}".format(d["type"])
+            assert False, "unsupported value type {}".format(data_type)
 
     def default(self, name):
         """Get the default value, if it exists, for a given value.
