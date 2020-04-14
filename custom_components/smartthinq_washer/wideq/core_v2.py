@@ -3,7 +3,7 @@
 import requests
 import base64
 import uuid
-from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
+from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 import hashlib
 import hmac
 import logging
@@ -620,7 +620,7 @@ class ClientV2(object):
         return None
 
     @classmethod
-    def load(cls, state: Dict[str, Any]) -> "Client":
+    def load(cls, state: Dict[str, Any]) -> "ClientV2":
         """Load a client from serialized state.
             """
 
@@ -693,7 +693,7 @@ class ClientV2(object):
     @classmethod
     def from_token(
         cls, oauth_url, refresh_token, user_number, country=None, language=None
-    ) -> "Client":
+    ) -> "ClientV2":
         """Construct a client using just a refresh token.
             
             This allows simpler state storage (e.g., for human-written
