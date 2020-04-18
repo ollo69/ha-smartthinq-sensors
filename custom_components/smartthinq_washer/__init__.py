@@ -6,9 +6,13 @@ Support for LG SmartThinQ device.
 import asyncio
 import logging
 import time
+from datetime import timedelta
 
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2
+from .wideq.device import DeviceType
+from .wideq.dryer import DryerDevice
+from .wideq.washer import WasherDevice
 
 from .wideq.core_exceptions import (
     NotConnectedError,
@@ -20,10 +24,10 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.util import Throttle
 
-from homeassistant.const import CONF_REGION, CONF_TOKEN, STATE_ON, STATE_OFF
+from homeassistant.const import CONF_REGION, CONF_TOKEN
 
 from .const import (
     ATTR_CONFIG,
@@ -43,6 +47,8 @@ ATTR_MAC_ADDRESS = "mac_address"
 MAX_RETRIES = 3
 MAX_CONN_RETRIES = 2
 MAX_LOOP_WARN = 3
+# not stress to match cloud if multiple call
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
 SMARTTHINQ_SCHEMA = vol.Schema(
     {
@@ -141,15 +147,22 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
     )
     if not client:
-        _LOGGER.warning("Connection not available. SmartthinQ platform not ready.")
+        _LOGGER.warning("Connection not available. SmartThinQ platform not ready.")
         raise ConfigEntryNotReady()
 
     if not client.hasdevices:
         _LOGGER.error("No SmartThinQ devices found. Component setup aborted.")
         return False
 
-    hass.data.setdefault(DOMAIN, {}).update({CLIENT: client})
-    _LOGGER.info("Smartthinq client connected.")
+    _LOGGER.info("SmartThinQ client connected.")
+
+    lge_devices = await lge_devices_setup(client)
+    hass.data.setdefault(DOMAIN, {}).update(
+        {
+            CLIENT: client,
+            LGE_DEVICES: lge_devices,
+        }
+    )
 
     for platform in SMARTTHINQ_COMPONENTS:
         hass.async_create_task(
@@ -196,19 +209,19 @@ async def async_setup(hass, config):
     return True
 
 
-class LGEDevice(Entity):
+class LGEDevice:
     def __init__(self, device, name):
         """initialize a LGE Device."""
 
         self._device = device
         self._name = name
         self._device_id = device.device_info.id
+        self._type = device.device_info.type
         self._mac = device.device_info.macaddress
         self._firmware = device.device_info.firmware
 
-        self._model = device.device_info.model_name + "-" + device.model_info.model_type
-        self._id = "%s:%s" % (device.type, self._device_id)
-
+        self._model = f"{device.device_info.model_name}-{device.model_info.model_type}"
+        self._id = f"{self._type.name}:{self._device_id}"
         self._state = None
 
         self._retry_count = 0
@@ -216,17 +229,16 @@ class LGEDevice(Entity):
         self._not_logged = False
 
     @property
-    def available(self):
+    def available(self) -> bool:
         return True
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
-    def should_poll(self) -> bool:
-        # This sensors must be polled. We leave this task to the HomeAssistant engine
-        return True
+    def type(self) -> DeviceType:
+        return self._type
 
     @property
     def unique_id(self) -> str:
@@ -234,10 +246,7 @@ class LGEDevice(Entity):
 
     @property
     def state(self):
-        if self._state:
-            if self._state.is_on:
-                return STATE_ON
-        return STATE_OFF
+        return self._state
 
     @property
     def state_attributes(self):
@@ -254,22 +263,12 @@ class LGEDevice(Entity):
             "identifiers": {(DOMAIN, self._device_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "%s (%s)" % (self._model, self._device.type),
+            "model": f"{self._model} ({self._type.name})",
         }
         if self._firmware:
             data["sw_version"] = self._firmware
 
         return data
-
-    @staticmethod
-    def format_time(hours, minutes):
-        if not (hours and minutes):
-            return "0:00"
-        remain_time = [hours, minutes]
-        if int(minutes) < 10:
-            return ":0".join(remain_time)
-        else:
-            return ":".join(remain_time)
 
     def _restart_monitor(self):
         """Restart the device monitor"""
@@ -281,24 +280,22 @@ class LGEDevice(Entity):
                 self._disconnected = True
 
             self._device.monitor_start()
-            # self._device.delete_permission()
             self._disconnected = False
 
         except NotConnectedError:
             _LOGGER.debug("Device not connected. Status not available.")
             self._disconnected = True
-            # self._state = None
 
         except NotLoggedInError:
             _LOGGER.info("Session expired. Refreshing.")
-            # self._client.refresh()
             self._not_logged = True
 
         except Exception as ex:
             self._not_logged = True
             raise ex
 
-    def update(self):
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
+    def device_update(self):
         """Update device state"""
         _LOGGER.debug("Updating smartthinq device %s.", self.name)
 
@@ -321,8 +318,6 @@ class LGEDevice(Entity):
                     state = self._device.poll()
 
                 except NotLoggedInError:
-                    # self._client.refresh()
-                    # self._restart_monitor()
                     self._not_logged = True
 
                 except NotConnectedError:
@@ -359,3 +354,40 @@ class LGEDevice(Entity):
         else:
             self._retry_count += 1
             _LOGGER.debug("Status update failed.")
+
+
+async def lge_devices_setup(client) -> dict:
+    """Query connected devices from LG ThinQ."""
+    _LOGGER.info("Starting LGE ThinQ devices...")
+
+    wrapped_devices = {}
+    device_count = 0
+
+    for device in client.devices:
+        device_id = device.id
+        device_name = device.name
+        device_mac = device.macaddress
+        model_name = device.model_name
+        device_count += 1
+
+        if device.type == DeviceType.WASHER:
+            base_name = device_name
+            dev = LGEDevice(WasherDevice(client, device), base_name)
+        elif device.type == DeviceType.DRYER:
+            base_name = device_name
+            dev = LGEDevice(DryerDevice(client, device), base_name)
+        else:
+            _LOGGER.info("Found unsupported LGE Device %s of type %s", device_name, device.type.name)
+            continue
+
+        wrapped_devices.setdefault(device.type, []).append(dev)
+        _LOGGER.info(
+            "LGE Device added. Name: %s - Model: %s - Mac: %s - ID: %s",
+            base_name,
+            model_name,
+            device_mac,
+            device_id,
+        )
+
+    _LOGGER.info("Founds %s LGE device(s)", str(device_count))
+    return wrapped_devices

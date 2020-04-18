@@ -562,7 +562,6 @@ class Device(object):
 
         self._client = client
         self._device_info = device
-        self._type = device.type.name
         model_data = client.model_info(device)
         if device.platform_type == PlatformType.THINQ2:
             self._model_info = ModelInfoV2(model_data)
@@ -584,10 +583,6 @@ class Device(object):
     @property
     def model_info(self):
         return self._model_info
-
-    @property
-    def type(self):
-        return self._type
 
     def _set_control(self, key, value):
         """Set a device's control for `key` to `value`.
