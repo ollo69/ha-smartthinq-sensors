@@ -5,6 +5,7 @@ from typing import Optional
 from .device import (
     Device,
     DeviceStatus,
+    STATE_OPTIONITEM_OFF,
 )
 
 from .washer_states import (
@@ -121,7 +122,7 @@ class WasherStatus(DeviceStatus):
             ["APCourse", "Course", "courseFL24inchBaseTitan"]
         )
         if course == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return course
 
     @property
@@ -130,7 +131,7 @@ class WasherStatus(DeviceStatus):
             ["SmartCourse", "smartCourseFL24inchBaseTitan"]
         )
         if smartcourse == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         else:
             return smartcourse
 
@@ -174,7 +175,7 @@ class WasherStatus(DeviceStatus):
     def spin_option_state(self):
         spinspeed = self.lookup_enum(["SpinSpeed", "spin"])
         if spinspeed == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return self._set_unknown(
             state=WASHERSPINSPEEDS.get(spinspeed, None),
             key=spinspeed,
@@ -185,7 +186,7 @@ class WasherStatus(DeviceStatus):
     def water_temp_option_state(self):
         water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
         if water_temp == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return self._set_unknown(
             state=WASHERWATERTEMPS.get(water_temp, None),
             key=water_temp,

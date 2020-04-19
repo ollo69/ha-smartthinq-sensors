@@ -13,6 +13,9 @@ from typing import Any, Dict, Optional
 
 from .core_exceptions import MonitorError
 
+BIT_OFF_THINQ2 = "@CP_OFF_EN_W"
+BIT_ON_THINQ2 = "@CP_ON_EN_W"
+
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
@@ -20,8 +23,8 @@ STATE_OPTIONITEM_ON = "On"
 STATE_OPTIONITEM_OFF = "Off"
 STATE_OPTIONITEM_UNKNOWN = "unknown"
 
-BIT_OFF_THINQ2 = "@CP_OFF_EN_W"
-BIT_ON_THINQ2 = "@CP_ON_EN_W"
+UNIT_TEMP_CELSIUS = "celsius"
+UNIT_TEMP_FAHRENHEIT = "fahrenheit"
 
 OPTIONITEMMODES = {
     "ON": STATE_OPTIONITEM_ON,
@@ -737,9 +740,9 @@ class DeviceStatus(object):
         bit_index = 2 ** index
         mode = bin(bit_value & bit_index)
         if mode == bin(0):
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         else:
-            return "ON"
+            return STATE_OPTIONITEM_ON
 
     def lookup_bit_v2(self, key):
         curr_key = self._get_data_key(key)
@@ -748,4 +751,4 @@ class DeviceStatus(object):
         result = self._device.model_info.bit_name_v2(curr_key, self._data[curr_key])
         if result is None:
             return STATE_OPTIONITEM_UNKNOWN
-        return "ON" if result else "OFF"
+        return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF

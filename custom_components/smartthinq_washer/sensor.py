@@ -5,15 +5,25 @@ import logging
 from datetime import timedelta
 
 from .wideq.device import (
-    OPTIONITEMMODES,
     STATE_OPTIONITEM_OFF,
+    STATE_OPTIONITEM_ON,
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
     DeviceType,
 )
 
-from homeassistant.components.binary_sensor import DEVICE_CLASS_PROBLEM
-from homeassistant.const import STATE_ON, STATE_OFF
+from homeassistant.components.binary_sensor import DEVICE_CLASS_PROBLEM, DEVICE_CLASS_OPENING
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
+
+from homeassistant.const import (
+    DEVICE_CLASS_TEMPERATURE,
+    STATE_ON,
+    STATE_OFF,
+    TEMP_CELSIUS,
+    TEMP_FAHRENHEIT
+)
+
 from .const import DOMAIN, LGE_DEVICES
 from . import LGEDevice
 
@@ -55,9 +65,20 @@ ATTR_TEMPCONTROL_OPTION_STATE = "tempcontrol_option_state"
 ATTR_DRYLEVEL_OPTION_STATE = "drylevel_option_state"
 ATTR_TIMEDRY_OPTION_STATE = "timedry_option_state"
 
-SENSORMODES = {
-    "ON": STATE_ON,
-    "OFF": STATE_OFF,
+# refrigerator sensor attributes
+ATTR_REFRIGERATOR_TEMP = "refrigerator_temp"
+ATTR_FREEZER_TEMP = "freezer_temp"
+ATTR_TEMP_UNIT = "temp_unit"
+ATTR_DOOROPEN_STATE = "door_open_state"
+
+STATE_LOOKUP = {
+    STATE_OPTIONITEM_OFF: STATE_OFF,
+    STATE_OPTIONITEM_ON: STATE_ON,
+}
+
+TEMP_UNIT_LOOKUP = {
+    UNIT_TEMP_CELSIUS: TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT: TEMP_FAHRENHEIT,
 }
 
 DEFAULT_SENSOR = "default"
@@ -79,7 +100,7 @@ WASHER_SENSORS = {
 }
 
 WASHER_BINARY_SENSORS = {
-    "wash_completed": {
+    ATTR_RUN_COMPLETED: {
         ATTR_MEASUREMENT_NAME: "Wash Completed",
         ATTR_ICON: None,
         ATTR_UNIT_FN: lambda x: None,
@@ -87,7 +108,7 @@ WASHER_BINARY_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._run_completed,
         ATTR_ENABLED_FN: lambda x: True,
     },
-    "error_state": {
+    ATTR_ERROR_STATE: {
         ATTR_MEASUREMENT_NAME: "Error State",
         ATTR_ICON: None,
         ATTR_UNIT_FN: lambda x: None,
@@ -102,7 +123,6 @@ DRYER_SENSORS = {
         ATTR_MEASUREMENT_NAME: "Default",
         ATTR_ICON: "mdi:tumble-dryer",
         ATTR_UNIT_FN: lambda x: None,
-        # ATTR_UNIT_FN: lambda x: "dBm",
         ATTR_DEVICE_CLASS: None,
         ATTR_VALUE_FN: lambda x: x._power_state,
         ATTR_ENABLED_FN: lambda x: True,
@@ -110,7 +130,7 @@ DRYER_SENSORS = {
 }
 
 DRYER_BINARY_SENSORS = {
-    "dry_completed": {
+    ATTR_RUN_COMPLETED: {
         ATTR_MEASUREMENT_NAME: "Dry Completed",
         ATTR_ICON: None,
         ATTR_UNIT_FN: lambda x: None,
@@ -118,12 +138,50 @@ DRYER_BINARY_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._run_completed,
         ATTR_ENABLED_FN: lambda x: True,
     },
-    "error_state": {
+    ATTR_ERROR_STATE: {
         ATTR_MEASUREMENT_NAME: "Error State",
         ATTR_ICON: None,
         ATTR_UNIT_FN: lambda x: None,
         ATTR_DEVICE_CLASS: DEVICE_CLASS_PROBLEM,
         ATTR_VALUE_FN: lambda x: x._error_state,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+}
+
+REFRIGERATOR_SENSORS = {
+    DEFAULT_SENSOR: {
+        ATTR_MEASUREMENT_NAME: "Default",
+        ATTR_ICON: "mdi:fridge-outline",
+        ATTR_UNIT_FN: lambda x: None,
+        ATTR_DEVICE_CLASS: None,
+        ATTR_VALUE_FN: lambda x: x._power_state,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+    ATTR_REFRIGERATOR_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Refrigerator Temp",
+        ATTR_ICON: None,
+        ATTR_UNIT_FN: lambda x: x._temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._temp_refrigerator,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+    ATTR_FREEZER_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Freezer Temp",
+        ATTR_ICON: None,
+        ATTR_UNIT_FN: lambda x: x._temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._temp_freezer,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+}
+
+REFRIGERATOR_BINARY_SENSORS = {
+    ATTR_DOOROPEN_STATE: {
+        ATTR_MEASUREMENT_NAME: "Door Open",
+        ATTR_ICON: None,
+        ATTR_UNIT_FN: lambda x: None,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_OPENING,
+        ATTR_VALUE_FN: lambda x: x._door_open_state,
         ATTR_ENABLED_FN: lambda x: True,
     },
 }
@@ -138,6 +196,7 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
     lge_sensors = []
     washer_sensors = WASHER_BINARY_SENSORS if type_binary else WASHER_SENSORS
     dryer_sensors = DRYER_BINARY_SENSORS if type_binary else DRYER_SENSORS
+    refrigerator_sensors = REFRIGERATOR_BINARY_SENSORS if type_binary else REFRIGERATOR_SENSORS
 
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES, [])
@@ -155,6 +214,14 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
             LGEDryerSensor(lge_device, measurement, definition, type_binary)
             for measurement, definition in dryer_sensors.items()
             for lge_device in lge_devices.get(DeviceType.DRYER, [])
+            if definition[ATTR_ENABLED_FN](lge_device)
+        ]
+    )
+    lge_sensors.extend(
+        [
+            LGERefrigeratorSensor(lge_device, measurement, definition, type_binary)
+            for measurement, definition in refrigerator_sensors.items()
+            for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
             if definition[ATTR_ENABLED_FN](lge_device)
         ]
     )
@@ -321,8 +388,8 @@ class LGEWasherSensor(LGESensor):
     def _run_completed(self):
         if self._api.state:
             if self._api.state.is_run_completed:
-                return SENSORMODES["ON"]
-        return SENSORMODES["OFF"]
+                return STATE_ON
+        return STATE_OFF
 
     @property
     def _current_run_state(self):
@@ -383,7 +450,7 @@ class LGEWasherSensor(LGESensor):
             if self._api.state.is_on:
                 if course == "Download course":
                     return smartcourse
-                elif course == "OFF":
+                elif course == STATE_OPTIONITEM_OFF:
                     return "-"
                 return course
         return "-"
@@ -393,8 +460,8 @@ class LGEWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 if self._api.state.is_error:
-                    return SENSORMODES["ON"]
-        return SENSORMODES["OFF"]
+                    return STATE_ON
+        return STATE_OFF
 
     @property
     def _error_msg(self):
@@ -408,7 +475,7 @@ class LGEWasherSensor(LGESensor):
     def _spin_option_state(self):
         if self._api.state:
             spin_option = self._api.state.spin_option_state
-            if spin_option == "OFF":
+            if spin_option == STATE_OPTIONITEM_OFF:
                 return "-"
             return spin_option
         return "-"
@@ -417,7 +484,7 @@ class LGEWasherSensor(LGESensor):
     def _watertemp_option_state(self):
         if self._api.state:
             watertemp_option = self._api.state.water_temp_option_state
-            if watertemp_option == "OFF":
+            if watertemp_option == STATE_OPTIONITEM_OFF:
                 return "-"
             return watertemp_option
         return "-"
@@ -426,57 +493,57 @@ class LGEWasherSensor(LGESensor):
     def _creasecare_mode(self):
         if self._api.state:
             mode = self._api.state.creasecare_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _childlock_mode(self):
         if self._api.state:
             mode = self._api.state.childlock_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _steam_mode(self):
         if self._api.state:
             mode = self._api.state.steam_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _steam_softener_mode(self):
         if self._api.state:
             mode = self._api.state.steam_softener_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _prewash_mode(self):
         if self._api.state:
             mode = self._api.state.prewash_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _doorlock_mode(self):
         if self._api.state:
             mode = self._api.state.doorlock_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _remotestart_mode(self):
         if self._api.state:
             mode = self._api.state.remotestart_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _turbowash_mode(self):
         if self._api.state:
             mode = self._api.state.turbowash_state
-            return OPTIONITEMMODES[mode]
-        return OPTIONITEMMODES["OFF"]
+            return mode
+        return STATE_OPTIONITEM_OFF
 
     @property
     def _tubclean_count(self):
@@ -514,8 +581,8 @@ class LGEDryerSensor(LGESensor):
     def _run_completed(self):
         if self._api.state:
             if self._api.state.is_run_completed:
-                return SENSORMODES["ON"]
-        return SENSORMODES["OFF"]
+                return STATE_ON
+        return STATE_OFF
 
     @property
     def _current_run_state(self):
@@ -572,7 +639,7 @@ class LGEDryerSensor(LGESensor):
             if self._api.state.is_on:
                 if course == "Download course":
                     return smartcourse
-                elif course == "OFF":
+                elif course == STATE_OPTIONITEM_OFF:
                     return "-"
                 return course
         return "-"
@@ -582,8 +649,8 @@ class LGEDryerSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 if self._api.state.is_error:
-                    return SENSORMODES["ON"]
-        return SENSORMODES["OFF"]
+                    return STATE_ON
+        return STATE_OFF
 
     @property
     def _error_msg(self):
@@ -597,7 +664,7 @@ class LGEDryerSensor(LGESensor):
     def _tempcontrol_option_state(self):
         if self._api.state:
             temp_option = self._api.state.temp_control_option_state
-            if temp_option == "OFF":
+            if temp_option == STATE_OPTIONITEM_OFF:
                 return "-"
             return temp_option
         return "-"
@@ -606,7 +673,7 @@ class LGEDryerSensor(LGESensor):
     def _drylevel_option_state(self):
         if self._api.state:
             drylevel_option = self._api.state.dry_level_option_state
-            if drylevel_option == "OFF":
+            if drylevel_option == STATE_OPTIONITEM_OFF:
                 return "-"
             return drylevel_option
         return "-"
@@ -615,7 +682,66 @@ class LGEDryerSensor(LGESensor):
     def _timedry_option_state(self):
         if self._api.state:
             timedry_option = self._api.state.time_dry_option_state
-            if timedry_option == "OFF":
+            if timedry_option == STATE_OPTIONITEM_OFF:
                 return "-"
             return timedry_option
         return "-"
+
+
+class LGERefrigeratorSensor(LGESensor):
+    """A sensor to monitor LGE Refrigerator devices"""
+
+    @property
+    def device_state_attributes(self):
+        """Return the optional state attributes."""
+        if not self._is_default:
+            return None
+
+        data = {
+            ATTR_REFRIGERATOR_TEMP: self._temp_refrigerator,
+            ATTR_FREEZER_TEMP: self._temp_freezer,
+            ATTR_TEMP_UNIT: self._temp_unit,
+            ATTR_DOOROPEN_STATE: self._door_open_state,
+        }
+        return data
+
+    @staticmethod
+    def convert_unit(value, unit):
+        if unit == TEMP_FAHRENHEIT:
+            temp_val = int(value)
+            return str((temp_val * 9 / 5) + 32)
+        return value
+
+    @property
+    def _temp_refrigerator(self):
+        if self._api.state:
+            temp = self._api.state.temp_refrigerator_c
+            return LGERefrigeratorSensor.convert_unit(
+                temp,
+                self._temp_unit
+            )
+        return None
+
+    @property
+    def _temp_freezer(self):
+        if self._api.state:
+            temp = self._api.state.temp_freezer_c
+            return LGERefrigeratorSensor.convert_unit(
+                temp,
+                self._temp_unit
+            )
+        return None
+
+    @property
+    def _temp_unit(self):
+        if self._api.state:
+            unit = self._api.state.temp_unit()
+            return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
+        return TEMP_CELSIUS
+
+    @property
+    def _door_open_state(self):
+        if self._api.state:
+            state = self._api.state.door_opened_state
+            return STATE_LOOKUP.get(state, STATE_OFF)
+        return STATE_OFF

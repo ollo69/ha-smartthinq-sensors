@@ -13,6 +13,7 @@ from .wideq.core_v2 import ClientV2
 from .wideq.device import DeviceType
 from .wideq.dryer import DryerDevice
 from .wideq.washer import WasherDevice
+from .wideq.refrigerator import RefrigeratorDevice
 
 from .wideq.core_exceptions import (
     NotConnectedError,
@@ -376,6 +377,9 @@ async def lge_devices_setup(client) -> dict:
         elif device.type == DeviceType.DRYER:
             base_name = device_name
             dev = LGEDevice(DryerDevice(client, device), base_name)
+        elif device.type == DeviceType.REFRIGERATOR:
+            base_name = device_name
+            dev = LGEDevice(RefrigeratorDevice(client, device), base_name)
         else:
             _LOGGER.info("Found unsupported LGE Device %s of type %s", device_name, device.type.name)
             continue

@@ -5,6 +5,7 @@ from typing import Optional
 from .device import (
     Device,
     DeviceStatus,
+    STATE_OPTIONITEM_OFF,
 )
 
 from .dryer_states import (
@@ -39,7 +40,6 @@ class DryerStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
-
     def __init__(self, device, data):
         super().__init__(device, data)
         self._run_state = None
@@ -113,7 +113,7 @@ class DryerStatus(DeviceStatus):
             ["APCourse", "Course", "courseFL24inchBaseTitan"]
         )
         if course == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return course
 
     @property
@@ -122,7 +122,7 @@ class DryerStatus(DeviceStatus):
             ["SmartCourse", "smartCourseFL24inchBaseTitan"]
         )
         if smartcourse == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         else:
             return smartcourse
 
@@ -166,7 +166,7 @@ class DryerStatus(DeviceStatus):
     def temp_control_option_state(self):
         temp_control = self.lookup_enum(["TempControl", "tempControl"])
         if temp_control == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return self._set_unknown(
             state=DRYERTEMPS.get(temp_control, None), key=temp_control, type="TempControl",
         ).value
@@ -175,7 +175,7 @@ class DryerStatus(DeviceStatus):
     def dry_level_option_state(self):
         dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
         if dry_level == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return self._set_unknown(
             state=DRYERDRYLEVELS.get(dry_level, None), key=dry_level, type="DryLevel",
         ).value
@@ -185,5 +185,5 @@ class DryerStatus(DeviceStatus):
         """Get the time dry setting."""
         time_dry = self.lookup_enum("TimeDry")
         if time_dry == "-":
-            return "OFF"
+            return STATE_OPTIONITEM_OFF
         return time_dry
