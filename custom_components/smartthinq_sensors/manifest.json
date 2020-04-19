@@ -1,0 +1,9 @@
+{
+  "domain": "smartthinq_sensors",
+  "name": "SmartThinQ LGE Sensors",
+  "documentation": "https://github.com/ollo69/ha-smartthinq-sensors",
+  "dependencies": [],
+  "codeowners": ["@ollo69"],
+  "requirements": [],
+  "config_flow": true
+}

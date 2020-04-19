@@ -1,5 +1,5 @@
 {
-  "name": "SmartThinQ LGE Washer",
+  "name": "SmartThinQ LGE Sensors",
   "domains": ["sensor"],
   "iot_class": "Cloud Polling"
 }

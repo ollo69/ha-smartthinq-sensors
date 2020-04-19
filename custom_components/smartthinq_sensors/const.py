@@ -1,4 +1,4 @@
-DOMAIN = "smartthinq_washer"
+DOMAIN = "smartthinq_sensors"
 
 CONF_LANGUAGE = "language"
 CONF_OAUTH_URL = "outh_url"

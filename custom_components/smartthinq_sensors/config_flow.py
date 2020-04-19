@@ -218,7 +218,7 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
         )
 
         if not client:
-            _LOGGER.error("LGE Washer: Invalid Login info!")
+            _LOGGER.error("LGE ThinQ: Invalid Login info!")
             return self._show_form({"base": "invalid_credentials"})
 
         if not client.hasdevices:
@@ -239,7 +239,7 @@ class SmartThinQFlowHandler(oauth2_flow.AbstractOAuth2FlowHandler):
                 }
             )
 
-        return self.async_create_entry(title="LGE Washers", data=data,)
+        return self.async_create_entry(title="LGE Devices", data=data,)
 
     @callback
     def _show_form(self, errors=None, step_id="user"):
