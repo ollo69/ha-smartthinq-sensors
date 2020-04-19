@@ -332,7 +332,7 @@ class LGEDevice:
 
                 else:
                     if state:
-                        _LOGGER.debug("Status updated: %s", state.run_state)
+                        _LOGGER.debug("ThinQ status updated")
                         # l = dir(state)
                         # _LOGGER.debug('Status attributes: %s', l)
 
