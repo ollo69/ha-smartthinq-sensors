@@ -82,7 +82,7 @@ TEMP_UNIT_LOOKUP = {
 }
 
 DEFAULT_SENSOR = "default"
-DISPATCHER_REMOTE_UPDATE = "lge_cloud_remote_update"
+DISPATCHER_REMOTE_UPDATE = "thinq_remote_update"
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -233,7 +233,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the LGE sensors."""
     _LOGGER.info("Starting LGE ThinQ sensors...")
     await async_setup_sensors(hass, config_entry, async_add_entities, False)
-    return True
 
 
 class LGESensor(Entity):
@@ -246,6 +245,7 @@ class LGESensor(Entity):
         self._is_binary = is_binary
         self._is_default = self._measurement == DEFAULT_SENSOR
         self._unsub_dispatcher = None
+        self._dispatcher_queue = f"{DISPATCHER_REMOTE_UPDATE}-{self._name_slug}"
 
     @staticmethod
     def format_time(hours, minutes):
@@ -321,7 +321,7 @@ class LGESensor(Entity):
     def update(self):
         """Update the device status"""
         self._api.device_update()
-        dispatcher_send(self.hass, DISPATCHER_REMOTE_UPDATE)
+        dispatcher_send(self.hass, self._dispatcher_queue)
 
     async def async_added_to_hass(self):
         """Register update dispatcher."""
@@ -333,7 +333,7 @@ class LGESensor(Entity):
 
         if not self._is_default:
             self._unsub_dispatcher = async_dispatcher_connect(
-                self.hass, DISPATCHER_REMOTE_UPDATE, async_state_update
+                self.hass, self._dispatcher_queue, async_state_update
             )
 
     async def async_will_remove_from_hass(self):
@@ -735,7 +735,7 @@ class LGERefrigeratorSensor(LGESensor):
     @property
     def _temp_unit(self):
         if self._api.state:
-            unit = self._api.state.temp_unit()
+            unit = self._api.state.temp_unit
             return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
         return TEMP_CELSIUS
 

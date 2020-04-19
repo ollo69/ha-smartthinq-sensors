@@ -26,11 +26,15 @@ STATE_OPTIONITEM_UNKNOWN = "unknown"
 UNIT_TEMP_CELSIUS = "celsius"
 UNIT_TEMP_FAHRENHEIT = "fahrenheit"
 
-OPTIONITEMMODES = {
-    "ON": STATE_OPTIONITEM_ON,
-    "OFF": STATE_OPTIONITEM_OFF,
-    "unknown": STATE_OPTIONITEM_UNKNOWN,
-}
+
+class OPTIONITEMMODES(enum.Enum):
+    ON = STATE_OPTIONITEM_ON
+    OFF = STATE_OPTIONITEM_OFF
+
+
+class UNITTEMPMODES(enum.Enum):
+    Celsius = UNIT_TEMP_CELSIUS
+    Fahrenheit = UNIT_TEMP_FAHRENHEIT
 
 
 class STATE_UNKNOWN(enum.Enum):
@@ -314,7 +318,7 @@ class ModelInfo(object):
             return str(value)
 
         options = self.value(key).options
-        return options[value]
+        return options.get(value, STATE_OPTIONITEM_UNKNOWN)
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
@@ -477,7 +481,8 @@ class ModelInfoV2(object):
             return str(value)
 
         options = self.value(data)
-        return options[value]["label"]
+        item = options.get(value)
+        return item["label"] if item else STATE_OPTIONITEM_UNKNOWN
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
