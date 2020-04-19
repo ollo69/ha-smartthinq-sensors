@@ -1,5 +1,6 @@
 # LG ThinQ Washer, Dryer and Refrigerators integration for HomeAssistant
-A Homeassistant custom component to monitor LG Washer, Dryer and Refrigerators using ThinQ API (extension to other device will be managed with future development).<br/>
+A Homeassistant custom component to monitor LG Washer, Dryer and Refrigerators using ThinQ API
+based on [WideQ project](https://github.com/sampsyo/wideq).<br/>
 
 **Important Version note:** From version 0.3.x component name changed from `smartthinq_washer` to `smartthinq_sensors`
 If you are upgrading to version 0.3.x from previous version, you must **remove component configuration and uninstall component**

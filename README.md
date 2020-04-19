@@ -5,7 +5,8 @@
 [![](https://img.shields.io/badge/COMMUNITY-FORUM-success?style=for-the-badge)](https://community.home-assistant.io)
 
 # LG ThinQ Washer, Dryer and Refrigerators integration for HomeAssistant
-A Homeassistant custom component to monitor LG Washer, Dryer and Refrigerators using ThinQ API (extension to other device will be managed with future development).<br/>
+A Homeassistant custom component to monitor LG Washer, Dryer and Refrigerators using ThinQ API 
+based on [WideQ project](https://github.com/sampsyo/wideq).<br/>
 
 **Important Version note:** From version 0.3.x component name changed from `smartthinq_washer` to `smartthinq_sensors`
 If you are upgrading to version 0.3.x from previous version, you must **remove component configuration and uninstall component**
@@ -24,8 +25,7 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 You can install this component in two ways: via HACS (as custom repository for the moment) or manually.
 
 ### Option A: Installing via HACS
-If you have HACS, you must add this repository ("https://github.com/ollo69/ha-smartthinq-sensors") to your Custom Repository selecting the Configuration Tab in the HACS page. Set with a category of Integration and then push save button.
-After this you can go in the Integration Tab and search the "SmartThinQ LG Sensors" component to install it.
+If you have HACS, just go in the Integration Tab and search the "SmartThinQ LG Sensors" component to install it.
 
 ### Option B: Manually installation (custom_component)
 1. Clone the git master branch.
@@ -82,3 +82,8 @@ If you like the component, why don't you support me by buying me a coffe?
 It would certainly motivate me to further improve this work.
 
 [![Buy me a coffe!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ollo69)
+
+
+[reference]: https://github.com/sampsyo/wideq).<br/>
+
+[reference]: https://github.com/sampsyo/wideq).<br/>
