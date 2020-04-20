@@ -1,3 +1,11 @@
+"""
+Support to interface with LGE ThinQ Devices.
+"""
+
+__version__ = "0.3.4"
+PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
+ISSUE_URL = "{}issues".format(PROJECT_URL)
+
 DOMAIN = "smartthinq_sensors"
 
 CONF_LANGUAGE = "language"
@@ -13,3 +21,14 @@ SMARTTHINQ_COMPONENTS = [
     "sensor", "binary_sensor"
 ]
 
+STARTUP = """
+-------------------------------------------------------------------
+{}
+Version: {}
+This is a custom component
+If you have any issues with this you need to open an issue here:
+{}
+-------------------------------------------------------------------
+""".format(
+    DOMAIN, __version__, ISSUE_URL
+)

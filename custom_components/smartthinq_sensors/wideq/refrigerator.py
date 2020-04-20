@@ -116,15 +116,19 @@ class RefrigeratorStatus(DeviceStatus):
     @property
     def smart_saving_mode(self):
         mode = self.lookup_enum(["SmartSavingMode", "smartSavingMode"])
+        if mode == STATE_OPTIONITEM_UNKNOWN:
+            return None
         return self._set_unknown(
             state=REFRSMARTSAVMODE.get(mode, None), key=mode, type="SmartSavingMode",
         ).value
 
     @property
     def smart_saving_state(self):
-        mode = self.lookup_enum(["SmartSavingModeStatus", "smartSavingRun"])
+        state = self.lookup_enum(["SmartSavingModeStatus", "smartSavingRun"])
+        if state == STATE_OPTIONITEM_UNKNOWN:
+            return None
         return self._set_unknown(
-            state=REFRSMARTSAVSTATUS.get(mode, None), key=mode, type="SmartSavingModeStatus",
+            state=REFRSMARTSAVSTATUS.get(state, None), key=state, type="SmartSavingModeStatus",
         ).value
 
     @property

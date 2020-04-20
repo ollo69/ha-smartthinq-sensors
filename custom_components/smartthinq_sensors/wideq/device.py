@@ -721,7 +721,7 @@ class DeviceStatus(object):
         if self._device.is_unknown_status(key):
             _LOGGER.warning(
                 "ThinQ: received unknown %s status '%s' of type '%s'",
-                self._device.type,
+                self._device.device_info.type.name,
                 key,
                 type,
             )

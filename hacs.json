@@ -1,5 +1,6 @@
 {
   "name": "SmartThinQ LGE Sensors",
+  "content_in_root": false,
   "domains": ["sensor"],
-  "iot_class": "Cloud Polling"
+  "iot_class": "cloud_poll"
 }

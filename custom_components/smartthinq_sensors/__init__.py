@@ -40,6 +40,7 @@ from .const import (
     DOMAIN,
     LGE_DEVICES,
     SMARTTHINQ_COMPONENTS,
+    STARTUP,
 )
 
 ATTR_MODEL = "model"
@@ -133,8 +134,9 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     oauth_url = config_entry.data.get(CONF_OAUTH_URL)
     oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
 
+    _LOGGER.info(STARTUP)
     _LOGGER.info(
-        "Initializing smartthinq platform with region: %s - language: %s",
+        "Initializing SmartThinQ platform with region: %s - language: %s",
         region,
         language,
     )

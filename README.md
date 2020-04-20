@@ -87,8 +87,8 @@ It would certainly motivate me to further improve this work.
 Credits
 -------
 
-This component is realized by [Ollo69][ollo69] based on [WideQ API][wideq].<br/>
-Original WideQ API was implemented by [Adrian Sampson][adrian] under license [MIT][].
+This component is developed by [Ollo69][ollo69] based on [WideQ API][wideq].<br/>
+Original WideQ API was developed by [Adrian Sampson][adrian] under license [MIT][].
 
 [ollo69]: https://github.com/ollo69
 [wideq]: https://github.com/sampsyo/wideq
