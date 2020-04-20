@@ -555,9 +555,21 @@ class ClientV2(object):
         self._country = country
         self._language = language
 
+    def _inject_thinq2_device(self):
+        """This is used only for debug"""
+        data_file = os.path.dirname(os.path.realpath(__file__)) + "/deviceV2.txt"
+        with open(data_file, "r") as f:
+            device_v2 = json.load(f)
+        for d in device_v2:
+            self._devices.append(d)
+            _LOGGER.debug("Injected debug device: %s", d)
+
     def _load_devices(self, force_update: bool = False):
         if self._session and (self._devices is None or force_update):
             self._devices = self._session.get_devices()
+            # for debug
+            # self._inject_thinq2_device()
+            # for debug
 
     @property
     def gateway(self) -> Gateway:
@@ -590,24 +602,12 @@ class ClientV2(object):
             self._load_devices()
         return (DeviceInfo(d) for d in self._devices)
 
-    def _inject_thinq2_state(self):
-        """This is used only for debug"""
-        data_file = os.path.dirname(os.path.realpath(__file__)) + "/snapshot.txt"
-        with open(data_file, "r") as f:
-            snapshot = json.load(f)
-        for d in self._devices:
-            d.update(snapshot)
-
     def refresh_devices(self):
         call_time = datetime.now()
         difference = (call_time - self._last_device_update).total_seconds()
         if difference > MIN_TIME_BETWEEN_UPDATE:
             self._load_devices(True)
             self._last_device_update = call_time
-            # for debug
-            # self._inject_thinq2_state()
-            # _LOGGER.debug(self._devices)
-            # for debug
 
     def get_device(self, device_id) -> Optional["DeviceInfo"]:
         """Look up a DeviceInfo object by device ID.

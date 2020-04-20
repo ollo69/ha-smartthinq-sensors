@@ -176,9 +176,6 @@ class DeviceInfo(object):
 
     @property
     def model_info_url(self) -> str:
-        # for debug - this is a Washer ThinQ V2
-        # return "https://objectstore.lgthinq.com/0dc06d18-81ce-4c7c-9ebc-6b2f6fd6b4bd?Expires=1645943733&Signature=hUkAOai3pKWk-O93foQxSVSPAaDHYT2vUDWxdPTd-FDype~Mr4pbfhAcSEDMu3rEixDBxE2l12ie6-czQMcPrjyxIiTojGxg~Mi~hC4zIzohrfqbgRKAJ-Hg2qd5~7Ge0uuK~6KJmxQeerI7BxedvXsP7aGmc2PloCWx7wtAPD1UsBzkrP6aACfRqQ3-0FnifULgiJenEfvJDQ6c6NjRLC0HYcdEG-vQOF~ZfslWUfyXTPNQBV~5c9mUO9J~CtPVLxRhrAvob-zbCyKhFiBw1ajRdmmRle9-mI0qjh3k58bC~5cAwzC-R~fbXuXj0GJcv-I8FXPO-Hic6AdFK44KgQ__&Key-Pair-Id=APKAI74R6YENXPGRIWLQ"
-        # for debug - this is a Washer ThinQ V2
         return self._get_data_value(["modelJsonUrl", "modelJsonUri"])
 
     @property
@@ -215,9 +212,6 @@ class DeviceInfo(object):
     @property
     def platform_type(self) -> PlatformType:
         """The kind of device, as a `DeviceType` value."""
-        # for debug
-        # return PlatformType.THINQ2
-        # for debug
         ptype = self._data.get("platformType")
         if not ptype:
             return (
@@ -501,7 +495,7 @@ class ModelInfoV2(object):
         if not data:
             return None
 
-        bit_val = self.value(data)[value]["label"]
+        bit_val = self.value(data)[value].get("label", "")
         if bit_val == BIT_OFF_THINQ2:
             return False
         elif bit_val == BIT_ON_THINQ2:
@@ -520,9 +514,18 @@ class ModelInfoV2(object):
 
         if value in reference:
             comment = reference[value].get("_comment")
-            return comment if comment else reference[value]["label"]
+            return comment if comment else reference[value].get("label", "-")
         else:
             return "-"
+
+    def target_key(self, key, value, target):
+        """Look up the friendly name for an encoded reference value
+        """
+        data = self.data_root(key)
+        if not data:
+            return None
+
+        return data.get("targetKey", {}).get(target, {}).get(value)
 
     @property
     def binary_monitor_data(self):

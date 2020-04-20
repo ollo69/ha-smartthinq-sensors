@@ -3,6 +3,8 @@ import logging
 from typing import Optional
 
 from .device import (
+    STATE_OPTIONITEM_UNKNOWN,
+    UNIT_TEMP_FAHRENHEIT,
     Device,
     DeviceStatus,
 )
@@ -27,7 +29,7 @@ class RefrigeratorDevice(Device):
     def poll(self) -> Optional["RefrigeratorStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("washerDryer")
+        res = self.device_poll("refState")
         if not res:
             return None
 
@@ -42,26 +44,96 @@ class RefrigeratorStatus(DeviceStatus):
     """
     def __init__(self, device, data):
         super().__init__(device, data)
+        self._temp_unit = None
+
+    @staticmethod
+    def convert_unit(value, unit):
+        if unit == UNIT_TEMP_FAHRENHEIT:
+            temp_val = int(value)
+            return str((temp_val * 9 / 5) + 32)
+        return value
+
+    def _get_temp_unit(self):
+        if not self._temp_unit:
+            temp_unit = self.lookup_enum(["TempUnit", "tempUnit"])
+            self._temp_unit = self._set_unknown(
+                state=REFRTEMPUNIT.get(temp_unit, None), key=temp_unit, type="TempUnit",
+            ).value
+        return self._temp_unit
+
+    def _get_temp_val_v2(self, key):
+        unit = self._data.get("tempUnit")
+        temp = self.int_or_none(self._data.get(key))
+        if temp:
+            ref_key = self._device.model_info.target_key(
+                key, unit, "tempUnit"
+            )
+            if ref_key:
+                return self._device.model_info.enum_name(ref_key, str(temp))
+            return str(temp)
+        return None
 
     @property
     def is_on(self):
         return True
 
     @property
-    def temp_refrigerator_c(self):
+    def temp_refrigerator(self):
+        if self.is_api_v2:
+            return self._get_temp_val_v2("fridgeTemp")
+
         temp = self.lookup_enum("TempRefrigerator")
-        return temp
+        return RefrigeratorStatus.convert_unit(
+            temp,
+            self._get_temp_unit()
+        )
 
     @property
-    def temp_freezer_c(self):
+    def temp_freezer(self):
+        if self.is_api_v2:
+            return self._get_temp_val_v2("freezerTemp")
+
         temp = self.lookup_enum("TempFreezer")
-        return temp
+        return RefrigeratorStatus.convert_unit(
+            temp,
+            self._get_temp_unit()
+        )
 
     @property
     def temp_unit(self):
-        temp_unit = self.lookup_enum("TempUnit")
+        return self._get_temp_unit()
+
+    @property
+    def door_opened_state(self):
+        if self.is_api_v2:
+            state = self._data.get("atLeastOneDoorOpen")
+        else:
+            state = self.lookup_enum("DoorOpenState")
         return self._set_unknown(
-            state=REFRTEMPUNIT.get(temp_unit, None), key=temp_unit, type="TempUnit",
+            state=REFRDOORSTATUS.get(state, None), key=state, type="DoorOpenState",
+        ).value
+
+    @property
+    def smart_saving_mode(self):
+        mode = self.lookup_enum(["SmartSavingMode", "smartSavingMode"])
+        return self._set_unknown(
+            state=REFRSMARTSAVMODE.get(mode, None), key=mode, type="SmartSavingMode",
+        ).value
+
+    @property
+    def smart_saving_state(self):
+        mode = self.lookup_enum(["SmartSavingModeStatus", "smartSavingRun"])
+        return self._set_unknown(
+            state=REFRSMARTSAVSTATUS.get(mode, None), key=mode, type="SmartSavingModeStatus",
+        ).value
+
+    @property
+    def eco_friendly_state(self):
+        state = self.lookup_enum(["EcoFriendly", "ecoFriendly"])
+        if state == STATE_OPTIONITEM_UNKNOWN:
+            return None
+        return self._set_unknown(
+            state=REFRECOSTATUS.get(state, None), key=state, type="EcoFriendly",
         ).value
 
     @property
@@ -79,38 +151,10 @@ class RefrigeratorStatus(DeviceStatus):
         ).value
 
     @property
-    def energy_saving_mode(self):
-        mode = self.lookup_enum("SmartSavingMode")
-        return self._set_unknown(
-            state=REFRSMARTSAVMODE.get(mode, None), key=mode, type="SmartSavingMode",
-        ).value
-
-    @property
-    def energy_saving_state(self):
-        mode = self.lookup_enum("SmartSavingModeStatus")
-        return self._set_unknown(
-            state=REFRSMARTSAVSTATUS.get(mode, None), key=mode, type="SmartSavingModeStatus",
-        ).value
-
-    @property
-    def door_opened_state(self):
-        state = self.lookup_enum("DoorOpenState")
-        return self._set_unknown(
-            state=REFRDOORSTATUS.get(state, None), key=state, type="DoorOpenState",
-        ).value
-
-    @property
     def locked_state(self):
         state = self.lookup_enum("LockingStatus")
         return self._set_unknown(
             state=REFRLOCKSTATUS.get(state, None), key=state, type="LockingStatus",
-        ).value
-
-    @property
-    def eco_enabled_state(self):
-        state = self.lookup_enum("EcoFriendly")
-        return self._set_unknown(
-            state=REFRECOSTATUS.get(state, None), key=state, type="EcoFriendly",
         ).value
 
     @property
