@@ -13,6 +13,7 @@ from .device import (
 # Refrigerator Smart Saving
 class STATE_REFR_SMARTSAV(enum.Enum):
     OFF = "Smart Saving Off"
+    NOT_USE = "Smart Saving Not Used"
     NIGHT_ON = "Smart Saving Night Mode On"
     CUSTOM_ON = "Smart Saving Custom Mode On"
     SMARTGRID_DR_ON = "Smart Grid Demand Response Mode On"
@@ -63,6 +64,7 @@ REFRSMARTSAVMODE = {
     "@RE_SMARTSAVING_MODE_CUSTOM_W": STATE_REFR_SMARTSAV.CUSTOM_ON,
     "@RE_TERM_DEMAND_RESPONSE_FUNCTIONALITY_W": STATE_REFR_SMARTSAV.SMARTGRID_DR_ON,
     "@RE_TERM_DELAY_DEFROST_CAPABILITY_W": STATE_REFR_SMARTSAV.SMARTGRID_DD_ON,
+    "NOT_USE": STATE_REFR_SMARTSAV.NOT_USE,
     "IGNORE": OPTIONITEMMODES.OFF,
 }
 

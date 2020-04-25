@@ -311,7 +311,10 @@ class ModelInfo(object):
         if not self.value_type(key):
             return str(value)
 
-        options = self.value(key).options
+        values = self.value(key)
+        if not hasattr(values, "options"):
+            return str(value)
+        options = values.options
         return options.get(value, STATE_OPTIONITEM_UNKNOWN)
 
     def range_name(self, key):
