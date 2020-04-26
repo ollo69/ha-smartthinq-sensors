@@ -1,0 +1,42 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Only a single configuration of SmartThinQ LGE Sensors is allowed.",
+            "no_smartthinq_devices": "No SmartThinQ devices found. Component setup aborted."
+        },
+        "error": {
+            "invalid_region": "Invalid region format.",
+            "invalid_language": "Invalid language format.",
+            "invalid_url": "Invalid redirection URL.",
+            "invalid_credentials": "Invalid SmartThinQ credentials."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "region": "Region (e.g. US)",
+                    "language": "Language (e.g. en-US)",
+                    "token": "Refresh Token (only for Authentication mode v1)",
+                    "use_api_v2": "Use Authentication mode v2"
+                },
+                "description": "Fill in your SmartThinQ access information. If you don't have a refresh token, leave it empty to start the authentication process with your credentials. Refresh token is not used with Authentication mode v2.",
+                "title": "SmartThinQ LGE Sensors"
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ login URL",
+                    "callback_url": "Redirection URL"
+                },
+                "description": "Use the URL in the first field to perform login to SmartThinQ with your credentials, then paste the URL where the browser is redirected after the login in the second field.",
+                "title": "SmartThinQ LGE Sensors - Authentication"
+            },
+            "token": {
+                "data": {
+                    "token": "Refresh Token"
+                },
+                "description": "Save the generated token for future use, then confirm to complete the configuration.",
+                "title": "SmartThinQ LGE Sensors - New refresh token"
+            }
+        },
+        "title": "SmartThinQ LGE Sensors"
+    }
+}
