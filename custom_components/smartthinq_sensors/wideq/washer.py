@@ -6,6 +6,7 @@ from .device import (
     Device,
     DeviceStatus,
     STATE_OPTIONITEM_OFF,
+    STATE_OPTIONITEM_UNKNOWN,
 )
 
 from .washer_states import (
@@ -16,6 +17,10 @@ from .washer_states import (
     WASHERSPINSPEEDS,
     WASHREFERRORS,
     WASHERERRORS,
+)
+
+from .dryer_states import (
+    DRYERDRYLEVELS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -191,6 +196,17 @@ class WasherStatus(DeviceStatus):
             state=WASHERWATERTEMPS.get(water_temp, None),
             key=water_temp,
             type="water_temp",
+        ).value
+
+    @property
+    def dry_level_option_state(self):
+        dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
+        if dry_level == STATE_OPTIONITEM_UNKNOWN or dry_level == "0":
+            return None
+        if dry_level == "-":
+            return STATE_OPTIONITEM_OFF
+        return self._set_unknown(
+            state=DRYERDRYLEVELS.get(dry_level, None), key=dry_level, type="DryLevel",
         ).value
 
     @property

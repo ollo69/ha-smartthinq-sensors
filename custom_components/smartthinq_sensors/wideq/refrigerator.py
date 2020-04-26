@@ -46,13 +46,6 @@ class RefrigeratorStatus(DeviceStatus):
         super().__init__(device, data)
         self._temp_unit = None
 
-    @staticmethod
-    def convert_unit(value, unit):
-        if unit == UNIT_TEMP_FAHRENHEIT:
-            temp_val = int(value)
-            return str((temp_val * 9 / 5) + 32)
-        return value
-
     def _get_temp_unit(self):
         if not self._temp_unit:
             temp_unit = self.lookup_enum(["TempUnit", "tempUnit"])
@@ -61,17 +54,30 @@ class RefrigeratorStatus(DeviceStatus):
             ).value
         return self._temp_unit
 
+    def _get_temp_val_v1(self, key):
+        temp = self.lookup_enum(key)
+        temp_key = self._data.get(key)
+        if not temp_key or temp != temp_key:
+            return temp
+        unit = self._get_temp_unit()
+        unit_key = "_F" if unit == UNIT_TEMP_FAHRENHEIT else "_C"
+        return self._device.model_info.enum_name(
+            key + unit_key, temp_key
+        )
+
     def _get_temp_val_v2(self, key):
-        unit = self._data.get("tempUnit")
         temp = self.int_or_none(self._data.get(key))
-        if temp:
-            ref_key = self._device.model_info.target_key(
-                key, unit, "tempUnit"
-            )
-            if ref_key:
-                return self._device.model_info.enum_name(ref_key, str(temp))
+        if not temp:
+            return None
+        unit = self._data.get("tempUnit")
+        ref_key = self._device.model_info.target_key(
+            key, unit, "tempUnit"
+        )
+        if not ref_key:
             return str(temp)
-        return None
+        return self._device.model_info.enum_name(
+            ref_key, str(temp)
+        )
 
     @property
     def is_on(self):
@@ -81,23 +87,13 @@ class RefrigeratorStatus(DeviceStatus):
     def temp_refrigerator(self):
         if self.is_api_v2:
             return self._get_temp_val_v2("fridgeTemp")
-
-        temp = self.lookup_enum("TempRefrigerator")
-        return RefrigeratorStatus.convert_unit(
-            temp,
-            self._get_temp_unit()
-        )
+        return self._get_temp_val_v1("TempRefrigerator")
 
     @property
     def temp_freezer(self):
         if self.is_api_v2:
             return self._get_temp_val_v2("freezerTemp")
-
-        temp = self.lookup_enum("TempFreezer")
-        return RefrigeratorStatus.convert_unit(
-            temp,
-            self._get_temp_unit()
-        )
+        return self._get_temp_val_v1("TempFreezer")
 
     @property
     def temp_unit(self):

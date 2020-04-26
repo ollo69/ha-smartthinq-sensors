@@ -372,6 +372,7 @@ class LGEWasherSensor(LGESensor):
             ATTR_CURRENT_COURSE: self._current_course,
             ATTR_SPIN_OPTION_STATE: self._spin_option_state,
             ATTR_WATERTEMP_OPTION_STATE: self._watertemp_option_state,
+            ATTR_DRYLEVEL_OPTION_STATE: self._drylevel_option_state,
             ATTR_TUBCLEAN_COUNT: self._tubclean_count,
             ATTR_REMAIN_TIME: self._remain_time,
             ATTR_INITIAL_TIME: self._initial_time,
@@ -490,6 +491,17 @@ class LGEWasherSensor(LGESensor):
             if watertemp_option == STATE_OPTIONITEM_OFF:
                 return "-"
             return watertemp_option
+        return "-"
+
+    @property
+    def _drylevel_option_state(self):
+        if self._api.state:
+            drylevel_option = self._api.state.dry_level_option_state
+            if not drylevel_option:
+                return None
+            if drylevel_option == STATE_OPTIONITEM_OFF:
+                return "-"
+            return drylevel_option
         return "-"
 
     @property
