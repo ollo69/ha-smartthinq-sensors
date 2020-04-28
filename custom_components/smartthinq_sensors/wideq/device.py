@@ -246,6 +246,7 @@ class ModelInfo(object):
 
     def __init__(self, data):
         self._data = data
+        self._bit_keys = {}
 
     @property
     def is_api_v2(self):
@@ -254,6 +255,9 @@ class ModelInfo(object):
     @property
     def model_type(self):
         return self._data.get("Info", {}).get("modelType", "")
+
+    def config_value(self, key):
+        return self._data.get("Config", {}).get(key, "")
 
     def value_type(self, name):
         if name in self._data["Value"]:
@@ -337,6 +341,53 @@ class ModelInfo(object):
         enum_options = self.value(options[bit_index]["value"]).options
         return enum_options[value]
 
+    def _get_bit_key(self, key):
+
+        def search_bit_key(key, data):
+            if not data:
+                return {}
+            for i in range(1, 4):
+                opt_key = f"Option{str(i)}"
+                option = data.get(opt_key)
+                if not option:
+                    continue
+                for opt in option.get("option", []):
+                    if key == opt.get("value", ""):
+                        start_bit = opt.get("startbit")
+                        if start_bit is None:
+                            return {}
+                        return {
+                            "option": opt_key,
+                            "startbit": start_bit,
+                        }
+            return {}
+
+        bit_key = self._bit_keys.get(key)
+        if bit_key is None:
+            data = self._data.get("Value")
+            bit_key = search_bit_key(key, data)
+            self._bit_keys[key] = bit_key
+
+        return bit_key
+
+    def bit_value(self, key, values):
+        """Look up the bit value for an specific key
+        """
+        bit_key = self._get_bit_key(key)
+        if not bit_key:
+            return None
+        value = None if not values else values.get(bit_key["option"])
+        if not value:
+            return False
+        bit_value = int(value)
+        start_bit = bit_key["startbit"]
+        bit_index = 2 ** start_bit
+        mode = bin(bit_value & bit_index)
+        if mode == bin(0):
+            return False
+        else:
+            return True
+
     def reference_name(self, key, value):
         """Look up the friendly name for an encoded reference value
         """
@@ -404,6 +455,9 @@ class ModelInfoV2(object):
     @property
     def model_type(self):
         return self._data.get("Info", {}).get("modelType", "")
+
+    def config_value(self, key):
+        return self._data.get("Config", {}).get(key, "")
 
     def value_type(self, name):
         return None
@@ -491,12 +545,14 @@ class ModelInfoV2(object):
         """
         return None
 
-    def bit_name_v2(self, key, value):
-        """Look up the friendly name for an encoded bit value
+    def bit_value(self, key, value):
+        """Look up the bit value for an specific key
         """
         data = self.data_root(key)
         if not data:
             return None
+        if not value:
+            return False
 
         bit_val = self.value(data)[value].get("label", "")
         if bit_val == BIT_OFF_THINQ2:
@@ -743,23 +799,27 @@ class DeviceStatus(object):
             return STATE_OPTIONITEM_UNKNOWN
         return self._device.model_info.reference_name(curr_key, self._data[curr_key])
 
-    def lookup_bit(self, key, index):
-        bit_value = int(self._data.get(key, -1))
-        if bit_value == -1:
-            return STATE_OPTIONITEM_UNKNOWN
-        bit_value = int(self._data[key])
-        bit_index = 2 ** index
-        mode = bin(bit_value & bit_index)
-        if mode == bin(0):
-            return STATE_OPTIONITEM_OFF
-        else:
-            return STATE_OPTIONITEM_ON
+    def lookup_bit(self, key):
+        if self.is_api_v2:
+            return None
+
+        result = self._device.model_info.bit_value(
+            key, self._data
+        )
+        if result is None:
+            return None
+        return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF
 
     def lookup_bit_v2(self, key):
-        curr_key = self._get_data_key(key)
-        if not curr_key:
-            return STATE_OPTIONITEM_UNKNOWN
-        result = self._device.model_info.bit_name_v2(curr_key, self._data[curr_key])
+        if not self.is_api_v2:
+            return None
+
+        value_key = self._get_data_key(key)
+        if not value_key:
+            return None
+        result = self._device.model_info.bit_value(
+            value_key, self._data[value_key]
+        )
         if result is None:
-            return STATE_OPTIONITEM_UNKNOWN
+            return None
         return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF

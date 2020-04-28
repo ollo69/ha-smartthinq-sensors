@@ -377,13 +377,13 @@ class LGEWasherSensor(LGESensor):
             ATTR_REMAIN_TIME: self._remain_time,
             ATTR_INITIAL_TIME: self._initial_time,
             ATTR_RESERVE_TIME: self._reserve_time,
-            ATTR_CREASECARE_MODE: self._creasecare_mode,
+            ATTR_DOORLOCK_MODE: self._doorlock_mode,
             ATTR_CHILDLOCK_MODE: self._childlock_mode,
+            ATTR_REMOTESTART_MODE: self._remotestart_mode,
+            ATTR_CREASECARE_MODE: self._creasecare_mode,
             ATTR_STEAM_MODE: self._steam_mode,
             ATTR_STEAM_SOFTENER_MODE: self._steam_softener_mode,
-            ATTR_DOORLOCK_MODE: self._doorlock_mode,
             ATTR_PREWASH_MODE: self._prewash_mode,
-            ATTR_REMOTESTART_MODE: self._remotestart_mode,
             ATTR_TURBOWASH_MODE: self._turbowash_mode,
         }
         return data
@@ -505,66 +505,66 @@ class LGEWasherSensor(LGESensor):
         return "-"
 
     @property
-    def _creasecare_mode(self):
+    def _tubclean_count(self):
         if self._api.state:
-            mode = self._api.state.creasecare_state
-            return mode
-        return STATE_OPTIONITEM_OFF
-
-    @property
-    def _childlock_mode(self):
-        if self._api.state:
-            mode = self._api.state.childlock_state
-            return mode
-        return STATE_OPTIONITEM_OFF
-
-    @property
-    def _steam_mode(self):
-        if self._api.state:
-            mode = self._api.state.steam_state
-            return mode
-        return STATE_OPTIONITEM_OFF
-
-    @property
-    def _steam_softener_mode(self):
-        if self._api.state:
-            mode = self._api.state.steam_softener_state
-            return mode
-        return STATE_OPTIONITEM_OFF
-
-    @property
-    def _prewash_mode(self):
-        if self._api.state:
-            mode = self._api.state.prewash_state
-            return mode
-        return STATE_OPTIONITEM_OFF
+            return self._api.state.tubclean_count
+        return "N/A"
 
     @property
     def _doorlock_mode(self):
         if self._api.state:
             mode = self._api.state.doorlock_state
             return mode
-        return STATE_OPTIONITEM_OFF
+        return None
+
+    @property
+    def _childlock_mode(self):
+        if self._api.state:
+            mode = self._api.state.childlock_state
+            return mode
+        return None
 
     @property
     def _remotestart_mode(self):
         if self._api.state:
             mode = self._api.state.remotestart_state
             return mode
-        return STATE_OPTIONITEM_OFF
+        return None
+
+    @property
+    def _creasecare_mode(self):
+        if self._api.state:
+            mode = self._api.state.creasecare_state
+            return mode
+        return None
+
+    @property
+    def _steam_mode(self):
+        if self._api.state:
+            mode = self._api.state.steam_state
+            return mode
+        return None
+
+    @property
+    def _steam_softener_mode(self):
+        if self._api.state:
+            mode = self._api.state.steam_softener_state
+            return mode
+        return None
+
+    @property
+    def _prewash_mode(self):
+        if self._api.state:
+            mode = self._api.state.prewash_state
+            return mode
+        return None
 
     @property
     def _turbowash_mode(self):
         if self._api.state:
             mode = self._api.state.turbowash_state
             return mode
-        return STATE_OPTIONITEM_OFF
-
-    @property
-    def _tubclean_count(self):
-        if self._api.state:
-            return self._api.state.tubclean_count
-        return "N/A"
+        return None
 
 
 class LGEDryerSensor(LGESensor):
@@ -589,6 +589,8 @@ class LGEDryerSensor(LGESensor):
             ATTR_REMAIN_TIME: self._remain_time,
             ATTR_INITIAL_TIME: self._initial_time,
             ATTR_RESERVE_TIME: self._reserve_time,
+            ATTR_DOORLOCK_MODE: self._doorlock_mode,
+            ATTR_CHILDLOCK_MODE: self._childlock_mode,
         }
         return data
 
@@ -701,6 +703,20 @@ class LGEDryerSensor(LGESensor):
                 return "-"
             return timedry_option
         return "-"
+
+    @property
+    def _doorlock_mode(self):
+        if self._api.state:
+            mode = self._api.state.doorlock_state
+            return mode
+        return None
+
+    @property
+    def _childlock_mode(self):
+        if self._api.state:
+            mode = self._api.state.childlock_state
+            return mode
+        return None
 
 
 class LGERefrigeratorSensor(LGESensor):

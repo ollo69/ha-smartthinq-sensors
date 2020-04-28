@@ -16,7 +16,6 @@ from .washer_states import (
     WASHERWATERTEMPS,
     WASHERSPINSPEEDS,
     WASHREFERRORS,
-    WASHERERRORS,
 )
 
 from .dryer_states import (
@@ -123,18 +122,26 @@ class WasherStatus(DeviceStatus):
 
     @property
     def current_course(self):
-        course = self.lookup_reference(
-            ["APCourse", "Course", "courseFL24inchBaseTitan"]
-        )
+        if self.is_api_v2:
+            course_key = self._device.model_info.config_value(
+                "courseType"
+            )
+        else:
+            course_key = ["APCourse", "Course"]
+        course = self.lookup_reference(course_key)
         if course == "-":
             return STATE_OPTIONITEM_OFF
         return course
 
     @property
     def current_smartcourse(self):
-        smartcourse = self.lookup_reference(
-            ["SmartCourse", "smartCourseFL24inchBaseTitan"]
-        )
+        if self.is_api_v2:
+            course_key = self._device.model_info.config_value(
+                "smartCourseType"
+            )
+        else:
+            course_key = "SmartCourse"
+        smartcourse = self.lookup_reference(course_key)
         if smartcourse == "-":
             return STATE_OPTIONITEM_OFF
         else:
@@ -210,55 +217,55 @@ class WasherStatus(DeviceStatus):
         ).value
 
     @property
-    def creasecare_state(self):
+    def tubclean_count(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("creaseCare")
-        return self.lookup_bit("Option1", 1)
-
-    @property
-    def childlock_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("childLock")
-        return self.lookup_bit("Option2", 7)
-
-    @property
-    def steam_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("steam")
-        return self.lookup_bit("Option1", 7)
-
-    @property
-    def steam_softener_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("steamSoftener")
-        return self.lookup_bit("Option1", 2)
+            return str(int(self._data.get("TCLCount", -1)))
+        return self._data.get("TCLCount")
 
     @property
     def doorlock_state(self):
         if self.is_api_v2:
             return self.lookup_bit_v2("doorLock")
-        return self.lookup_bit("Option2", 6)
+        return self.lookup_bit("DoorLock")
 
     @property
-    def prewash_state(self):
+    def childlock_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("preWash")
-        return self.lookup_bit("Option1", 6)
+            return self.lookup_bit_v2("childLock")
+        return self.lookup_bit("ChildLock")
 
     @property
     def remotestart_state(self):
         if self.is_api_v2:
             return self.lookup_bit_v2("remoteStart")
-        return self.lookup_bit("Option2", 1)
+        return self.lookup_bit("RemoteStart")
+
+    @property
+    def creasecare_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2("creaseCare")
+        return self.lookup_bit("CreaseCare")
+
+    @property
+    def steam_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2("steam")
+        return self.lookup_bit("Steam")
+
+    @property
+    def steam_softener_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2("steamSoftener")
+        return self.lookup_bit("SteamSoftener")
+
+    @property
+    def prewash_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2("preWash")
+        return self.lookup_bit("PreWash")
 
     @property
     def turbowash_state(self):
         if self.is_api_v2:
             return self.lookup_bit_v2("turboWash")
-        return self.lookup_bit("Option1", 0)
-
-    @property
-    def tubclean_count(self):
-        if self.is_api_v2:
-            return str(int(self._data.get("TCLCount", -1)))
-        return self._data.get("TCLCount")
+        return self.lookup_bit("TurboWash")

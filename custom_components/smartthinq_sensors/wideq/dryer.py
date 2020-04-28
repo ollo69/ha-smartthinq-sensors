@@ -15,7 +15,6 @@ from .dryer_states import (
     DRYERDRYLEVELS,
     DRYERTEMPS,
     DRYERREFERRORS,
-    DRYERERRORS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -109,18 +108,26 @@ class DryerStatus(DeviceStatus):
 
     @property
     def current_course(self):
-        course = self.lookup_reference(
-            ["APCourse", "Course", "courseFL24inchBaseTitan"]
-        )
+        if self.is_api_v2:
+            course_key = self._device.model_info.config_value(
+                "courseType"
+            )
+        else:
+            course_key = ["APCourse", "Course"]
+        course = self.lookup_reference(course_key)
         if course == "-":
             return STATE_OPTIONITEM_OFF
         return course
 
     @property
     def current_smartcourse(self):
-        smartcourse = self.lookup_reference(
-            ["SmartCourse", "smartCourseFL24inchBaseTitan"]
-        )
+        if self.is_api_v2:
+            course_key = self._device.model_info.config_value(
+                "smartCourseType"
+            )
+        else:
+            course_key = "SmartCourse"
+        smartcourse = self.lookup_reference(course_key)
         if smartcourse == "-":
             return STATE_OPTIONITEM_OFF
         else:
@@ -187,3 +194,15 @@ class DryerStatus(DeviceStatus):
         if time_dry == "-":
             return STATE_OPTIONITEM_OFF
         return time_dry
+
+    @property
+    def doorlock_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2("doorLock")
+        return self.lookup_bit("DoorLock")
+
+    @property
+    def childlock_state(self):
+        if self.is_api_v2:
+            return self.lookup_bit_v2("childLock")
+        return self.lookup_bit("ChildLock")
