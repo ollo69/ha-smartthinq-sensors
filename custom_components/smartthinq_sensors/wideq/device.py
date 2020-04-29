@@ -652,6 +652,8 @@ class Device(object):
 
     @property
     def status(self):
+        if not self._model_info:
+            return None
         return self._status
 
     def _set_control(self, key, value):
@@ -717,6 +719,8 @@ class Device(object):
         either a `Status` object or `None` if the status is not yet
         available.
         """
+        if not self._model_info:
+            return None
 
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
