@@ -5,8 +5,7 @@ from typing import Optional
 from .device import (
     Device,
     DeviceStatus,
-    STATE_OPTIONITEM_OFF,
-    STATE_OPTIONITEM_UNKNOWN,
+    STATE_OPTIONITEM_NONE,
 )
 
 from .washer_states import (
@@ -27,6 +26,8 @@ _LOGGER = logging.getLogger(__name__)
 
 class WasherDevice(Device):
     """A higher-level interface for a washer."""
+    def __init__(self, client, device):
+        super().__init__(client, device, WasherStatus(self, None))
 
     def poll(self) -> Optional["WasherStatus"]:
         """Poll the device's current state."""
@@ -35,7 +36,8 @@ class WasherDevice(Device):
         if not res:
             return None
 
-        return WasherStatus(self, res)
+        self._status = WasherStatus(self, res)
+        return self._status
 
 
 class WasherStatus(DeviceStatus):
@@ -44,7 +46,6 @@ class WasherStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
-
     def __init__(self, device, data):
         super().__init__(device, data)
         self._run_state = None
@@ -54,6 +55,8 @@ class WasherStatus(DeviceStatus):
     def _get_run_state(self):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
+            if not state:
+                return STATE_WASHER.POWER_OFF
             self._run_state = self._set_unknown(
                 state=WASHERSTATES.get(state, None), key=state, type="status"
             )
@@ -62,6 +65,8 @@ class WasherStatus(DeviceStatus):
     def _get_pre_state(self):
         if not self._pre_state:
             state = self.lookup_enum(["PreState", "preState"])
+            if not state:
+                return STATE_WASHER.POWER_OFF
             self._pre_state = self._set_unknown(
                 state=WASHERSTATES.get(state, None), key=state, type="status"
             )
@@ -70,6 +75,8 @@ class WasherStatus(DeviceStatus):
     def _get_error(self):
         if not self._error:
             error = self.lookup_reference(["Error", "error"])
+            if not error:
+                return STATE_WASHER_ERROR.OFF
             self._error = self._set_unknown(
                 state=WASHREFERRORS.get(error, None), key=error, type="error_status"
             )
@@ -109,6 +116,8 @@ class WasherStatus(DeviceStatus):
 
     @property
     def error_state(self):
+        if not self.is_on:
+            return STATE_OPTIONITEM_NONE
         error = self._get_error()
         return error.value
 
@@ -129,8 +138,6 @@ class WasherStatus(DeviceStatus):
         else:
             course_key = ["APCourse", "Course"]
         course = self.lookup_reference(course_key)
-        if course == "-":
-            return STATE_OPTIONITEM_OFF
         return course
 
     @property
@@ -141,11 +148,8 @@ class WasherStatus(DeviceStatus):
             )
         else:
             course_key = "SmartCourse"
-        smartcourse = self.lookup_reference(course_key)
-        if smartcourse == "-":
-            return STATE_OPTIONITEM_OFF
-        else:
-            return smartcourse
+        smart_course = self.lookup_reference(course_key)
+        return smart_course
 
     @property
     def remaintime_hour(self):
@@ -185,42 +189,46 @@ class WasherStatus(DeviceStatus):
 
     @property
     def spin_option_state(self):
-        spinspeed = self.lookup_enum(["SpinSpeed", "spin"])
-        if spinspeed == "-":
-            return STATE_OPTIONITEM_OFF
+        spin_speed = self.lookup_enum(["SpinSpeed", "spin"])
+        if not spin_speed:
+            return STATE_OPTIONITEM_NONE
         return self._set_unknown(
-            state=WASHERSPINSPEEDS.get(spinspeed, None),
-            key=spinspeed,
-            type="spin_option",
+            state=WASHERSPINSPEEDS.get(spin_speed, None),
+            key=spin_speed,
+            type="SpinSpeed",
         ).value
 
     @property
     def water_temp_option_state(self):
         water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
-        if water_temp == "-":
-            return STATE_OPTIONITEM_OFF
+        if not water_temp:
+            return STATE_OPTIONITEM_NONE
         return self._set_unknown(
             state=WASHERWATERTEMPS.get(water_temp, None),
             key=water_temp,
-            type="water_temp",
+            type="WaterTemp",
         ).value
 
     @property
     def dry_level_option_state(self):
         dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
-        if dry_level == STATE_OPTIONITEM_UNKNOWN or dry_level == "0":
-            return None
-        if dry_level == "-":
-            return STATE_OPTIONITEM_OFF
+        if not dry_level:
+            return STATE_OPTIONITEM_NONE
         return self._set_unknown(
-            state=DRYERDRYLEVELS.get(dry_level, None), key=dry_level, type="DryLevel",
+            state=DRYERDRYLEVELS.get(dry_level, None),
+            key=dry_level,
+            type="DryLevel",
         ).value
 
     @property
     def tubclean_count(self):
         if self.is_api_v2:
-            return str(int(self._data.get("TCLCount", -1)))
-        return self._data.get("TCLCount")
+            result = DeviceStatus.int_or_none(self._data.get("TCLCount"))
+        else:
+            result = self._data.get("TCLCount")
+        if result is None:
+            return "N/A"
+        return result
 
     @property
     def doorlock_state(self):

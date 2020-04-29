@@ -218,6 +218,7 @@ class LGEDevice:
 
         self._device = device
         self._name = name
+        self._state = device.status
         self._device_id = device.device_info.id
         self._type = device.device_info.type
         self._mac = device.device_info.macaddress
@@ -225,7 +226,6 @@ class LGEDevice:
 
         self._model = f"{device.device_info.model_name}-{device.model_info.model_type}"
         self._id = f"{self._type.name}:{self._device_id}"
-        self._state = None
 
         self._retry_count = 0
         self._disconnected = True

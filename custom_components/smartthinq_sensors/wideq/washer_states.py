@@ -1,11 +1,11 @@
 import enum
 
-from .device import STATE_OPTIONITEM_OFF
+from .device import STATE_OPTIONITEM_NONE
 
 
 # Washer State
 class STATE_WASHER(enum.Enum):
-    POWER_OFF = STATE_OPTIONITEM_OFF
+    POWER_OFF = STATE_OPTIONITEM_NONE
     ADD_DRAIN = "Add Drain"
     COOLDOWN = "Cooldown"
     DETECTING = "Detecting"
@@ -33,7 +33,7 @@ class STATE_WASHER(enum.Enum):
 
 # Washer Temp
 class STATE_WASHER_WATERTEMP(enum.Enum):
-    OFF = STATE_OPTIONITEM_OFF
+    OFF = STATE_OPTIONITEM_NONE
     NO_SELECT = "Not selected"
     COLD = "Cold"
     EXTRA_HOT = "Extra Hot"
@@ -50,7 +50,7 @@ class STATE_WASHER_WATERTEMP(enum.Enum):
 
 # Washesr Spin
 class STATE_WASHER_SPINSPEED(enum.Enum):
-    OFF = STATE_OPTIONITEM_OFF
+    OFF = STATE_OPTIONITEM_NONE
     NO_SPIN = "No Spin"
     SPEED_EXTRA_HIGH = "Extra High"
     SPEED_HIGH = "High"
@@ -70,7 +70,7 @@ class STATE_WASHER_SPINSPEED(enum.Enum):
 
 # Washer Error
 class STATE_WASHER_ERROR(enum.Enum):
-    OFF = STATE_OPTIONITEM_OFF
+    OFF = STATE_OPTIONITEM_NONE
     NO_ERROR = "Normal"
     ERROR_CE = "CE - Contact Service Center"
     ERROR_dE1 = "Door open - Please close the door"
@@ -121,6 +121,7 @@ WASHERSTATES = {
 }
 
 WASHERWATERTEMPS = {
+    "-": STATE_WASHER_WATERTEMP.OFF,
     "OFF": STATE_WASHER_WATERTEMP.OFF,
     "@WM_TERM_NO_SELECT_W": STATE_WASHER_WATERTEMP.NO_SELECT,
     "@WM_OPTION_TEMP_COLD_W": STATE_WASHER_WATERTEMP.COLD,
@@ -144,6 +145,7 @@ WASHERWATERTEMPS = {
 }
 
 WASHERSPINSPEEDS = {
+    "-": STATE_WASHER_SPINSPEED.OFF,
     "OFF": STATE_WASHER_SPINSPEED.OFF,
     "@WM_OPTION_SPIN_NO_SPIN_W": STATE_WASHER_SPINSPEED.NO_SPIN,
     "@WM_OPTION_SPIN_LOW_W": STATE_WASHER_SPINSPEED.SPEED_LOW,

@@ -21,6 +21,7 @@ DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
 STATE_OPTIONITEM_ON = "On"
 STATE_OPTIONITEM_OFF = "Off"
+STATE_OPTIONITEM_NONE = "-"
 STATE_OPTIONITEM_UNKNOWN = "unknown"
 
 UNIT_TEMP_CELSIUS = "celsius"
@@ -313,13 +314,13 @@ class ModelInfo(object):
         """Look up the friendly enum name for an encoded value.
         """
         if not self.value_type(key):
-            return str(value)
+            return None
 
         values = self.value(key)
         if not hasattr(values, "options"):
-            return str(value)
+            return None
         options = values.options
-        return options.get(value, STATE_OPTIONITEM_UNKNOWN)
+        return options.get(value)
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
@@ -393,15 +394,14 @@ class ModelInfo(object):
         """
         value = str(value)
         if not self.value_type(key):
-            return value
+            return None
 
         reference = self.value(key).reference
 
         if value in reference:
-            comment = reference[value]["_comment"]
-            return comment if comment else reference[value]["label"]
-        else:
-            return "-"
+            comment = reference[value].get("_comment")
+            return comment if comment else reference[value].get("label")
+        return None
 
     @property
     def binary_monitor_data(self):
@@ -529,11 +529,11 @@ class ModelInfoV2(object):
         """
         data = self.data_root(key)
         if not data:
-            return str(value)
+            return None
 
         options = self.value(data)
-        item = options.get(value)
-        return item["label"] if item else STATE_OPTIONITEM_UNKNOWN
+        item = options.get(value, {})
+        return item.get("label")
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
@@ -567,15 +567,14 @@ class ModelInfoV2(object):
         """
         data = self.data_root(key)
         if not data:
-            return str(value)
+            return None
 
         reference = self.value(data)
 
         if value in reference:
             comment = reference[value].get("_comment")
-            return comment if comment else reference[value].get("label", "-")
-        else:
-            return "-"
+            return comment if comment else reference[value].get("label")
+        return None
 
     def target_key(self, key, value, target):
         """Look up the friendly name for an encoded reference value
@@ -625,13 +624,14 @@ class Device(object):
     regarding the device.
     """
 
-    def __init__(self, client, device):
+    def __init__(self, client, device, status=None):
         """Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
         """
 
         self._client = client
         self._device_info = device
+        self._status = status
         model_data = client.model_info(device)
         if device.platform_type == PlatformType.THINQ2:
             self._model_info = ModelInfoV2(model_data)
@@ -653,6 +653,10 @@ class Device(object):
     @property
     def model_info(self):
         return self._model_info
+
+    @property
+    def status(self):
+        return self._status
 
     def _set_control(self, key, value):
         """Set a device's control for `key` to `value`.
@@ -751,7 +755,7 @@ class DeviceStatus(object):
 
     def __init__(self, device, data):
         self._device = device
-        self._data = data
+        self._data = {} if data is None else data
 
     @staticmethod
     def int_or_none(value):
@@ -760,10 +764,16 @@ class DeviceStatus(object):
         return None
 
     @property
+    def has_data(self):
+        return self._data is not None
+
+    @property
     def is_api_v2(self):
         return self._device.model_info.is_api_v2
 
     def _get_data_key(self, keys):
+        if not self._data:
+            return ""
         if isinstance(keys, list):
             for key in keys:
                 if key in self._data:
@@ -790,13 +800,13 @@ class DeviceStatus(object):
     def lookup_enum(self, key):
         curr_key = self._get_data_key(key)
         if not curr_key:
-            return STATE_OPTIONITEM_UNKNOWN
+            return None
         return self._device.model_info.enum_name(curr_key, self._data[curr_key])
 
     def lookup_reference(self, key):
         curr_key = self._get_data_key(key)
         if not curr_key:
-            return STATE_OPTIONITEM_UNKNOWN
+            return None
         return self._device.model_info.reference_name(curr_key, self._data[curr_key])
 
     def lookup_bit(self, key):
@@ -807,7 +817,7 @@ class DeviceStatus(object):
             key, self._data
         )
         if result is None:
-            return None
+            return STATE_OPTIONITEM_NONE
         return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF
 
     def lookup_bit_v2(self, key):
@@ -816,10 +826,10 @@ class DeviceStatus(object):
 
         value_key = self._get_data_key(key)
         if not value_key:
-            return None
+            return STATE_OPTIONITEM_NONE
         result = self._device.model_info.bit_value(
             value_key, self._data[value_key]
         )
         if result is None:
-            return None
+            return STATE_OPTIONITEM_NONE
         return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF

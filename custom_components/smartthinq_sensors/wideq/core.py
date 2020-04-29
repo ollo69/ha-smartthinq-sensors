@@ -599,5 +599,11 @@ class Client(object):
             """
         url = device.model_info_url
         if url not in self._model_info:
+            _LOGGER.info(
+                "Loading model info for %s. Model: %s, Url: %s",
+                device.name,
+                device.model_name,
+                url,
+            )
             self._model_info[url] = device.load_model_info()
         return self._model_info[url]
