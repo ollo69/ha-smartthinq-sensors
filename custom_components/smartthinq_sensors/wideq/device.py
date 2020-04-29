@@ -632,11 +632,7 @@ class Device(object):
         self._client = client
         self._device_info = device
         self._status = status
-        model_data = client.model_info(device)
-        if device.platform_type == PlatformType.THINQ2:
-            self._model_info = ModelInfoV2(model_data)
-        else:
-            self._model_info = ModelInfo(model_data)
+        self._model_info = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
 
         # for logging unknown states received
@@ -686,6 +682,14 @@ class Device(object):
         # The response comes in a funky key/value format: "(key:value)".
         _, value = data[1:-1].split(":")
         return value
+
+    def init_device_info(self):
+        if self._model_info is None:
+            model_data = self._client.model_info(self._device_info)
+            if self._device_info.platform_type == PlatformType.THINQ2:
+                self._model_info = ModelInfoV2(model_data)
+            else:
+                self._model_info = ModelInfo(model_data)
 
     def monitor_start(self):
         """Start monitoring the device's status."""

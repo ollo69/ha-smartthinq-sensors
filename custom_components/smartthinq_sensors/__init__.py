@@ -159,7 +159,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
 
     _LOGGER.info("SmartThinQ client connected.")
 
-    lge_devices = await lge_devices_setup(client)
+    lge_devices = await lge_devices_setup(hass, client)
     hass.data.setdefault(DOMAIN, {}).update(
         {
             CLIENT: client,
@@ -224,7 +224,7 @@ class LGEDevice:
         self._mac = device.device_info.macaddress
         self._firmware = device.device_info.firmware
 
-        self._model = f"{device.device_info.model_name}-{device.model_info.model_type}"
+        self._model = f"{device.device_info.model_name}"
         self._id = f"{self._type.name}:{self._device_id}"
 
         self._retry_count = 0
@@ -272,6 +272,10 @@ class LGEDevice:
             data["sw_version"] = self._firmware
 
         return data
+
+    def init_device(self):
+        self._device.init_device_info()
+        self._model = f"{self._model}-{self._device.model_info.model_type}"
 
     def _restart_monitor(self):
         """Restart the device monitor"""
@@ -359,7 +363,7 @@ class LGEDevice:
             _LOGGER.debug("Status update failed.")
 
 
-async def lge_devices_setup(client) -> dict:
+async def lge_devices_setup(hass, client) -> dict:
     """Query connected devices from LG ThinQ."""
     _LOGGER.info("Starting LGE ThinQ devices...")
 
@@ -386,6 +390,7 @@ async def lge_devices_setup(client) -> dict:
             _LOGGER.info("Found unsupported LGE Device %s of type %s", device_name, device.type.name)
             continue
 
+        await hass.async_add_executor_job(dev.init_device)
         wrapped_devices.setdefault(device.type, []).append(dev)
         _LOGGER.info(
             "LGE Device added. Name: %s - Model: %s - Mac: %s - ID: %s",
