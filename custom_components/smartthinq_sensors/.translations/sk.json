@@ -1,0 +1,42 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Len jedna konfigurácia SmartThinQ LGE Sensors je povolená.",
+            "no_smartthinq_devices": "Nebolo nájdené SmartThinQ zariadenie. Nastavenie komponentu bolo prerušené."
+        },
+        "error": {
+            "invalid_region": "Nesprávny formát regiónu.",
+            "invalid_language": "Nesprávny formát jazyka.",
+            "invalid_url": "Nesrpávna spätná URL.",
+            "invalid_credentials": "Nesprávne SmartThinQ prihlásenie."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "region": "Región (napr. SK)",
+                    "language": "Jazyk (napr. sk-SK)",
+                    "token": "Obnova Token (len pre Autorizačný mód v1)",
+                    "use_api_v2": "Použi Autorizačný mód v2"
+                },
+                "description": "Vyplňte informácie o prístupe k SmartThinQ. Ak nemáte obnovovací token, nechajte ho prázdny a začnite proces autentifikácie pomocou vašich poverení. Obnovovací token sa nepoužíva v režime overovania v2.",
+                "title": "SmartThinQ LGE Sensors"
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ prihlasovacie URL",
+                    "callback_url": "Spätná URL"
+                },
+                "description": "Pomocou URL v prvom poli vykonajte prihlásenie do SmartThinQ a potom vložte URL, ktorú vygeneruje prehliadač po prihlásení, do druhého poľa.",
+                "title": "SmartThinQ LGE Sensors - Autentifikácia"
+            },
+            "token": {
+                "data": {
+                    "token": "Obnovte Token"
+                },
+                "description": "Uložte vygenerovaný token pre budúce použitie a potom potvrďte dokončenie konfigurácie.",
+                "title": "SmartThinQ LGE Sensors - Nový obnovený token"
+            }
+        },
+        "title": "SmartThinQ LGE Sensors"
+    }
+}
