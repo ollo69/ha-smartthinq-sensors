@@ -389,7 +389,7 @@ class ModelInfo(object):
         else:
             return True
 
-    def reference_name(self, key, value):
+    def reference_name(self, key, value, get_comment=True):
         """Look up the friendly name for an encoded reference value
         """
         value = str(value)
@@ -400,7 +400,9 @@ class ModelInfo(object):
 
         if value in reference:
             comment = reference[value].get("_comment")
-            return comment if comment else reference[value].get("label")
+            if comment and get_comment:
+                return comment
+            return reference[value].get("label")
         return None
 
     @property
@@ -562,7 +564,7 @@ class ModelInfoV2(object):
 
         return None
 
-    def reference_name(self, key, value):
+    def reference_name(self, key, value, get_comment=True):
         """Look up the friendly name for an encoded reference value
         """
         data = self.data_root(key)
@@ -573,7 +575,9 @@ class ModelInfoV2(object):
 
         if value in reference:
             comment = reference[value].get("_comment")
-            return comment if comment else reference[value].get("label")
+            if comment and get_comment:
+                return comment
+            return reference[value].get("label")
         return None
 
     def target_key(self, key, value, target):
@@ -809,13 +813,17 @@ class DeviceStatus(object):
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
-        return self._device.model_info.enum_name(curr_key, self._data[curr_key])
+        return self._device.model_info.enum_name(
+            curr_key, self._data[curr_key]
+        )
 
-    def lookup_reference(self, key):
+    def lookup_reference(self, key, get_comment=True):
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
-        return self._device.model_info.reference_name(curr_key, self._data[curr_key])
+        return self._device.model_info.reference_name(
+            curr_key, self._data[curr_key], get_comment
+        )
 
     def lookup_bit(self, key):
         if self.is_api_v2:

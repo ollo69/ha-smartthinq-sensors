@@ -65,6 +65,15 @@ ATTR_TEMPCONTROL_OPTION_STATE = "tempcontrol_option_state"
 ATTR_DRYLEVEL_OPTION_STATE = "drylevel_option_state"
 ATTR_TIMEDRY_OPTION_STATE = "timedry_option_state"
 
+# dishwasher sensor attributes
+ATTR_PROCESS_STATE = "process_state"
+ATTR_DELAYSTART_MODE = "delay_start_mode"
+ATTR_ENERGYSAVER_MODE = "energy_saver_mode"
+ATTR_DUALZONE_MODE = "dual_zone_mode"
+ATTR_HALFLOAD_MODE = "half_load_mode"
+ATTR_RINSEREFILL_STATE = "rinse_refill_state"
+ATTR_SALTREFILL_STATE = "salt_refill_state"
+
 # refrigerator sensor attributes
 ATTR_REFRIGERATOR_TEMP = "refrigerator_temp"
 ATTR_FREEZER_TEMP = "freezer_temp"
@@ -154,6 +163,36 @@ DRYER_BINARY_SENSORS = {
     },
 }
 
+DISHWASHER_SENSORS = {
+    DEFAULT_SENSOR: {
+        ATTR_MEASUREMENT_NAME: "Default",
+        ATTR_ICON: "mdi:dishwasher",
+        ATTR_UNIT_FN: lambda x: None,
+        ATTR_DEVICE_CLASS: None,
+        ATTR_VALUE_FN: lambda x: x._power_state,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+}
+
+DISHWASHER_BINARY_SENSORS = {
+    ATTR_RUN_COMPLETED: {
+        ATTR_MEASUREMENT_NAME: "Wash Completed",
+        ATTR_ICON: None,
+        ATTR_UNIT_FN: lambda x: None,
+        ATTR_DEVICE_CLASS: None,
+        ATTR_VALUE_FN: lambda x: x._run_completed,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+    ATTR_ERROR_STATE: {
+        ATTR_MEASUREMENT_NAME: "Error State",
+        ATTR_ICON: None,
+        ATTR_UNIT_FN: lambda x: None,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_PROBLEM,
+        ATTR_VALUE_FN: lambda x: x._error_state,
+        ATTR_ENABLED_FN: lambda x: True,
+    },
+}
+
 REFRIGERATOR_SENSORS = {
     DEFAULT_SENSOR: {
         ATTR_MEASUREMENT_NAME: "Default",
@@ -202,6 +241,7 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
     lge_sensors = []
     washer_sensors = WASHER_BINARY_SENSORS if type_binary else WASHER_SENSORS
     dryer_sensors = DRYER_BINARY_SENSORS if type_binary else DRYER_SENSORS
+    dishwasher_sensors = DISHWASHER_BINARY_SENSORS if type_binary else DISHWASHER_SENSORS
     refrigerator_sensors = REFRIGERATOR_BINARY_SENSORS if type_binary else REFRIGERATOR_SENSORS
 
     entry_config = hass.data[DOMAIN]
@@ -220,6 +260,14 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
             LGEDryerSensor(lge_device, measurement, definition, type_binary)
             for measurement, definition in dryer_sensors.items()
             for lge_device in lge_devices.get(DeviceType.DRYER, [])
+            if definition[ATTR_ENABLED_FN](lge_device)
+        ]
+    )
+    lge_sensors.extend(
+        [
+            LGEDishWasherSensor(lge_device, measurement, definition, type_binary)
+            for measurement, definition in dishwasher_sensors.items()
+            for lge_device in lge_devices.get(DeviceType.DISHWASHER, [])
             if definition[ATTR_ENABLED_FN](lge_device)
         ]
     )
@@ -691,6 +739,170 @@ class LGEDryerSensor(LGESensor):
             mode = self._api.state.childlock_state
             return mode
         return None
+
+
+class LGEDishWasherSensor(LGESensor):
+    """A sensor to monitor LGE DishWasher devices"""
+
+    @property
+    def device_state_attributes(self):
+        """Return the optional state attributes."""
+        if not self._is_default:
+            return None
+
+        data = {
+            ATTR_RUN_COMPLETED: self._run_completed,
+            ATTR_ERROR_STATE: self._error_state,
+            ATTR_ERROR_MSG: self._error_msg,
+            ATTR_RUN_STATE: self._current_run_state,
+            ATTR_PROCESS_STATE: self._process_state,
+            ATTR_CURRENT_COURSE: self._current_course,
+            ATTR_REMAIN_TIME: self._remain_time,
+            ATTR_INITIAL_TIME: self._initial_time,
+            ATTR_RESERVE_TIME: self._reserve_time,
+            ATTR_DOORLOCK_MODE: self._doorlock_mode,
+            ATTR_CHILDLOCK_MODE: self._childlock_mode,
+            ATTR_DELAYSTART_MODE: self._delaystart_mode,
+            ATTR_ENERGYSAVER_MODE: self._energysaver_mode,
+            ATTR_DUALZONE_MODE: self._dualzone_mode,
+            ATTR_HALFLOAD_MODE: self._halfload_mode,
+            ATTR_RINSEREFILL_STATE: self._rinserefill_state,
+            ATTR_SALTREFILL_STATE: self._saltrefill_state,
+        }
+        return data
+
+    @property
+    def _run_completed(self):
+        if self._api.state:
+            if self._api.state.is_run_completed:
+                return STATE_ON
+        return STATE_OFF
+
+    @property
+    def _current_run_state(self):
+        if self._api.state:
+            run_state = self._api.state.run_state
+            return run_state
+        return "-"
+
+    @property
+    def _process_state(self):
+        if self._api.state:
+            process = self._api.state.process_state
+            return process
+        return "-"
+
+    @property
+    def _remain_time(self):
+        if self._api.state:
+            if self._api.state.is_on:
+                return LGESensor.format_time(
+                    self._api.state.remaintime_hour,
+                    self._api.state.remaintime_min
+                )
+        return "0:00"
+
+    @property
+    def _initial_time(self):
+        if self._api.state:
+            if self._api.state.is_on:
+                return LGESensor.format_time(
+                    self._api.state.initialtime_hour,
+                    self._api.state.initialtime_min
+                )
+        return "0:00"
+
+    @property
+    def _reserve_time(self):
+        if self._api.state:
+            if self._api.state.is_on:
+                return LGESensor.format_time(
+                    self._api.state.reservetime_hour,
+                    self._api.state.reservetime_min
+                )
+        return "0:00"
+
+    @property
+    def _current_course(self):
+        if self._api.state:
+            if self._api.state.is_on:
+                course = self._api.state.current_course
+                if course:
+                    return course
+                smartcourse = self._api.state.current_smartcourse
+                if smartcourse:
+                    return smartcourse
+        return "-"
+
+    @property
+    def _error_state(self):
+        if self._api.state:
+            if self._api.state.is_error:
+                return STATE_ON
+        return STATE_OFF
+
+    @property
+    def _error_msg(self):
+        if self._api.state:
+            error = self._api.state.error_state
+            return error
+        return "-"
+
+    @property
+    def _doorlock_mode(self):
+        if self._api.state:
+            mode = self._api.state.doorlock_state
+            return mode
+        return None
+
+    @property
+    def _childlock_mode(self):
+        if self._api.state:
+            mode = self._api.state.childlock_state
+            return mode
+        return None
+
+    @property
+    def _delaystart_mode(self):
+        if self._api.state:
+            mode = self._api.state.delaystart_state
+            return mode
+        return None
+
+    @property
+    def _energysaver_mode(self):
+        if self._api.state:
+            mode = self._api.state.energysaver_state
+            return mode
+        return None
+
+    @property
+    def _dualzone_mode(self):
+        if self._api.state:
+            mode = self._api.state.dualzone_state
+            return mode
+        return None
+
+    @property
+    def _halfload_mode(self):
+        if self._api.state:
+            mode = self._api.state.halfload_state
+            return mode
+        return None
+
+    @property
+    def _rinserefill_state(self):
+        if self._api.state:
+            state = self._api.state.rinserefill_state
+            return STATE_LOOKUP.get(state, STATE_OFF)
+        return STATE_OFF
+
+    @property
+    def _saltrefill_state(self):
+        if self._api.state:
+            state = self._api.state.saltrefill_state
+            return STATE_LOOKUP.get(state, STATE_OFF)
+        return STATE_OFF
 
 
 class LGERefrigeratorSensor(LGESensor):

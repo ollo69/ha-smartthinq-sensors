@@ -1,4 +1,4 @@
-"""------------------for Washer"""
+"""------------------for DishWasher"""
 import logging
 from typing import Optional
 
@@ -8,40 +8,36 @@ from .device import (
     STATE_OPTIONITEM_NONE,
 )
 
-from .washer_states import (
-    STATE_WASHER,
-    STATE_WASHER_ERROR,
-    WASHERSTATES,
-    WASHERWATERTEMPS,
-    WASHERSPINSPEEDS,
-    WASHREFERRORS,
-)
-
-from .dryer_states import (
-    DRYERDRYLEVELS,
+from .dishwasher_states import (
+    STATE_DISHWASHER,
+    STATE_DISHWASHER_PROCESS,
+    STATE_DISHWASHER_ERROR,
+    DISHWASHERSTATES,
+    DISHWASHERPROCESS,
+    DISHWASHERERRORS,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class WasherDevice(Device):
-    """A higher-level interface for a washer."""
+class DishWasherDevice(Device):
+    """A higher-level interface for a dishwasher."""
     def __init__(self, client, device):
-        super().__init__(client, device, WasherStatus(self, None))
+        super().__init__(client, device, DishWasherStatus(self, None))
 
-    def poll(self) -> Optional["WasherStatus"]:
+    def poll(self) -> Optional["DishWasherStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("washerDryer")
+        res = self.device_poll("dishWasher")
         if not res:
             return None
 
-        self._status = WasherStatus(self, res)
+        self._status = DishWasherStatus(self, res)
         return self._status
 
 
-class WasherStatus(DeviceStatus):
-    """Higher-level information about a washer's current status.
+class DishWasherStatus(DeviceStatus):
+    """Higher-level information about a dishwasher's current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.
@@ -49,50 +45,50 @@ class WasherStatus(DeviceStatus):
     def __init__(self, device, data):
         super().__init__(device, data)
         self._run_state = None
-        self._pre_state = None
+        self._process = None
         self._error = None
 
     def _get_run_state(self):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
-                return STATE_WASHER.POWER_OFF
+                return STATE_DISHWASHER.POWER_OFF
             self._run_state = self._set_unknown(
-                state=WASHERSTATES.get(state, None), key=state, type="status"
+                state=DISHWASHERSTATES.get(state, None), key=state, type="state"
             )
         return self._run_state
 
-    def _get_pre_state(self):
-        if not self._pre_state:
-            state = self.lookup_enum(["PreState", "preState"])
-            if not state:
-                return STATE_WASHER.POWER_OFF
-            self._pre_state = self._set_unknown(
-                state=WASHERSTATES.get(state, None), key=state, type="status"
+    def _get_process(self):
+        if not self._process:
+            process = self.lookup_enum(["Process", "process"])
+            if not process:
+                return STATE_DISHWASHER_PROCESS.OFF
+            self._process = self._set_unknown(
+                state=DISHWASHERPROCESS.get(process, None), key=process, type="process"
             )
-        return self._pre_state
+        return self._process
 
     def _get_error(self):
         if not self._error:
-            error = self.lookup_reference(["Error", "error"])
+            error = self.lookup_reference(["Error", "error"], get_comment=False)
             if not error:
-                return STATE_WASHER_ERROR.OFF
+                return STATE_DISHWASHER_ERROR.OFF
             self._error = self._set_unknown(
-                state=WASHREFERRORS.get(error, None), key=error, type="error_status"
+                state=DISHWASHERERRORS.get(error, None), key=error, type="error_status"
             )
         return self._error
 
     @property
     def is_on(self):
         run_state = self._get_run_state()
-        return run_state != STATE_WASHER.POWER_OFF
+        return run_state != STATE_DISHWASHER.POWER_OFF
 
     @property
     def is_run_completed(self):
         run_state = self._get_run_state()
-        pre_state = self._get_pre_state()
-        if run_state == STATE_WASHER.END or (
-            run_state == STATE_WASHER.POWER_OFF and pre_state == STATE_WASHER.END
+        process = self._get_process()
+        if run_state == STATE_DISHWASHER.COMPLETE or (
+            run_state == STATE_DISHWASHER.POWER_OFF and process == STATE_DISHWASHER_PROCESS.COMPLETE
         ):
             return True
         return False
@@ -100,7 +96,7 @@ class WasherStatus(DeviceStatus):
     @property
     def is_error(self):
         error = self._get_error()
-        if error != STATE_WASHER_ERROR.NO_ERROR and error != STATE_WASHER_ERROR.OFF:
+        if error != STATE_DISHWASHER_ERROR.NO_ERROR and error != STATE_DISHWASHER_ERROR.OFF:
             return True
         return False
 
@@ -110,9 +106,9 @@ class WasherStatus(DeviceStatus):
         return run_state.value
 
     @property
-    def pre_state(self):
-        pre_state = self._get_pre_state()
-        return pre_state.value
+    def process_state(self):
+        process = self._get_process()
+        return process.value
 
     @property
     def error_state(self):
@@ -180,53 +176,10 @@ class WasherStatus(DeviceStatus):
         return self._data.get("Reserve_Time_M")
 
     @property
-    def spin_option_state(self):
-        spin_speed = self.lookup_enum(["SpinSpeed", "spin"])
-        if not spin_speed:
-            return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=WASHERSPINSPEEDS.get(spin_speed, None),
-            key=spin_speed,
-            type="SpinSpeed",
-        ).value
-
-    @property
-    def water_temp_option_state(self):
-        water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
-        if not water_temp:
-            return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=WASHERWATERTEMPS.get(water_temp, None),
-            key=water_temp,
-            type="WaterTemp",
-        ).value
-
-    @property
-    def dry_level_option_state(self):
-        dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
-        if not dry_level:
-            return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=DRYERDRYLEVELS.get(dry_level, None),
-            key=dry_level,
-            type="DryLevel",
-        ).value
-
-    @property
-    def tubclean_count(self):
-        if self.is_api_v2:
-            result = DeviceStatus.int_or_none(self._data.get("TCLCount"))
-        else:
-            result = self._data.get("TCLCount")
-        if result is None:
-            return "N/A"
-        return result
-
-    @property
     def doorlock_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("doorLock")
-        return self.lookup_bit("DoorLock")
+            return self.lookup_bit_v2("door")
+        return self.lookup_bit("Door")
 
     @property
     def childlock_state(self):
@@ -235,37 +188,37 @@ class WasherStatus(DeviceStatus):
         return self.lookup_bit("ChildLock")
 
     @property
-    def remotestart_state(self):
+    def delaystart_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("remoteStart")
-        return self.lookup_bit("RemoteStart")
+            return self.lookup_bit_v2("delayStart")
+        return self.lookup_bit("DelayStart")
 
     @property
-    def creasecare_state(self):
+    def energysaver_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("creaseCare")
-        return self.lookup_bit("CreaseCare")
+            return self.lookup_bit_v2("energySaver")
+        return self.lookup_bit("EnergySaver")
 
     @property
-    def steam_state(self):
+    def dualzone_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("steam")
-        return self.lookup_bit("Steam")
+            return self.lookup_bit_v2("dualZone")
+        return self.lookup_bit("DualZone")
 
     @property
-    def steam_softener_state(self):
+    def halfload_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("steamSoftener")
-        return self.lookup_bit("SteamSoftener")
+            return self.lookup_bit_v2("halfLoad")
+        return self.lookup_bit("HalfLoad")
 
     @property
-    def prewash_state(self):
+    def rinserefill_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("preWash")
-        return self.lookup_bit("PreWash")
+            return self.lookup_bit_v2("rinseRefill")
+        return self.lookup_bit("RinseRefill")
 
     @property
-    def turbowash_state(self):
+    def saltrefill_state(self):
         if self.is_api_v2:
-            return self.lookup_bit_v2("turboWash")
-        return self.lookup_bit("TurboWash")
+            return self.lookup_bit_v2("saltRefill")
+        return self.lookup_bit("SaltRefill")

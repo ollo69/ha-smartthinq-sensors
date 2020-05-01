@@ -11,6 +11,7 @@ from datetime import timedelta
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2
 from .wideq.device import DeviceType
+from .wideq.dishwasher import DishWasherDevice
 from .wideq.dryer import DryerDevice
 from .wideq.washer import WasherDevice
 from .wideq.refrigerator import RefrigeratorDevice
@@ -383,6 +384,9 @@ async def lge_devices_setup(hass, client) -> dict:
         elif device.type == DeviceType.DRYER:
             base_name = device_name
             dev = LGEDevice(DryerDevice(client, device), base_name)
+        elif device.type == DeviceType.DISHWASHER:
+            base_name = device_name
+            dev = LGEDevice(DishWasherDevice(client, device), base_name)
         elif device.type == DeviceType.REFRIGERATOR:
             base_name = device_name
             dev = LGEDevice(RefrigeratorDevice(client, device), base_name)
