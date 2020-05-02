@@ -723,8 +723,9 @@ class Device(object):
         either a `Status` object or `None` if the status is not yet
         available.
         """
-        if not self._model_info:
-            return None
+
+        # load device info at first call if not loaded before
+        self.init_device_info()
 
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
