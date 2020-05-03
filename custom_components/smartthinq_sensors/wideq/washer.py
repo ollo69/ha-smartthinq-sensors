@@ -123,7 +123,7 @@ class WasherStatus(DeviceStatus):
 
     @property
     def current_course(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             course_key = self._device.model_info.config_value(
                 "courseType"
             )
@@ -134,7 +134,7 @@ class WasherStatus(DeviceStatus):
 
     @property
     def current_smartcourse(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             course_key = self._device.model_info.config_value(
                 "smartCourseType"
             )
@@ -145,37 +145,37 @@ class WasherStatus(DeviceStatus):
 
     @property
     def remaintime_hour(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("remainTimeHour"))
         return self._data.get("Remain_Time_H")
 
     @property
     def remaintime_min(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("remainTimeMinute"))
         return self._data.get("Remain_Time_M")
 
     @property
     def initialtime_hour(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("initialTimeHour"))
         return self._data.get("Initial_Time_H")
 
     @property
     def initialtime_min(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("initialTimeMinute"))
         return self._data.get("Initial_Time_M")
 
     @property
     def reservetime_hour(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("reserveTimeHour"))
         return self._data.get("Reserve_Time_H")
 
     @property
     def reservetime_min(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("reserveTimeMinute"))
         return self._data.get("Reserve_Time_M")
 
@@ -214,7 +214,7 @@ class WasherStatus(DeviceStatus):
 
     @property
     def tubclean_count(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             result = DeviceStatus.int_or_none(self._data.get("TCLCount"))
         else:
             result = self._data.get("TCLCount")
@@ -224,48 +224,48 @@ class WasherStatus(DeviceStatus):
 
     @property
     def doorlock_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("doorLock")
+        if self.is_info_v2:
+            return self.lookup_bit("doorLock")
         return self.lookup_bit("DoorLock")
 
     @property
     def childlock_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("childLock")
+        if self.is_info_v2:
+            return self.lookup_bit("childLock")
         return self.lookup_bit("ChildLock")
 
     @property
     def remotestart_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("remoteStart")
+        if self.is_info_v2:
+            return self.lookup_bit("remoteStart")
         return self.lookup_bit("RemoteStart")
 
     @property
     def creasecare_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("creaseCare")
+        if self.is_info_v2:
+            return self.lookup_bit("creaseCare")
         return self.lookup_bit("CreaseCare")
 
     @property
     def steam_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("steam")
+        if self.is_info_v2:
+            return self.lookup_bit("steam")
         return self.lookup_bit("Steam")
 
     @property
     def steam_softener_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("steamSoftener")
+        if self.is_info_v2:
+            return self.lookup_bit("steamSoftener")
         return self.lookup_bit("SteamSoftener")
 
     @property
     def prewash_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("preWash")
+        if self.is_info_v2:
+            return self.lookup_bit("preWash")
         return self.lookup_bit("PreWash")
 
     @property
     def turbowash_state(self):
-        if self.is_api_v2:
-            return self.lookup_bit_v2("turboWash")
+        if self.is_info_v2:
+            return self.lookup_bit("turboWash")
         return self.lookup_bit("TurboWash")

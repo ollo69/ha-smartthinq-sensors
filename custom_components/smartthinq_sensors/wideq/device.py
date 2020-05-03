@@ -13,8 +13,8 @@ from typing import Any, Dict, Optional
 
 from .core_exceptions import MonitorError
 
-BIT_OFF_THINQ2 = "@CP_OFF_EN_W"
-BIT_ON_THINQ2 = "@CP_ON_EN_W"
+LABEL_BIT_OFF = "@CP_OFF_EN_W"
+LABEL_BIT_ON = "@CP_ON_EN_W"
 
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
@@ -250,7 +250,7 @@ class ModelInfo(object):
         self._bit_keys = {}
 
     @property
-    def is_api_v2(self):
+    def is_info_v2(self):
         return False
 
     @property
@@ -320,7 +320,7 @@ class ModelInfo(object):
         if not hasattr(values, "options"):
             return None
         options = values.options
-        return options.get(value)
+        return options.get(value, "")
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
@@ -355,11 +355,13 @@ class ModelInfo(object):
                 for opt in option.get("option", []):
                     if key == opt.get("value", ""):
                         start_bit = opt.get("startbit")
+                        length = opt.get("length", 1)
                         if start_bit is None:
                             return {}
                         return {
                             "option": opt_key,
                             "startbit": start_bit,
+                            "length": length,
                         }
             return {}
 
@@ -379,15 +381,16 @@ class ModelInfo(object):
             return None
         value = None if not values else values.get(bit_key["option"])
         if not value:
-            return False
+            return "0"
         bit_value = int(value)
         start_bit = bit_key["startbit"]
-        bit_index = 2 ** start_bit
-        mode = bin(bit_value & bit_index)
-        if mode == bin(0):
-            return False
-        else:
-            return True
+        length = bit_key["length"]
+        val = 0
+        for i in range(0, length):
+            bit_index = 2 ** (start_bit + i)
+            bit = 1 if bit_value & bit_index else 0
+            val += bit * (2 ** i)
+        return str(val)
 
     def reference_name(self, key, value, get_comment=True):
         """Look up the friendly name for an encoded reference value
@@ -440,7 +443,19 @@ class ModelInfo(object):
 
     def decode_snapshot(self, data, key):
         """Decode  status data."""
-        return {}
+        decoded = {}
+        if self._data["Monitoring"]["type"] != "THINQ2":
+            return decoded
+        info = data.get(key)
+        if not info:
+            return decoded
+        protocol = self._data["Monitoring"]["protocol"]
+        for data_key, value_key in protocol.items():
+            value = info.get(data_key, "")
+            if value is not None and isinstance(value, Number):
+                value = int(value)
+            decoded[value_key] = str(value)
+        return decoded
 
 
 class ModelInfoV2(object):
@@ -451,7 +466,7 @@ class ModelInfoV2(object):
         self._data = data
 
     @property
-    def is_api_v2(self):
+    def is_info_v2(self):
         return True
 
     @property
@@ -535,7 +550,7 @@ class ModelInfoV2(object):
 
         options = self.value(data)
         item = options.get(value, {})
-        return item.get("label")
+        return item.get("label", "")
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
@@ -549,19 +564,8 @@ class ModelInfoV2(object):
 
     def bit_value(self, key, value):
         """Look up the bit value for an specific key
-        """
-        data = self.data_root(key)
-        if not data:
-            return None
-        if not value:
-            return False
-
-        bit_val = self.value(data)[value].get("label", "")
-        if bit_val == BIT_OFF_THINQ2:
-            return False
-        elif bit_val == BIT_ON_THINQ2:
-            return True
-
+            Not used in model V2
+            """
         return None
 
     def reference_name(self, key, value, get_comment=True):
@@ -636,6 +640,7 @@ class Device(object):
         self._client = client
         self._device_info = device
         self._status = status
+        self._model_data = None
         self._model_info = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
 
@@ -691,11 +696,16 @@ class Device(object):
 
     def init_device_info(self):
         if self._model_info is None:
-            model_data = self._client.model_info(self._device_info)
-            if self._device_info.platform_type == PlatformType.THINQ2:
-                self._model_info = ModelInfoV2(model_data)
-            else:
+            if self._model_data is None:
+                self._model_data = self._client.model_info(self._device_info)
+
+            model_data = self._model_data
+            if model_data.get("Monitoring") and model_data.get("Value"):
                 self._model_info = ModelInfo(model_data)
+            elif model_data.get("MonitoringValue"):
+                self._model_info = ModelInfoV2(model_data)
+
+        return self._model_info is not None
 
     def monitor_start(self):
         """Start monitoring the device's status."""
@@ -725,7 +735,8 @@ class Device(object):
         """
 
         # load device info at first call if not loaded before
-        self.init_device_info()
+        if not self.init_device_info():
+            return None
 
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
@@ -781,8 +792,8 @@ class DeviceStatus(object):
         return self._data is not None
 
     @property
-    def is_api_v2(self):
-        return self._device.model_info.is_api_v2
+    def is_info_v2(self):
+        return self._device.model_info.is_info_v2
 
     def _get_data_key(self, keys):
         if not self._data:
@@ -826,27 +837,33 @@ class DeviceStatus(object):
             curr_key, self._data[curr_key], get_comment
         )
 
+    def lookup_bit_enum(self, key):
+        if not self._data:
+            str_val = ""
+        else:
+            str_val = self._data.get(key)
+            if not str_val:
+                str_val = self._device.model_info.bit_value(
+                    key, self._data
+                )
+
+        if str_val is None:
+            return None
+        ret_val = self._device.model_info.enum_name(key, str_val)
+
+        # exception because doorlock bit
+        # is not inside the model enum
+        if key == "DoorLock" and ret_val is None:
+            if str_val == "1":
+                return LABEL_BIT_ON
+            return LABEL_BIT_OFF
+
+        return ret_val
+
     def lookup_bit(self, key):
-        if self.is_api_v2:
-            return None
-
-        result = self._device.model_info.bit_value(
-            key, self._data
-        )
-        if result is None:
+        enum_val = self.lookup_bit_enum(key)
+        if enum_val is None:
             return STATE_OPTIONITEM_NONE
-        return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF
-
-    def lookup_bit_v2(self, key):
-        if not self.is_api_v2:
-            return None
-
-        value_key = self._get_data_key(key)
-        if not value_key:
-            return STATE_OPTIONITEM_NONE
-        result = self._device.model_info.bit_value(
-            value_key, self._data[value_key]
-        )
-        if result is None:
-            return STATE_OPTIONITEM_NONE
-        return STATE_OPTIONITEM_ON if result else STATE_OPTIONITEM_OFF
+        if enum_val == LABEL_BIT_ON:
+            return STATE_OPTIONITEM_ON
+        return STATE_OPTIONITEM_OFF

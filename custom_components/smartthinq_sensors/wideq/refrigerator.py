@@ -98,13 +98,13 @@ class RefrigeratorStatus(DeviceStatus):
 
     @property
     def temp_refrigerator(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return self._get_temp_val_v2("fridgeTemp")
         return self._get_temp_val_v1("TempRefrigerator")
 
     @property
     def temp_freezer(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             return self._get_temp_val_v2("freezerTemp")
         return self._get_temp_val_v1("TempFreezer")
 
@@ -114,7 +114,7 @@ class RefrigeratorStatus(DeviceStatus):
 
     @property
     def door_opened_state(self):
-        if self.is_api_v2:
+        if self.is_info_v2:
             state = self._data.get("atLeastOneDoorOpen")
         else:
             state = self.lookup_enum("DoorOpenState")
@@ -172,7 +172,7 @@ class RefrigeratorStatus(DeviceStatus):
     @property
     def water_filter_used_month(self):
         counter = None
-        if self.is_api_v2:
+        if self.is_info_v2:
             status = self._data.get("waterFilter")
             if status:
                 counters = status.split("_", 1)
@@ -185,7 +185,7 @@ class RefrigeratorStatus(DeviceStatus):
     @property
     def locked_state(self):
         state = self.lookup_enum("LockingStatus")
-        if state is None:
+        if not state:
             return STATE_OPTIONITEM_NONE
         return self._set_unknown(
             state=REFRLOCKSTATUS.get(state, None), key=state, type="LockingStatus",

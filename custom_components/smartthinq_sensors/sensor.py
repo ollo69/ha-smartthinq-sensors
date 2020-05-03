@@ -226,7 +226,7 @@ REFRIGERATOR_BINARY_SENSORS = {
         ATTR_ICON: None,
         ATTR_UNIT_FN: lambda x: None,
         ATTR_DEVICE_CLASS: DEVICE_CLASS_OPENING,
-        ATTR_VALUE_FN: lambda x: x._door_open_state,
+        ATTR_VALUE_FN: lambda x: x._dooropen_state,
         ATTR_ENABLED_FN: lambda x: True,
     },
 }
@@ -754,20 +754,21 @@ class LGEDishWasherSensor(LGESensor):
             ATTR_RUN_COMPLETED: self._run_completed,
             ATTR_ERROR_STATE: self._error_state,
             ATTR_ERROR_MSG: self._error_msg,
+            ATTR_DOOROPEN_STATE: self._dooropen_state,
+            ATTR_RINSEREFILL_STATE: self._rinserefill_state,
+            ATTR_SALTREFILL_STATE: self._saltrefill_state,
             ATTR_RUN_STATE: self._current_run_state,
             ATTR_PROCESS_STATE: self._process_state,
             ATTR_CURRENT_COURSE: self._current_course,
+            ATTR_TUBCLEAN_COUNT: self._tubclean_count,
             ATTR_REMAIN_TIME: self._remain_time,
             ATTR_INITIAL_TIME: self._initial_time,
             ATTR_RESERVE_TIME: self._reserve_time,
-            ATTR_DOORLOCK_MODE: self._doorlock_mode,
+            ATTR_HALFLOAD_MODE: self._halfload_mode,
             ATTR_CHILDLOCK_MODE: self._childlock_mode,
             ATTR_DELAYSTART_MODE: self._delaystart_mode,
             ATTR_ENERGYSAVER_MODE: self._energysaver_mode,
             ATTR_DUALZONE_MODE: self._dualzone_mode,
-            ATTR_HALFLOAD_MODE: self._halfload_mode,
-            ATTR_RINSEREFILL_STATE: self._rinserefill_state,
-            ATTR_SALTREFILL_STATE: self._saltrefill_state,
         }
         return data
 
@@ -849,9 +850,37 @@ class LGEDishWasherSensor(LGESensor):
         return "-"
 
     @property
-    def _doorlock_mode(self):
+    def _tubclean_count(self):
         if self._api.state:
-            mode = self._api.state.doorlock_state
+            tubclean_count = self._api.state.tubclean_count
+            return tubclean_count
+        return "N/A"
+
+    @property
+    def _dooropen_state(self):
+        if self._api.state:
+            state = self._api.state.door_opened_state
+            return STATE_LOOKUP.get(state, STATE_OFF)
+        return None
+
+    @property
+    def _rinserefill_state(self):
+        if self._api.state:
+            state = self._api.state.rinserefill_state
+            return STATE_LOOKUP.get(state, STATE_OFF)
+        return STATE_OFF
+
+    @property
+    def _saltrefill_state(self):
+        if self._api.state:
+            state = self._api.state.saltrefill_state
+            return STATE_LOOKUP.get(state, STATE_OFF)
+        return STATE_OFF
+
+    @property
+    def _halfload_mode(self):
+        if self._api.state:
+            mode = self._api.state.halfload_state
             return mode
         return None
 
@@ -883,27 +912,6 @@ class LGEDishWasherSensor(LGESensor):
             return mode
         return None
 
-    @property
-    def _halfload_mode(self):
-        if self._api.state:
-            mode = self._api.state.halfload_state
-            return mode
-        return None
-
-    @property
-    def _rinserefill_state(self):
-        if self._api.state:
-            state = self._api.state.rinserefill_state
-            return STATE_LOOKUP.get(state, STATE_OFF)
-        return STATE_OFF
-
-    @property
-    def _saltrefill_state(self):
-        if self._api.state:
-            state = self._api.state.saltrefill_state
-            return STATE_LOOKUP.get(state, STATE_OFF)
-        return STATE_OFF
-
 
 class LGERefrigeratorSensor(LGESensor):
     """A sensor to monitor LGE Refrigerator devices"""
@@ -918,7 +926,7 @@ class LGERefrigeratorSensor(LGESensor):
             ATTR_REFRIGERATOR_TEMP: self._temp_refrigerator,
             ATTR_FREEZER_TEMP: self._temp_freezer,
             ATTR_TEMP_UNIT: self._temp_unit,
-            ATTR_DOOROPEN_STATE: self._door_open_state,
+            ATTR_DOOROPEN_STATE: self._dooropen_state,
             ATTR_SMARTSAVING_MODE: self._smart_saving_mode,
             ATTR_SMARTSAVING_STATE: self._smart_saving_state,
             ATTR_ECOFRIENDLY_STATE: self._eco_friendly_state,
@@ -948,7 +956,7 @@ class LGERefrigeratorSensor(LGESensor):
         return TEMP_CELSIUS
 
     @property
-    def _door_open_state(self):
+    def _dooropen_state(self):
         if self._api.state:
             state = self._api.state.door_opened_state
             return STATE_LOOKUP.get(state, STATE_OFF)

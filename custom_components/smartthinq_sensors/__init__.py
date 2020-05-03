@@ -219,7 +219,6 @@ class LGEDevice:
 
         self._device = device
         self._name = name
-        self._state = device.status
         self._device_id = device.device_info.id
         self._type = device.device_info.type
         self._mac = device.device_info.macaddress
@@ -228,6 +227,7 @@ class LGEDevice:
         self._model = f"{device.device_info.model_name}"
         self._id = f"{self._type.name}:{self._device_id}"
 
+        self._state = None
         self._retry_count = 0
         self._disconnected = True
         self._not_logged = False
@@ -276,6 +276,7 @@ class LGEDevice:
 
     def init_device(self):
         self._device.init_device_info()
+        self._state = self._device.status
         self._model = f"{self._model}-{self._device.model_info.model_type}"
 
     def _restart_monitor(self):
