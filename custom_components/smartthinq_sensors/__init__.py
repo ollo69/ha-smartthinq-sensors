@@ -303,7 +303,7 @@ class LGEDevice:
             _LOGGER.info("ThinQ Session expired. Refreshing.")
             self._not_logged = True
 
-        except (reqExc.ConnectionError, reqExc.ConnectTimeout):
+        except (reqExc.ConnectionError, reqExc.ConnectTimeout, reqExc.ReadTimeout):
             _LOGGER.error("Connection to ThinQ failed. Network connection error")
             self._disconnected = True
             self._not_logged = True
@@ -343,7 +343,7 @@ class LGEDevice:
                     return
                     # time.sleep(1)
 
-                except (reqExc.ConnectionError, reqExc.ConnectTimeout):
+                except (reqExc.ConnectionError, reqExc.ConnectTimeout, reqExc.ReadTimeout):
                     _LOGGER.error("Connection to ThinQ failed. Network connection error")
                     self._not_logged = True
                     return
