@@ -7,6 +7,7 @@ import asyncio
 import logging
 import time
 from datetime import timedelta
+from requests import exceptions as reqExc
 
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2
@@ -26,6 +27,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.util import Throttle
 
@@ -298,12 +300,17 @@ class LGEDevice:
             self._disconnected = True
 
         except NotLoggedInError:
-            _LOGGER.info("Session expired. Refreshing.")
+            _LOGGER.info("ThinQ Session expired. Refreshing.")
+            self._not_logged = True
+
+        except (reqExc.ConnectionError, reqExc.ConnectTimeout):
+            _LOGGER.error("Connection to ThinQ failed. Network connection error")
+            self._disconnected = True
             self._not_logged = True
 
         except Exception as ex:
             self._not_logged = True
-            raise ex
+            raise UpdateFailed(ex)
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def device_update(self):
@@ -336,9 +343,14 @@ class LGEDevice:
                     return
                     # time.sleep(1)
 
+                except (reqExc.ConnectionError, reqExc.ConnectTimeout):
+                    _LOGGER.error("Connection to ThinQ failed. Network connection error")
+                    self._not_logged = True
+                    return
+
                 except Exception as ex:
                     self._not_logged = True
-                    raise ex
+                    raise UpdateFailed(ex)
 
                 else:
                     if state:
