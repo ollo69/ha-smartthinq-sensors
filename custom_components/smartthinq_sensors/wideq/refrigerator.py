@@ -75,7 +75,7 @@ class RefrigeratorStatus(DeviceStatus):
             key + unit_key, temp_key
         )
         if not result:
-            return STATE_OPTIONITEM_NONE
+            return temp
         return result
 
     def _get_temp_val_v2(self, key):
