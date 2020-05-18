@@ -21,6 +21,7 @@ If applicable, add screenshots to help explain your problem.
  - Home Assistant version installed:
  - Component version installed:
  - Last know working version:
+ - LG device type and model with issue:
  - LG devices connected (list):
 
 **Output of HA logs**
