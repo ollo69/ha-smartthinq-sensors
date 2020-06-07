@@ -8,18 +8,10 @@ from .device import (
     STATE_OPTIONITEM_NONE,
 )
 
-from .washer_states import (
-    STATE_WASHER,
-    STATE_WASHER_ERROR,
-    WASHERSTATES,
-    WASHERWATERTEMPS,
-    WASHERSPINSPEEDS,
-    WASHREFERRORS,
-)
-
-from .dryer_states import (
-    DRYERDRYLEVELS,
-)
+STATE_WASHER_POWER_OFF = "@WM_STATE_POWER_OFF_W"
+STATE_WASHER_END = "@WM_STATE_END_W"
+STATE_WASHER_ERROR_NO_ERROR = "ERROR_NOERROR_TITLE"
+STATE_WASHER_ERROR_OFF = "OFF"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,43 +48,37 @@ class WasherStatus(DeviceStatus):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
-                return STATE_WASHER.POWER_OFF
-            self._run_state = self._set_unknown(
-                state=WASHERSTATES.get(state, None), key=state, type="status"
-            )
+                return STATE_WASHER_POWER_OFF
+            self._run_state = state
         return self._run_state
 
     def _get_pre_state(self):
         if not self._pre_state:
             state = self.lookup_enum(["PreState", "preState"])
             if not state:
-                return STATE_WASHER.POWER_OFF
-            self._pre_state = self._set_unknown(
-                state=WASHERSTATES.get(state, None), key=state, type="status"
-            )
+                return STATE_WASHER_POWER_OFF
+            self._pre_state = state
         return self._pre_state
 
     def _get_error(self):
         if not self._error:
-            error = self.lookup_reference(["Error", "error"])
+            error = self.lookup_reference(["Error", "error"], ref_key="title")
             if not error:
-                return STATE_WASHER_ERROR.OFF
-            self._error = self._set_unknown(
-                state=WASHREFERRORS.get(error, None), key=error, type="error_status"
-            )
+                return STATE_WASHER_ERROR_OFF
+            self._error = error
         return self._error
 
     @property
     def is_on(self):
         run_state = self._get_run_state()
-        return run_state != STATE_WASHER.POWER_OFF
+        return run_state != STATE_WASHER_POWER_OFF
 
     @property
     def is_run_completed(self):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
-        if run_state == STATE_WASHER.END or (
-            run_state == STATE_WASHER.POWER_OFF and pre_state == STATE_WASHER.END
+        if run_state == STATE_WASHER_END or (
+            run_state == STATE_WASHER_POWER_OFF and pre_state == STATE_WASHER_END
         ):
             return True
         return False
@@ -100,26 +86,32 @@ class WasherStatus(DeviceStatus):
     @property
     def is_error(self):
         error = self._get_error()
-        if error != STATE_WASHER_ERROR.NO_ERROR and error != STATE_WASHER_ERROR.OFF:
+        if error != STATE_WASHER_ERROR_NO_ERROR and error != STATE_WASHER_ERROR_OFF:
             return True
         return False
 
     @property
     def run_state(self):
         run_state = self._get_run_state()
-        return run_state.value
+        if run_state == STATE_WASHER_POWER_OFF:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(run_state)
 
     @property
     def pre_state(self):
         pre_state = self._get_pre_state()
-        return pre_state.value
+        if pre_state == STATE_WASHER_POWER_OFF:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(pre_state)
 
     @property
     def error_state(self):
         if not self.is_on:
             return STATE_OPTIONITEM_NONE
         error = self._get_error()
-        return error.value
+        if error == STATE_WASHER_ERROR_NO_ERROR:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(error)
 
     @property
     def current_course(self):
@@ -129,8 +121,8 @@ class WasherStatus(DeviceStatus):
             )
         else:
             course_key = ["APCourse", "Course"]
-        course = self.lookup_reference(course_key)
-        return course
+        course = self.lookup_reference(course_key, ref_key="name")
+        return self._device.get_enum_text(course)
 
     @property
     def current_smartcourse(self):
@@ -140,8 +132,8 @@ class WasherStatus(DeviceStatus):
             )
         else:
             course_key = "SmartCourse"
-        smart_course = self.lookup_reference(course_key)
-        return smart_course
+        smart_course = self.lookup_reference(course_key, ref_key="name")
+        return self._device.get_enum_text(smart_course)
 
     @property
     def remaintime_hour(self):
@@ -184,33 +176,21 @@ class WasherStatus(DeviceStatus):
         spin_speed = self.lookup_enum(["SpinSpeed", "spin"])
         if not spin_speed:
             return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=WASHERSPINSPEEDS.get(spin_speed, None),
-            key=spin_speed,
-            type="SpinSpeed",
-        ).value
+        return self._device.get_enum_text(spin_speed)
 
     @property
     def water_temp_option_state(self):
         water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
         if not water_temp:
             return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=WASHERWATERTEMPS.get(water_temp, None),
-            key=water_temp,
-            type="WaterTemp",
-        ).value
+        return self._device.get_enum_text(water_temp)
 
     @property
     def dry_level_option_state(self):
         dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
         if not dry_level:
             return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=DRYERDRYLEVELS.get(dry_level, None),
-            key=dry_level,
-            type="DryLevel",
-        ).value
+        return self._device.get_enum_text(dry_level)
 
     @property
     def tubclean_count(self):
@@ -227,6 +207,12 @@ class WasherStatus(DeviceStatus):
         if self.is_info_v2:
             return self.lookup_bit("doorLock")
         return self.lookup_bit("DoorLock")
+
+    @property
+    def doorclose_state(self):
+        if self.is_info_v2:
+            return self.lookup_bit("doorClose")
+        return self.lookup_bit("DoorClose")
 
     @property
     def childlock_state(self):

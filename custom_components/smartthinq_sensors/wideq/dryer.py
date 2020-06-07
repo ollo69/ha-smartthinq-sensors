@@ -8,14 +8,10 @@ from .device import (
     STATE_OPTIONITEM_NONE,
 )
 
-from .dryer_states import (
-    STATE_DRYER,
-    STATE_DRYER_ERROR,
-    DRYERSTATES,
-    DRYERDRYLEVELS,
-    DRYERTEMPS,
-    DRYERREFERRORS,
-)
+STATE_DRYER_POWER_OFF = "@WM_STATE_POWER_OFF_W"
+STATE_DRYER_END = "@WM_STATE_END_W"
+STATE_DRYER_ERROR_NO_ERROR = "ERROR_NOERROR_TITLE"
+STATE_DRYER_ERROR_OFF = "OFF"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,43 +48,37 @@ class DryerStatus(DeviceStatus):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
-                return STATE_DRYER.POWER_OFF
-            self._run_state = self._set_unknown(
-                state=DRYERSTATES.get(state, None), key=state, type="status"
-            )
+                return STATE_DRYER_POWER_OFF
+            self._run_state = state
         return self._run_state
 
     def _get_pre_state(self):
         if not self._pre_state:
             state = self.lookup_enum(["PreState", "preState"])
             if not state:
-                return STATE_DRYER.POWER_OFF
-            self._pre_state = self._set_unknown(
-                state=DRYERSTATES.get(state, None), key=state, type="status"
-            )
+                return STATE_DRYER_POWER_OFF
+            self._pre_state = state
         return self._pre_state
 
     def _get_error(self):
         if not self._error:
-            error = self.lookup_reference(["Error", "error"])
+            error = self.lookup_reference(["Error", "error"], ref_key="title")
             if not error:
-                return STATE_DRYER_ERROR.OFF
-            self._error = self._set_unknown(
-                state=DRYERREFERRORS.get(error, None), key=error, type="error_status"
-            )
+                return STATE_DRYER_ERROR_OFF
+            self._error = error
         return self._error
 
     @property
     def is_on(self):
         run_state = self._get_run_state()
-        return run_state != STATE_DRYER.POWER_OFF
+        return run_state != STATE_DRYER_POWER_OFF
 
     @property
     def is_run_completed(self):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
-        if run_state == STATE_DRYER.END or (
-            run_state == STATE_DRYER.POWER_OFF and pre_state == STATE_DRYER.END
+        if run_state == STATE_DRYER_END or (
+            run_state == STATE_DRYER_POWER_OFF and pre_state == STATE_DRYER_END
         ):
             return True
         return False
@@ -96,26 +86,32 @@ class DryerStatus(DeviceStatus):
     @property
     def is_error(self):
         error = self._get_error()
-        if error != STATE_DRYER_ERROR.NO_ERROR and error != STATE_DRYER_ERROR.OFF:
+        if error != STATE_DRYER_ERROR_NO_ERROR and error != STATE_DRYER_ERROR_OFF:
             return True
         return False
 
     @property
     def run_state(self):
         run_state = self._get_run_state()
-        return run_state.value
+        if run_state == STATE_DRYER_POWER_OFF:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(run_state)
 
     @property
     def pre_state(self):
         pre_state = self._get_pre_state()
-        return pre_state.value
+        if pre_state == STATE_DRYER_POWER_OFF:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(pre_state)
 
     @property
     def error_state(self):
         if not self.is_on:
             return STATE_OPTIONITEM_NONE
         error = self._get_error()
-        return error.value
+        if error == STATE_DRYER_ERROR_NO_ERROR:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(error)
 
     @property
     def current_course(self):
@@ -125,8 +121,8 @@ class DryerStatus(DeviceStatus):
             )
         else:
             course_key = ["APCourse", "Course"]
-        course = self.lookup_reference(course_key)
-        return course
+        course = self.lookup_reference(course_key, ref_key="name")
+        return self._device.get_enum_text(course)
 
     @property
     def current_smartcourse(self):
@@ -136,8 +132,8 @@ class DryerStatus(DeviceStatus):
             )
         else:
             course_key = "SmartCourse"
-        smart_course = self.lookup_reference(course_key)
-        return smart_course
+        smart_course = self.lookup_reference(course_key, ref_key="name")
+        return self._device.get_enum_text(smart_course)
 
     @property
     def remaintime_hour(self):
@@ -177,21 +173,17 @@ class DryerStatus(DeviceStatus):
 
     @property
     def temp_control_option_state(self):
-        temp_control = self.lookup_enum(["TempControl", "tempControl"])
+        temp_control = self.lookup_enum(["TempControl", "tempControl", "temp"])
         if not temp_control:
             return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=DRYERTEMPS.get(temp_control, None), key=temp_control, type="TempControl",
-        ).value
+        return self._device.get_enum_text(temp_control)
 
     @property
     def dry_level_option_state(self):
         dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
         if not dry_level:
             return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=DRYERDRYLEVELS.get(dry_level, None), key=dry_level, type="DryLevel",
-        ).value
+        return self._device.get_enum_text(dry_level)
 
     @property
     def time_dry_option_state(self):

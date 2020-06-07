@@ -1,8 +1,6 @@
 """A high-level, convenient abstraction for interacting with the LG
 SmartThinQ API for most use cases.
 """
-import requests
-
 import base64
 import json
 from collections import namedtuple
@@ -19,13 +17,26 @@ LABEL_BIT_ON = "@CP_ON_EN_W"
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
-STATE_OPTIONITEM_ON = "On"
 STATE_OPTIONITEM_OFF = "Off"
+STATE_OPTIONITEM_ON = "On"
 STATE_OPTIONITEM_NONE = "-"
 STATE_OPTIONITEM_UNKNOWN = "unknown"
 
 UNIT_TEMP_CELSIUS = "celsius"
 UNIT_TEMP_FAHRENHEIT = "fahrenheit"
+
+LOCAL_LANG_PACK = {
+    LABEL_BIT_OFF: STATE_OPTIONITEM_OFF,
+    LABEL_BIT_ON: STATE_OPTIONITEM_ON,
+    "OFF": STATE_OPTIONITEM_OFF,
+    "ON": STATE_OPTIONITEM_ON,
+    "CLOSE": STATE_OPTIONITEM_OFF,
+    "OPEN": STATE_OPTIONITEM_ON,
+    "UNLOCK": STATE_OPTIONITEM_OFF,
+    "LOCK": STATE_OPTIONITEM_ON,
+    "IGNORE": STATE_OPTIONITEM_NONE,
+    "NOT_USE": "Not Used",
+}
 
 
 class OPTIONITEMMODES(enum.Enum):
@@ -159,13 +170,13 @@ class DeviceInfo(object):
                 return key
         return ""
 
-    def _get_data_value(self, key):
+    def _get_data_value(self, key, default: Any = STATE_OPTIONITEM_UNKNOWN):
         if isinstance(key, list):
             vkey = self._get_data_key(key)
         else:
             vkey = key
 
-        return self._data.get(vkey, STATE_OPTIONITEM_UNKNOWN)
+        return self._data.get(vkey, default)
 
     @property
     def model_id(self) -> str:
@@ -177,7 +188,21 @@ class DeviceInfo(object):
 
     @property
     def model_info_url(self) -> str:
-        return self._get_data_value(["modelJsonUrl", "modelJsonUri"])
+        return self._get_data_value(
+            ["modelJsonUrl", "modelJsonUri"], default=None
+        )
+
+    @property
+    def model_lang_pack_url(self) -> str:
+        return self._get_data_value(
+            ["langPackModelUrl", "langPackModelUri"], default=None
+        )
+
+    @property
+    def product_lang_pack_url(self) -> str:
+        return self._get_data_value(
+            ["langPackProductTypeUrl", "langPackProductTypeUri"], default=None
+        )
 
     @property
     def name(self) -> str:
@@ -225,14 +250,6 @@ class DeviceInfo(object):
         if "snapshot" in self._data:
             return self._data["snapshot"]
         return None
-
-    def load_model_info(self):
-        """Load JSON data describing the model's capabilities.
-        """
-        info_url = self.model_info_url
-        if info_url == STATE_OPTIONITEM_UNKNOWN:
-            return {}
-        return requests.get(info_url, timeout=DEFAULT_TIMEOUT).json()
 
 
 EnumValue = namedtuple("EnumValue", ["options"])
@@ -392,7 +409,7 @@ class ModelInfo(object):
             val += bit * (2 ** i)
         return str(val)
 
-    def reference_name(self, key, value, get_comment=True):
+    def reference_name(self, key, value, ref_key="_comment"):
         """Look up the friendly name for an encoded reference value
         """
         value = str(value)
@@ -402,9 +419,9 @@ class ModelInfo(object):
         reference = self.value(key).reference
 
         if value in reference:
-            comment = reference[value].get("_comment")
-            if comment and get_comment:
-                return comment
+            ref_key_value = reference[value].get(ref_key)
+            if ref_key_value:
+                return ref_key_value
             return reference[value].get("label")
         return None
 
@@ -568,7 +585,7 @@ class ModelInfoV2(object):
             """
         return None
 
-    def reference_name(self, key, value, get_comment=True):
+    def reference_name(self, key, value, ref_key="_comment"):
         """Look up the friendly name for an encoded reference value
         """
         data = self.data_root(key)
@@ -578,9 +595,9 @@ class ModelInfoV2(object):
         reference = self.value(data)
 
         if value in reference:
-            comment = reference[value].get("_comment")
-            if comment and get_comment:
-                return comment
+            ref_key_value = reference[value].get(ref_key)
+            if ref_key_value:
+                return ref_key_value
             return reference[value].get("label")
         return None
 
@@ -632,7 +649,7 @@ class Device(object):
     regarding the device.
     """
 
-    def __init__(self, client, device, status=None):
+    def __init__(self, client, device: DeviceInfo, status=None):
         """Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
         """
@@ -642,6 +659,8 @@ class Device(object):
         self._status = status
         self._model_data = None
         self._model_info = None
+        self._model_lang_pack = None
+        self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
 
         # for logging unknown states received
@@ -697,13 +716,29 @@ class Device(object):
     def init_device_info(self):
         if self._model_info is None:
             if self._model_data is None:
-                self._model_data = self._client.model_info(self._device_info)
+                self._model_data = self._client.model_url_info(
+                    self._device_info.model_info_url,
+                    self._device_info,
+                )
 
             model_data = self._model_data
             if model_data.get("Monitoring") and model_data.get("Value"):
                 self._model_info = ModelInfo(model_data)
             elif model_data.get("MonitoringValue"):
                 self._model_info = ModelInfoV2(model_data)
+
+        if self._model_info is not None:
+            # load model language pack
+            if self._model_lang_pack is None:
+                self._model_lang_pack = self._client.model_url_info(
+                    self._device_info.model_lang_pack_url
+                )
+
+            # load product language pack
+            if self._product_lang_pack is None:
+                self._product_lang_pack = self._client.model_url_info(
+                    self._device_info.product_lang_pack_url
+                )
 
         return self._model_info is not None
 
@@ -764,6 +799,23 @@ class Device(object):
                 json.dump(res, dumpfile, ensure_ascii=False, indent="\t")
         """
         return res
+
+    def get_enum_text(self, enum_name):
+
+        if not enum_name:
+            return STATE_OPTIONITEM_NONE
+
+        text_value = None
+        if self._model_lang_pack:
+            text_value = self._model_lang_pack.get("pack", {}).get(enum_name)
+        if not text_value and self._product_lang_pack:
+            text_value = self._product_lang_pack.get("pack", {}).get(enum_name)
+        if not text_value:
+            text_value = LOCAL_LANG_PACK.get(enum_name)
+        if not text_value:
+            text_value = enum_name
+
+        return text_value
 
     def is_unknown_status(self, status):
 
@@ -829,12 +881,12 @@ class DeviceStatus(object):
             curr_key, self._data[curr_key]
         )
 
-    def lookup_reference(self, key, get_comment=True):
+    def lookup_reference(self, key, ref_key="_comment"):
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
         return self._device.model_info.reference_name(
-            curr_key, self._data[curr_key], get_comment
+            curr_key, self._data[curr_key], ref_key
         )
 
     def lookup_bit_enum(self, key):
@@ -864,6 +916,6 @@ class DeviceStatus(object):
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
             return STATE_OPTIONITEM_NONE
-        if enum_val == LABEL_BIT_ON:
+        if enum_val == LABEL_BIT_ON or enum_val == "INITIAL_BIT_ON":
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF

@@ -8,6 +8,7 @@ import logging
 import time
 from datetime import timedelta
 from requests import exceptions as reqExc
+from typing import Dict
 
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2
@@ -24,6 +25,7 @@ from .wideq.core_exceptions import (
 )
 
 import voluptuous as vol
+import homeassistant.helpers.config_validation as cv
 
 from homeassistant import config_entries
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -63,7 +65,16 @@ SMARTTHINQ_SCHEMA = vol.Schema(
     }
 )
 
-CONFIG_SCHEMA = vol.Schema({DOMAIN: SMARTTHINQ_SCHEMA}, extra=vol.ALLOW_EXTRA)
+CONFIG_SCHEMA = vol.Schema(
+    vol.All(
+        cv.deprecated(DOMAIN),
+        {
+            DOMAIN: SMARTTHINQ_SCHEMA
+        },
+    ),
+    extra=vol.ALLOW_EXTRA,
+)
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,7 +105,7 @@ class LGEAuthentication:
 
         return login_url
 
-    def getOAuthInfoFromUrl(self, callback_url) -> str:
+    def getOAuthInfoFromUrl(self, callback_url) -> Dict[str, str]:
 
         oauth_info = None
         try:

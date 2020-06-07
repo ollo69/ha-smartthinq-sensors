@@ -301,6 +301,11 @@ class Session(object):
     def __init__(self, auth, session_id):
         self.auth = auth
         self.session_id = session_id
+        self._common_lang_pack_url = None
+
+    @property
+    def common_lang_pack_url(self):
+        return self._common_lang_pack_url
 
     def post(self, path, data=None):
         """Make a POST request to the API server.
@@ -318,8 +323,10 @@ class Session(object):
         Return a list of dicts with information about the devices.
         """
 
-        devices = self.post("device/deviceList").get("item", [])
-        return as_list(devices)
+        devices = self.post("device/deviceList")
+        if self._common_lang_pack_url is None:
+            self._common_lang_pack_url = devices.get("langPackCommonUri")
+        return as_list(devices.get("item", []))
 
     def monitor_start(self, device_id):
         """Begin monitoring a device's status.
@@ -448,7 +455,8 @@ class Client(object):
 
         # Cached model info data. This is a mapping from URLs to JSON
         # responses.
-        self._model_info: Dict[str, Any] = {}
+        self._model_url_info: Dict[str, Any] = {}
+        self._common_lang_pack = None
 
         # Locale information used to discover a gateway, if necessary.
         self._country = country
@@ -490,7 +498,6 @@ class Client(object):
 
     def get_device(self, device_id) -> Optional["DeviceInfo"]:
         """Look up a DeviceInfo object by device ID.
-            
             Return None if the device does not exist.
             """
 
@@ -540,7 +547,7 @@ class Client(object):
         """Serialize the client state."""
 
         out = {
-            "model_info": self._model_info,
+            "model_url_info": self._model_url_info,
         }
 
         if self._gateway:
@@ -593,17 +600,38 @@ class Client(object):
         access_token, refresh_token = parse_oauth_callback(url)
         return {"access_token": access_token, "refresh_token": refresh_token}
 
-    def model_info(self, device):
+    @staticmethod
+    def _load_json_info(info_url):
+        """Load JSON data from specific url.
+        """
+        if not info_url:
+            return {}
+        return requests.get(info_url, timeout=DEFAULT_TIMEOUT).json()
+
+    def common_lang_pack(self):
+        """Load JSON common lang pack from specific url.
+        """
+        if self._devices is None:
+            return {}
+        if self._common_lang_pack is None and self._session:
+            self._common_lang_pack = self._load_json_info(
+                self._session.common_lang_pack_url
+            ).get("pack", {})
+        return self._common_lang_pack
+
+    def model_url_info(self, url, device=None):
         """For a DeviceInfo object, get a ModelInfo object describing
             the model's capabilities.
             """
-        url = device.model_info_url
-        if url not in self._model_info:
-            _LOGGER.info(
-                "Loading model info for %s. Model: %s, Url: %s",
-                device.name,
-                device.model_name,
-                url,
-            )
-            self._model_info[url] = device.load_model_info()
-        return self._model_info[url]
+        if not url:
+            return {}
+        if url not in self._model_url_info:
+            if device:
+                _LOGGER.info(
+                    "Loading model info for %s. Model: %s, Url: %s",
+                    device.name,
+                    device.model_name,
+                    url,
+                )
+            self._model_url_info[url] = self._load_json_info(url)
+        return self._model_url_info[url]

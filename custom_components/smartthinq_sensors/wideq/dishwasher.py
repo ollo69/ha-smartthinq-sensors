@@ -8,15 +8,10 @@ from .device import (
     STATE_OPTIONITEM_NONE,
 )
 
-from .dishwasher_states import (
-    STATE_DISHWASHER,
-    STATE_DISHWASHER_PROCESS,
-    STATE_DISHWASHER_ERROR,
-    DISHWASHERSTATES,
-    DISHWASHERPROCESS,
-    DISHWASHERHALFLOAD,
-    DISHWASHERERRORS,
-)
+STATE_DISHWASHER_POWER_OFF = "@DW_STATE_POWER_OFF_W"
+STATE_DISHWASHER_COMPLETE = "@DW_STATE_COMPLETE_W"
+STATE_DISHWASHER_ERROR_NO_ERROR = "No_Error"
+STATE_DISHWASHER_ERROR_OFF = "OFF"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,43 +48,37 @@ class DishWasherStatus(DeviceStatus):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
-                return STATE_DISHWASHER.POWER_OFF
-            self._run_state = self._set_unknown(
-                state=DISHWASHERSTATES.get(state, None), key=state, type="state"
-            )
+                return STATE_DISHWASHER_POWER_OFF
+            self._run_state = state
         return self._run_state
 
     def _get_process(self):
         if not self._process:
             process = self.lookup_enum(["Process", "process"])
             if not process:
-                return STATE_DISHWASHER_PROCESS.OFF
-            self._process = self._set_unknown(
-                state=DISHWASHERPROCESS.get(process, None), key=process, type="process"
-            )
+                return STATE_OPTIONITEM_NONE
+            self._process = process
         return self._process
 
     def _get_error(self):
         if not self._error:
-            error = self.lookup_reference(["Error", "error"], get_comment=False)
+            error = self.lookup_reference(["Error", "error"], ref_key="title")
             if not error:
-                return STATE_DISHWASHER_ERROR.OFF
-            self._error = self._set_unknown(
-                state=DISHWASHERERRORS.get(error, None), key=error, type="error_status"
-            )
+                return STATE_DISHWASHER_ERROR_OFF
+            self._error = error
         return self._error
 
     @property
     def is_on(self):
         run_state = self._get_run_state()
-        return run_state != STATE_DISHWASHER.POWER_OFF
+        return run_state != STATE_DISHWASHER_POWER_OFF
 
     @property
     def is_run_completed(self):
         run_state = self._get_run_state()
         process = self._get_process()
-        if run_state == STATE_DISHWASHER.COMPLETE or (
-            run_state == STATE_DISHWASHER.POWER_OFF and process == STATE_DISHWASHER_PROCESS.COMPLETE
+        if run_state == STATE_DISHWASHER_COMPLETE or (
+            run_state == STATE_DISHWASHER_POWER_OFF and process == STATE_DISHWASHER_COMPLETE
         ):
             return True
         return False
@@ -97,26 +86,32 @@ class DishWasherStatus(DeviceStatus):
     @property
     def is_error(self):
         error = self._get_error()
-        if error != STATE_DISHWASHER_ERROR.NO_ERROR and error != STATE_DISHWASHER_ERROR.OFF:
+        if error != STATE_DISHWASHER_ERROR_NO_ERROR and error != STATE_DISHWASHER_ERROR_OFF:
             return True
         return False
 
     @property
     def run_state(self):
         run_state = self._get_run_state()
-        return run_state.value
+        if run_state == STATE_DISHWASHER_POWER_OFF:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(run_state)
 
     @property
     def process_state(self):
         process = self._get_process()
-        return process.value
+        if process == STATE_OPTIONITEM_NONE:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(process)
 
     @property
     def error_state(self):
         if not self.is_on:
             return STATE_OPTIONITEM_NONE
         error = self._get_error()
-        return error.value
+        if error == STATE_DISHWASHER_ERROR_NO_ERROR:
+            return STATE_OPTIONITEM_NONE
+        return self._device.get_enum_text(error)
 
     @property
     def current_course(self):
@@ -126,8 +121,8 @@ class DishWasherStatus(DeviceStatus):
             )
         else:
             course_key = ["APCourse", "Course"]
-        course = self.lookup_reference(course_key)
-        return course
+        course = self.lookup_reference(course_key, ref_key="name")
+        return self._device.get_enum_text(course)
 
     @property
     def current_smartcourse(self):
@@ -137,8 +132,8 @@ class DishWasherStatus(DeviceStatus):
             )
         else:
             course_key = "SmartCourse"
-        smart_course = self.lookup_reference(course_key)
-        return smart_course
+        smart_course = self.lookup_reference(course_key, ref_key="name")
+        return self._device.get_enum_text(smart_course)
 
     @property
     def remaintime_hour(self):
@@ -184,11 +179,7 @@ class DishWasherStatus(DeviceStatus):
             half_load = self.lookup_bit_enum("HalfLoad")
         if not half_load:
             return STATE_OPTIONITEM_NONE
-        return self._set_unknown(
-            state=DISHWASHERHALFLOAD.get(half_load, None),
-            key=half_load,
-            type="HalfLoad",
-        ).value
+        return self._device.get_enum_text(half_load)
 
     @property
     def tubclean_count(self):
