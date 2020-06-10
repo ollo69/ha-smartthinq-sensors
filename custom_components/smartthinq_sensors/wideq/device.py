@@ -684,6 +684,10 @@ class Device(object):
             return None
         return self._status
 
+    def reset_status(self):
+        self._status = None
+        return self._status
+
     def _set_control(self, key, value):
         """Set a device's control for `key` to `value`.
         """
@@ -841,7 +845,11 @@ class DeviceStatus(object):
 
     @property
     def has_data(self):
-        return self._data is not None
+        return True if self._data else False
+
+    @property
+    def is_on(self) -> bool:
+        return False
 
     @property
     def is_info_v2(self):

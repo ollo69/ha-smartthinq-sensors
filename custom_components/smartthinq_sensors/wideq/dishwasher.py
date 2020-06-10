@@ -9,9 +9,17 @@ from .device import (
 )
 
 STATE_DISHWASHER_POWER_OFF = "@DW_STATE_POWER_OFF_W"
-STATE_DISHWASHER_COMPLETE = "@DW_STATE_COMPLETE_W"
-STATE_DISHWASHER_ERROR_NO_ERROR = "No_Error"
+STATE_DISHWASHER_END = [
+    "@DW_STATE_END_W",
+    "@DW_STATE_COMPLETE_W",
+]
 STATE_DISHWASHER_ERROR_OFF = "OFF"
+STATE_DISHWASHER_ERROR_NO_ERROR = [
+    "ERROR_NOERROR",
+    "ERROR_NOERROR_TITLE",
+    "No Error",
+    "No_Error",
+]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,6 +28,10 @@ class DishWasherDevice(Device):
     """A higher-level interface for a dishwasher."""
     def __init__(self, client, device):
         super().__init__(client, device, DishWasherStatus(self, None))
+
+    def reset_status(self):
+        self._status = DishWasherStatus(self, None)
+        return self._status
 
     def poll(self) -> Optional["DishWasherStatus"]:
         """Poll the device's current state."""
@@ -48,24 +60,27 @@ class DishWasherStatus(DeviceStatus):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
-                return STATE_DISHWASHER_POWER_OFF
-            self._run_state = state
+                self._run_state = STATE_DISHWASHER_POWER_OFF
+            else:
+                self._run_state = state
         return self._run_state
 
     def _get_process(self):
         if not self._process:
             process = self.lookup_enum(["Process", "process"])
             if not process:
-                return STATE_OPTIONITEM_NONE
-            self._process = process
+                self._process = STATE_OPTIONITEM_NONE
+            else:
+                self._process = process
         return self._process
 
     def _get_error(self):
         if not self._error:
             error = self.lookup_reference(["Error", "error"], ref_key="title")
             if not error:
-                return STATE_DISHWASHER_ERROR_OFF
-            self._error = error
+                self._error = STATE_DISHWASHER_ERROR_OFF
+            else:
+                self._error = error
         return self._error
 
     @property
@@ -77,18 +92,20 @@ class DishWasherStatus(DeviceStatus):
     def is_run_completed(self):
         run_state = self._get_run_state()
         process = self._get_process()
-        if run_state == STATE_DISHWASHER_COMPLETE or (
-            run_state == STATE_DISHWASHER_POWER_OFF and process == STATE_DISHWASHER_COMPLETE
+        if run_state in STATE_DISHWASHER_END or (
+            run_state == STATE_DISHWASHER_POWER_OFF and process in STATE_DISHWASHER_END
         ):
             return True
         return False
 
     @property
     def is_error(self):
+        if not self.is_on:
+            return False
         error = self._get_error()
-        if error != STATE_DISHWASHER_ERROR_NO_ERROR and error != STATE_DISHWASHER_ERROR_OFF:
-            return True
-        return False
+        if error in STATE_DISHWASHER_ERROR_NO_ERROR or error == STATE_DISHWASHER_ERROR_OFF:
+            return False
+        return True
 
     @property
     def run_state(self):
@@ -106,11 +123,9 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def error_state(self):
-        if not self.is_on:
+        if not self.is_error:
             return STATE_OPTIONITEM_NONE
         error = self._get_error()
-        if error == STATE_DISHWASHER_ERROR_NO_ERROR:
-            return STATE_OPTIONITEM_NONE
         return self._device.get_enum_text(error)
 
     @property

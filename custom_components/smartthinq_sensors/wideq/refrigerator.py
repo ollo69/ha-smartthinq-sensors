@@ -26,6 +26,10 @@ class RefrigeratorDevice(Device):
     def __init__(self, client, device):
         super().__init__(client, device, RefrigeratorStatus(self, None))
 
+    def reset_status(self):
+        self._status = RefrigeratorStatus(self, None)
+        return self._status
+
     def poll(self) -> Optional["RefrigeratorStatus"]:
         """Poll the device's current state."""
 
@@ -92,7 +96,7 @@ class RefrigeratorStatus(DeviceStatus):
 
     @property
     def is_on(self):
-        return True
+        return self.has_data
 
     @property
     def temp_refrigerator(self):

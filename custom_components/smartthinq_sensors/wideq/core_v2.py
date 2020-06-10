@@ -348,6 +348,11 @@ class Auth(object):
             self.user_number,
         )
 
+    def refresh_gateway(self, gateway):
+        """Refresh the gateway.
+        """
+        self.gateway = gateway
+
     def dump(self):
         return {
             "access_token": self.access_token,
@@ -692,7 +697,11 @@ class ClientV2(object):
 
         return out
 
-    def refresh(self) -> None:
+    def refresh(self, refresh_gateway=False) -> None:
+        if refresh_gateway:
+            self._gateway = None
+        if not self._gateway:
+            self._auth.refresh_gateway(self.gateway)
         self._auth = self.auth.refresh()
         self._session = self.auth.start_session()
         # self._device = None

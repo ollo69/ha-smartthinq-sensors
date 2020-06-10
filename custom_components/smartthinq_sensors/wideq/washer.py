@@ -9,9 +9,17 @@ from .device import (
 )
 
 STATE_WASHER_POWER_OFF = "@WM_STATE_POWER_OFF_W"
-STATE_WASHER_END = "@WM_STATE_END_W"
-STATE_WASHER_ERROR_NO_ERROR = "ERROR_NOERROR_TITLE"
+STATE_WASHER_END = [
+    "@WM_STATE_END_W",
+    "@WM_STATE_COMPLETE_W",
+]
 STATE_WASHER_ERROR_OFF = "OFF"
+STATE_WASHER_ERROR_NO_ERROR = [
+    "ERROR_NOERROR",
+    "ERROR_NOERROR_TITLE",
+    "No Error",
+    "No_Error",
+]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,6 +28,10 @@ class WasherDevice(Device):
     """A higher-level interface for a washer."""
     def __init__(self, client, device):
         super().__init__(client, device, WasherStatus(self, None))
+
+    def reset_status(self):
+        self._status = WasherStatus(self, None)
+        return self._status
 
     def poll(self) -> Optional["WasherStatus"]:
         """Poll the device's current state."""
@@ -48,24 +60,27 @@ class WasherStatus(DeviceStatus):
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
-                return STATE_WASHER_POWER_OFF
-            self._run_state = state
+                self._run_state = STATE_WASHER_POWER_OFF
+            else:
+                self._run_state = state
         return self._run_state
 
     def _get_pre_state(self):
         if not self._pre_state:
             state = self.lookup_enum(["PreState", "preState"])
             if not state:
-                return STATE_WASHER_POWER_OFF
-            self._pre_state = state
+                self._pre_state = STATE_WASHER_POWER_OFF
+            else:
+                self._pre_state = state
         return self._pre_state
 
     def _get_error(self):
         if not self._error:
             error = self.lookup_reference(["Error", "error"], ref_key="title")
             if not error:
-                return STATE_WASHER_ERROR_OFF
-            self._error = error
+                self._error = STATE_WASHER_ERROR_OFF
+            else:
+                self._error = error
         return self._error
 
     @property
@@ -77,18 +92,20 @@ class WasherStatus(DeviceStatus):
     def is_run_completed(self):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
-        if run_state == STATE_WASHER_END or (
-            run_state == STATE_WASHER_POWER_OFF and pre_state == STATE_WASHER_END
+        if run_state in STATE_WASHER_END or (
+            run_state == STATE_WASHER_POWER_OFF and pre_state in STATE_WASHER_END
         ):
             return True
         return False
 
     @property
     def is_error(self):
+        if not self.is_on:
+            return False
         error = self._get_error()
-        if error != STATE_WASHER_ERROR_NO_ERROR and error != STATE_WASHER_ERROR_OFF:
-            return True
-        return False
+        if error in STATE_WASHER_ERROR_NO_ERROR or error == STATE_WASHER_ERROR_OFF:
+            return False
+        return True
 
     @property
     def run_state(self):
@@ -106,11 +123,9 @@ class WasherStatus(DeviceStatus):
 
     @property
     def error_state(self):
-        if not self.is_on:
+        if not self.is_error:
             return STATE_OPTIONITEM_NONE
         error = self._get_error()
-        if error == STATE_WASHER_ERROR_NO_ERROR:
-            return STATE_OPTIONITEM_NONE
         return self._device.get_enum_text(error)
 
     @property
