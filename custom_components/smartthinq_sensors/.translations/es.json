@@ -8,7 +8,7 @@
             "invalid_region": "Formato País no válido.",
             "invalid_language": "Formato Idioma no válido.",
             "invalid_url": "URL de redireccionamiento no válida",
-            "invalid_credentials": "Credenciales SmartThinQ inválidos."
+            "invalid_credentials": "Credenciales SmartThinQ no válidos."
         },
         "step": {
             "user": {
