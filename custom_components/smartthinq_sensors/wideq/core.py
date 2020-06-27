@@ -44,6 +44,7 @@ API_ERRORS = {
     "0102": exc.NotLoggedInError,
     "0106": exc.NotConnectedError,
     "0100": exc.FailedRequestError,
+    "0110": exc.InvalidCredentialError,
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
 }
 

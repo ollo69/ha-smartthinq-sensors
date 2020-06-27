@@ -36,6 +36,13 @@ class InvalidRequestError(APIError):
         pass
 
 
+class InvalidCredentialError(APIError):
+    """The server rejected connection."""
+
+    def __init__(self):
+        pass
+
+
 class TokenError(APIError):
     """An authentication token was rejected."""
 
