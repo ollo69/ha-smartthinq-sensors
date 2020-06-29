@@ -15,18 +15,18 @@ from Home Assistant before upgrade.<br/>
 
 2. From version 0.5.x devices state labels are loaded from "language pack" and shown in the language related to your account.
 This change should solve all case of "unknown state" warning, due to the big change some sensors may not work as expected.
-Please open issue with all possible detail to help me to fix possible new issues introduced.
+Please open an issue with all possible details to help me to fix possible new issues introduced.
 
-**Important**: The component will **not work if you have logged into the ThinQ application and registered your devices using a social network account** (google, facebook or amazon). In order to use the component you need to create a new independent LG account and make sure you log into the ThinQ app and associate your devices with it.
+**Important**: The component will **not work if you have logged into the ThinQ application and registered your devices using a social network account** (Google, Facebook or Amazon). In order to use the component you need to create a new independent LG account and make sure you log into the ThinQ app and associate your devices with it.
 If during configuration you receive the message "No SmartThinQ devices found", probably your devices are still associated with the social network account. To solve the problem perform the following step:
 - remove your devices from the ThinQ app
 - logout from the app and login again with the independent LG account
 - reconnect the devices in the app
 
-**Note**: some device status may not be correctly detected, this depend on model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
+**Note**: some device status may not be correctly detected, this depends on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
 
 ## Installation
-You can install this component in two ways: via HACS (as custom repository for the moment) or manually.
+You can install this component in two ways: via HACS or manually.
 
 ### Option A: Installing via HACS
 If you have HACS, just go in the Integration Tab and search the "SmartThinQ LG Sensors" component to install it.
@@ -76,17 +76,17 @@ Edit it by adding the following lines:
     ```
     smartthinq_sensors:
       token: my_smartthinq_token
-      region: my_smartthinq_region (e.g. US)
-      language: my_smartthinq_language (e.g. en-US)
+      region: my_smartthinq_region #(e.g. US)
+      language: my_smartthinq_language #(e.g. en-US)
     ```
 
 2. Reboot HomeAssistant
 
 ## Be nice!
-If you like the component, why don't you support me by buying me a coffe?
+If you like the component, why don't you support me by buying me a coffee?
 It would certainly motivate me to further improve this work.
 
-[![Buy me a coffe!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ollo69)
+[![Buy me a coffee!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ollo69)
 
 
 Credits
