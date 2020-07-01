@@ -102,11 +102,17 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | mac_address | Mac address of washer |
 | run_completed | Turns On when washer completed wash, just like binary_sensor.my_washer_wash_completed. |
 | error_state | Off/OK means that it's fine. On/Error means there's an error, just like binary_sensor.my_washer_error_state. |
-| error_message | When there is an error, this is what it is. |
+| error_message | When there is an error, this is what it is. ??? Unit please help |
 | run_state | Current state of washer |
 | pre_state | Previous state of washer |
 | current_course | Current washing cycle |
 | spin_option_state | Current spin mode |
+| watertemp_option_state | Current option for water temperature |
+| drylevel_option_state | ??? Please help |
+| tubclean_count | ??? Please help |
+| remain_time | How much more time is remaining ??? Unit please help |
+| initial_time | ??? Please help |
+| reserve_time | ??? Please help |
 
 ## Be nice!
 If you like the component, why don't you support me by buying me a coffee?
