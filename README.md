@@ -96,6 +96,8 @@ In this example, "My [insert thing]" will just be the placeholder
 
 #### Attributes `sensor.my_washer`
 Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for my washer, values may differ for yours. Feel free to open an issue/PR.
+<details><summary>Hidden, click to expand</summary>
+
 | Attribute ID | Description |
 | :-- | :-- |
 | model | Model ID of washer |
@@ -123,6 +125,8 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | prewash_mode | Unknown attribute, on/off |
 | turbowash_mode | Whether or not Turbowash is enabled |
 
+</details>
+
 #### Examples (washer/dryer)
 - Get a notification when the dry clothes are hot (automation)
 ```yaml
@@ -141,7 +145,75 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
       message: 'Get them while they're hot!'
     service: notify.notify
 ```
-- Washer status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
+- Really, really neat custom card
+<details><summary>Hidden, click to expand</summary>
+
+custom JS module for card:
+```js
+class LgLaundryCard extends HTMLElement {
+  set hass(hass) {
+    const entityId = this.config.entity;
+    const state = hass.states[entityId];
+    const stateStr = state ? state.state : 'unavailable';
+    const friendlyName = state.attributes.friendly_name;
+    const friendlyNameStr = friendlyName ? " " + friendlyName : "";
+    const courseName = state.attributes.current_course;
+    const courseNameStr = courseName ? " " + courseName : "an unknown cycle";
+    const stageName = state.attributes.run_state;
+    const stageNameStr = stageName ? " " + stageName : "unknown";
+    const iconName = state.attributes.icon;
+    const iconNameStr = iconName ? iconName : "";
+    const remainTime = state.attributes.remain_time;
+    const remainTimeStr = remainTime ? remainTime : "unknown";
+    const totalTime = state.attributes.initial_time;
+    const totalTimeStr = totalTime ? totalTime : "unknown";
+    if (!this.content) {
+      const card = document.createElement('ha-card');
+      card.header = friendlyNameStr;
+      this.content = document.createElement('div');
+      this.content.style.padding = '0 16px 16px';
+      this.content.style.display = 'flex';
+      card.appendChild(this.content);
+      this.appendChild(card);
+    }
+    this.content.innerHTML = `
+      <ha-icon icon="${iconNameStr}" style="margin: 30px; display: block; transform: scale(3,3); color: ${stateStr == 'on' ? "var(--sidebar-selected-icon-color)" : "var(--secondary-text-color)"};"></ha-icon>&nbsp;&nbsp;${friendlyNameStr} is currently ${stateStr}.
+    `;
+    if (stateStr == 'on') {
+        this.content.innerHTML += `
+          <br/>&nbsp;&nbsp;The ${courseNameStr} progress is ${stageNameStr}.
+          <br/>&nbsp;&nbsp;There's ${remainTimeStr} remaining out of ${totalTimeStr} total.
+        `;
+    }
+  }
+  setConfig(config) {
+    if (!config.entity) {
+      throw new Error('You need to define a laundry entity');
+    }
+    this.config = config;
+  }
+  getCardSize() {
+    return 3;
+  }
+}
+
+customElements.define('lg-laundry-card', LgLaundryCard);
+```
+
+Lovelace:
+```yaml
+type: 'custom:lg-laundry-card'
+entity: 'sensor.the_dryer_dryer' # Washers work too!
+```
+
+Screenshot:
+![Screenshot of laundry card](/washerpics/2020-07-01-132644_1920x1080_scrot.png)
+
+</details>
+
+- Alternative: Washer picture status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
+<details><summary>Hidden, click to expand</summary>
+    
 configuration.yaml:
 ```yaml
 sensor:
@@ -175,6 +247,9 @@ cards:
       type: picture-entity
 type: vertical-stack
 ```
+
+</details>
+
 ## Be nice!
 If you like the component, why don't you support me by buying me a coffee?
 It would certainly motivate me to further improve this work.
