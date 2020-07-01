@@ -82,9 +82,9 @@ Edit it by adding the following lines:
 
 2. Reboot HomeAssistant
 
-## Entity Docs
+## Docs
 In this example, "My [insert thing]" will just be the placeholder
-
+#### Entities
 | Entity ID | Entity Name | Description |
 | :-- | :-: | :-- |
 | sensor.my_washer | My Washer | Washer, turns On when on, turns Off when off |
@@ -114,6 +114,58 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | initial_time | ??? Please help |
 | reserve_time | ??? Please help |
 
+#### Examples (washer/dryer)
+- Get a notification when the dry clothes are hot (automation)
+```yaml
+- id: 'dry_clothes_notification'
+  alias: Dry clothes notification
+  description: Alert when dryer finishes
+  trigger:
+  - entity_id: binary_sensor.my_dryer_dry_completed
+    platform: state
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - data:
+      title: 'The clothes are dry!'
+      message: 'Get them while they're hot!'
+    service: notify.notify
+```
+- Washer status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
+configuration.yaml:
+```yaml
+sensor:
+  - platform: template
+    sensors:
+      washer_cycle_state:
+        value_template: '{{state_attr(''sensor.my_washer'', ''remain_time'')}}'
+        friendly_name: Washer Cycle State
+        icon_template: 'mdi:washing-machine'
+```
+lovelace:
+```yaml
+cards:
+  - type: conditional
+    conditions:
+      - entity: sensor.my_washer
+        state: "on"
+    card:
+      aspect_ratio: '1'
+      entity: sensor.washer_cycle_state
+      image: /local/washerrunning.gif
+      type: picture-entity
+  - type: conditional
+    conditions:
+      - entity: sensor.my_washer
+        not_state: "on"
+    card:
+      aspect_ratio: '1'
+      entity: sensor.my_washer
+      image: /local/washer.jpg
+      type: picture-entity
+type: vertical-stack
+```
 ## Be nice!
 If you like the component, why don't you support me by buying me a coffee?
 It would certainly motivate me to further improve this work.
