@@ -82,6 +82,15 @@ Edit it by adding the following lines:
 
 2. Reboot HomeAssistant
 
+## Entity Docs
+In this example, "My [insert thing]" will just be the placeholder
+
+| Entity ID | Entity Name | Description |
+| :-: | :-: | :-: |
+| sensor.my_washer | My Washer | Washer, turns On when on, turns Off when off |
+| binary_sensor.my_washer_wash_completed | My Washer Wash Completed | Turns On when washer completed wash. You can use it in automations by triggering them when it goes from Off to On. |
+| binary_sensor.my_washer_error_state | My Washer Error State | Off/OK means that it's fine. On/Error means there's an error. |
+
 ## Be nice!
 If you like the component, why don't you support me by buying me a coffee?
 It would certainly motivate me to further improve this work.
