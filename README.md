@@ -86,10 +86,27 @@ Edit it by adding the following lines:
 In this example, "My [insert thing]" will just be the placeholder
 
 | Entity ID | Entity Name | Description |
-| :-: | :-: | :-: |
+| :-- | :-: | :-- |
 | sensor.my_washer | My Washer | Washer, turns On when on, turns Off when off |
 | binary_sensor.my_washer_wash_completed | My Washer Wash Completed | Turns On when washer completed wash. You can use it in automations by triggering them when it goes from Off to On. |
 | binary_sensor.my_washer_error_state | My Washer Error State | Off/OK means that it's fine. On/Error means there's an error. |
+| sensor.my_dryer | My Dryer | Dryer, turns On when on, turns Off when off |
+| binary_sensor.my_dryer_dry_completed | My Dryer Dry Completed | Turns On when dryer completed wash. You can use it in automations by triggering them when it goes from Off to On. |
+| binary_sensor.my_dryer_error_state | My Dryer Error State | Off/OK means that it's fine. On/Error means there's an error. |
+
+#### Attributes `sensor.my_washer`
+Note: When something doesn't apply and/or is off, it may have a `-` as its value.
+| Attribute ID | Description |
+| :-- | :-- |
+| model | Model ID of washer |
+| mac_address | Mac address of washer |
+| run_completed | Turns On when washer completed wash, just like binary_sensor.my_washer_wash_completed. |
+| error_state | Off/OK means that it's fine. On/Error means there's an error, just like binary_sensor.my_washer_error_state. |
+| error_message | When there is an error, this is what it is. |
+| run_state | Current state of washer |
+| pre_state | Previous state of washer |
+| current_course | Current washing cycle |
+| spin_option_state | Current spin mode |
 
 ## Be nice!
 If you like the component, why don't you support me by buying me a coffee?
