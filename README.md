@@ -179,6 +179,9 @@ class LgLaundryCard extends HTMLElement {
   set hass(hass) {
     const entityId = this.config.entity;
     const state = hass.states[entityId];
+    if (!state) {
+        throw new Error('Entity not found. Maybe check to make sure it exists.');
+    }
     const stateStr = state ? state.state : 'unavailable';
     const friendlyName = state.attributes.friendly_name;
     const friendlyNameStr = friendlyName ? " " + friendlyName : "";
@@ -220,9 +223,13 @@ class LgLaundryCard extends HTMLElement {
   getCardSize() {
     return 3;
   }
+  static getStubConfig() {
+    return { entity: "sensor.my_washing_machine" };
+  }
 }
 
 customElements.define('lg-laundry-card', LgLaundryCard);
+window.customCards.push({type: "lg-laundry-card", name: "LG laundry card", description: "Card for LG laundry machines."});
 ```
 
 Lovelace:
