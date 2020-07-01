@@ -95,24 +95,33 @@ In this example, "My [insert thing]" will just be the placeholder
 | binary_sensor.my_dryer_error_state | My Dryer Error State | Off/OK means that it's fine. On/Error means there's an error. |
 
 #### Attributes `sensor.my_washer`
-Note: When something doesn't apply and/or is off, it may have a `-` as its value.
+Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for my washer, values may differ for yours. Feel free to open an issue/PR.
 | Attribute ID | Description |
 | :-- | :-- |
 | model | Model ID of washer |
 | mac_address | Mac address of washer |
 | run_completed | Turns On when washer completed wash, just like binary_sensor.my_washer_wash_completed. |
 | error_state | Off/OK means that it's fine. On/Error means there's an error, just like binary_sensor.my_washer_error_state. |
-| error_message | When there is an error, this is what it is. ??? Unit please help |
-| run_state | Current state of washer |
-| pre_state | Previous state of washer |
-| current_course | Current washing cycle |
-| spin_option_state | Current spin mode |
-| watertemp_option_state | Current option for water temperature |
-| drylevel_option_state | ??? Please help |
-| tubclean_count | ??? Please help |
-| remain_time | How much more time is remaining ??? Unit please help |
-| initial_time | ??? Please help |
-| reserve_time | ??? Please help |
+| error_message | When there is an error, this is what it is. (Format unknown) |
+| run_state | Current state of washer in words |
+| pre_state | Previous state of washer in words |
+| current_course | Current washing cycle in words |
+| spin_option_state | Current spin mode in words |
+| watertemp_option_state | Current option for water temperature in words |
+| drylevel_option_state | Unknown attribute |
+| tubclean_count | Unknown attribute, number |
+| remain_time | How much more time is remaining, H:MM |
+| initial_time | The orgiinal amount of time, H:MM |
+| reserve_time | Unknown attribute, H:MM |
+| doorlock_mode | Unknown attribute, on/off |
+| doorclose_mode | Unknown attribute, on/off |
+| childlock_mode | Child lock, on/off |
+| remotestart_mode | Whether remote start is enabled or not |
+| creasecare_mode | Unknown attribute, on/off |
+| steam_mode | Unknown attribute, on/off |
+| steam_softener_mode | Unknown attribute, on/off |
+| prewash_mode | Unknown attribute, on/off |
+| turbowash_mode | Whether or not Turbowash is enabled |
 
 #### Examples (washer/dryer)
 - Get a notification when the dry clothes are hot (automation)
