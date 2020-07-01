@@ -127,8 +127,32 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 
 </details>
 
+#### Attributes `sensor.my_dryer`
+Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for my dryer, values may differ for yours. Feel free to open an issue/PR.
+<details><summary>Hidden, click to expand</summary>
+
+| Attribute ID | Description |
+| :-- | :-- |
+| model | Model ID of dryer |
+| mac_address | Mac address of dryer |
+| run_completed | Turns On when dryer completed dry, just like binary_sensor.my_dryer_dry_completed. |
+| error_state | Off/OK means that it's fine. On/Error means there's an error, just like binary_sensor.my_dryer_error_state. |
+| error_message | When there is an error, this is what it is. (Format unknown) |
+| run_state | Current state of dryer in words |
+| pre_state | Previous state of dryer in words |
+| current_course | Current drying cycle in words |
+| tempcontrol_option_state | Current option for dryer temperature in words |
+| drylevel_option_state | Current level for how much to dry |
+| remain_time | How much more time is remaining, H:MM |
+| initial_time | The orgiinal amount of time, H:MM |
+| reserve_time | Unknown attribute, H:MM |
+| doorlock_mode | Unknown attribute, on/off |
+| childlock_mode | Child lock, on/off |
+
+</details>
+
 #### Examples (washer/dryer)
-- Get a notification when the dry clothes are hot (automation)
+- Get a notification when the clothes are done drying (or when the clothes are done washing, automation)
 ```yaml
 - id: 'dry_clothes_notification'
   alias: Dry clothes notification
@@ -145,7 +169,8 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
       message: 'Get them while they're hot!'
     service: notify.notify
 ```
-- Really, really neat custom card
+Substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer.
+- Really, really neat custom card for dryer and washer
 <details><summary>Hidden, click to expand</summary>
 
 custom JS module for card:
