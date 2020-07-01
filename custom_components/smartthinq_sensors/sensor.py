@@ -367,6 +367,11 @@ class LGESensor(Entity):
         return self._api.available
 
     @property
+    def assumed_state(self) -> bool:
+        """Return True if unable to access real state of the entity."""
+        return self._api.assumed_state
+
+    @property
     def state_attributes(self):
         """Return the optional state attributes."""
         return self._api.state_attributes

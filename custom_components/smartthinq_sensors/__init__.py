@@ -260,6 +260,11 @@ class LGEDevice:
         return self._not_logged_count <= MAX_UPDATE_FAIL_ALLOWED
 
     @property
+    def assumed_state(self) -> bool:
+        """Return True if unable to access real state of the entity."""
+        return self.available and self._disconnected
+
+    @property
     def name(self) -> str:
         return self._name
 
@@ -434,6 +439,7 @@ class LGEDevice:
                         # _LOGGER.debug('Status attributes: %s', l)
 
                         self._update_fail_count = 0
+                        self._not_logged_count = 0
                         self._retry_count = 0
                         self._state = state
 
