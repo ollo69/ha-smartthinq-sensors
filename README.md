@@ -170,7 +170,7 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
     service: notify.notify
 ```
 Substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer.
-- Really, really neat custom card for dryer and washer
+- Really, really neat custom card for dryer and washer (![Screenshot of laundry card](/washerpics/cardpic.png))
 <details><summary>Hidden, click to expand</summary>
 
 custom JS module for card:
@@ -322,9 +322,6 @@ Lovelace:
 type: 'custom:lg-laundry-card'
 entity: 'sensor.the_dryer_dryer' # Washers work too!
 ```
-
-Screenshot:
-![Screenshot of laundry card](/washerpics/cardpic.png)
 
 </details>
 
