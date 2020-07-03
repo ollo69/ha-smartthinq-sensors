@@ -283,8 +283,8 @@ class LgLaundryCard extends HTMLElement {
         if (worked) {
           conthtml += `
             <br/>
-            <div style="width: 100%; height: 30px; background-color: #8f8d; display: inline-block;">
-              <div style="max-width: 0; min-width: 0; max-width: ${percentDone} !important; min-width: ${percentDone} !important; height: 30px; background-color: #09dd; display: inline-block;">
+            <div style="width: 100%; height: 30px; background-color: #8f89; display: inline-block;">
+              <div style="max-width: 0; min-width: 0; max-width: ${percentDone} !important; min-width: ${percentDone} !important; height: 30px; background-color: #09d9; display: inline-block;">
                 <b style="line-height: 30px; margin: 0 10px; display: block;">${percentDone}</b>
               </div>
             </div>
