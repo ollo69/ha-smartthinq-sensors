@@ -272,7 +272,7 @@ class LgLaundryCard extends HTMLElement {
     }
     var conthtml = '';
     conthtml = `
-      <ha-icon icon="${iconNameStr}" style="transform: scale(3,3); color: ${stateStr == 'on' ? "var(--sidebar-selected-icon-color)" : "var(--secondary-text-color)"}; display: block; padding: 8px 5px 12px 5px; margin: 15px;"></ha-icon>
+      <ha-icon icon="${iconNameStr}" style="transform: scale(3,3); color: ${stateStr == 'on' ? "var(--sidebar-selected-icon-color)" : "var(--secondary-text-color)"}; display: block; padding: 8px 9px 12px 5px; margin: 15px;"></ha-icon>
       <div>${friendlyNameStr} is currently ${stateStr}.
     `;
     if (stateStr == 'on') {
@@ -290,7 +290,7 @@ class LgLaundryCard extends HTMLElement {
             </div>
             </div>
           `;
-          conthtml = conthtml.replace("8px 5px 12px 5px", "16px 5px 12px 5px");
+          conthtml = conthtml.replace("8px 9px 12px 5px", "16px 9px 12px 5px");
         } else {
             conthtml += "</div>";
         }
