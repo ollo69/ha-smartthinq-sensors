@@ -31,10 +31,10 @@ Simply add a new "integration" and look for "SmartThinQ LGE Sensors" among the p
 
 **Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale, so be sure to use the country you originally created your account with.<br/>
 
-### Option B: Configuration via editing configuration.yaml [deprecated]
+### Option B: Configuration via editing configuration.yaml [deprecated - not possible from v0.5.4]
 Follow these steps only if the previous configuration method did not work for you.<br/>
 **Note**: with this configuration the integration will use APIv1 that cannot connect to new LG devices.
-This configuration option is deprecated and will be removed in future versions<br/>
+This configuration option is deprecated and is not possible starting from version 0.5.4<br/>
 
 1. Enable the component by editing the configuration.yaml file (within the config directory as well).
 Edit it by adding the following lines:
