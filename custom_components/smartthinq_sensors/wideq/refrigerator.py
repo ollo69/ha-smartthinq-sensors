@@ -18,6 +18,13 @@ REFRTEMPUNIT = {
     "˚C": UNITTEMPMODES.Celsius,
 }
 
+# REFRTEMPUNIT = {
+#     "\uff26": UNITTEMPMODES.Fahrenheit,
+#     "\u2103": UNITTEMPMODES.Celsius,
+#     "\u02daF": UNITTEMPMODES.Fahrenheit,
+#     "\u02daC": UNITTEMPMODES.Celsius,
+# }
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -63,21 +70,23 @@ class RefrigeratorStatus(DeviceStatus):
         return self._temp_unit
 
     def _get_temp_val_v1(self, key):
-        temp = self.lookup_enum(key)
         temp_key = self._data.get(key)
-        if not temp or temp_key is None:
-            if temp_key is not None:
-                return str(temp_key)
+        if temp_key is None:
             return STATE_OPTIONITEM_NONE
-        if temp != temp_key:
-            return temp
+        value_type = self._device.model_info.value_type(key)
+        if value_type and value_type == "Enum":
+            temp = self.lookup_enum(key)
+            if not temp:
+                return str(temp_key)
+            if temp != temp_key:
+                return temp
         unit = self._get_temp_unit()
         unit_key = "_F" if unit == UNIT_TEMP_FAHRENHEIT else "_C"
         result = self._device.model_info.enum_name(
             key + unit_key, temp_key
         )
         if not result:
-            return temp
+            return str(temp_key)
         return result
 
     def _get_temp_val_v2(self, key):

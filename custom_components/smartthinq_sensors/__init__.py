@@ -181,6 +181,14 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         )
         raise ConfigEntryNotReady()
 
+    if not use_apiv2:
+        _LOGGER.warning(
+            "Integration configuration is using ThinQ APIv1 that is obsolete"
+            " and not able to manage all ThinQ devices."
+            " Please remove and re-add integration from HA user interface to"
+            " enable the use of ThinQ APIv2"
+        )
+
     hass.data.setdefault(DOMAIN, {}).update(
         {
             CLIENT: client,
