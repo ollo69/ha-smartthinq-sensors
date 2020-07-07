@@ -29,7 +29,12 @@ There are two ways of doing so:
 Simply add a new "integration" and look for "SmartThinQ LGE Sensors" among the proposed ones and
 **follow setup worflow**.<br/>
 
-**Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale, so be sure to use the country you originally created your account with.<br/>
+**Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale, 
+so be sure to use the country and language you originally created your account with. 
+Reference for valid code:<br/>
+
+- Country code: [ISO 3166-1 alpha-2 code][ISO-3166-1-alpha-2]<br/>
+- Language code: [ISO 639-1 code][ISO-639-1]<br/>
 
 ### Option B: Configuration via editing configuration.yaml [deprecated - not possible from v0.5.4]
 Follow these steps only if the previous configuration method did not work for you.<br/>
@@ -41,8 +46,8 @@ Edit it by adding the following lines:
     ```
     smartthinq_sensors:
       token: my_smartthinq_token
-      region: my_smartthinq_region (e.g. US)
-      language: my_smartthinq_language (e.g. en-US)
+      region: my_smartthinq_region #(ISO 3166-1 alpha-2, e.g. US)
+      language: my_smartthinq_language #(ISO-639-1, e.g. en)
     ```
 
 2. Reboot HomeAssistant
@@ -63,3 +68,5 @@ Original WideQ API was developed by [Adrian Sampson][adrian] under license [MIT]
 [wideq]: https://github.com/sampsyo/wideq
 [adrian]: https://github.com/sampsyo
 [mit]: https://opensource.org/licenses/MIT
+[ISO-3166-1-alpha-2]: https://en.wikipedia.org/wiki/ISO_3166-2
+[ISO-639-1]: https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes

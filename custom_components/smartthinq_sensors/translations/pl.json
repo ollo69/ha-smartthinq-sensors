@@ -13,8 +13,8 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Region (np. PL)",
-                    "language": "Język (np. pl-PL)",
+                    "region": "Region (ISO 3166-1 alpha-2, np. PL)",
+                    "language": "Język (ISO-639-1, np. pl)",
                     "token": "Wpisz token (tylko dla trybu uwierzytelniania API v1)",
                     "use_api_v2": "Użyj trybu API v2"
                 },

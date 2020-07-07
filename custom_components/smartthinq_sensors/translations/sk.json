@@ -13,8 +13,8 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Región (napr. SK)",
-                    "language": "Jazyk (napr. sk-SK)",
+                    "region": "Región (ISO 3166-1 alpha-2, napr. SK)",
+                    "language": "Jazyk (ISO-639-1, napr. sk)",
                     "token": "Obnova Token (len pre Autorizačný mód v1)",
                     "use_api_v2": "Použi Autorizačný mód v2"
                 },

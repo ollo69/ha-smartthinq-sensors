@@ -13,8 +13,8 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Paese (per es. IT)",
-                    "language": "Lingua (per es. it-IT)",
+                    "region": "Paese (ISO 3166-1 alpha-2, per es. IT)",
+                    "language": "Lingua (ISO-639-1, per es. it)",
                     "token": "Aggiornare il Token (solo per Authentication mode v1)",
                     "use_api_v2": "Usa Authentication mode v2"
                 },
