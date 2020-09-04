@@ -32,13 +32,18 @@ You can install this component in two ways: via HACS or manually.
 If you have HACS, just go in the Integration Tab and search the "SmartThinQ LG Sensors" component to install it.
 
 ### Option B: Manually installation (custom_component)
-1. Clone the git master branch.
-2. Unzip/copy the smartthinq_sensors direcotry within the `custom_components` directory of your homeassistant installation.
-The `custom_components` directory resides within your homeassistant configuration directory.
-Usually, the configuration directory is within your home (`~/.homeassistant/`).
-In other words, the configuration directory of homeassistant is where the configuration.yaml file is located.
+Prerequisite: SSH into your server. [Home Assistant Add-on: SSH server](https://github.com/home-assistant/hassio-addons/tree/master/ssh)
+1. Clone the git master branch.  
+`git clone https://github.com/ollo69/ha-smartthinq-sensors.git`
+2. If missing, create a `custom_components` directory where your configuration.yaml file resides. This is usually in the config directory of homeassistant.  
+`mkdir ~/.homeassistant/config/custom_components`
+3. Copy the smartthinq_sensors directory within the `custom_components` directory of your homeassistant installation from step 2.  
+`cp -R ha-smartthinq-sensors/custom_components/smartthinq_sensors/ ~/.homeassistant/config/custom_components`
+4. (Optional) Delete the git repo.  
+`rm -R ha-smartthinq-sensors/`
+
 After a correct installation, your configuration directory should look like the following.
-    ```
+```
     └── ...
     └── configuration.yaml
     └── secrects.yaml
@@ -48,7 +53,7 @@ After a correct installation, your configuration directory should look like the 
             └── config_flow.py
             └── const.py
             └── ...
-    ```
+```
 
     **Note**: if the custom_components directory does not exist, you need to create it.
     
