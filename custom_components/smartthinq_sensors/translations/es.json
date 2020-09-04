@@ -5,20 +5,20 @@
             "no_smartthinq_devices": "No se encontraron dispositivos SmartThinQ. Configuración del componente interrumpida."
         },
         "error": {
-            "invalid_region": "Formato País no válido.",
-            "invalid_language": "Formato Idioma no válido.",
+            "invalid_region": "Formato de país no válido.",
+            "invalid_language": "Formato de idioma no válido.",
             "invalid_url": "URL de redireccionamiento no válida",
-            "invalid_credentials": "Credenciales SmartThinQ no válidos."
+            "invalid_credentials": "Credenciales SmartThinQ no válidas."
         },
         "step": {
             "user": {
                 "data": {
                     "region": "País (ISO 3166-1 alpha-2, p. ej. ES)",
                     "language": "Idioma (ISO-639-1, p. ej. es)",
-                    "token": "Actualizar el Token (Sólo para Autenticación mode v1)",
-                    "use_api_v2": "Usar Authentication mode v2"
+                    "token": "Actualizar el Token (Sólo para autenticación modo v1)",
+                    "use_api_v2": "Usar autenticación modo v2"
                 },
-                "description": "Inserte su información de acceso a SmartThinQ. Si no dispone de un Token de actualización, déjelo vacío para empezar el proceso de autenticación con sus credenciales. El Token de Actualización no es necesario con el Authentication mode v2.",
+                "description": "Inserta tu información de acceso a SmartThinQ. Si no dispones de un Token de actualización, déjalo vacío para empezar el proceso de autenticación con tus credenciales. El Token de Actualización no es necesario con el Authentication mode v2.",
                 "title": "Sensores SmartThinQ LGE"
             },
             "url": {
@@ -26,14 +26,14 @@
                     "login_url": "URL de acceso a SmartThinQ",
                     "callback_url": "URL de redireccionamiento"
                 },
-                "description": "Use la URL en el primer campo para iniciar sesión con sus credenciales de SmartThinQ, luego pegue en el segundo campo la URL donde se redirige el navegador después del inicio de sesión.",
+                "description": "Usa la URL en el primer campo para iniciar sesión con tus credenciales de SmartThinQ, luego pega en el segundo campo la URL donde se redirige el navegador después del inicio de sesión.",
                 "title": "Sensores SmartThinQ LGE - Autenticación"
             },
             "token": {
                 "data": {
                     "token": "Actualización de Token"
                 },
-                "description": "Guarde el Token generado para futuros usos, luego confirme para completar la configuración.",
+                "description": "Guarda el Token generado para futuros usos, luego confirma para completar la configuración.",
                 "title": "Sensores SmartThinQ LGE - Nueva Actualización de Token"
             }
         },
