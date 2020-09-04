@@ -81,12 +81,6 @@ ATTR_REFRIGERATOR_TEMP = "refrigerator_temp"
 ATTR_FREEZER_TEMP = "freezer_temp"
 ATTR_TEMP_UNIT = "temp_unit"
 ATTR_DOOROPEN_STATE = "door_open_state"
-ATTR_SMARTSAVING_MODE = "smart_saving_mode"
-ATTR_SMARTSAVING_STATE = "smart_saving_state"
-ATTR_ECOFRIENDLY_STATE = "eco_friendly_state"
-ATTR_ICEPLUS_STATE = "ice_plus_state"
-ATTR_FRESHAIRFILTER_STATE = "fresh_air_filter_state"
-ATTR_WATERFILTERUSED_MONTH = "water_filter_used_month"
 
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
@@ -949,13 +943,12 @@ class LGERefrigeratorSensor(LGESensor):
             ATTR_FREEZER_TEMP: self._temp_freezer,
             ATTR_TEMP_UNIT: self._temp_unit,
             ATTR_DOOROPEN_STATE: self._dooropen_state,
-            ATTR_SMARTSAVING_MODE: self._smart_saving_mode,
-            ATTR_SMARTSAVING_STATE: self._smart_saving_state,
-            ATTR_ECOFRIENDLY_STATE: self._eco_friendly_state,
-            ATTR_ICEPLUS_STATE: self._ice_plus_state,
-            ATTR_FRESHAIRFILTER_STATE: self._freshair_filter_state,
-            ATTR_WATERFILTERUSED_MONTH: self._water_filter_used_month,
         }
+
+        if self._api.state:
+            for name, value in self._api.state.device_features.items():
+                data[name] = value
+
         return data
 
     @property
@@ -983,39 +976,3 @@ class LGERefrigeratorSensor(LGESensor):
             state = self._api.state.door_opened_state
             return STATE_LOOKUP.get(state, STATE_OFF)
         return STATE_OFF
-
-    @property
-    def _smart_saving_mode(self):
-        if self._api.state:
-            return self._api.state.smart_saving_mode
-        return "-"
-
-    @property
-    def _smart_saving_state(self):
-        if self._api.state:
-            return self._api.state.smart_saving_state
-        return None
-
-    @property
-    def _eco_friendly_state(self):
-        if self._api.state:
-            return self._api.state.eco_friendly_state
-        return None
-
-    @property
-    def _ice_plus_state(self):
-        if self._api.state:
-            return self._api.state.ice_plus_status
-        return None
-
-    @property
-    def _freshair_filter_state(self):
-        if self._api.state:
-            return self._api.state.fresh_air_filter_status
-        return None
-
-    @property
-    def _water_filter_used_month(self):
-        if self._api.state:
-            return self._api.state.water_filter_used_month
-        return None

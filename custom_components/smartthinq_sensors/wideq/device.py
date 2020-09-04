@@ -317,7 +317,7 @@ class ModelInfo(object):
         """Get the default value, if it exists, for a given value.
         """
 
-        return self._data["Value"][name]["default"]
+        return self._data.get("Value", {}).get(name, {}).get("default")
 
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name.
@@ -338,6 +338,11 @@ class ModelInfo(object):
             return None
         options = values.options
         return options.get(value, "")
+
+    def enum_index(self, key, index):
+        """Look up the friendly enum name for an indexed value.
+        """
+        return self.enum_name(key, index)
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension
@@ -544,8 +549,11 @@ class ModelInfoV2(object):
     def default(self, name):
         """Get the default value, if it exists, for a given value.
         """
+        data = self.data_root(name)
+        if data:
+            return data.get("default")
 
-        return self._data["MonitoringValue"][name]["label"]
+        return None
 
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name.
@@ -568,6 +576,21 @@ class ModelInfoV2(object):
         options = self.value(data)
         item = options.get(value, {})
         return item.get("label", "")
+
+    def enum_index(self, key, index):
+        """Look up the friendly enum name for an indexed value.
+        """
+        data = self.data_root(key)
+        if not data:
+            return None
+
+        options = self.value(data)
+        for item in options.values():
+            idx = item.get("index", -1)
+            if idx == index:
+                return item.get("label", "")
+
+        return ""
 
     def range_name(self, key):
         """Look up the value of a RangeValue.  Not very useful other than for comprehension

@@ -75,12 +75,17 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not region_regex.match(region):
             return self._show_form({"base": "invalid_region"})
 
-        language_regex = re.compile(r"^[a-z]{2,3}$")
+        if len(language) == 2:
+            language_regex = re.compile(r"^[a-z]{2,3}$")
+        else:
+            language_regex = re.compile(r"^[a-z]{2,3}-[A-Z]{2,3}$")
         if not language_regex.match(language):
             return self._show_form({"base": "invalid_language"})
 
         self._region = region
-        self._language = language + "-" + region
+        self._language = language
+        if len(language) == 2:
+            self._language += "-" + region
         self._token = refresh_token
 
         if not self._token:
