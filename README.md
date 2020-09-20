@@ -123,9 +123,9 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | drylevel_option_state | Unknown attribute |
 | tubclean_count | Unknown attribute, number |
 | remain_time | How much more time is remaining, H:MM |
-| initial_time | The orgiinal amount of time, H:MM |
-| reserve_time | Unknown attribute, H:MM |
-| doorlock_mode | Unknown attribute, on/off |
+| initial_time | The orginal amount of time, H:MM |
+| reserve_time | When in Delay Start mode, the delay amount, H:MM |
+| doorlock_mode | Whether washer door is locked, on/off |
 | doorclose_mode | Unknown attribute, on/off |
 | childlock_mode | Child lock, on/off |
 | remotestart_mode | Whether remote start is enabled or not |
@@ -154,7 +154,7 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | tempcontrol_option_state | Current option for dryer temperature in words |
 | drylevel_option_state | Current level for how much to dry |
 | remain_time | How much more time is remaining, H:MM |
-| initial_time | The orgiinal amount of time, H:MM |
+| initial_time | The orginal amount of time, H:MM |
 | reserve_time | Unknown attribute, H:MM |
 | doorlock_mode | Unknown attribute, on/off |
 | childlock_mode | Child lock, on/off |
