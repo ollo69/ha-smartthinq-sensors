@@ -23,6 +23,8 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 - logout from the app and login again with the independent LG account
 - reconnect the devices in the app
 
+**Important 2**: If you receive an "Invalid Credential" error during component configuration/startup, check in the LG mobile app if is requested to accept new Term Of Service.
+
 **Note**: some device status may not be correctly detected, this depends on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
 
 ## Installation
@@ -42,22 +44,20 @@ Prerequisite: SSH into your server. [Home Assistant Add-on: SSH server](https://
 4. (Optional) Delete the git repo.  
 `rm -R ha-smartthinq-sensors/`
 
-After a correct installation, your configuration directory should look like the following.
-```
-    └── ...
-    └── configuration.yaml
-    └── secrects.yaml
-    └── custom_components
-        └── smartthinq_sensors
-            └── __init__.py
-            └── config_flow.py
-            └── const.py
-            └── ...
-```
+    After a correct installation, your configuration directory should look like the following.
+    ```
+        └── ...
+        └── configuration.yaml
+        └── secrects.yaml
+        └── custom_components
+            └── smartthinq_sensors
+                └── __init__.py
+                └── config_flow.py
+                └── const.py
+                └── ...
+    ```
 
-    **Note**: if the custom_components directory does not exist, you need to create it.
-    
-3. Reboot HomeAssistant
+5. Reboot HomeAssistant
 
 ## Component configuration    
 Once the component has been installed, you need to configure it in order to make it work.

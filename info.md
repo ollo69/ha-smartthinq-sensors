@@ -17,6 +17,8 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 - logout from the app and login again with the independent LG account
 - reconnect the devices in the app
 
+**Important 2**: If you receive an "Invalid Credential" error during component configuration/startup, check in the LG mobile app if is requested to accept new Term Of Service.
+
 **Note**: some device status may not be correctly detected, this depend on Washer model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
 
 ## Component configuration    
