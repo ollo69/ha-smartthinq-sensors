@@ -4,6 +4,6 @@
   "documentation": "https://github.com/ollo69/ha-smartthinq-sensors",
   "dependencies": [],
   "codeowners": ["@ollo69"],
-  "requirements": [],
+  "requirements": ["pycountry>=20.7.3"],
   "config_flow": true
 }

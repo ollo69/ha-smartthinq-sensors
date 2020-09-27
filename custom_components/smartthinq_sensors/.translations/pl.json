@@ -13,12 +13,10 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Region (ISO 3166-1 alpha-2, np. PL)",
-                    "language": "Język (ISO-639-1, np. pl)",
-                    "token": "Wpisz token (tylko dla trybu uwierzytelniania API v1)",
-                    "use_api_v2": "Użyj trybu API v2"
+                    "region": "Region",
+                    "language": "Język"
                 },
-                "description": "Podaj swoje ustawienia regionalne dla SmartThinQ. Jeśli nie posiadasz tokena, pozostaw to pole puste, rozpocznij proces uwierzytelniania. Token nie jest używany w trybie uwierzytelniania API v2.",
+                "description": "Podaj swoje ustawienia regionalne dla SmartThinQ.",
                 "title": "SmartThinQ LGE Sensors"
             },
             "url": {

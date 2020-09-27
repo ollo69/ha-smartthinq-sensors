@@ -1,5 +1,6 @@
 """Config flow for TP-Link."""
 import logging
+import pycountry
 import re
 
 import voluptuous as vol
@@ -30,6 +31,23 @@ INIT_SCHEMA = vol.Schema(
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _countries_list():
+    """Returns a list of countries, suitable for use in a multiple choice field."""
+    countries = {}
+    for country in sorted(pycountry.countries, key=lambda x: x.name):
+        countries[country.alpha_2] = f"{country.name} - {country.alpha_2}"
+    return countries
+
+
+def _languages_list():
+    """Returns a list of languages, suitable for use in a multiple choice field."""
+    languages = {}
+    for language in sorted(pycountry.languages, key=lambda x: x.name):
+        if hasattr(language, "alpha_2"):
+            languages[language.alpha_2] = f"{language.name} - {language.alpha_2}"
+    return languages
 
 
 class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -160,7 +178,16 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Show the form to the user."""
         schema = INIT_SCHEMA
 
-        if step_id == "url":
+        if step_id == "user":
+            schema = vol.Schema(
+                {
+                    # vol.Required(CONF_REGION): str,
+                    vol.Required(CONF_REGION): vol.In(_countries_list()),
+                    # vol.Required(CONF_LANGUAGE): str,
+                    vol.Required(CONF_LANGUAGE): vol.In(_languages_list()),
+                }
+            )
+        elif step_id == "url":
             schema = vol.Schema(
                 {
                     vol.Required(CONF_LOGIN, default=self._loginurl): str,

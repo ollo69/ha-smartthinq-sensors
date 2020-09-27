@@ -13,12 +13,10 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Paese (ISO 3166-1 alpha-2, per es. IT)",
-                    "language": "Lingua (ISO-639-1, per es. it)",
-                    "token": "Aggiornare il Token (solo per Authentication mode v1)",
-                    "use_api_v2": "Usa Authentication mode v2"
+                    "region": "Codice Paese",
+                    "language": "Codice Lingua"
                 },
-                "description": "Inserisci le informazioni di acceso SmartThinQ. Se non si dispone di un token di aggiornamento, lasciarlo vuoto per avviare il processo di autenticazione con le proprie credenziali. Il token di aggiornamento non viene usato con Authentication mode v2.",
+                "description": "Seleziona le informazioni di localizzazione del tuo account SmartThinQ.",
                 "title": "SmartThinQ LGE Sensors"
             },
             "url": {
@@ -27,7 +25,7 @@
                     "callback_url": "URL di reindirizzamento"
                 },
                 "description": "Utilizzare l'URL del primo campo per eseguire l'accesso con le proprie credenziali a SmartThinQ, poi incollare l'URL in cui si viene reindirizzati con il browser dopo l'accesso nel secondo campo.",
-                "title": "SmartThinQ LGE Sensors - Autentificazione"
+                "title": "SmartThinQ LGE Sensors - Autenticazione"
             },
             "token": {
                 "data": {

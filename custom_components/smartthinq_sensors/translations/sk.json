@@ -13,12 +13,10 @@
         "step": {
             "user": {
                 "data": {
-                    "region": "Región (ISO 3166-1 alpha-2, napr. SK)",
-                    "language": "Jazyk (ISO-639-1, napr. sk)",
-                    "token": "Obnova Token (len pre Autorizačný mód v1)",
-                    "use_api_v2": "Použi Autorizačný mód v2"
+                    "region": "Región",
+                    "language": "Jazyk"
                 },
-                "description": "Vyplňte informácie o prístupe k SmartThinQ. Ak nemáte obnovovací token, nechajte ho prázdny a začnite proces autentifikácie pomocou vašich poverení. Obnovovací token sa nepoužíva v režime overovania v2.",
+                "description": "Vyplňte informácie o prístupe k SmartThinQ.",
                 "title": "SmartThinQ LGE Sensors"
             },
             "url": {
