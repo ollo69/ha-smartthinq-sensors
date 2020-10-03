@@ -24,7 +24,7 @@
                     "login_url": "SmartThinQ login URL",
                     "callback_url": "URL przekierowania"
                 },
-                "description": "Skopiuj i otwórz adres URL z pierwszego pola, aby zalogować się do SmartThinQ, a następnie po zalogowaniu się na konto martThinQ w drugie pole wklej adres URL, na który przekierowała cię przeglądarka po zalogowaniu.",
+                "description": "Skopiuj i otwórz adres URL z pierwszego pola, aby zalogować się do SmartThinQ, a następnie po zalogowaniu się na konto SmartThinQ w drugie pole wklej adres URL, na który przekierowała cię przeglądarka po zalogowaniu.",
                 "title": "SmartThinQ LGE Sensors - Autoryzacja"
             },
             "token": {
