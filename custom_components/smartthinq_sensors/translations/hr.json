@@ -24,7 +24,7 @@
                     "login_url": "SmartThinQ URL za prijavu",
                     "callback_url": "URL za preusmjeravanje"
                 },
-                "description": "Upotrijebite URL u prvom polju za prijavu na SmartThinQ sa svojim vjerodajnicama, a u drugo polje zalijepite URL na koji je preglednik preusmjeren poslije prijave.",
+                "description": "Upotrijebite URL u prvom polju za prijavu na SmartThinQ sa svojim vjerodajnicama, a u drugo polje zalijepite URL na koji je preglednik preusmjeren poslije prijave. Podijelite povratne informacije o svojoj implementaciji [ovdje](https://git.io/JU166).",
                 "title": "SmartThinQ LGE Senzori - autentikacija"
             },
             "token": {
