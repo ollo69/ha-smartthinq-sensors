@@ -1,0 +1,40 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Samo jedna konfiguracija SmartThinQ LGE Senzora je dozvoljena.",
+            "no_smartthinq_devices": "Nije pronađen niti jedan SmartThinQ uređaj. Podešavanje komponente prekinuto."
+        },
+        "error": {
+            "invalid_region": "Neispravan format regije.",
+            "invalid_language": "Neispravan format jezika.",
+            "invalid_url": "Neispravan URL za preusmjeravanje.",
+            "invalid_credentials": "Neispravne SmartThinQ vjerodajnice."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "region": "Kod za državu",
+                    "language": "Kod za jezik"
+                },
+                "description": "Odaberite podatke o lokalizaciji računa SmartThinQ.",
+                "title": "SmartThinQ LGE Senzori"
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ URL za prijavu",
+                    "callback_url": "URL za preusmjeravanje"
+                },
+                "description": "Upotrijebite URL u prvom polju za prijavu na SmartThinQ sa svojim vjerodajnicama, a u drugo polje zalijepite URL na koji je preglednik preusmjeren poslije prijave. Podijelite povratne informacije o svojoj implementaciji [ovdje](https://git.io/JU166).",
+                "title": "SmartThinQ LGE Senzori - autentikacija"
+            },
+            "token": {
+                "data": {
+                    "token": "Osvježite token"
+                },
+                "description": "Sačuvajte token za buduću upotrebu, a zatim potvrdite da biste dovršili konfiguraciju.",
+                "title": "SmartThinQ LGE Senzori - Novi token"
+            }
+        },
+        "title": "SmartThinQ LGE Senzoris"
+    }
+}
