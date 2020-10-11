@@ -24,7 +24,7 @@
                     "login_url": "SmartThinQ påloggings-URL",
                     "callback_url": "Omadresserings-URL"
                 },
-                "description": "Bruk URL-en i det første feltet for å utføre pålogging til SmartThinQ med legitimasjonen din, og lim deretter inn URL-en der nettleseren blir omdirigert etter påloggingen i det andre feltet.",
+                "description": "Bruk URL-en i det første feltet for å utføre pålogging til SmartThinQ med legitimasjonen din, og lim deretter inn URL-en der nettleseren blir omdirigert etter påloggingen i det andre feltet. Del tilbakemeldinger om oppsettet ditt [her] (https://git.io/JU166).",
                 "title": "SmartThinQ LGE-sensorer - autentisering"
             },
             "token": {
