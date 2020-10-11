@@ -304,7 +304,7 @@ class LGESensor(Entity):
         if not hours:
             if int(minutes) >= 60:
                 int_minutes = int(minutes)
-                int_hours = round(int_minutes / 60)
+                int_hours = int(int_minutes / 60)
                 minutes = str(int_minutes - (int_hours * 60))
                 hours = str(int_hours)
             else:
