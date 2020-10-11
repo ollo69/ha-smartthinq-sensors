@@ -299,8 +299,16 @@ class LGESensor(Entity):
 
     @staticmethod
     def format_time(hours, minutes):
-        if not (hours and minutes):
+        if not minutes:
             return "0:00"
+        if not hours:
+            if int(minutes) >= 60:
+                int_minutes = int(minutes)
+                int_hours = round(int_minutes / 60)
+                minutes = str(int_minutes - (int_hours * 60))
+                hours = str(int_hours)
+            else:
+                hours = "0"
         remain_time = [hours, minutes]
         if int(minutes) < 10:
             return ":0".join(remain_time)

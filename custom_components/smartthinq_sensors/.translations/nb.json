@@ -1,0 +1,40 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Only a single configuration of SmartThinQ LGE Sensors is allowed.",
+            "no_smartthinq_devices": "No SmartThinQ devices found. Component setup aborted."
+        },
+        "error": {
+            "invalid_region": "Ugyldig regionformat.",
+            "invalid_language": "Ugyldig språkformat.",
+            "invalid_url": "Ugyldig URL for omdirigering.",
+            "invalid_credentials": "Ugyldige SmartThinQ-legitimasjoner."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "region": "Landskode",
+                    "language": "Språkkode"
+                },
+                "description": "Velg informasjon om lokalisering av SmartThinQ-kontoen.",
+                "title": "SmartThinQ LGE-sensorer"
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ påloggings-URL",
+                    "callback_url": "Omadresserings-URL"
+                },
+                "description": "Bruk URL-en i det første feltet for å utføre pålogging til SmartThinQ med legitimasjonen din, og lim deretter inn URL-en der nettleseren blir omdirigert etter påloggingen i det andre feltet. Del tilbakemeldinger om oppsettet ditt [her] (https://git.io/JU166).",
+                "title": "SmartThinQ LGE-sensorer - autentisering"
+            },
+            "token": {
+                "data": {
+                    "token": "Oppdater Token"
+                },
+                "description": "Lagre det genererte tokenet for fremtidig bruk, og bekreft deretter for å fullføre konfigurasjonen.",
+                "title": "SmartThinQ LGE-sensorer - Nytt oppdateringstoken"
+            }
+        },
+        "title": "SmartThinQ LGE-sensorer"
+    }
+}
