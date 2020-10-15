@@ -5,6 +5,7 @@
             "no_smartthinq_devices": "Nessun dispositivo SmartThinQ trovato. Component setup interrotto."
         },
         "error": {
+            "error_url": "Errore nel recuperare l'URL di login da ThinQ.",
             "invalid_region": "Formato Paese non valido.",
             "invalid_language": "Formato lingua non valido.",
             "invalid_url": "URL di reindizzamento non valido.",

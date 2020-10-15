@@ -91,14 +91,14 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
-            return self._show_form({"base": "invalid_region"})
+            return self._show_form(errors={"base": "invalid_region"})
 
         if len(language) == 2:
             language_regex = re.compile(r"^[a-z]{2,3}$")
         else:
             language_regex = re.compile(r"^[a-z]{2,3}-[A-Z]{2,3}$")
         if not language_regex.match(language):
-            return self._show_form({"base": "invalid_language"})
+            return self._show_form(errors={"base": "invalid_language"})
 
         self._region = region
         self._language = language
@@ -109,6 +109,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not self._token:
             lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
             self._loginurl = await self.hass.async_add_executor_job(lgauth.getLoginUrl)
+            if not self._loginurl:
+                return self._show_form(errors={"base": "error_url"})
             return self._show_form(errors=None, step_id="url")
 
         return await self._save_config_entry()

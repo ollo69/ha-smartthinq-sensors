@@ -5,6 +5,7 @@
             "no_smartthinq_devices": "No SmartThinQ devices found. Component setup aborted."
         },
         "error": {
+            "error_url": "Error retrieving login URL from ThinQ.",
             "invalid_region": "Invalid region format.",
             "invalid_language": "Invalid language format.",
             "invalid_url": "Invalid redirection URL.",
