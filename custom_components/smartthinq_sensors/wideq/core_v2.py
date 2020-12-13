@@ -292,7 +292,7 @@ class Gateway(object):
         gw = gateway_info(country, language)
         return cls(gw["empUri"], gw["thinq1Uri"], gw["thinq2Uri"], country, language)
 
-    def oauth_url(self):
+    def oauth_url(self, *, redirect_uri=None, state=None):
         """Construct the URL for users to log in (in a browser) to start an
         authenticated session.
         """
@@ -305,8 +305,8 @@ class Gateway(object):
                 "svc_list": SVC_CODE,
                 "client_id": CLIENT_ID,
                 "division": "ha",
-                "redirect_uri": OAUTH_REDIRECT_URI,
-                "state": uuid.uuid1().hex,
+                "redirect_uri": redirect_uri or OAUTH_REDIRECT_URI,
+                "state": state or uuid.uuid1().hex,
                 "show_thirdparty_login": "GGL,AMZ,FBK",
             }
         )

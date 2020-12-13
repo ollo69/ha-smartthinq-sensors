@@ -12,7 +12,10 @@ from .wideq.device import (
     DeviceType,
 )
 
-from homeassistant.components.binary_sensor import DEVICE_CLASS_PROBLEM, DEVICE_CLASS_OPENING
+from homeassistant.components.binary_sensor import (
+    DEVICE_CLASS_PROBLEM,
+    DEVICE_CLASS_OPENING,
+)
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
 from homeassistant.helpers.entity import Entity
 
@@ -22,7 +25,7 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_UNAVAILABLE,
     TEMP_CELSIUS,
-    TEMP_FAHRENHEIT
+    TEMP_FAHRENHEIT,
 )
 
 from .const import DOMAIN, LGE_DEVICES
@@ -237,8 +240,12 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
     lge_sensors = []
     washer_sensors = WASHER_BINARY_SENSORS if type_binary else WASHER_SENSORS
     dryer_sensors = DRYER_BINARY_SENSORS if type_binary else DRYER_SENSORS
-    dishwasher_sensors = DISHWASHER_BINARY_SENSORS if type_binary else DISHWASHER_SENSORS
-    refrigerator_sensors = REFRIGERATOR_BINARY_SENSORS if type_binary else REFRIGERATOR_SENSORS
+    dishwasher_sensors = (
+        DISHWASHER_BINARY_SENSORS if type_binary else DISHWASHER_SENSORS
+    )
+    refrigerator_sensors = (
+        REFRIGERATOR_BINARY_SENSORS if type_binary else REFRIGERATOR_SENSORS
+    )
 
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES, [])
@@ -482,8 +489,7 @@ class LGEWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.remaintime_hour,
-                    self._api.state.remaintime_min
+                    self._api.state.remaintime_hour, self._api.state.remaintime_min
                 )
         return "0:00"
 
@@ -492,8 +498,7 @@ class LGEWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.initialtime_hour,
-                    self._api.state.initialtime_min
+                    self._api.state.initialtime_hour, self._api.state.initialtime_min
                 )
         return "0:00"
 
@@ -502,8 +507,7 @@ class LGEWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.reservetime_hour,
-                    self._api.state.reservetime_min
+                    self._api.state.reservetime_hour, self._api.state.reservetime_min
                 )
         return "0:00"
 
@@ -678,8 +682,7 @@ class LGEDryerSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.remaintime_hour,
-                    self._api.state.remaintime_min
+                    self._api.state.remaintime_hour, self._api.state.remaintime_min
                 )
         return "0:00"
 
@@ -688,8 +691,7 @@ class LGEDryerSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.initialtime_hour,
-                    self._api.state.initialtime_min
+                    self._api.state.initialtime_hour, self._api.state.initialtime_min
                 )
         return "0:00"
 
@@ -698,8 +700,7 @@ class LGEDryerSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.reservetime_hour,
-                    self._api.state.reservetime_min
+                    self._api.state.reservetime_hour, self._api.state.reservetime_min
                 )
         return "0:00"
 
@@ -822,8 +823,7 @@ class LGEDishWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.remaintime_hour,
-                    self._api.state.remaintime_min
+                    self._api.state.remaintime_hour, self._api.state.remaintime_min
                 )
         return "0:00"
 
@@ -832,8 +832,7 @@ class LGEDishWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.initialtime_hour,
-                    self._api.state.initialtime_min
+                    self._api.state.initialtime_hour, self._api.state.initialtime_min
                 )
         return "0:00"
 
@@ -842,8 +841,7 @@ class LGEDishWasherSensor(LGESensor):
         if self._api.state:
             if self._api.state.is_on:
                 return LGESensor.format_time(
-                    self._api.state.reservetime_hour,
-                    self._api.state.reservetime_min
+                    self._api.state.reservetime_hour, self._api.state.reservetime_min
                 )
         return "0:00"
 
