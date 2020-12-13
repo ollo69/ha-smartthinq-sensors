@@ -25,7 +25,7 @@
                     "login_url": "URL de acesso ao SmartThinQ",
                     "callback_url": "URL de redirecionamento"
                 },
-                "description": "Usar o URL do primeiro campo para iniciar sessão no SmartThinQ, depois colar no segundo campo o URL para onde foi redirecionado depois da autenticação efectuada.",ond field. Share feedback about your setup [here](https://git.io/JU166).",
+                "description": "Usar o URL do primeiro campo para iniciar sessão no SmartThinQ, depois colar no segundo campo o URL para onde foi redirecionado depois da autenticação efectuada.",
                 "title": "SmartThinQ LGE Sensors - Autenticação"
             },
             "token": {
