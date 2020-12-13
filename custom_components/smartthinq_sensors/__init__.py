@@ -497,9 +497,10 @@ async def lge_devices_setup(hass, client) -> dict:
 
         if not result:
             _LOGGER.info(
-                "Found unsupported LGE Device. Name: %s - Type: %s",
+                "Found unsupported LGE Device. Name: %s - Type: %s - InfoUrl: %s",
                 device_name,
                 device_type.name,
+                device.model_info_url,
             )
             continue
 

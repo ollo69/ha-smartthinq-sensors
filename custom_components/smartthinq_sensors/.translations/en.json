@@ -8,7 +8,7 @@
             "error_url": "Error retrieving login URL from ThinQ.",
             "invalid_region": "Invalid region format.",
             "invalid_language": "Invalid language format.",
-            "invalid_url": "Invalid redirection URL.",
+            "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone. You can get support [over here](https://git.io/JTjid).",
             "invalid_credentials": "Invalid SmartThinQ credentials."
         },
         "step": {

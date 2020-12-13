@@ -8,7 +8,7 @@
             "error_url": "Errore nel recuperare l'URL di login da ThinQ.",
             "invalid_region": "Formato Paese non valido.",
             "invalid_language": "Formato lingua non valido.",
-            "invalid_url": "URL di reindizzamento non valido.",
+            "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone. Puoi richiedere supporto [qui](https://git.io/JTjid).",
             "invalid_credentials": "Credendiali SmartThinQ non valide."
         },
         "step": {
