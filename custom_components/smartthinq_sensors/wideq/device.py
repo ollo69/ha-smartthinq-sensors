@@ -63,7 +63,8 @@ class DeviceType(enum.Enum):
     DRYER = 202
     STYLER = 203
     DISHWASHER = 204
-    WASHTOWER = 221
+    TOWER_WASHER = 221
+    TOWER_DRYER = 222
     OVEN = 301
     MICROWAVE = 302
     COOKTOP = 303

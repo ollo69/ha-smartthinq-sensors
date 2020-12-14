@@ -483,9 +483,9 @@ async def lge_devices_setup(hass, client) -> dict:
         result = False
         device_count += 1
 
-        if device_type == DeviceType.WASHER:
+        if device_type in [DeviceType.WASHER, DeviceType.TOWER_WASHER]:
             dev = LGEDevice(WasherDevice(client, device), device_name)
-        elif device_type == DeviceType.DRYER:
+        elif device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
             dev = LGEDevice(DryerDevice(client, device), device_name)
         elif device_type == DeviceType.DISHWASHER:
             dev = LGEDevice(DishWasherDevice(client, device), device_name)
