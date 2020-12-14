@@ -1,0 +1,41 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Apenas é permitida uma única configuração do SmartThinQ LGE Sensors.",
+            "no_smartthinq_devices": "Não foram encontrados dispositivos SmartThinQ. Configuração do componente interrompida."
+        },
+        "error": {
+            "error_url": "Ocorreu um erro a tentar encontrar o endereço do ThinQ.",
+            "invalid_region": "Formato da região inválido.",
+            "invalid_language": "Formato do idioma inválido.",
+            "invalid_url": "URL de redirecionamento inválido. Certifique-se que tem acesso à app ThinQ através do telemóvel. Pode obter ajuda [aqui](https://git.io/JTjid).",
+            "invalid_credentials": "Credenciais SmartThinQ inválidas."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "region": "Código do país",
+                    "language": "Código do idioma"
+                },
+                "description": "Selecione a localização da sua conta SmartThinQ.",
+                "title": "Sensores SmartThinQ LGE"
+            },
+            "url": {
+                "data": {
+                    "login_url": "URL de acesso ao SmartThinQ",
+                    "callback_url": "URL de redirecionamento"
+                },
+                "description": "Usar o URL do primeiro campo para iniciar sessão no SmartThinQ, depois colar no segundo campo o URL para onde foi redirecionado depois da autenticação efectuada. Deixe a sua opinião acerca da configuração [aqui](https://git.io/JU166).",
+                "title": "SmartThinQ LGE Sensors - Autenticação"
+            },
+            "token": {
+                "data": {
+                    "token": "Atualizar Token"
+                },
+                "description": "Guarde o token gerado para uso no futuro, depois confirmar para completar a configuração.",
+                "title": "SmartThinQ LGE Sensors - Actualizar token"
+            }
+        },
+        "title": "Sensores SmartThinQ LGE"
+    }
+}
