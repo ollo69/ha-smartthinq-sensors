@@ -483,14 +483,19 @@ async def lge_devices_setup(hass, client) -> dict:
         result = False
         device_count += 1
 
+        device_group = device_type
         if device_type in [DeviceType.WASHER, DeviceType.TOWER_WASHER]:
             dev = LGEDevice(WasherDevice(client, device), device_name)
+            device_group = DeviceType.WASHER
         elif device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
             dev = LGEDevice(DryerDevice(client, device), device_name)
+            device_group = DeviceType.DRYER
         elif device_type == DeviceType.DISHWASHER:
             dev = LGEDevice(DishWasherDevice(client, device), device_name)
+            device_group = DeviceType.DISHWASHER
         elif device_type == DeviceType.REFRIGERATOR:
             dev = LGEDevice(RefrigeratorDevice(client, device), device_name)
+            device_group = DeviceType.REFRIGERATOR
 
         if dev:
             result = await hass.async_add_executor_job(dev.init_device)
@@ -504,7 +509,7 @@ async def lge_devices_setup(hass, client) -> dict:
             )
             continue
 
-        wrapped_devices.setdefault(device_type, []).append(dev)
+        wrapped_devices.setdefault(device_group, []).append(dev)
         _LOGGER.info(
             "LGE Device added. Name: %s - Type: %s - Model: %s - Mac: %s - ID: %s",
             device_name,
