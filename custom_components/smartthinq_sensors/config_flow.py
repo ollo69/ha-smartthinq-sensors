@@ -1,6 +1,6 @@
 """Config flow for TP-Link."""
 import logging
-import pycountry
+from pycountry import countries as pycountries, languages as pylanguages
 import re
 
 import voluptuous as vol
@@ -36,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 def _countries_list():
     """Returns a list of countries, suitable for use in a multiple choice field."""
     countries = {}
-    for country in sorted(pycountry.countries, key=lambda x: x.name):
+    for country in sorted(pycountries, key=lambda x: x.name):
         countries[country.alpha_2] = f"{country.name} - {country.alpha_2}"
     return countries
 
@@ -44,7 +44,7 @@ def _countries_list():
 def _languages_list():
     """Returns a list of languages, suitable for use in a multiple choice field."""
     languages = {}
-    for language in sorted(pycountry.languages, key=lambda x: x.name):
+    for language in sorted(pylanguages, key=lambda x: x.name):
         if hasattr(language, "alpha_2"):
             languages[language.alpha_2] = f"{language.name} - {language.alpha_2}"
     return languages
