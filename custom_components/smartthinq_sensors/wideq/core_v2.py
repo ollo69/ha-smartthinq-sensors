@@ -756,7 +756,9 @@ class ClientV2(object):
         """
         if not info_url:
             return {}
-        return requests.get(info_url, timeout=DEFAULT_TIMEOUT).json()
+        resp = requests.get(info_url, timeout=DEFAULT_TIMEOUT).text
+        enc_resp = resp.encode()
+        return json.loads(enc_resp)
 
     def common_lang_pack(self):
         """Load JSON common lang pack from specific url.
