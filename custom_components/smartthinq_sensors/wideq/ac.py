@@ -39,6 +39,7 @@ AC_STATE_FILTER_REMAIN_TIME = "airState.filterMngStates.useTime"
 
 AC_STATE_WIND_UP_DOWN = "airState.wDir.upDown"
 AC_STATE_WIND_LEFT_RIGHT = "airState.wDir.leftRight"
+AC_STATE_WIND_VSTEP = "airState.wDir.vStep"
 
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
@@ -202,3 +203,13 @@ class AirConditionerStatus(DeviceStatus):
         except KeyError:
             return
         return self._device.set_state(AC_CTRL_WIND_DIRECTION, AC_STATE_WIND_LEFT_RIGHT, val)
+
+    @property
+    def wind_vstep(self):
+        # should check with another AC devices
+        return int(self._get_number_value(AC_STATE_WIND_VSTEP)) & 0xF
+
+    @wind_vstep.setter
+    def wind_vstep(self, step):
+        step &= 0xF
+        return self._device.set_state(AC_CTRL_WIND_DIRECTION, AC_STATE_WIND_VSTEP, step);
