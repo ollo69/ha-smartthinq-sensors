@@ -200,6 +200,59 @@ def lgedm2_post(
     return msg
 
 
+def lgedm2_post2(
+    url,
+    data=None,
+    access_token=None,
+    user_number=None,
+    headers={},
+    country=core.DEFAULT_COUNTRY,
+    language=core.DEFAULT_LANGUAGE,
+    use_tlsv1=True,
+):
+    """Make an HTTP request in the format used by the API servers."""
+
+    # this code to avoid ssl error 'dh key too small'
+    requests.packages.urllib3.disable_warnings()
+    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += "HIGH:!DH:!aNULL"
+    try:
+        requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += (
+            "HIGH:!DH:!aNULL"
+        )
+    except AttributeError:
+        # no pyopenssl support used / needed / available
+        pass
+    # this code to avoid ssl error 'dh key too small'
+
+    _LOGGER.debug("lgedm2_post2 before: %s", url)
+
+    res = requests.post(
+        url,
+        json=data,
+        headers=thinq2_headers(
+            access_token=access_token,
+            user_number=user_number,
+            extra_headers=headers,
+            country=country,
+            language=language,
+        ),
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    out = res.json()
+    _LOGGER.debug("lgedm2_post2 after: %s", out)
+
+    if "resultCode" in out:
+        code = out["resultCode"]
+        if code != "0000":
+            message = out["result"]
+            if code in API2_ERRORS:
+                raise API2_ERRORS[code]()
+            raise exc.APIError(code, message)
+
+    return out
+
+
 def gateway_info(country, language):
     """ TODO
     """
@@ -408,6 +461,23 @@ class Session(object):
             country=self.auth.gateway.country,
             language=self.auth.gateway.language,
         )
+
+    def post2(self, path, data=None):
+        """Make a POST request to the APIv2 server.
+
+        This is like `lgedm_post`, but it pulls the context for the
+        request from an active Session.
+        """
+        url = urljoin(self.auth.gateway.api2_root + "/", path)
+        return lgedm2_post2(
+            url,
+            data,
+            self.auth.access_token,
+            self.auth.user_number,
+            country=self.auth.gateway.country,
+            language=self.auth.gateway.language,
+        )
+
 
     def get(self, path):
         """Make a GET request to the APIv1 server."""

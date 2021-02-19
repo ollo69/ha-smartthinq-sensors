@@ -79,6 +79,13 @@ class AirConditionerDevice(Device):
         self._status = AirConditionerStatus(self, res)
         return self._status
 
+    def set_state(self, key, value):
+        path = "/v1/service/devices/" + self._device_info.id + "/control-sync"
+        data = dict(ctrlKey="basicCtrl", command="Set", dataKey=key, dataValue=value)
+        #self._client.session.post2(path, json.dumps(data))
+        self._client.session.post2(path, data)
+        pass
+
 class AirConditionerStatus(DeviceStatus):
     """Higher-level information about a AC's current status.
 
@@ -129,8 +136,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def is_on(self):
-        run_state = self._get_run_state()
-        return run_state != STATE_AC_OPERATION_OFF
+        return self.operation != STATE_AC_OPERATION_OFF
 
     @property
     def current_temp(self):
@@ -139,6 +145,11 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def target_temp(self):
         return self._get_number_value(AC_STATE_TARGET_TEMP)
+
+    @target_temp.setter
+    def target_temp(self, temp):
+        # TODO check in range
+        return self._device.set_state(AC_STATE_TARGET_TEMP, temp)
 
     @property
     def current_humidity(self):
@@ -152,7 +163,28 @@ class AirConditionerStatus(DeviceStatus):
         strength = self.lookup_enum(AC_STATE_WIND_STRENGTH)
         return strength
 
+    @windstrength.setter
+    def windstrength(self, strength):
+        # TODO check support enum
+        return self._device.set_state(AC_STATE_WIND_STRENGTH, strength)
+
+    @property
+    def operation(self):
+        state = self.lookup_enum(AC_STATE_OPERATION)
+        return state
+
+    @operation.setter
+    def operation(self, op):
+        # TODO check support enum
+        return self._device.set_state(AC_STATE_OPERATION, op)
+
     @property
     def operation_mode(self):
         opmode = self.lookup_enum(AC_STATE_OPERATION_MODE)
         return opmode
+
+    @operation_mode.setter
+    def operation_mode(self, mode):
+        # TODO check suppert enum
+        return self._device.set_state(AC_STATE_OPERATION_MODE, mode)
+
