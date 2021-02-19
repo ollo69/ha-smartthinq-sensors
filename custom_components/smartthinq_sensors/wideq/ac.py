@@ -10,45 +10,6 @@ from .device import (
 )
 
 STATE_AC_OPERATION_OFF = "@AC_MAIN_OPERATION_OFF_W"
-STATE_AC_OPERATION_MODE = [
-    "@NON",
-    "@AC_MAIN_OPERATION_MODE_COOL_W",
-    "@AC_MAIN_OPERATION_MODE_DRY_W",
-    "@AC_MAIN_OPERATION_MODE_FAN_W",
-    "@AC_MAIN_OPERATION_MODE_AI_W",
-]
-
-STATE_AC_POWER_OFF = "@WM_STATE_POWER_OFF_W"
-STATE_AC_END = [
-    "@WM_STATE_END_W",
-    "@WM_STATE_COMPLETE_W",
-]
-STATE_AC_ERROR_OFF = "OFF"
-STATE_AC_ERROR_NO_ERROR = [
-    "ERROR_NOERROR",
-    "ERROR_NOERROR_TITLE",
-    "No Error",
-    "No_Error",
-]
-
-STATE_AC_WIND_STRENGTH = [
-    #"@AC_MAIN_WIND_STRENGTH_SLOW_W",
-    "@AC_MAIN_WIND_STRENGTH_SLOW_LOW_W",
-    "@AC_MAIN_WIND_STRENGTH_LOW_W",
-    #"@AC_MAIN_WIND_STRENGTH_LOW_MID_W",
-    "@AC_MAIN_WIND_STRENGTH_MID_W",
-    #"@AC_MAIN_WIND_STRENGTH_MID_HIGH_W",
-    "@AC_MAIN_WIND_STRENGTH_HIGH_W",
-    "@AC_MAIN_WIND_STRENGTH_POWER_W",
-    "@AC_MAIN_WIND_STRENGTH_AUTO_W",
-]
-
-STATE_AC_OPERATION_MODE = [
-    "@AC_MAIN_OPERATION_MODE_COOL_W",
-    "@AC_MAIN_OPERATION_MODE_DRY_W",
-    "@AC_MAIN_OPERATION_MODE_FAN_W",
-    "@AC_MAIN_OPERATION_MODE_AI_W",
-]
 
 SUPPORT_AC_OPERATION_MODE = "support.airState.opMode"
 SUPPORT_AC_WIND_STRENGTH = "support.airState.windStrength"
@@ -197,4 +158,3 @@ class AirConditionerStatus(DeviceStatus):
             return
         val = self._device.model_info.enum_value(AC_STATE_OPERATION_MODE, mode)
         return self._device.set_state(AC_STATE_OPERATION_MODE, val)
-
