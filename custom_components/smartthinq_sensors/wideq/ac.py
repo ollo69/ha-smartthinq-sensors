@@ -6,7 +6,6 @@ from numbers import Number
 from .device import (
     Device,
     DeviceStatus,
-    STATE_OPTIONITEM_NONE,
     UNITTEMPMODES,
 )
 
@@ -51,13 +50,15 @@ STATE_AC_OPERATION_MODE = [
     "@AC_MAIN_OPERATION_MODE_AI_W",
 ]
 
-#AC_CONTROL_COMMAND = "basicCtrl"
+SUPPORT_AC_OPERATION_MODE = "support.airState.opMode"
+SUPPORT_AC_WIND_STRENGTH = "support.airState.windStrength"
 AC_STATE_OPERATION = "airState.operation"
 AC_STATE_OPERATION_MODE = "airState.opMode"
 AC_STATE_CURRENT_TEMP = "airState.tempState.current"
 AC_STATE_TARGET_TEMP = "airState.tempState.target"
 AC_STATE_CURRENT_HUMIDITY = "airState.humidity.current"
 AC_STATE_WIND_STRENGTH = "airState.windStrength"
+
 
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
@@ -148,8 +149,9 @@ class AirConditionerStatus(DeviceStatus):
 
     @target_temp.setter
     def target_temp(self, temp):
-        # TODO check in range
-        return self._device.set_state(AC_STATE_TARGET_TEMP, temp)
+        range_info = self._device.model_info.value(AC_STATE_TARGET_TEMP)
+        if range_info.min <= temp <= range_info.max:
+            return self._device.set_state(AC_STATE_TARGET_TEMP, temp)
 
     @property
     def current_humidity(self):
@@ -165,8 +167,12 @@ class AirConditionerStatus(DeviceStatus):
 
     @windstrength.setter
     def windstrength(self, strength):
-        # TODO check support enum
-        return self._device.set_state(AC_STATE_WIND_STRENGTH, strength)
+        try:
+            self._device._model_info.enum_value(SUPPORT_AC_WIND_STRENGTH, op)
+        except KeyError:
+            return
+        val = self._device.model_info.enum_value(AC_STATE_WIND_STRENGTH, op)
+        return self._device.set_state(AC_STATE_WIND_STRENGTH, val)
 
     @property
     def operation(self):
@@ -185,6 +191,10 @@ class AirConditionerStatus(DeviceStatus):
 
     @operation_mode.setter
     def operation_mode(self, mode):
-        # TODO check suppert enum
-        return self._device.set_state(AC_STATE_OPERATION_MODE, mode)
+        try:
+            self._device._model_info.enum_value(SUPPORT_AC_OPERATION_MODE, mode)
+        except KeyError:
+            return
+        val = self._device.model_info.enum_value(AC_STATE_OPERATION_MODE, mode)
+        return self._device.set_state(AC_STATE_OPERATION_MODE, val)
 

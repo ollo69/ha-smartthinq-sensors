@@ -979,7 +979,7 @@ class ModelInfoControlDevice(ModelInfo):
             return EnumValue(d["value_mapping"])
         elif d["data_type"] in ("Range", "range"):
             return RangeValue(
-                d["value_mapping"]["min"], d["value_mapping"]["max"], d["value_mapping"]["step"]
+                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"]["step"]
             )
         #elif d["type"] == "Bit":
         #    bit_values = {}
