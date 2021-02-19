@@ -57,9 +57,6 @@ class AirConditionerStatus(DeviceStatus):
 
     def __init__(self, device, data):
         super().__init__(device, data)
-        self._run_state = None
-        self._pre_state = None
-        self._error = None
 
     def lookup_enum(self, key):
         curr_key = self._get_data_key(key)
@@ -68,24 +65,6 @@ class AirConditionerStatus(DeviceStatus):
         return self._device.model_info.enum_name(
             curr_key, self.int_or_none(self._data[curr_key])
         )
-
-    def _get_run_state(self):
-        if not self._run_state:
-            state = self.lookup_enum(AC_STATE_OPERATION)
-            if not state:
-                self._run_state = STATE_WASHER_POWER_OFF
-            else:
-                self._run_state = state
-        return self._run_state
-
-    #def _get_error(self):
-    #    if not self._error:
-    #        error = self.lookup_reference(["Error", "error"], ref_key="title")
-    #        if not error:
-    #            self._error = STATE_WASHER_ERROR_OFF
-    #        else:
-    #            self._error = error
-    #    return self._error
 
     def _get_number_value(self, key):
         curr_key = self._get_data_key(key)
@@ -123,8 +102,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def windstrength(self):
-        strength = self.lookup_enum(AC_STATE_WIND_STRENGTH)
-        return strength
+        return self.lookup_enum(AC_STATE_WIND_STRENGTH)
 
     @windstrength.setter
     def windstrength(self, strength):
@@ -137,8 +115,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def operation(self):
-        state = self.lookup_enum(AC_STATE_OPERATION)
-        return state
+        return self.lookup_enum(AC_STATE_OPERATION)
 
     @operation.setter
     def operation(self, op):
@@ -147,8 +124,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def operation_mode(self):
-        opmode = self.lookup_enum(AC_STATE_OPERATION_MODE)
-        return opmode
+        return self.lookup_enum(AC_STATE_OPERATION_MODE)
 
     @operation_mode.setter
     def operation_mode(self, mode):
