@@ -120,11 +120,11 @@ class AirConditionerStatus(DeviceStatus):
         return val / 10
 
     @property
-    def windstrength(self):
+    def wind_strength(self):
         return self.lookup_enum(AC_STATE_WIND_STRENGTH)
 
-    @windstrength.setter
-    def windstrength(self, strength):
+    @wind_strength.setter
+    def wind_strength(self, strength):
         try:
             self._device._model_info.enum_value(SUPPORT_AC_WIND_STRENGTH, op)
         except KeyError:
