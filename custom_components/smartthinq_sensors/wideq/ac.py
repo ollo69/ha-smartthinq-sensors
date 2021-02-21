@@ -157,10 +157,10 @@ class AirConditionerStatus(DeviceStatus):
         val = self._device.model_info.enum_value(AC_STATE_OPERATION_MODE, mode)
         return self._device.set_state(AC_CTRL_BASIC, AC_STATE_OPERATION_MODE, val)
 
-    @property
-    def temp_unit(self):
-        unit = self.lookup_enum(AC_STATE_TEMP_UNIT)
-        return AC_TEMP_UNIT[unit]
+    #@property
+    #def temp_unit(self):
+    #    unit = self.lookup_enum(AC_STATE_TEMP_UNIT)
+    #    return AC_TEMP_UNIT[unit]
 
     @property
     def autodry_mode(self):
