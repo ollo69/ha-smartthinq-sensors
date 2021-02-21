@@ -22,6 +22,7 @@ STATE_AC_OPERATION_OFF = "@AC_MAIN_OPERATION_OFF_W"
 AC_CTRL_BASIC = "basicCtrl"
 AC_CTRL_SETTING = "settingInfo"
 AC_CTRL_WIND_DIRECTION = "wDirCtrl"
+#AC_CTRL_WIND_MODE = "wModeCtrl"
 
 SUPPORT_AC_OPERATION_MODE = "support.airState.opMode"
 SUPPORT_AC_WIND_STRENGTH = "support.airState.windStrength"
@@ -34,12 +35,14 @@ AC_STATE_WIND_STRENGTH = "airState.windStrength"
 AC_STATE_TEMP_UNIT = "airState.tempState.unit"
 
 AC_STATE_AUTODRY_MODE = "airState.miscFuncState.autoDry"
+AC_STATE_AIRCLEAN_MODE= "airState.wMode.airClean"
 AC_STATE_FILTER_MAX_TIME = "airState.filterMngStates.maxTime"
 AC_STATE_FILTER_REMAIN_TIME = "airState.filterMngStates.useTime"
 
 AC_STATE_WIND_UP_DOWN = "airState.wDir.upDown"
 AC_STATE_WIND_LEFT_RIGHT = "airState.wDir.leftRight"
 AC_STATE_WIND_VSTEP = "airState.wDir.vStep"
+
 
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
@@ -171,6 +174,19 @@ class AirConditionerStatus(DeviceStatus):
         except KeyError:
             return
         return self._device.set_state(AC_CTRL_SETTING, AC_STATE_AUTODRY_MODE, val)
+
+    @property
+    def airclean_mode(self):
+        return self.lookup_enum(AC_STATE_AIRCLEAN_MODE) == AC_FLAG_ON
+
+    @airclean_mode.setter
+    def airclean_mode(self, use):
+        flag = AC_FLAG_ON if use else AC_FLAG_OFF
+        try:
+            val = self._device._model_info.enum_value(AC_STATE_AIRCLEAN_MODE, flag)
+        except KeyError:
+            return
+        return self._device.set_state(AC_CTRL_BASIC, AC_STATE_AIRCLEAN_MODE, val)
 
     @property
     def filter_remain(self):
