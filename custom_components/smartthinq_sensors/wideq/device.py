@@ -101,6 +101,15 @@ class PlatformType(enum.Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
+class GuideType(enum.Enum):
+    """The category of guide type."""
+
+    TYPE1 = "TYPE1"
+    TYPE4 = "TYPE4"
+    AIR_TYPE1 = "AIR_TYPE1"
+    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -252,6 +261,20 @@ class DeviceInfo(object):
                 PlatformType.THINQ1
             )  # for the moment, probably not available in APIv1
         return PlatformType(ptype)
+
+    @property
+    def guide_type(self) -> GuideType:
+        """The kind of guide, as a `GuideType` value."""
+        if self._data.get("guideTypeYn") != "Y":
+            return GuideType.UNKNOWN
+        gtype = self._data.get("guideType")
+        if not gtype:
+            return GuideType.UNKNOWN
+        try:
+            return GuideType(gtype)
+        except ValueError:
+            _LOGGER.warning("Unknown gruide type with id %s", gtype)
+            return GuideType.UNKNOWN
 
     @property
     def snapshot(self) -> Optional[Dict[str, Any]]:
@@ -761,8 +784,8 @@ class Device(object):
                 self._model_info = ModelInfo(model_data)
             elif model_data.get("MonitoringValue"):
                 self._model_info = ModelInfoV2(model_data)
-            elif model_data.get('ControlDevice'):
-                self._model_info = ModelInfoControlDevice(model_data)
+            elif self._device_info.guide_type in (GuideType.TYPE4, GuideType.AIR_TYPE1):
+                self._model_info = ModelInfoType4(model_data)
 
         if self._model_info is not None:
             # load model language pack
@@ -962,7 +985,7 @@ class DeviceStatus(object):
         return STATE_OPTIONITEM_OFF
 
 
-class ModelInfoControlDevice(ModelInfo):
+class ModelInfoType4(ModelInfo):
     def value_type(self, name):
         if name in self._data["Value"]:
             return self._data["Value"][name]["data_type"]
