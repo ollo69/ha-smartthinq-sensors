@@ -105,7 +105,7 @@ In this example, "My [insert thing]" will just be the placeholder
 | binary_sensor.my_dryer_error_state | My Dryer Error State | Off/OK means that it's fine. On/Error means there's an error. |
 
 #### Attributes `sensor.my_washer`
-Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for my washer, values may differ for yours. Feel free to open an issue/PR.
+Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for @KTibow's washer, values may differ for yours. Feel free to open an issue/PR.
 <details><summary>Hidden, click to expand</summary>
 
 | Attribute ID | Description |
@@ -138,7 +138,7 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 </details>
 
 #### Attributes `sensor.my_dryer`
-Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for my dryer, values may differ for yours. Feel free to open an issue/PR.
+Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for @KTibow's dryer, values may differ for yours. Feel free to open an issue/PR.
 <details><summary>Hidden, click to expand</summary>
 
 | Attribute ID | Description |
@@ -180,10 +180,10 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
     service: notify.notify
 ```
 Substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer.
-- Really, really neat custom card for dryer and washer (![Screenshot of laundry card](/washerpics/cardpic.png))
+- Custom card for dryer and washer (![Screenshot of laundry card](/washerpics/cardpic.png))
 <details><summary>Hidden, click to expand</summary>
 
-custom JS module for card:
+Put this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
 ```js
 // card-tools for more-info. MIT license (This isn't a substantial portion)
 function lovelace_view() {
