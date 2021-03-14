@@ -17,8 +17,8 @@ LABEL_BIT_ON = "@CP_ON_EN_W"
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
-STATE_OPTIONITEM_OFF = "Off"
-STATE_OPTIONITEM_ON = "On"
+STATE_OPTIONITEM_OFF = "off"
+STATE_OPTIONITEM_ON = "on"
 STATE_OPTIONITEM_NONE = "-"
 STATE_OPTIONITEM_UNKNOWN = "unknown"
 
@@ -680,7 +680,7 @@ class Device(object):
     regarding the device.
     """
 
-    def __init__(self, client, device: DeviceInfo, status=None):
+    def __init__(self, client, device: DeviceInfo, status=None, available_features=None):
         """Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
         """
@@ -693,6 +693,7 @@ class Device(object):
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
+        self._available_features = available_features or {}
 
         # for logging unknown states received
         self._unknown_states = []
@@ -710,6 +711,10 @@ class Device(object):
         return self._model_info
 
     @property
+    def available_features(self) -> Dict:
+        return self._available_features
+
+    @property
     def status(self):
         if not self._model_info:
             return None
@@ -718,6 +723,21 @@ class Device(object):
     def reset_status(self):
         self._status = None
         return self._status
+
+    def _get_feature_title(self, item_key, def_value):
+        """Override this function to manage feature title per device type"""
+        return def_value or item_key
+
+    def feature_title(self, feature_name, def_value=None, status=None):
+        title = self._available_features.get(feature_name)
+        if title is None:
+            if status is None:
+                return None
+            title = self._get_feature_title(feature_name, def_value)
+            if not title:
+                return None
+            self._available_features[feature_name] = title
+        return title
 
     def _set_control(self, key, value):
         """Set a device's control for `key` to `value`.
@@ -867,6 +887,8 @@ class DeviceStatus(object):
     def __init__(self, device, data):
         self._device = device
         self._data = {} if data is None else data
+        self._device_features = {}
+        self._features_updated = False
 
     @staticmethod
     def int_or_none(value):
@@ -954,7 +976,35 @@ class DeviceStatus(object):
     def lookup_bit(self, key):
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
-            return STATE_OPTIONITEM_NONE
+            return None
         if enum_val == LABEL_BIT_ON or enum_val == "INITIAL_BIT_ON":
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF
+
+    def _update_feature(self, key, status, get_text=True, def_title=None):
+        title = self._device.feature_title(
+            key, def_title, status
+        )
+        if not title:
+            return None
+
+        if status is None:
+            status = STATE_OPTIONITEM_NONE
+        if status == STATE_OPTIONITEM_NONE or not get_text:
+            value = status
+        else:
+            value = self._device.get_enum_text(status)
+
+        self._device_features[title] = value
+        return value
+
+    def _update_features(self):
+        """Override this function to manage device features"""
+        raise NotImplementedError()
+
+    @property
+    def device_features(self):
+        if not self._features_updated:
+            self._update_features()
+            self._features_updated = True
+        return self._device_features

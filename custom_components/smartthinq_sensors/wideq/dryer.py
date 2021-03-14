@@ -2,6 +2,17 @@
 import logging
 from typing import Optional
 
+from . import (
+    FEAT_CHILDLOCK,
+    FEAT_DOORLOCK,
+    FEAT_DRYLEVEL,
+    FEAT_ERROR_MSG,
+    FEAT_PRE_STATE,
+    FEAT_RUN_STATE,
+    FEAT_TEMPCONTROL,
+    FEAT_TIMEDRY,
+)
+
 from .device import (
     Device,
     DeviceStatus,
@@ -108,27 +119,6 @@ class DryerStatus(DeviceStatus):
         return True
 
     @property
-    def run_state(self):
-        run_state = self._get_run_state()
-        if run_state == STATE_DRYER_POWER_OFF:
-            return STATE_OPTIONITEM_NONE
-        return self._device.get_enum_text(run_state)
-
-    @property
-    def pre_state(self):
-        pre_state = self._get_pre_state()
-        if pre_state == STATE_DRYER_POWER_OFF:
-            return STATE_OPTIONITEM_NONE
-        return self._device.get_enum_text(pre_state)
-
-    @property
-    def error_state(self):
-        if not self.is_error:
-            return STATE_OPTIONITEM_NONE
-        error = self._get_error()
-        return self._device.get_enum_text(error)
-
-    @property
     def current_course(self):
         if self.is_info_v2:
             course_key = self._device.model_info.config_value(
@@ -151,18 +141,6 @@ class DryerStatus(DeviceStatus):
         return self._device.get_enum_text(smart_course)
 
     @property
-    def remaintime_hour(self):
-        if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("remainTimeHour"))
-        return self._data.get("Remain_Time_H")
-
-    @property
-    def remaintime_min(self):
-        if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("remainTimeMinute"))
-        return self._data.get("Remain_Time_M")
-
-    @property
     def initialtime_hour(self):
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("initialTimeHour"))
@@ -173,6 +151,18 @@ class DryerStatus(DeviceStatus):
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("initialTimeMinute"))
         return self._data.get("Initial_Time_M")
+
+    @property
+    def remaintime_hour(self):
+        if self.is_info_v2:
+            return DeviceStatus.int_or_none(self._data.get("remainTimeHour"))
+        return self._data.get("Remain_Time_H")
+
+    @property
+    def remaintime_min(self):
+        if self.is_info_v2:
+            return DeviceStatus.int_or_none(self._data.get("remainTimeMinute"))
+        return self._data.get("Remain_Time_M")
 
     @property
     def reservetime_hour(self):
@@ -187,35 +177,87 @@ class DryerStatus(DeviceStatus):
         return self._data.get("Reserve_Time_M")
 
     @property
+    def run_state(self):
+        run_state = self._get_run_state()
+        if run_state == STATE_DRYER_POWER_OFF:
+            run_state = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_RUN_STATE, run_state
+        )
+
+    @property
+    def pre_state(self):
+        pre_state = self._get_pre_state()
+        if pre_state == STATE_DRYER_POWER_OFF:
+            pre_state = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_PRE_STATE, pre_state
+        )
+
+    @property
     def temp_control_option_state(self):
         temp_control = self.lookup_enum(["TempControl", "tempControl", "temp"])
         if not temp_control:
-            return STATE_OPTIONITEM_NONE
-        return self._device.get_enum_text(temp_control)
+            temp_control = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_TEMPCONTROL, temp_control
+        )
 
     @property
     def dry_level_option_state(self):
         dry_level = self.lookup_enum(["DryLevel", "dryLevel"])
         if not dry_level:
-            return STATE_OPTIONITEM_NONE
-        return self._device.get_enum_text(dry_level)
+            dry_level = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_DRYLEVEL, dry_level
+        )
 
     @property
     def time_dry_option_state(self):
         """Get the time dry setting."""
         time_dry = self.lookup_enum("TimeDry")
         if not time_dry:
-            return STATE_OPTIONITEM_NONE
-        return time_dry
+            time_dry = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_TIMEDRY, time_dry, False
+        )
+
+    @property
+    def error_msg(self):
+        if not self.is_error:
+            error = STATE_OPTIONITEM_NONE
+        else:
+            error = self._get_error()
+        return self._update_feature(
+            FEAT_ERROR_MSG, error
+        )
 
     @property
     def doorlock_state(self):
-        if self.is_info_v2:
-            return self.lookup_bit("doorLock")
-        return self.lookup_bit("DoorLock")
+        status = self.lookup_bit(
+            "doorLock" if self.is_info_v2 else "DoorLock"
+        )
+        return self._update_feature(
+            FEAT_DOORLOCK, status, False
+        )
 
     @property
     def childlock_state(self):
-        if self.is_info_v2:
-            return self.lookup_bit("childLock")
-        return self.lookup_bit("ChildLock")
+        status = self.lookup_bit(
+            "childLock" if self.is_info_v2 else "ChildLock"
+        )
+        return self._update_feature(
+            FEAT_CHILDLOCK, status, False
+        )
+
+    def _update_features(self):
+        result = [
+            self.run_state,
+            self.pre_state,
+            self.temp_control_option_state,
+            self.dry_level_option_state,
+            # self.time_dry_option_state,
+            self.error_msg,
+            self.doorlock_state,
+            self.childlock_state,
+        ]

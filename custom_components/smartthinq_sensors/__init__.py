@@ -15,6 +15,7 @@ from .wideq.core_v2 import ClientV2
 from .wideq.device import DeviceType
 from .wideq.dishwasher import DishWasherDevice
 from .wideq.dryer import DryerDevice
+from .wideq.styler import StylerDevice
 from .wideq.washer import WasherDevice
 from .wideq.refrigerator import RefrigeratorDevice
 
@@ -239,7 +240,7 @@ class LGEDevice:
         self._name = name
         self._device_id = device.device_info.id
         self._type = device.device_info.type
-        self._mac = device.device_info.macaddress
+        self._mac = device.device_info.macaddress or "N/A"
         self._firmware = device.device_info.firmware
 
         self._model = f"{device.device_info.model_name}"
@@ -277,6 +278,10 @@ class LGEDevice:
     @property
     def state(self):
         return self._state
+
+    @property
+    def available_features(self) -> Dict:
+        return self._device.available_features
 
     @property
     def state_attributes(self):
@@ -490,6 +495,9 @@ async def lge_devices_setup(hass, client) -> dict:
         elif device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
             dev = LGEDevice(DryerDevice(client, device), device_name)
             device_group = DeviceType.DRYER
+        elif device_type == DeviceType.STYLER:
+            dev = LGEDevice(StylerDevice(client, device), device_name)
+            device_group = DeviceType.STYLER
         elif device_type == DeviceType.DISHWASHER:
             dev = LGEDevice(DishWasherDevice(client, device), device_name)
             device_group = DeviceType.DISHWASHER
