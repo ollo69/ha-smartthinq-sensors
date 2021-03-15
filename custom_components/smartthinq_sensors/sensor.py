@@ -64,7 +64,7 @@ ATTR_ERROR_STATE = "error_state"
 ATTR_REFRIGERATOR_TEMP = "refrigerator_temp"
 ATTR_FREEZER_TEMP = "freezer_temp"
 ATTR_TEMP_UNIT = "temp_unit"
-ATTR_DOOROPEN_STATE = "door_open_state"
+ATTR_DOOR_OPEN = "door_open"
 
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
@@ -321,7 +321,7 @@ REFRIGERATOR_SENSORS = {
 }
 
 REFRIGERATOR_BINARY_SENSORS = {
-    ATTR_DOOROPEN_STATE: {
+    ATTR_DOOR_OPEN: {
         ATTR_MEASUREMENT_NAME: "Door Open",
         ATTR_DEVICE_CLASS: DEVICE_CLASS_OPENING,
         ATTR_VALUE_FN: lambda x: x._dooropen_state,
@@ -645,7 +645,7 @@ class LGERefrigeratorSensor(LGESensor):
             ATTR_REFRIGERATOR_TEMP: self._temp_refrigerator,
             ATTR_FREEZER_TEMP: self._temp_freezer,
             ATTR_TEMP_UNIT: self._temp_unit,
-            ATTR_DOOROPEN_STATE: self._dooropen_state,
+            ATTR_DOOR_OPEN: self._dooropen_state,
         }
 
         if self._api.state:
