@@ -118,22 +118,19 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | run_state | Current state of washer in words |
 | pre_state | Previous state of washer in words |
 | current_course | Current washing cycle in words |
-| spin_option_state | Current spin mode in words |
-| watertemp_option_state | Current option for water temperature in words |
-| drylevel_option_state | Unknown attribute |
-| tubclean_count | Unknown attribute, number |
+| spin_speed | Current cycle's spin mode in words |
+| water_temp | Current cycle's water temperature in words |
+| dry_level | Unknown attribute, might be used in combined washers and dryers for the current cycle's dry level |
+| tubclean_count | How many cycles have been ran without running the Tub Clean cycle |
 | remain_time | How much more time is remaining, H:MM |
 | initial_time | The orginal amount of time, H:MM |
 | reserve_time | When in Delay Start mode, the delay amount, H:MM |
-| doorlock_mode | Whether washer door is locked, on/off |
-| doorclose_mode | Unknown attribute, on/off |
-| childlock_mode | Child lock, on/off |
-| remotestart_mode | Whether remote start is enabled or not |
-| creasecare_mode | Unknown attribute, on/off |
-| steam_mode | Unknown attribute, on/off |
-| steam_softener_mode | Unknown attribute, on/off |
-| prewash_mode | Unknown attribute, on/off |
-| turbowash_mode | Whether or not Turbowash is enabled |
+| door_lock | Whether washer door is locked, on/off |
+| child_lock | Whether child lock is on, on/off |
+| remote_start | Whether remote start is enabled, on/off |
+| steam | Whether steam is enabled on supported washers, on/off |
+| pre_wash | Whether using prewash cycle, on/off |
+| turbo_wash | Whether Turbowash is enabled, on/off |
 
 </details>
 
@@ -151,13 +148,12 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | run_state | Current state of dryer in words |
 | pre_state | Previous state of dryer in words |
 | current_course | Current drying cycle in words |
-| tempcontrol_option_state | Current option for dryer temperature in words |
-| drylevel_option_state | Current level for how much to dry |
+| temp_control | Current option for dryer temperature in words |
+| dry_level | Current level for how much to dry |
 | remain_time | How much more time is remaining, H:MM |
 | initial_time | The orginal amount of time, H:MM |
-| reserve_time | Unknown attribute, H:MM |
-| doorlock_mode | Unknown attribute, on/off |
-| childlock_mode | Child lock, on/off |
+| reserve_time | Unknown attribute, it could be this behaves the same as the washer's `reserve_time`, H:MM |
+| child_lock | Child lock, on/off |
 
 </details>
 
