@@ -31,6 +31,7 @@ import homeassistant.helpers.config_validation as cv
 
 from homeassistant import config_entries
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.util import Throttle
 
@@ -71,7 +72,7 @@ CONFIG_SCHEMA = vol.Schema(
     vol.All(cv.deprecated(DOMAIN), {DOMAIN: SMARTTHINQ_SCHEMA},), extra=vol.ALLOW_EXTRA,
 )
 
-
+SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -128,6 +129,29 @@ class LGEAuthentication:
             _LOGGER.exception("Error connecting to ThinQ")
 
         return client
+
+
+async def async_setup(hass, config):
+    """
+    This method gets called if HomeAssistant has a valid configuration entry within
+    configurations.yaml.
+
+    Thus, in this method we simply trigger the creation of a config entry.
+
+    :return:
+    """
+    conf = config.get(DOMAIN)
+    hass.data[DOMAIN] = {}
+    hass.data[DOMAIN][ATTR_CONFIG] = conf
+
+    if conf is not None:
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=conf
+            )
+        )
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistantType, config_entry):
@@ -209,35 +233,13 @@ async def async_unload_entry(hass, config_entry):
     return True
 
 
-async def async_setup(hass, config):
-    """
-    This method gets called if HomeAssistant has a valid configuration entry within
-    configurations.yaml.
-
-    Thus, in this method we simply trigger the creation of a config entry.
-
-    :return:
-    """
-    conf = config.get(DOMAIN)
-    hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][ATTR_CONFIG] = conf
-
-    if conf is not None:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": config_entries.SOURCE_IMPORT}, data=conf
-            )
-        )
-
-    return True
-
-
 class LGEDevice:
-    def __init__(self, device, name):
+    def __init__(self, device, hass):
         """initialize a LGE Device."""
 
         self._device = device
-        self._name = name
+        self._hass = hass
+        self._name = device.device_info.name
         self._device_id = device.device_info.id
         self._type = device.device_info.type
         self._mac = device.device_info.macaddress or "N/A"
@@ -247,6 +249,7 @@ class LGEDevice:
         self._id = f"{self._type.name}:{self._device_id}"
 
         self._state = None
+        self._coordinator = None
         self._retry_count = 0
         self._disconnected = True
         self._not_logged = False
@@ -305,12 +308,40 @@ class LGEDevice:
 
         return data
 
-    def init_device(self):
-        if self._device.init_device_info():
-            self._state = self._device.status
-            self._model = f"{self._model}-{self._device.model_info.model_type}"
-            return True
-        return False
+    @property
+    def coordinator(self):
+        return self._coordinator
+
+    async def init_device(self):
+        """Init the device status and start coordinator."""
+        result = await self._hass.async_add_executor_job(
+            self._device.init_device_info
+        )
+        if not result:
+            return False
+        self._state = self._device.status
+        self._model = f"{self._model}-{self._device.model_info.model_type}"
+
+        await self._create_coordinator()
+        return True
+
+    async def _create_coordinator(self):
+        """Get the coordinator for a specific device."""
+        coordinator = DataUpdateCoordinator(
+            self._hass,
+            _LOGGER,
+            name=f"{DOMAIN}-{self._name}",
+            update_method=self.async_device_update,
+            # Polling interval. Will only be polled if there are subscribers.
+            update_interval=SCAN_INTERVAL,
+        )
+        await coordinator.async_refresh()
+        self._coordinator = coordinator
+
+    async def async_device_update(self):
+        """Async Update device state"""
+        await self._hass.async_add_executor_job(self._device_update)
+        return self._state
 
     def _critical_status(self):
         return self._not_logged_count == MAX_UPDATE_FAIL_ALLOWED or (
@@ -362,7 +393,7 @@ class LGEDevice:
             self._not_logged = True
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    def device_update(self):
+    def _device_update(self):
         """Update device state"""
         _LOGGER.debug("Updating smartthinq device %s", self.name)
 
@@ -490,23 +521,23 @@ async def lge_devices_setup(hass, client) -> dict:
 
         device_group = device_type
         if device_type in [DeviceType.WASHER, DeviceType.TOWER_WASHER]:
-            dev = LGEDevice(WasherDevice(client, device), device_name)
+            dev = LGEDevice(WasherDevice(client, device), hass)
             device_group = DeviceType.WASHER
         elif device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
-            dev = LGEDevice(DryerDevice(client, device), device_name)
+            dev = LGEDevice(DryerDevice(client, device), hass)
             device_group = DeviceType.DRYER
         elif device_type == DeviceType.STYLER:
-            dev = LGEDevice(StylerDevice(client, device), device_name)
+            dev = LGEDevice(StylerDevice(client, device), hass)
             device_group = DeviceType.STYLER
         elif device_type == DeviceType.DISHWASHER:
-            dev = LGEDevice(DishWasherDevice(client, device), device_name)
+            dev = LGEDevice(DishWasherDevice(client, device), hass)
             device_group = DeviceType.DISHWASHER
         elif device_type == DeviceType.REFRIGERATOR:
-            dev = LGEDevice(RefrigeratorDevice(client, device), device_name)
+            dev = LGEDevice(RefrigeratorDevice(client, device), hass)
             device_group = DeviceType.REFRIGERATOR
 
         if dev:
-            result = await hass.async_add_executor_job(dev.init_device)
+            result = await dev.init_device()
 
         if not result:
             _LOGGER.info(

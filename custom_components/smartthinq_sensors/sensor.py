@@ -2,7 +2,6 @@
 # DEPENDENCIES = ['smartthinq']
 
 import logging
-from datetime import timedelta
 
 from .wideq import (
     FEAT_DRYLEVEL,
@@ -28,8 +27,7 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_PROBLEM,
     DEVICE_CLASS_OPENING,
 )
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from homeassistant.const import (
     DEVICE_CLASS_TEMPERATURE,
@@ -77,10 +75,8 @@ TEMP_UNIT_LOOKUP = {
 }
 
 DEFAULT_SENSOR = "default"
-DISPATCHER_REMOTE_UPDATE = "thinq_remote_update"
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(seconds=30)
 
 WASHER_SENSORS = {
     DEFAULT_SENSOR: {
@@ -391,16 +387,22 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await async_setup_sensors(hass, config_entry, async_add_entities, False)
 
 
-class LGESensor(Entity):
-    def __init__(self, device: LGEDevice, measurement, definition, is_binary):
+class LGESensor(CoordinatorEntity):
+    def __init__(
+            self,
+            device: LGEDevice,
+            measurement,
+            definition,
+            is_binary
+    ):
         """Initialize the sensor."""
+        super().__init__(device.coordinator)
         self._api = device
         self._name_slug = device.name
         self._measurement = measurement
         self._def = definition
         self._is_binary = is_binary
         self._is_default = self._measurement == DEFAULT_SENSOR
-        self._dispatcher_queue = f"{DISPATCHER_REMOTE_UPDATE}-{self._name_slug}"
 
     @staticmethod
     def format_time(hours, minutes):
@@ -499,31 +501,6 @@ class LGESensor(Entity):
     def device_info(self):
         """Return the device info."""
         return self._api.device_info
-
-    @property
-    def should_poll(self) -> bool:
-        """ This sensors must be polled only by default entity """
-        return self._is_default
-
-    def update(self):
-        """Update the device status"""
-        self._api.device_update()
-        dispatcher_send(self.hass, self._dispatcher_queue)
-
-    async def async_added_to_hass(self):
-        """Register update dispatcher."""
-
-        async def async_state_update():
-            """Update callback."""
-            _LOGGER.debug("Updating %s state by dispatch", self.name)
-            self.async_write_ha_state()
-
-        if not self._is_default:
-            self.async_on_remove(
-                async_dispatcher_connect(
-                    self.hass, self._dispatcher_queue, async_state_update
-                )
-            )
 
     @property
     def _power_state(self):
