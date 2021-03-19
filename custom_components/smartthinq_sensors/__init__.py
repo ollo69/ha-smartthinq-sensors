@@ -322,7 +322,12 @@ class LGEDevice:
         self._state = self._device.status
         self._model = f"{self._model}-{self._device.model_info.model_type}"
 
+        # Create status update coordinator
         await self._create_coordinator()
+
+        # Initialize device features
+        features = self._state.device_features
+
         return True
 
     async def _create_coordinator(self):

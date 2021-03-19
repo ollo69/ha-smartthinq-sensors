@@ -4,12 +4,21 @@
 import logging
 
 from .wideq import (
+    FEAT_CHILDLOCK,
+    FEAT_DOORCLOSE,
+    FEAT_DOORLOCK,
+    FEAT_DOOROPEN,
     FEAT_DRYLEVEL,
+    FEAT_DUALZONE,
     FEAT_ERROR_MSG,
+    FEAT_HALFLOAD,
     FEAT_PRE_STATE,
     FEAT_PROCESS_STATE,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
+    FEAT_REMOTESTART,
+    FEAT_RINSEREFILL,
+    FEAT_SALTREFILL,
     FEAT_TUBCLEAN_COUNT,
     FEAT_TEMPCONTROL,
     FEAT_WATERTEMP,
@@ -24,8 +33,9 @@ from .wideq.device import (
 )
 
 from homeassistant.components.binary_sensor import (
-    DEVICE_CLASS_PROBLEM,
+    DEVICE_CLASS_LOCK,
     DEVICE_CLASS_OPENING,
+    DEVICE_CLASS_PROBLEM,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -49,6 +59,7 @@ ATTR_DEVICE_CLASS = "device_class"
 ATTR_VALUE_FEAT = "value_feat"
 ATTR_VALUE_FN = "value_fn"
 ATTR_ENABLED = "enabled"
+ATTR_INVERT_STATE = "invert_state"
 
 # general sensor attributes
 ATTR_RUN_COMPLETED = "run_completed"
@@ -75,13 +86,29 @@ TEMP_UNIT_LOOKUP = {
 }
 
 DEFAULT_SENSOR = "default"
+DEFAULT_ICON = "def_icon"
 
 _LOGGER = logging.getLogger(__name__)
 
-WASHER_SENSORS = {
+DEVICE_ICONS = {
+    DeviceType.WASHER: "mdi:washing-machine",
+    DeviceType.DRYER: "mdi:tumble-dryer",
+    DeviceType.STYLER: "mdi:palette-swatch-outline",
+    DeviceType.DISHWASHER: "mdi:dishwasher",
+    DeviceType.REFRIGERATOR: "mdi:fridge-outline",
+}
+
+RUN_COMPLETED_PREFIX = {
+    DeviceType.WASHER: "Wash",
+    DeviceType.DRYER: "Dry",
+    DeviceType.STYLER: "Style",
+    DeviceType.DISHWASHER: "Wash",
+}
+
+WASH_DEV_SENSORS = {
     DEFAULT_SENSOR: {
         ATTR_MEASUREMENT_NAME: "Default",
-        ATTR_ICON: "mdi:washing-machine",
+        ATTR_ICON: DEFAULT_ICON,
         # ATTR_UNIT_FN: lambda x: None,
         # ATTR_UNIT_FN: lambda x: "dBm",
         # ATTR_DEVICE_CLASS: None,
@@ -90,13 +117,19 @@ WASHER_SENSORS = {
     },
     FEAT_RUN_STATE: {
         ATTR_MEASUREMENT_NAME: "Run State",
-        ATTR_ICON: "mdi:washing-machine",
+        ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_RUN_STATE,
+        ATTR_ENABLED: True,
+    },
+    FEAT_PROCESS_STATE: {
+        ATTR_MEASUREMENT_NAME: "Process State",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_PROCESS_STATE,
         ATTR_ENABLED: True,
     },
     FEAT_PRE_STATE: {
         ATTR_MEASUREMENT_NAME: "Pre State",
-        ATTR_ICON: "mdi:washing-machine",
+        ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_PRE_STATE,
     },
     FEAT_ERROR_MSG: {
@@ -106,7 +139,7 @@ WASHER_SENSORS = {
     },
     FEAT_TUBCLEAN_COUNT: {
         ATTR_MEASUREMENT_NAME: "Tube Clean Counter",
-        ATTR_ICON: "mdi:washing-machine",
+        ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_TUBCLEAN_COUNT,
     },
     FEAT_SPINSPEED: {
@@ -119,55 +152,6 @@ WASHER_SENSORS = {
         ATTR_ICON: "mdi:thermometer-lines",
         ATTR_VALUE_FEAT: FEAT_WATERTEMP,
     },
-    FEAT_DRYLEVEL: {
-        ATTR_MEASUREMENT_NAME: "Dry Level",
-        ATTR_ICON: "mdi:tumble-dryer",
-        ATTR_VALUE_FEAT: FEAT_DRYLEVEL,
-    },
-    ATTR_CURRENT_COURSE: {
-        ATTR_MEASUREMENT_NAME: "Current Course",
-        ATTR_ICON: "mdi:pin-outline",
-        ATTR_VALUE_FN: lambda x: x._current_course,
-    },
-}
-
-WASHER_BINARY_SENSORS = {
-    ATTR_RUN_COMPLETED: {
-        ATTR_MEASUREMENT_NAME: "Wash Completed",
-        ATTR_VALUE_FN: lambda x: x._run_completed,
-        ATTR_ENABLED: True,
-    },
-    ATTR_ERROR_STATE: {
-        ATTR_MEASUREMENT_NAME: "Error State",
-        ATTR_DEVICE_CLASS: DEVICE_CLASS_PROBLEM,
-        ATTR_VALUE_FN: lambda x: x._error_state,
-        ATTR_ENABLED: True,
-    },
-}
-
-DRYER_SENSORS = {
-    DEFAULT_SENSOR: {
-        ATTR_MEASUREMENT_NAME: "Default",
-        ATTR_ICON: "mdi:tumble-dryer",
-        ATTR_VALUE_FN: lambda x: x._power_state,
-        ATTR_ENABLED: True,
-    },
-    FEAT_RUN_STATE: {
-        ATTR_MEASUREMENT_NAME: "Run State",
-        ATTR_ICON: "mdi:tumble-dryer",
-        ATTR_VALUE_FEAT: FEAT_RUN_STATE,
-        ATTR_ENABLED: True,
-    },
-    FEAT_PRE_STATE: {
-        ATTR_MEASUREMENT_NAME: "Pre State",
-        ATTR_ICON: "mdi:tumble-dryer",
-        ATTR_VALUE_FEAT: FEAT_PRE_STATE,
-    },
-    FEAT_ERROR_MSG: {
-        ATTR_MEASUREMENT_NAME: "Error Message",
-        ATTR_ICON: "mdi:alert-circle-outline",
-        ATTR_VALUE_FEAT: FEAT_ERROR_MSG,
-    },
     FEAT_TEMPCONTROL: {
         ATTR_MEASUREMENT_NAME: "Temp Control",
         ATTR_ICON: "mdi:thermometer-lines",
@@ -178,16 +162,36 @@ DRYER_SENSORS = {
         ATTR_ICON: "mdi:tumble-dryer",
         ATTR_VALUE_FEAT: FEAT_DRYLEVEL,
     },
+    FEAT_HALFLOAD: {
+        ATTR_MEASUREMENT_NAME: "Half Load",
+        ATTR_ICON: "mdi:circle-half-full",
+        ATTR_VALUE_FEAT: FEAT_HALFLOAD,
+    },
     ATTR_CURRENT_COURSE: {
         ATTR_MEASUREMENT_NAME: "Current Course",
         ATTR_ICON: "mdi:pin-outline",
         ATTR_VALUE_FN: lambda x: x._current_course,
     },
+    ATTR_INITIAL_TIME: {
+        ATTR_MEASUREMENT_NAME: "Initial Time",
+        ATTR_ICON: "mdi:clock-outline",
+        ATTR_VALUE_FN: lambda x: x._initial_time,
+    },
+    ATTR_REMAIN_TIME: {
+        ATTR_MEASUREMENT_NAME: "Remain Time",
+        ATTR_ICON: "mdi:clock-outline",
+        ATTR_VALUE_FN: lambda x: x._remain_time,
+    },
+    ATTR_RESERVE_TIME: {
+        ATTR_MEASUREMENT_NAME: "Reserve Time",
+        ATTR_ICON: "mdi:clock-outline",
+        ATTR_VALUE_FN: lambda x: x._reserve_time,
+    },
 }
 
-DRYER_BINARY_SENSORS = {
+WASH_DEV_BINARY_SENSORS = {
     ATTR_RUN_COMPLETED: {
-        ATTR_MEASUREMENT_NAME: "Dry Completed",
+        ATTR_MEASUREMENT_NAME: "<Run> Completed",
         ATTR_VALUE_FN: lambda x: x._run_completed,
         ATTR_ENABLED: True,
     },
@@ -197,106 +201,51 @@ DRYER_BINARY_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._error_state,
         ATTR_ENABLED: True,
     },
-}
-
-STYLER_SENSORS = {
-    DEFAULT_SENSOR: {
-        ATTR_MEASUREMENT_NAME: "Default",
-        ATTR_ICON: "mdi:palette-swatch-outline",
-        ATTR_VALUE_FN: lambda x: x._power_state,
-        ATTR_ENABLED: True,
+    FEAT_CHILDLOCK: {
+        ATTR_MEASUREMENT_NAME: "Child Lock",
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_LOCK,
+        ATTR_VALUE_FEAT: FEAT_CHILDLOCK,
+        ATTR_INVERT_STATE: True
     },
-    FEAT_RUN_STATE: {
-        ATTR_MEASUREMENT_NAME: "Run State",
-        ATTR_ICON: "mdi:palette-swatch-outline",
-        ATTR_VALUE_FEAT: FEAT_RUN_STATE,
-        ATTR_ENABLED: True,
+    FEAT_DOORCLOSE: {
+        ATTR_MEASUREMENT_NAME: "Door Close",
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_OPENING,
+        ATTR_VALUE_FEAT: FEAT_DOORCLOSE,
+        ATTR_INVERT_STATE: True
     },
-    FEAT_PRE_STATE: {
-        ATTR_MEASUREMENT_NAME: "Pre State",
-        ATTR_ICON: "mdi:palette-swatch-outline",
-        ATTR_VALUE_FEAT: FEAT_PRE_STATE,
+    FEAT_DOORLOCK: {
+        ATTR_MEASUREMENT_NAME: "Door Lock",
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_LOCK,
+        ATTR_VALUE_FEAT: FEAT_DOORLOCK,
+        ATTR_INVERT_STATE: True
     },
-    FEAT_ERROR_MSG: {
-        ATTR_MEASUREMENT_NAME: "Error Message",
-        ATTR_ICON: "mdi:alert-circle-outline",
-        ATTR_VALUE_FEAT: FEAT_ERROR_MSG,
+    FEAT_DOOROPEN: {
+        ATTR_MEASUREMENT_NAME: "Door Open",
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_OPENING,
+        ATTR_VALUE_FEAT: FEAT_DOOROPEN,
     },
-    ATTR_CURRENT_COURSE: {
-        ATTR_MEASUREMENT_NAME: "Current Course",
-        ATTR_ICON: "mdi:pin-outline",
-        ATTR_VALUE_FN: lambda x: x._current_course,
+    FEAT_REMOTESTART: {
+        ATTR_MEASUREMENT_NAME: "Remote Start",
+        ATTR_VALUE_FEAT: FEAT_REMOTESTART,
     },
-}
-
-STYLER_BINARY_SENSORS = {
-    ATTR_RUN_COMPLETED: {
-        ATTR_MEASUREMENT_NAME: "Run Completed",
-        ATTR_VALUE_FN: lambda x: x._run_completed,
-        ATTR_ENABLED: True,
+    FEAT_DUALZONE: {
+        ATTR_MEASUREMENT_NAME: "Dual Zone",
+        ATTR_VALUE_FEAT: FEAT_DUALZONE,
     },
-    ATTR_ERROR_STATE: {
-        ATTR_MEASUREMENT_NAME: "Error State",
-        ATTR_DEVICE_CLASS: DEVICE_CLASS_PROBLEM,
-        ATTR_VALUE_FN: lambda x: x._error_state,
-        ATTR_ENABLED: True,
+    FEAT_RINSEREFILL: {
+        ATTR_MEASUREMENT_NAME: "Rinse Refill",
+        ATTR_VALUE_FEAT: FEAT_RINSEREFILL,
     },
-}
-
-DISHWASHER_SENSORS = {
-    DEFAULT_SENSOR: {
-        ATTR_MEASUREMENT_NAME: "Default",
-        ATTR_ICON: "mdi:dishwasher",
-        ATTR_VALUE_FN: lambda x: x._power_state,
-        ATTR_ENABLED: True,
-    },
-    FEAT_RUN_STATE: {
-        ATTR_MEASUREMENT_NAME: "Run State",
-        ATTR_ICON: "mdi:dishwasher",
-        ATTR_VALUE_FEAT: FEAT_RUN_STATE,
-        ATTR_ENABLED: True,
-    },
-    FEAT_PROCESS_STATE: {
-        ATTR_MEASUREMENT_NAME: "Process State",
-        ATTR_ICON: "mdi:dishwasher",
-        ATTR_VALUE_FEAT: FEAT_PROCESS_STATE,
-        ATTR_ENABLED: True,
-    },
-    FEAT_ERROR_MSG: {
-        ATTR_MEASUREMENT_NAME: "Error Message",
-        ATTR_ICON: "mdi:alert-circle-outline",
-        ATTR_VALUE_FEAT: FEAT_ERROR_MSG,
-    },
-    FEAT_TUBCLEAN_COUNT: {
-        ATTR_MEASUREMENT_NAME: "Tube Clean Counter",
-        ATTR_ICON: "mdi:dishwasher",
-        ATTR_VALUE_FEAT: FEAT_TUBCLEAN_COUNT,
-    },
-    ATTR_CURRENT_COURSE: {
-        ATTR_MEASUREMENT_NAME: "Current Course",
-        ATTR_ICON: "mdi:pin-outline",
-        ATTR_VALUE_FN: lambda x: x._current_course,
-    },
-}
-
-DISHWASHER_BINARY_SENSORS = {
-    ATTR_RUN_COMPLETED: {
-        ATTR_MEASUREMENT_NAME: "Wash Completed",
-        ATTR_VALUE_FN: lambda x: x._run_completed,
-        ATTR_ENABLED: True,
-    },
-    ATTR_ERROR_STATE: {
-        ATTR_MEASUREMENT_NAME: "Error State",
-        ATTR_DEVICE_CLASS: DEVICE_CLASS_PROBLEM,
-        ATTR_VALUE_FN: lambda x: x._error_state,
-        ATTR_ENABLED: True,
+    FEAT_SALTREFILL: {
+        ATTR_MEASUREMENT_NAME: "Salt Refill",
+        ATTR_VALUE_FEAT: FEAT_SALTREFILL,
     },
 }
 
 REFRIGERATOR_SENSORS = {
     DEFAULT_SENSOR: {
         ATTR_MEASUREMENT_NAME: "Default",
-        ATTR_ICON: "mdi:fridge-outline",
+        ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FN: lambda x: x._power_state,
         ATTR_ENABLED: True,
     },
@@ -329,12 +278,7 @@ REFRIGERATOR_BINARY_SENSORS = {
 async def async_setup_sensors(hass, config_entry, async_add_entities, type_binary):
     """Set up LGE device sensors and bynary sensor based on config_entry."""
     lge_sensors = []
-    washer_sensors = WASHER_BINARY_SENSORS if type_binary else WASHER_SENSORS
-    dryer_sensors = DRYER_BINARY_SENSORS if type_binary else DRYER_SENSORS
-    styler_sensors = STYLER_BINARY_SENSORS if type_binary else STYLER_SENSORS
-    dishwasher_sensors = (
-        DISHWASHER_BINARY_SENSORS if type_binary else DISHWASHER_SENSORS
-    )
+    wash_dev_sensors = WASH_DEV_BINARY_SENSORS if type_binary else WASH_DEV_SENSORS
     refrigerator_sensors = (
         REFRIGERATOR_BINARY_SENSORS if type_binary else REFRIGERATOR_SENSORS
     )
@@ -345,29 +289,33 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
     lge_sensors.extend(
         [
             LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in washer_sensors.items()
+            for measurement, definition in wash_dev_sensors.items()
             for lge_device in lge_devices.get(DeviceType.WASHER, [])
+            if _sensor_exist(lge_device, definition)
         ]
     )
     lge_sensors.extend(
         [
             LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in dryer_sensors.items()
+            for measurement, definition in wash_dev_sensors.items()
             for lge_device in lge_devices.get(DeviceType.DRYER, [])
+            if _sensor_exist(lge_device, definition)
         ]
     )
     lge_sensors.extend(
         [
             LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in styler_sensors.items()
+            for measurement, definition in wash_dev_sensors.items()
             for lge_device in lge_devices.get(DeviceType.STYLER, [])
+            if _sensor_exist(lge_device, definition)
         ]
     )
     lge_sensors.extend(
         [
             LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in dishwasher_sensors.items()
+            for measurement, definition in wash_dev_sensors.items()
             for lge_device in lge_devices.get(DeviceType.DISHWASHER, [])
+            if _sensor_exist(lge_device, definition)
         ]
     )
     lge_sensors.extend(
@@ -375,16 +323,30 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
             LGERefrigeratorSensor(lge_device, measurement, definition, type_binary)
             for measurement, definition in refrigerator_sensors.items()
             for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+            if _sensor_exist(lge_device, definition)
         ]
     )
 
-    async_add_entities(lge_sensors, True)
+    async_add_entities(lge_sensors)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the LGE sensors."""
     _LOGGER.info("Starting LGE ThinQ sensors...")
     await async_setup_sensors(hass, config_entry, async_add_entities, False)
+
+
+def _sensor_exist(lge_device, sensor_def):
+    """Check if a sensor exist for device."""
+    if ATTR_VALUE_FN in sensor_def:
+        return True
+
+    if ATTR_VALUE_FEAT in sensor_def:
+        feature = sensor_def[ATTR_VALUE_FEAT]
+        if feature in lge_device.available_features:
+            return True
+
+    return False
 
 
 class LGESensor(CoordinatorEntity):
@@ -402,6 +364,10 @@ class LGESensor(CoordinatorEntity):
         self._measurement = measurement
         self._def = definition
         self._is_binary = is_binary
+        if is_binary:
+            self._invert_state = definition.get(ATTR_INVERT_STATE, False)
+        else:
+            self._invert_state = False
         self._is_default = self._measurement == DEFAULT_SENSOR
 
     @staticmethod
@@ -432,7 +398,12 @@ class LGESensor(CoordinatorEntity):
         """Return the name of the sensor."""
         if self._is_default:
             return self._name_slug
-        return f"{self._name_slug} {self._def[ATTR_MEASUREMENT_NAME]}"
+        name = self._def[ATTR_MEASUREMENT_NAME]
+        if self._measurement == ATTR_RUN_COMPLETED:
+            name = name.replace(
+                "<Run>", RUN_COMPLETED_PREFIX.get(self._api.type, "Run")
+            )
+        return f"{self._name_slug} {name}"
 
     @property
     def unique_id(self) -> str:
@@ -456,7 +427,12 @@ class LGESensor(CoordinatorEntity):
     @property
     def icon(self):
         """Return the icon to use in the frontend, if any."""
-        return self._def.get(ATTR_ICON)
+        icon = self._def.get(ATTR_ICON)
+        if not icon:
+            return None
+        if icon == DEFAULT_ICON:
+            icon = DEVICE_ICONS.get(self._api.type)
+        return icon
 
     @property
     def is_on(self):
@@ -465,12 +441,13 @@ class LGESensor(CoordinatorEntity):
             ret_val = self._get_sensor_state()
             if ret_val is None:
                 return False
+            def_on = not self._invert_state
             if isinstance(ret_val, bool):
-                return ret_val
+                return ret_val if def_on else not ret_val
             if ret_val == STATE_ON:
-                return True
+                return def_on
             state = STATE_LOOKUP.get(ret_val, STATE_OFF)
-            return True if state == STATE_ON else False
+            return def_on if state == STATE_ON else not def_on
         return False
 
     @property
@@ -523,11 +500,11 @@ class LGESensor(CoordinatorEntity):
 
     def _get_features_value(self):
         ret_val = {}
-        features = self._api.available_features
         if self._api.state:
             states = self._api.state.device_features
         else:
             states = {}
+        features = self._api.available_features
         for feature in features.values():
             ret_val[feature] = states.get(feature)
         return ret_val
