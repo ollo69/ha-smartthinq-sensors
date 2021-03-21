@@ -253,18 +253,24 @@ class LGEDevice:
         self._retry_count = 0
         self._disconnected = True
         self._not_logged = False
+        self._available = True
+        self._was_unavailable = False
         self._update_fail_count = 0
         self._not_logged_count = 0
         self._refresh_gateway = False
 
     @property
     def available(self) -> bool:
-        return self._not_logged_count <= MAX_UPDATE_FAIL_ALLOWED
+        return self._available
+
+    @property
+    def was_unavailable(self) -> bool:
+        return self._was_unavailable
 
     @property
     def assumed_state(self) -> bool:
         """Return True if unable to access real state of the entity."""
-        return self.available and self._disconnected
+        return self._available and self._disconnected
 
     @property
     def name(self) -> str:
@@ -353,6 +359,16 @@ class LGEDevice:
             self._not_logged_count > 0 and self._not_logged_count % 60 == 0
         )
 
+    def _set_available(self):
+        """Set the available status."""
+        if self._not_logged:
+            self._not_logged_count += 1
+        else:
+            self._not_logged_count = 0
+        available = self._not_logged_count <= MAX_UPDATE_FAIL_ALLOWED
+        self._was_unavailable = available and not self._available
+        self._available = available
+
     def _log_error(self, msg, *args, **kwargs):
         if self._critical_status():
             _LOGGER.error(msg, *args, **kwargs)
@@ -405,10 +421,7 @@ class LGEDevice:
         if self._disconnected or self._not_logged:
             if self._update_fail_count < MAX_UPDATE_FAIL_ALLOWED:
                 self._update_fail_count += 1
-            if self._not_logged:
-                self._not_logged_count += 1
-            else:
-                self._not_logged_count = 0
+            self._set_available()
 
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
@@ -431,7 +444,7 @@ class LGEDevice:
                         )
                         if self._not_logged_count >= 60:
                             self._refresh_gateway = True
-                        self._not_logged_count += 1
+                        self._set_available()
 
                     if self._state.is_on:
                         self._state = self._device.reset_status()
@@ -485,7 +498,7 @@ class LGEDevice:
                         # _LOGGER.debug('Status attributes: %s', l)
 
                         self._update_fail_count = 0
-                        self._not_logged_count = 0
+                        self._set_available()
                         self._retry_count = 0
                         self._state = state
 

@@ -9,6 +9,7 @@ from . import (
     FEAT_DOORLOCK,
     FEAT_DRYLEVEL,
     FEAT_ERROR_MSG,
+    FEAT_MEDICRINSE,
     FEAT_PRE_STATE,
     FEAT_PREWASH,
     FEAT_REMOTESTART,
@@ -332,6 +333,15 @@ class WasherStatus(DeviceStatus):
             FEAT_TURBOWASH, status, False
         )
 
+    @property
+    def medicrinse_state(self):
+        status = self.lookup_bit(
+            "medicRinse" if self.is_info_v2 else "MedicRinse"
+        )
+        return self._update_feature(
+            FEAT_MEDICRINSE, status, False
+        )
+
     def _update_features(self):
         result = [
             self.run_state,
@@ -350,4 +360,5 @@ class WasherStatus(DeviceStatus):
             self.steam_softener_state,
             self.prewash_state,
             self.turbowash_state,
+            self.medicrinse_state,
         ]

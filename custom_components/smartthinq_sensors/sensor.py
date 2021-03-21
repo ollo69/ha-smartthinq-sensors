@@ -507,6 +507,11 @@ class LGESensor(CoordinatorEntity):
 class LGEWashDeviceSensor(LGESensor):
     """A sensor to monitor LGE Wash devices"""
 
+    def __init__(self, device, measurement, definition, is_binary):
+        """Initialize the sensor."""
+        super().__init__(device, measurement, definition, is_binary)
+        self._forced_run_completed = False
+
     @property
     def device_state_attributes(self):
         """Return the optional state attributes."""
@@ -529,7 +534,10 @@ class LGEWashDeviceSensor(LGESensor):
     @property
     def _run_completed(self):
         if self._api.state:
-            if self._api.state.is_run_completed:
+            run_completed = self._api.state.is_run_completed
+            if self._api.was_unavailable or self._forced_run_completed:
+                self._forced_run_completed = run_completed
+            if run_completed and not self._forced_run_completed:
                 return STATE_ON
         return STATE_OFF
 
