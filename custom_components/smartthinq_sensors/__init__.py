@@ -518,33 +518,22 @@ async def lge_devices_setup(hass, client) -> dict:
         device_id = device.id
         device_name = device.name
         device_type = device.type
-        device_mac = device.macaddress
         model_name = device.model_name
-        dev = None
-        result = False
         device_count += 1
 
-        device_group = device_type
+        dev = None
         if device_type in [DeviceType.WASHER, DeviceType.TOWER_WASHER]:
             dev = LGEDevice(WasherDevice(client, device), hass)
-            device_group = DeviceType.WASHER
         elif device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
             dev = LGEDevice(DryerDevice(client, device), hass)
-            device_group = DeviceType.DRYER
         elif device_type == DeviceType.STYLER:
             dev = LGEDevice(StylerDevice(client, device), hass)
-            device_group = DeviceType.STYLER
         elif device_type == DeviceType.DISHWASHER:
             dev = LGEDevice(DishWasherDevice(client, device), hass)
-            device_group = DeviceType.DISHWASHER
         elif device_type == DeviceType.REFRIGERATOR:
             dev = LGEDevice(RefrigeratorDevice(client, device), hass)
-            device_group = DeviceType.REFRIGERATOR
 
-        if dev:
-            result = await dev.init_device()
-
-        if not result:
+        if not dev:
             _LOGGER.info(
                 "Found unsupported LGE Device. Name: %s - Type: %s - InfoUrl: %s",
                 device_name,
@@ -553,13 +542,21 @@ async def lge_devices_setup(hass, client) -> dict:
             )
             continue
 
-        wrapped_devices.setdefault(device_group, []).append(dev)
+        if not await dev.init_device():
+            _LOGGER.error(
+                "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
+                device_name,
+                device_type.name,
+                device.model_info_url,
+            )
+            continue
+
+        wrapped_devices.setdefault(device_type, []).append(dev)
         _LOGGER.info(
-            "LGE Device added. Name: %s - Type: %s - Model: %s - Mac: %s - ID: %s",
+            "LGE Device added. Name: %s - Type: %s - Model: %s - ID: %s",
             device_name,
             device_type.name,
             model_name,
-            device_mac,
             device_id,
         )
 

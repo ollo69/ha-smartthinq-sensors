@@ -274,49 +274,56 @@ REFRIGERATOR_BINARY_SENSORS = {
     },
 }
 
+WASH_DEVICE_TYPES = [
+    DeviceType.DISHWASHER,
+    DeviceType.DRYER,
+    DeviceType.STYLER,
+    DeviceType.TOWER_DRYER,
+    DeviceType.TOWER_WASHER,
+    DeviceType.WASHER,
+]
+
+
+def _sensor_exist(lge_device, sensor_def):
+    """Check if a sensor exist for device."""
+    if ATTR_VALUE_FN in sensor_def:
+        return True
+
+    if ATTR_VALUE_FEAT in sensor_def:
+        feature = sensor_def[ATTR_VALUE_FEAT]
+        if feature in lge_device.available_features:
+            return True
+
+    return False
+
 
 async def async_setup_sensors(hass, config_entry, async_add_entities, type_binary):
     """Set up LGE device sensors and bynary sensor based on config_entry."""
     lge_sensors = []
+    entry_config = hass.data[DOMAIN]
+    lge_devices = entry_config.get(LGE_DEVICES)
+    if not lge_devices:
+        return
+
+    # add wash devices
+    wash_devices = []
+    for dev_type, devices in lge_devices.items():
+        if dev_type in WASH_DEVICE_TYPES:
+            wash_devices.extend(devices)
+
     wash_dev_sensors = WASH_DEV_BINARY_SENSORS if type_binary else WASH_DEV_SENSORS
+    lge_sensors.extend(
+        [
+            LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
+            for measurement, definition in wash_dev_sensors.items()
+            for lge_device in wash_devices
+            if _sensor_exist(lge_device, definition)
+        ]
+    )
+
+    # add refrigerators
     refrigerator_sensors = (
         REFRIGERATOR_BINARY_SENSORS if type_binary else REFRIGERATOR_SENSORS
-    )
-
-    entry_config = hass.data[DOMAIN]
-    lge_devices = entry_config.get(LGE_DEVICES, [])
-
-    lge_sensors.extend(
-        [
-            LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in wash_dev_sensors.items()
-            for lge_device in lge_devices.get(DeviceType.WASHER, [])
-            if _sensor_exist(lge_device, definition)
-        ]
-    )
-    lge_sensors.extend(
-        [
-            LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in wash_dev_sensors.items()
-            for lge_device in lge_devices.get(DeviceType.DRYER, [])
-            if _sensor_exist(lge_device, definition)
-        ]
-    )
-    lge_sensors.extend(
-        [
-            LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in wash_dev_sensors.items()
-            for lge_device in lge_devices.get(DeviceType.STYLER, [])
-            if _sensor_exist(lge_device, definition)
-        ]
-    )
-    lge_sensors.extend(
-        [
-            LGEWashDeviceSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in wash_dev_sensors.items()
-            for lge_device in lge_devices.get(DeviceType.DISHWASHER, [])
-            if _sensor_exist(lge_device, definition)
-        ]
     )
     lge_sensors.extend(
         [
@@ -334,19 +341,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the LGE sensors."""
     _LOGGER.info("Starting LGE ThinQ sensors...")
     await async_setup_sensors(hass, config_entry, async_add_entities, False)
-
-
-def _sensor_exist(lge_device, sensor_def):
-    """Check if a sensor exist for device."""
-    if ATTR_VALUE_FN in sensor_def:
-        return True
-
-    if ATTR_VALUE_FEAT in sensor_def:
-        feature = sensor_def[ATTR_VALUE_FEAT]
-        if feature in lge_device.available_features:
-            return True
-
-    return False
 
 
 class LGESensor(CoordinatorEntity):
