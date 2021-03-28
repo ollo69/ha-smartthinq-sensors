@@ -250,7 +250,6 @@ class LGEDevice:
 
         self._state = None
         self._coordinator = None
-        self._retry_count = 0
         self._disconnected = True
         self._not_logged = False
         self._available = True
@@ -377,6 +376,8 @@ class LGEDevice:
 
     def _restart_monitor(self):
         """Restart the device monitor"""
+        if not (self._disconnected or self._not_logged):
+            return
 
         refresh_gateway = False
         if self._refresh_gateway:
@@ -416,25 +417,26 @@ class LGEDevice:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def _device_update(self):
         """Update device state"""
-        _LOGGER.debug("Updating smartthinq device %s", self.name)
+        _LOGGER.debug("Updating ThinQ device %s", self.name)
 
         if self._disconnected or self._not_logged:
             if self._update_fail_count < MAX_UPDATE_FAIL_ALLOWED:
                 self._update_fail_count += 1
             self._set_available()
 
+        conn_retry = 0
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
 
-            if self._disconnected or self._not_logged:
-                if iteration >= MAX_CONN_RETRIES and iteration > 0:
-                    _LOGGER.debug("Connection not available. Status update failed")
-                    return
+            # Wait one second between iteration
+            if iteration > 0:
+                time.sleep(1)
 
-                self._retry_count = 0
-                self._restart_monitor()
+            # Try to restart monitor
+            self._restart_monitor()
 
             if self._disconnected or self._not_logged:
+                conn_retry += 1
                 if self._update_fail_count >= MAX_UPDATE_FAIL_ALLOWED:
 
                     if self._critical_status():
@@ -447,77 +449,65 @@ class LGEDevice:
                         self._set_available()
 
                     if self._state.is_on:
+                        _LOGGER.debug("Connection not available. Device status reset")
                         self._state = self._device.reset_status()
                         return
 
-            if self._disconnected:
+                if conn_retry >= MAX_CONN_RETRIES or self._disconnected:
+                    _LOGGER.debug("Connection not available. Status update failed")
+                    return
+
+                continue
+
+            try:
+                state = self._device.poll()
+
+            except NotLoggedInError:
+                self._not_logged = True
+                continue
+
+            except NotConnectedError:
+                self._disconnected = True
                 return
 
-            if not (self._disconnected or self._not_logged):
+            except InvalidCredentialError:
+                self._log_error(
+                    "Connection to ThinQ failed. Check your login credential"
+                )
+                self._not_logged = True
+                return
 
-                try:
-                    state = self._device.poll()
+            except (
+                reqExc.ConnectionError,
+                reqExc.ConnectTimeout,
+                reqExc.ReadTimeout,
+            ):
+                self._log_error(
+                    "Connection to ThinQ failed. Network connection error"
+                )
+                self._not_logged = True
+                return
 
-                except NotLoggedInError:
-                    self._not_logged = True
+            except Exception:
+                self._log_error(
+                    "ThinQ error while updating device status", exc_info=True
+                )
+                self._not_logged = True
+                return
 
-                except NotConnectedError:
-                    self._disconnected = True
+            else:
+                if state:
+                    _LOGGER.debug("ThinQ status updated")
+                    # l = dir(state)
+                    # _LOGGER.debug('Status attributes: %s', l)
+
+                    self._update_fail_count = 0
+                    self._set_available()
+                    self._state = state
+
                     return
-                    # time.sleep(1)
-
-                except InvalidCredentialError:
-                    self._log_error(
-                        "Connection to ThinQ failed. Check your login credential"
-                    )
-                    self._not_logged = True
-                    return
-
-                except (
-                    reqExc.ConnectionError,
-                    reqExc.ConnectTimeout,
-                    reqExc.ReadTimeout,
-                ):
-                    self._log_error(
-                        "Connection to ThinQ failed. Network connection error"
-                    )
-                    self._not_logged = True
-                    return
-
-                except Exception:
-                    self._log_error(
-                        "ThinQ error while updating device status", exc_info=True
-                    )
-                    self._not_logged = True
-                    return
-
                 else:
-                    if state:
-                        _LOGGER.debug("ThinQ status updated")
-                        # l = dir(state)
-                        # _LOGGER.debug('Status attributes: %s', l)
-
-                        self._update_fail_count = 0
-                        self._set_available()
-                        self._retry_count = 0
-                        self._state = state
-
-                        return
-                    else:
-                        _LOGGER.debug("No status available yet")
-
-            # time.sleep(2 ** iteration)
-            time.sleep(1)
-
-        # We tried several times but got no result. This might happen
-        # when the monitoring request gets into a bad state, so we
-        # restart the task.
-        if self._retry_count >= MAX_LOOP_WARN:
-            self._retry_count = 0
-            _LOGGER.warning("Status update failed")
-        else:
-            self._retry_count += 1
-            _LOGGER.debug("Status update failed")
+                    _LOGGER.debug("No status available yet")
 
 
 async def lge_devices_setup(hass, client) -> dict:
