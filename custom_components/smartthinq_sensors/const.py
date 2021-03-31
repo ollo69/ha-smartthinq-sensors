@@ -2,7 +2,7 @@
 Support to interface with LGE ThinQ Devices.
 """
 
-__version__ = "0.6.6"
+__version__ = "0.6.7"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
 ISSUE_URL = "{}issues".format(PROJECT_URL)
 
@@ -12,8 +12,9 @@ CONF_LANGUAGE = "language"
 CONF_OAUTH_URL = "outh_url"
 CONF_OAUTH_USER_NUM = "outh_user_num"
 CONF_USE_API_V2 = "use_api_v2"
+CONF_USE_TLS_V1 = "use_tls_v1"
+CONF_EXCLUDE_DH = "exclude_dh"
 
-ATTR_CONFIG = "config"
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 

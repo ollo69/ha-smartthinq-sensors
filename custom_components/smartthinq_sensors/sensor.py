@@ -37,7 +37,6 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_OPENING,
     DEVICE_CLASS_PROBLEM,
 )
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from homeassistant.const import (
     DEVICE_CLASS_TEMPERATURE,
@@ -47,6 +46,8 @@ from homeassistant.const import (
     TEMP_CELSIUS,
     TEMP_FAHRENHEIT,
 )
+from homeassistant.core import callback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LGE_DEVICES
 from . import LGEDevice
@@ -297,7 +298,8 @@ def _sensor_exist(lge_device, sensor_def):
     return False
 
 
-async def async_setup_sensors(hass, config_entry, async_add_entities, type_binary):
+@callback
+def setup_sensors(hass, config_entry, async_add_entities, type_binary):
     """Set up LGE device sensors and bynary sensor based on config_entry."""
     lge_sensors = []
     entry_config = hass.data[DOMAIN]
@@ -340,7 +342,7 @@ async def async_setup_sensors(hass, config_entry, async_add_entities, type_binar
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the LGE sensors."""
     _LOGGER.info("Starting LGE ThinQ sensors...")
-    await async_setup_sensors(hass, config_entry, async_add_entities, False)
+    setup_sensors(hass, config_entry, async_add_entities, False)
 
 
 class LGESensor(CoordinatorEntity):

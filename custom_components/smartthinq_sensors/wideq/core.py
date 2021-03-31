@@ -1,44 +1,34 @@
 """A low-level, general abstraction for the LG SmartThinQ API.
 """
-import ssl
-import requests
-from urllib3.poolmanager import PoolManager
-from requests.adapters import HTTPAdapter
-from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 import base64
 import hashlib
 import hmac
 import logging
+import requests
+
 from datetime import datetime
+from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from typing import Any, Dict, Generator, Optional
 
-from . import as_list, gen_uuid
+from . import(
+    as_list,
+    gen_uuid,
+    AuthHTTPAdapter,
+    DATA_ROOT,
+    DEFAULT_COUNTRY,
+    DEFAULT_LANGUAGE,
+)
 from . import core_exceptions as exc
 from .device import DeviceInfo, DEFAULT_TIMEOUT, DEFAULT_REFRESH_TIMEOUT
-
-
-class Tlsv1HttpAdapter(HTTPAdapter):
-    def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = PoolManager(
-            num_pools=connections,
-            maxsize=maxsize,
-            block=block,
-            ssl_version=ssl.PROTOCOL_TLSv1,
-        )
-
 
 GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"
 APP_KEY = "wideq"
 SECURITY_KEY = "nuts_securitykey"
-DATA_ROOT = "lgedmRoot"
 SVC_CODE = "SVC202"
 CLIENT_ID = "LGAO221A02"
 OAUTH_SECRET_KEY = "c053c2a6ddeb7ad97cb0eed0dcb31cf8"
 OAUTH_CLIENT_KEY = "LGAO221A02"
 DATE_FORMAT = "%a, %d %b %Y %H:%M:%S +0000"
-
-DEFAULT_COUNTRY = "US"
-DEFAULT_LANGUAGE = "en-US"
 
 API_ERRORS = {
     "0102": exc.NotLoggedInError,
@@ -90,10 +80,8 @@ def lgedm_post(url, data=None, access_token=None, session_id=None, use_tlsv1=Tru
         headers["x-thinq-jsessionId"] = session_id
 
     s = requests.Session()
-    if use_tlsv1:
-        s.mount(url, Tlsv1HttpAdapter())
+    s.mount(url, AuthHTTPAdapter(use_tls_v1=use_tlsv1, exclude_dh=True))
     res = s.post(url, json={DATA_ROOT: data}, headers=headers, timeout=DEFAULT_TIMEOUT)
-    # res = requests.post(url, json={DATA_ROOT: data}, headers=headers, timeout = DEFAULT_TIMEOUT)
 
     out = res.json()
     _LOGGER.debug("lgedm_post after: %s", out)
@@ -120,18 +108,6 @@ def gateway_info(country, language):
     `country` and `language` are codes, like "US" and "en-US,"
     respectively.
     """
-
-    # this code to avoid ssl error with DH
-    requests.packages.urllib3.disable_warnings()
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += "HIGH:!DH:!aNULL"
-    try:
-        requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += (
-            "HIGH:!DH:!aNULL"
-        )
-    except AttributeError:
-        # no pyopenssl support used / needed / available
-        pass
-    # this code to avoid ssl error with DH
 
     return lgedm_post(GATEWAY_URL, {"countryCode": country, "langCode": language},)
 
@@ -213,10 +189,8 @@ def refresh_auth(oauth_root, refresh_token, use_tlsv1=True):
     }
 
     s = requests.Session()
-    if use_tlsv1:
-        s.mount(token_url, Tlsv1HttpAdapter())
+    s.mount(token_url, AuthHTTPAdapter(use_tls_v1=use_tlsv1, exclude_dh=True))
     res = s.post(token_url, data=data, headers=headers, timeout=DEFAULT_REFRESH_TIMEOUT)
-    # res = requests.post(token_url, data=data, headers=headers, timeout = DEFAULT_REFRESH_TIMEOUT)
 
     res_data = res.json()
     _LOGGER.debug(res_data)

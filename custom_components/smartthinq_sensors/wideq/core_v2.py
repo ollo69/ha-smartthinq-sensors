@@ -1,22 +1,28 @@
 """A low-level, general abstraction for the LG SmartThinQ API.
 """
-import requests
 import base64
-import uuid
-from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 import hashlib
 import hmac
+import json
 import logging
+import os
+import requests
+import uuid
+
 from datetime import datetime
+from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from typing import Any, Dict, Generator, Optional
 
-from . import as_list, gen_uuid
+from . import(
+    as_list,
+    gen_uuid,
+    AuthHTTPAdapter,
+    DATA_ROOT,
+    DEFAULT_COUNTRY,
+    DEFAULT_LANGUAGE,
+)
 from . import core_exceptions as exc
-from . import core
 from .device import DeviceInfo, DEFAULT_TIMEOUT
-
-import os
-import json
 
 # v2
 V2_API_KEY = "VGhpblEyLjAgU0VSVklDRQ=="
@@ -53,6 +59,20 @@ MIN_TIME_BETWEEN_UPDATE = 25  # seconds
 _LOGGER = logging.getLogger(__name__)
 
 
+class CoreV2HttpAdapter:
+
+    http_adapter = None
+
+    @staticmethod
+    def init_http_adapter(use_tls_v1=False, exclude_dh=False):
+        if not (use_tls_v1 or exclude_dh):
+            CoreV2HttpAdapter.http_adapter = None
+            return
+        CoreV2HttpAdapter.http_adapter = AuthHTTPAdapter(
+            use_tls_v1=use_tls_v1, exclude_dh=exclude_dh
+        )
+
+
 def oauth2_signature(message, secret):
     """Get the base64-encoded SHA-1 HMAC digest of a string, as used in
     OAauth2 request signatures.
@@ -71,8 +91,8 @@ def thinq2_headers(
     extra_headers={},
     access_token=None,
     user_number=None,
-    country=core.DEFAULT_COUNTRY,
-    language=core.DEFAULT_LANGUAGE,
+    country=DEFAULT_COUNTRY,
+    language=DEFAULT_LANGUAGE,
 ):
     """Prepare API2 header."""
 
@@ -107,26 +127,18 @@ def thinq2_get(
     access_token=None,
     user_number=None,
     headers={},
-    country=core.DEFAULT_COUNTRY,
-    language=core.DEFAULT_LANGUAGE,
+    country=DEFAULT_COUNTRY,
+    language=DEFAULT_LANGUAGE,
 ):
     """Make an HTTP request in the format used by the API2 servers."""
 
-    # this code to avoid ssl error 'dh key too small'
-    requests.packages.urllib3.disable_warnings()
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += "HIGH:!DH:!aNULL"
-    try:
-        requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += (
-            "HIGH:!DH:!aNULL"
-        )
-    except AttributeError:
-        # no pyopenssl support used / needed / available
-        pass
-    # this code to avoid ssl error 'dh key too small'
-
     _LOGGER.debug("thinq2_get before: %s", url)
 
-    res = requests.get(
+    s = requests.Session()
+    if CoreV2HttpAdapter.http_adapter:
+        s.mount(url, CoreV2HttpAdapter.http_adapter)
+
+    res = s.get(
         url,
         headers=thinq2_headers(
             access_token=access_token,
@@ -158,20 +170,20 @@ def lgedm2_post(
     access_token=None,
     user_number=None,
     headers={},
-    country=core.DEFAULT_COUNTRY,
-    language=core.DEFAULT_LANGUAGE,
-    use_tlsv1=True,
+    country=DEFAULT_COUNTRY,
+    language=DEFAULT_LANGUAGE,
 ):
     """Make an HTTP request in the format used by the API servers."""
 
     _LOGGER.debug("lgedm2_post before: %s", url)
 
     s = requests.Session()
-    if use_tlsv1:
-        s.mount(url, core.Tlsv1HttpAdapter())
+    if CoreV2HttpAdapter.http_adapter:
+        s.mount(url, CoreV2HttpAdapter.http_adapter)
+
     res = s.post(
         url,
-        json={core.DATA_ROOT: data},
+        json={DATA_ROOT: data},
         headers=thinq2_headers(
             access_token=access_token,
             user_number=user_number,
@@ -185,7 +197,7 @@ def lgedm2_post(
     out = res.json()
     _LOGGER.debug("lgedm2_post after: %s", out)
 
-    msg = out.get(core.DATA_ROOT)
+    msg = out.get(DATA_ROOT)
     if not msg:
         raise exc.APIError("-1", out)
 
@@ -232,7 +244,11 @@ def auth_request(oauth_url, data, *, log_auth_info=False):
         "Accept": "application/json",
     }
 
-    res = requests.post(url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT)
+    s = requests.Session()
+    if CoreV2HttpAdapter.http_adapter:
+        s.mount(url, CoreV2HttpAdapter.http_adapter)
+
+    res = s.post(url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT)
 
     if res.status_code != 200:
         raise exc.TokenError()
@@ -556,8 +572,8 @@ class ClientV2(object):
         gateway: Optional[Gateway] = None,
         auth: Optional[Auth] = None,
         session: Optional[Session] = None,
-        country: str = core.DEFAULT_COUNTRY,
-        language: str = core.DEFAULT_LANGUAGE,
+        country: str = DEFAULT_COUNTRY,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
         # The three steps required to get access to call the API.
         self._gateway: Optional[Gateway] = gateway
@@ -655,8 +671,8 @@ class ClientV2(object):
                 data["auth_base"],
                 data["api_root"],
                 data["api2_root"],
-                data.get("country", core.DEFAULT_COUNTRY),
-                data.get("language", core.DEFAULT_LANGUAGE),
+                data.get("country", DEFAULT_COUNTRY),
+                data.get("language", DEFAULT_LANGUAGE),
             )
 
         if "auth" in state:
@@ -729,8 +745,8 @@ class ClientV2(object):
             """
 
         client = cls(
-            country=country or core.DEFAULT_COUNTRY,
-            language=language or core.DEFAULT_LANGUAGE,
+            country=country or DEFAULT_COUNTRY,
+            language=language or DEFAULT_LANGUAGE,
         )
         client._auth = Auth(client.gateway, oauth_url, None, refresh_token, user_number)
         client.refresh()

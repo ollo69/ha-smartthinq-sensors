@@ -15,7 +15,9 @@
             "user": {
                 "data": {
                     "region": "Codice Paese",
-                    "language": "Codice Lingua"
+                    "language": "Codice Lingua",
+                    "use_tls_v1": "Forza l'utilizzo del protocollo TLSv1 (richiesto in alcuni casi)",
+                    "exclude_dh": "Non utilizzare il cypher DH (in caso di errore 'dh key too small')"
                 },
                 "description": "Seleziona le informazioni di localizzazione del tuo account SmartThinQ.",
                 "title": "SmartThinQ LGE Sensors"

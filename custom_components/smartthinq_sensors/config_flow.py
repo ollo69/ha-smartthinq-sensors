@@ -1,7 +1,7 @@
 """Config flow for TP-Link."""
 import logging
-import pycountry
 import re
+from pycountry import countries as py_countries, languages as py_languages
 
 import voluptuous as vol
 
@@ -11,24 +11,17 @@ from homeassistant.const import CONF_REGION, CONF_TOKEN
 
 from .const import (
     DOMAIN,
+    CONF_EXCLUDE_DH,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_OAUTH_USER_NUM,
     CONF_USE_API_V2,
+    CONF_USE_TLS_V1,
 )
 from . import LGEAuthentication
 
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
-
-INIT_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_REGION): str,
-        vol.Required(CONF_LANGUAGE): str,
-        # vol.Optional(CONF_TOKEN): str,
-        # vol.Required(CONF_USE_API_V2, default=True): bool,
-    }
-)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 def _countries_list():
     """Returns a list of countries, suitable for use in a multiple choice field."""
     countries = {}
-    for country in sorted(pycountry.countries, key=lambda x: x.name):
+    for country in sorted(py_countries, key=lambda x: x.name):
         countries[country.alpha_2] = f"{country.name} - {country.alpha_2}"
     return countries
 
@@ -44,10 +37,22 @@ def _countries_list():
 def _languages_list():
     """Returns a list of languages, suitable for use in a multiple choice field."""
     languages = {}
-    for language in sorted(pycountry.languages, key=lambda x: x.name):
+    for language in sorted(py_languages, key=lambda x: x.name):
         if hasattr(language, "alpha_2"):
             languages[language.alpha_2] = f"{language.name} - {language.alpha_2}"
     return languages
+
+
+INIT_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_REGION): vol.In(_countries_list()),
+        vol.Required(CONF_LANGUAGE): vol.In(_languages_list()),
+        # vol.Optional(CONF_TOKEN): str,
+        # vol.Required(CONF_USE_API_V2, default=True): bool,
+        vol.Optional(CONF_USE_TLS_V1, default=False): bool,
+        vol.Optional(CONF_EXCLUDE_DH, default=False): bool,
+    }
+)
 
 
 class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -64,6 +69,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._oauth_url = None
         self._oauth_user_num = None
         self._use_api_v2 = True
+        self._use_tls_v1 = False
+        self._exclude_dh = False
 
         self._loginurl = None
 
@@ -83,11 +90,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         region = user_input[CONF_REGION]
         language = user_input[CONF_LANGUAGE]
-        refresh_token = user_input.get(CONF_TOKEN, "")
-        # self._use_api_v2 = user_input.get(CONF_USE_API_V2, False)
-
-        if self._use_api_v2:
-            refresh_token = ""
+        self._use_tls_v1 = user_input.get(CONF_USE_TLS_V1, False)
+        self._exclude_dh = user_input.get(CONF_EXCLUDE_DH, False)
 
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
@@ -104,16 +108,13 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._language = language
         if len(language) == 2:
             self._language += "-" + region
-        self._token = refresh_token
 
-        if not self._token:
-            lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
-            self._loginurl = await self.hass.async_add_executor_job(lgauth.getLoginUrl)
-            if not self._loginurl:
-                return self._show_form(errors={"base": "error_url"})
-            return self._show_form(errors=None, step_id="url")
-
-        return await self._save_config_entry()
+        lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lgauth.initHttpAdapter(self._use_tls_v1, self._exclude_dh)
+        self._loginurl = await self.hass.async_add_executor_job(lgauth.getLoginUrl)
+        if not self._loginurl:
+            return self._show_form(errors={"base": "error_url"})
+        return self._show_form(errors=None, step_id="url")
 
     async def async_step_url(self, user_input=None):
         """Parse the response url for oauth data and submit for save."""
@@ -164,6 +165,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_REGION: self._region,
             CONF_LANGUAGE: self._language,
             CONF_USE_API_V2: self._use_api_v2,
+            CONF_USE_TLS_V1: self._use_tls_v1,
+            CONF_EXCLUDE_DH: self._exclude_dh,
         }
         if self._use_api_v2:
             data.update(
@@ -178,17 +181,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def _show_form(self, errors=None, step_id="user"):
         """Show the form to the user."""
-        schema = INIT_SCHEMA
-
+        schema = None
         if step_id == "user":
-            schema = vol.Schema(
-                {
-                    # vol.Required(CONF_REGION): str,
-                    vol.Required(CONF_REGION): vol.In(_countries_list()),
-                    # vol.Required(CONF_LANGUAGE): str,
-                    vol.Required(CONF_LANGUAGE): vol.In(_languages_list()),
-                }
-            )
+            schema = INIT_SCHEMA
         elif step_id == "url":
             schema = vol.Schema(
                 {

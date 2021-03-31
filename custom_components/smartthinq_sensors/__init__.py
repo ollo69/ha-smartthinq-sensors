@@ -11,7 +11,7 @@ from requests import exceptions as reqExc
 from typing import Dict
 
 from .wideq.core import Client
-from .wideq.core_v2 import ClientV2
+from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
 from .wideq.device import DeviceType
 from .wideq.dishwasher import DishWasherDevice
 from .wideq.dryer import DryerDevice
@@ -38,12 +38,13 @@ from homeassistant.util import Throttle
 from homeassistant.const import CONF_REGION, CONF_TOKEN
 
 from .const import (
-    ATTR_CONFIG,
     CLIENT,
+    CONF_EXCLUDE_DH,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_OAUTH_USER_NUM,
     CONF_USE_API_V2,
+    CONF_USE_TLS_V1,
     DOMAIN,
     LGE_DEVICES,
     SMARTTHINQ_COMPONENTS,
@@ -89,6 +90,10 @@ class LGEAuthentication:
             client = Client(country=self._region, language=self._language)
 
         return client
+
+    def initHttpAdapter(self, use_tls_v1, exclude_dh):
+        if self._use_api_v2:
+            CoreV2HttpAdapter.init_http_adapter(use_tls_v1, exclude_dh)
 
     def getLoginUrl(self) -> str:
 
@@ -142,7 +147,6 @@ async def async_setup(hass, config):
     """
     conf = config.get(DOMAIN)
     hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][ATTR_CONFIG] = conf
 
     if conf is not None:
         hass.async_create_task(
@@ -162,9 +166,11 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     refresh_token = config_entry.data.get(CONF_TOKEN)
     region = config_entry.data.get(CONF_REGION)
     language = config_entry.data.get(CONF_LANGUAGE)
-    use_apiv2 = config_entry.data.get(CONF_USE_API_V2, False)
+    use_api_v2 = config_entry.data.get(CONF_USE_API_V2, False)
     oauth_url = config_entry.data.get(CONF_OAUTH_URL)
     oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
+    use_tls_v1 = config_entry.data.get(CONF_USE_TLS_V1, False)
+    exclude_dh = config_entry.data.get(CONF_EXCLUDE_DH, False)
 
     _LOGGER.info(STARTUP)
     _LOGGER.info(
@@ -177,7 +183,8 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
 
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
-    lgeauth = LGEAuthentication(region, language, use_apiv2)
+    lgeauth = LGEAuthentication(region, language, use_api_v2)
+    lgeauth.initHttpAdapter(use_tls_v1, exclude_dh)
     client = await hass.async_add_executor_job(
         lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
     )
@@ -199,7 +206,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         )
         raise ConfigEntryNotReady()
 
-    if not use_apiv2:
+    if not use_api_v2:
         _LOGGER.warning(
             "Integration configuration is using ThinQ APIv1 that is obsolete"
             " and not able to manage all ThinQ devices."
@@ -208,7 +215,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
         )
 
     hass.data.setdefault(DOMAIN, {}).update(
-        {CLIENT: client, LGE_DEVICES: lge_devices,}
+        {CLIENT: client, LGE_DEVICES: lge_devices}
     )
 
     for platform in SMARTTHINQ_COMPONENTS:
