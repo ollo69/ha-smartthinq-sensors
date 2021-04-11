@@ -695,6 +695,47 @@ class ModelInfoV2(object):
         return data.get(key)
 
 
+class ModelInfoType4(ModelInfo):
+    def value_type(self, name):
+        if name in self._data["Value"]:
+            return self._data["Value"][name]["data_type"]
+        else:
+            return None
+
+    def value(self, name):
+        """Look up information about a value.
+
+        Return either an `EnumValue` or a `RangeValue`.
+        """
+        d = self._data["Value"][name]
+        if d["data_type"] in ("Enum", "enum"):
+            return EnumValue(d["value_mapping"])
+        elif d["data_type"] in ("Range", "range"):
+            return RangeValue(
+                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"]["step"]
+            )
+        # elif d["type"] == "Bit":
+        #    bit_values = {}
+        #    for bit in d["option"]:
+        #        bit_values[bit["startbit"]] = {
+        #            "value": bit["value"],
+        #            "length": bit["length"],
+        #        }
+        #    return BitValue(bit_values)
+        # elif d["type"] == "Reference":
+        #    ref = d["option"][0]
+        #    return ReferenceValue(self._data[ref])
+        # elif d["type"] == "Boolean":
+        #    return EnumValue({"0": "False", "1": "True"})
+        elif d["data_type"] == "String":
+            pass
+        else:
+            assert False, "unsupported value type {}".format(d["data_type"])
+
+    def decode_snapshot(self, data, key):
+        return data
+
+
 class Device(object):
     """A higher-level interface to a specific device.
         
@@ -1033,43 +1074,3 @@ class DeviceStatus(object):
             self._update_features()
             self._features_updated = True
         return self._device_features
-
-class ModelInfoType4(ModelInfo):
-    def value_type(self, name):
-        if name in self._data["Value"]:
-            return self._data["Value"][name]["data_type"]
-        else:
-            return None
-
-    def value(self, name):
-        """Look up information about a value.
-        
-        Return either an `EnumValue` or a `RangeValue`.
-        """
-        d = self._data["Value"][name]
-        if d["data_type"] in ("Enum", "enum"):
-            return EnumValue(d["value_mapping"])
-        elif d["data_type"] in ("Range", "range"):
-            return RangeValue(
-                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"]["step"]
-            )
-        #elif d["type"] == "Bit":
-        #    bit_values = {}
-        #    for bit in d["option"]:
-        #        bit_values[bit["startbit"]] = {
-        #            "value": bit["value"],
-        #            "length": bit["length"],
-        #        }
-        #    return BitValue(bit_values)
-        #elif d["type"] == "Reference":
-        #    ref = d["option"][0]
-        #    return ReferenceValue(self._data[ref])
-        #elif d["type"] == "Boolean":
-        #    return EnumValue({"0": "False", "1": "True"})
-        elif d["data_type"] == "String":
-            pass
-        else:
-            assert False, "unsupported value type {}".format(d["data_type"])
-
-    def decode_snapshot(self, data, key):
-        return data

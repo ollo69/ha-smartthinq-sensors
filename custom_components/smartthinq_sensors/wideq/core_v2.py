@@ -156,11 +156,7 @@ def thinq2_get(
     if "resultCode" not in out:
         raise exc.APIError("-1", out)
 
-    code = out["resultCode"]
-    if code != "0000":
-        if code in API2_ERRORS:
-            raise API2_ERRORS[code]()
-        raise exc.APIError(code, "error")
+    manage_lge_result(out, True)
     return out["result"]
 
 
@@ -172,6 +168,7 @@ def lgedm2_post(
     headers={},
     country=DEFAULT_COUNTRY,
     language=DEFAULT_LANGUAGE,
+    is_api_v2=False,
 ):
     """Make an HTTP request in the format used by the API servers."""
 
@@ -197,72 +194,36 @@ def lgedm2_post(
     out = res.json()
     _LOGGER.debug("lgedm2_post after: %s", out)
 
-    msg = out.get(DATA_ROOT)
+    return manage_lge_result(out, is_api_v2)
+
+
+def manage_lge_result(result, is_api_v2=False):
+    """Manage the result from a get or a post to lge server."""
+
+    if is_api_v2:
+        if "resultCode" in result:
+            code = result["resultCode"]
+            if code != "0000":
+                if code in API2_ERRORS:
+                    raise API2_ERRORS[code]()
+                message = result.get("result", "error")
+                raise exc.APIError(code, message)
+
+        return result
+
+    msg = result.get(DATA_ROOT)
     if not msg:
-        raise exc.APIError("-1", out)
+        raise exc.APIError("-1", result)
 
     if "returnCd" in msg:
         code = msg["returnCd"]
         if code != "0000":
-            message = msg["returnMsg"]
             if code in API2_ERRORS:
                 raise API2_ERRORS[code]()
+            message = msg["returnMsg"]
             raise exc.APIError(code, message)
 
     return msg
-
-
-def lgedm2_post2(
-    url,
-    data=None,
-    access_token=None,
-    user_number=None,
-    headers={},
-    country=core.DEFAULT_COUNTRY,
-    language=core.DEFAULT_LANGUAGE,
-    use_tlsv1=True,
-):
-    """Make an HTTP request in the format used by the API servers."""
-
-    # this code to avoid ssl error 'dh key too small'
-    requests.packages.urllib3.disable_warnings()
-    requests.packages.urllib3.util.ssl_.DEFAULT_CIPHERS += "HIGH:!DH:!aNULL"
-    try:
-        requests.packages.urllib3.contrib.pyopenssl.DEFAULT_SSL_CIPHER_LIST += (
-            "HIGH:!DH:!aNULL"
-        )
-    except AttributeError:
-        # no pyopenssl support used / needed / available
-        pass
-    # this code to avoid ssl error 'dh key too small'
-
-    _LOGGER.debug("lgedm2_post2 before: %s", url)
-
-    res = requests.post(
-        url,
-        json=data,
-        headers=thinq2_headers(
-            access_token=access_token,
-            user_number=user_number,
-            extra_headers=headers,
-            country=country,
-            language=language,
-        ),
-        timeout=DEFAULT_TIMEOUT,
-    )
-
-    out = res.json()
-    _LOGGER.debug("lgedm2_post2 after: %s", out)
-
-    if "resultCode" in out:
-        code = out["resultCode"]
-        if code != "0000":
-            message = out["result"]
-            if code in API2_ERRORS:
-                raise API2_ERRORS[code]()
-            raise exc.APIError(code, message)
-
-    return out
 
 
 def gateway_info(country, language):
@@ -476,6 +437,7 @@ class Session(object):
             self.auth.user_number,
             country=self.auth.gateway.country,
             language=self.auth.gateway.language,
+            is_api_v2=False,
         )
 
     def post2(self, path, data=None):
@@ -485,15 +447,15 @@ class Session(object):
         request from an active Session.
         """
         url = urljoin(self.auth.gateway.api2_root + "/", path)
-        return lgedm2_post2(
+        return lgedm2_post(
             url,
             data,
             self.auth.access_token,
             self.auth.user_number,
             country=self.auth.gateway.country,
             language=self.auth.gateway.language,
+            is_api_v2=True,
         )
-
 
     def get(self, path):
         """Make a GET request to the APIv1 server."""
