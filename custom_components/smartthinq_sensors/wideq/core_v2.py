@@ -10,8 +10,9 @@ import requests
 import uuid
 
 from datetime import datetime
-from urllib.parse import urljoin, urlencode, urlparse, parse_qs
+from threading import Lock
 from typing import Any, Dict, Generator, Optional
+from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
 from . import(
     as_list,
@@ -580,6 +581,7 @@ class ClientV2(object):
         self._auth: Optional[Auth] = auth
         self._session: Optional[Session] = session
         self._last_device_update = datetime.now()
+        self._lock = Lock()
 
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
@@ -642,9 +644,12 @@ class ClientV2(object):
         return (DeviceInfo(d) for d in self._devices)
 
     def refresh_devices(self):
-        call_time = datetime.now()
-        difference = (call_time - self._last_device_update).total_seconds()
-        if difference > MIN_TIME_BETWEEN_UPDATE:
+        """Refresh the devices information for this client"""
+        with self._lock:
+            call_time = datetime.now()
+            difference = (call_time - self._last_device_update).total_seconds()
+            if difference <= MIN_TIME_BETWEEN_UPDATE:
+                return
             self._load_devices(True)
             self._last_device_update = call_time
 
