@@ -56,8 +56,6 @@ ATTR_MODEL = "model"
 ATTR_MAC_ADDRESS = "mac_address"
 
 MAX_RETRIES = 3
-MAX_CONN_RETRIES = 2
-MAX_LOOP_WARN = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
 MIN_TIME_BETWEEN_CLI_REFRESH = 10
 # not stress to match cloud if multiple call
@@ -124,16 +122,12 @@ class LGEAuthentication:
 
     def createClientFromToken(self, token, oauth_url=None, oauth_user_num=None):
 
-        client = None
-        try:
-            if self._use_api_v2:
-                client = ClientV2.from_token(
-                    oauth_url, token, oauth_user_num, self._region, self._language
-                )
-            else:
-                client = Client.from_token(token, self._region, self._language)
-        except Exception:
-            _LOGGER.exception("Error connecting to ThinQ")
+        if self._use_api_v2:
+            client = ClientV2.from_token(
+                oauth_url, token, oauth_user_num, self._region, self._language
+            )
+        else:
+            client = Client.from_token(token, self._region, self._language)
 
         return client
 
@@ -176,7 +170,7 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
 
     _LOGGER.info(STARTUP)
     _LOGGER.info(
-        "Initializing SmartThinQ platform with region: %s - language: %s",
+        "Initializing ThinQ platform with region: %s - language: %s",
         region,
         language,
     )
@@ -187,24 +181,31 @@ async def async_setup_entry(hass: HomeAssistantType, config_entry):
     # raising ConfigEntryNotReady platform setup will be retried
     lgeauth = LGEAuthentication(region, language, use_api_v2)
     lgeauth.initHttpAdapter(use_tls_v1, exclude_dh)
-    client = await hass.async_add_executor_job(
-        lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
-    )
-    if not client:
-        _LOGGER.warning("Connection not available. SmartThinQ platform not ready")
+    try:
+        client = await hass.async_add_executor_job(
+            lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
+        )
+    except InvalidCredentialError:
+        _LOGGER.error("Invalid ThinQ credential error. Component setup aborted")
+        return False
+
+    except Exception:
+        _LOGGER.warning(
+            "Connection not available. ThinQ platform not ready", exc_info=True
+        )
         raise ConfigEntryNotReady()
 
     if not client.hasdevices:
-        _LOGGER.error("No SmartThinQ devices found. Component setup aborted")
+        _LOGGER.error("No ThinQ devices found. Component setup aborted")
         return False
 
-    _LOGGER.info("SmartThinQ client connected")
+    _LOGGER.info("ThinQ client connected")
 
     try:
         lge_devices = await lge_devices_setup(hass, client)
     except Exception:
         _LOGGER.warning(
-            "Connection not available. SmartThinQ platform not ready", exc_info=True,
+            "Connection not available. ThinQ platform not ready", exc_info=True
         )
         raise ConfigEntryNotReady()
 
@@ -430,12 +431,12 @@ class LGEDevice:
             self._disconnected = True
 
         except NotLoggedInError:
-            _LOGGER.warning("Connection to ThinQ not available. Will retry to connect...")
+            _LOGGER.warning("Connection to ThinQ not available, will be retried")
             self._not_logged = True
 
         except InvalidCredentialError:
             _LOGGER.error(
-                "Invalid credential connecting to ThinQ. Reconfigure integration with new login credential"
+                "Invalid credential connecting to ThinQ. Reconfigure integration with valid login credential"
             )
             self._not_logged = True
 
@@ -504,7 +505,7 @@ class LGEDevice:
 
             except InvalidCredentialError:
                 _LOGGER.error(
-                    "Invalid credential connecting to ThinQ. Reconfigure integration with new login credential"
+                    "Invalid credential connecting to ThinQ. Reconfigure integration with valid login credential"
                 )
                 self._not_logged = True
                 return

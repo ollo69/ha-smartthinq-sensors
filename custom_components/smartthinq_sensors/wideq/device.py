@@ -808,8 +808,6 @@ class Device(object):
 
     def monitor_stop(self):
         """Stop monitoring the device's status."""
-        if not self._should_poll:
-            return
         if not self._mon:
             return
         self._mon.stop()
