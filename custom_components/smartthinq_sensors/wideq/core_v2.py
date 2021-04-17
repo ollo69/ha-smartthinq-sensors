@@ -676,7 +676,7 @@ class ClientV2(object):
         return (DeviceInfo(d) for d in self._devices)
 
     def refresh_devices(self):
-        """Refresh devices information for this client."""
+        """Refresh the devices information for this client"""
         with self._lock:
             call_time = datetime.now()
             difference = (call_time - self._last_device_update).total_seconds()
