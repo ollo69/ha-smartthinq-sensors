@@ -23,6 +23,10 @@ from . import LGEAuthentication
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
 
+RESULT_SUCCESS = 0
+RESULT_FAIL = 1
+RESULT_NO_DEV = 2
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -132,33 +136,55 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._oauth_user_num = oauth_info.get("user_number")
 
         if self._use_api_v2:
-            return await self._save_config_entry()
+            result = await self._check_connection()
+            if result != RESULT_SUCCESS:
+                return self._manage_error(result)
+            return self._save_config_entry()
 
         return self._show_form(errors=None, step_id="token")
 
     async def async_step_token(self, user_input=None):
         """Show result token and submit for save."""
         self._token = user_input[CONF_TOKEN]
-        return await self._save_config_entry()
+        result = await self._check_connection()
+        if result != RESULT_SUCCESS:
+            return self._manage_error(result)
+        return self._save_config_entry()
 
-    async def _save_config_entry(self):
-        """Test the connection to the SmartThinQ and save the entry."""
+    async def _check_connection(self):
+        """Test the connection to ThinQ."""
 
         lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
-        client = await self.hass.async_add_executor_job(
-            lgauth.createClientFromToken,
-            self._token,
-            self._oauth_url,
-            self._oauth_user_num,
-        )
+        try:
+            client = await self.hass.async_add_executor_job(
+                lgauth.createClientFromToken,
+                self._token,
+                self._oauth_url,
+                self._oauth_user_num,
+            )
+        except Exception as ex:
+            _LOGGER.error("Error connecting to ThinQ: %s", ex)
+            return RESULT_FAIL
 
-        if not client:
+        if not client.hasdevices:
+            return RESULT_NO_DEV
+
+        return RESULT_SUCCESS
+
+    @callback
+    def _manage_error(self, error_code):
+        """Manage the error result."""
+        if error_code == RESULT_FAIL:
             _LOGGER.error("LGE ThinQ: Invalid Login info!")
             return self._show_form({"base": "invalid_credentials"})
 
-        if not client.hasdevices:
+        if error_code == RESULT_NO_DEV:
             _LOGGER.error("No SmartThinQ devices found. Component setup aborted.")
             return self.async_abort(reason="no_smartthinq_devices")
+
+    @callback
+    def _save_config_entry(self):
+        """Save the entry."""
 
         data = {
             CONF_TOKEN: self._token,
