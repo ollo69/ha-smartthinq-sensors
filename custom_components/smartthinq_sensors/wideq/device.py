@@ -693,6 +693,7 @@ class Device(object):
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
+        self._mon = None
         self._available_features = available_features or {}
 
         # for logging unknown states received
@@ -803,13 +804,16 @@ class Device(object):
             return
         mon = Monitor(self._client.session, self._device_info.id)
         mon.start()
-        self.mon = mon
+        self._mon = mon
 
     def monitor_stop(self):
         """Stop monitoring the device's status."""
         if not self._should_poll:
             return
-        self.mon.stop()
+        if not self._mon:
+            return
+        self._mon.stop()
+        self._mon = None
 
     def delete_permission(self):
         if not self._should_poll:
@@ -842,9 +846,9 @@ class Device(object):
         # ThinQ V1 - Monitor data must be polled """
         else:
             # Abort if monitoring has not started yet.
-            if not hasattr(self, "mon"):
+            if not self._mon:
                 return None
-            data = self.mon.poll()
+            data = self._mon.poll()
             if not data:
                 return None
             res = self._model_info.decode_monitor(data)
