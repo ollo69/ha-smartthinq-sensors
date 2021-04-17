@@ -31,7 +31,7 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 You can install this component in two ways: via HACS or manually.
 
 ### Option A: Installing via HACS
-If you have HACS, just go in the Integration Tab and search the "SmartThinQ LG Sensors" component to install it.
+If you have HACS, just go in the Integration Tab and search the "SmartThinQ LGE Sensors" component to install it.
 
 ### Option B: Manually installation (custom_component)
 Prerequisite: SSH into your server. [Home Assistant Add-on: SSH server](https://github.com/home-assistant/hassio-addons/tree/master/ssh)
