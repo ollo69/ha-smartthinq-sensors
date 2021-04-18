@@ -157,11 +157,7 @@ def thinq2_get(
     if "resultCode" not in out:
         raise exc.APIError("-1", out)
 
-    code = out["resultCode"]
-    if code != "0000":
-        if code in API2_ERRORS:
-            raise API2_ERRORS[code]()
-        raise exc.APIError(code, "error")
+    manage_lge_result(out, True)
     return out["result"]
 
 
@@ -173,6 +169,7 @@ def lgedm2_post(
     headers={},
     country=DEFAULT_COUNTRY,
     language=DEFAULT_LANGUAGE,
+    is_api_v2=False,
 ):
     """Make an HTTP request in the format used by the API servers."""
 
@@ -198,16 +195,33 @@ def lgedm2_post(
     out = res.json()
     _LOGGER.debug("lgedm2_post after: %s", out)
 
-    msg = out.get(DATA_ROOT)
+    return manage_lge_result(out, is_api_v2)
+
+
+def manage_lge_result(result, is_api_v2=False):
+    """Manage the result from a get or a post to lge server."""
+
+    if is_api_v2:
+        if "resultCode" in result:
+            code = result["resultCode"]
+            if code != "0000":
+                if code in API2_ERRORS:
+                    raise API2_ERRORS[code]()
+                message = result.get("result", "error")
+                raise exc.APIError(code, message)
+
+        return result
+
+    msg = result.get(DATA_ROOT)
     if not msg:
-        raise exc.APIError("-1", out)
+        raise exc.APIError("-1", result)
 
     if "returnCd" in msg:
         code = msg["returnCd"]
         if code != "0000":
-            message = msg["returnMsg"]
             if code in API2_ERRORS:
                 raise API2_ERRORS[code]()
+            message = msg["returnMsg"]
             raise exc.APIError(code, message)
 
     return msg
@@ -424,6 +438,24 @@ class Session(object):
             self.auth.user_number,
             country=self.auth.gateway.country,
             language=self.auth.gateway.language,
+            is_api_v2=False,
+        )
+
+    def post2(self, path, data=None):
+        """Make a POST request to the APIv2 server.
+
+        This is like `lgedm_post`, but it pulls the context for the
+        request from an active Session.
+        """
+        url = urljoin(self.auth.gateway.api2_root + "/", path)
+        return lgedm2_post(
+            url,
+            data,
+            self.auth.access_token,
+            self.auth.user_number,
+            country=self.auth.gateway.country,
+            language=self.auth.gateway.language,
+            is_api_v2=True,
         )
 
     def get(self, path):
