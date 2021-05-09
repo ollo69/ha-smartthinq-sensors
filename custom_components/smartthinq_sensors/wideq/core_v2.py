@@ -48,6 +48,7 @@ OAUTH_SECRET_KEY = "c053c2a6ddeb7ad97cb0eed0dcb31cf8"
 DATE_FORMAT = "%a, %d %b %Y %H:%M:%S +0000"
 
 API2_ERRORS = {
+    "0101": exc.DeviceNotFound,
     "0102": exc.NotLoggedInError,
     "0106": exc.NotConnectedError,
     "0100": exc.FailedRequestError,
@@ -181,7 +182,7 @@ def lgedm2_post(
 
     res = s.post(
         url,
-        json={DATA_ROOT: data},
+        json=data if is_api_v2 else {DATA_ROOT: data},
         headers=thinq2_headers(
             access_token=access_token,
             user_number=user_number,
@@ -576,7 +577,7 @@ class Session(object):
 
         `values` is a key/value map containing the settings to update.
         """
-        path = f"/v1/service/devices/{device_id}/control-sync"
+        path = f"service/devices/{device_id}/control-sync"
         return self.post2(path, values)
 
     def get_device_config(self, device_id, key, category="Config"):

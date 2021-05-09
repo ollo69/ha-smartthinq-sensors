@@ -1,7 +1,6 @@
 """A high-level, convenient abstraction for interacting with the LG
 SmartThinQ API for most use cases.
 """
-import asyncio
 import base64
 import json
 from collections import namedtuple
@@ -796,9 +795,14 @@ class Device(object):
             )
             return
 
-        data = dict(ctrlKey=ctrl_key, command=command, dataKey=key, dataValue=value)
         self._client.session.set_device_v2_controls(
-            self._device_info.id, data
+            self._device_info.id,
+            {
+                "ctrlKey": ctrl_key,
+                "command": command,
+                "dataKey": key,
+                "dataValue": value,
+            }
         )
 
     def set(self, key, value, ctrl_key="basicCtrl", command="Set"):
@@ -807,11 +811,6 @@ class Device(object):
         self._set_control(key, value, ctrl_key, command)
         if self._status:
             self._status.update_status(key, value)
-
-    async def async_set(self, key, value, ctrl_key="basicCtrl", command="Set"):
-        """Async set a device's control for `key` to `value`."""
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self.set, key, value, ctrl_key, command)
 
     def _get_config(self, key):
         """Look up a device's configuration for a given value.

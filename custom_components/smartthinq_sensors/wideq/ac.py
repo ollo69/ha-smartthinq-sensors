@@ -189,40 +189,40 @@ class AirConditionerDevice(Device):
             return None
         return temp_range[1]
 
-    async def power(self, turn_on):
+    def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
         op = self._supported_on_operation() if turn_on else ACOp.OFF
         key = AC_STATE_OPERATION[1 if self.model_info.is_info_v2 else 0]
         op_value = self.model_info.enum_value(key, op.value)
-        await self.async_set(key, op_value, AC_CTRL_BASIC)
+        self.set(key, op_value, AC_CTRL_BASIC)
 
-    async def set_op_mode(self, mode):
+    def set_op_mode(self, mode):
         """Set the device's operating mode to an `OpMode` value."""
 
         if mode not in self.op_modes:
             raise ValueError(f"Invalid operating mode: {mode}")
         key = AC_STATE_OPERATION_MODE[1 if self.model_info.is_info_v2 else 0]
         mode_value = self.model_info.enum_value(key, ACMode[mode].value)
-        await self.async_set(key, mode_value, AC_CTRL_BASIC)
+        self.set(key, mode_value, AC_CTRL_BASIC)
 
-    async def set_fan_speed(self, speed):
+    def set_fan_speed(self, speed):
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
 
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
         key = AC_STATE_WIND_STRENGTH[1 if self.model_info.is_info_v2 else 0]
         speed_value = self.model_info.enum_value(key, ACFanSpeed[speed].value)
-        await self.async_set(key, speed_value, AC_CTRL_BASIC)
+        self.set(key, speed_value, AC_CTRL_BASIC)
 
-    async def set_target_temp(self, temp):
+    def set_target_temp(self, temp):
         """Set the device's target temperature in Celsius degrees."""
 
         range_info = self._get_temperature_range()
         if range_info and not (range_info[0] <= temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
         key = AC_STATE_TARGET_TEMP[1 if self.model_info.is_info_v2 else 0]
-        await self.async_set(key, temp, AC_CTRL_BASIC)
+        self.set(key, temp, AC_CTRL_BASIC)
 
     def reset_status(self):
         self._status = AirConditionerStatus(self, None)

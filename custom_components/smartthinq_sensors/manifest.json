@@ -7,5 +7,6 @@
   "codeowners": ["@ollo69"],
   "requirements": ["pycountry>=20.7.3"],
   "config_flow": true,
-  "version": "0.7.0b1"
+  "iot_class": "cloud_polling",
+  "version": "0.7.0b2"
 }

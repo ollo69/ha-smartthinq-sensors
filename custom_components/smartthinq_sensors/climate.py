@@ -1,4 +1,6 @@
 """Platform for LGE climate integration."""
+import logging
+
 from .wideq.device import DeviceType
 from .wideq.ac import AirConditionerDevice, ACMode
 
@@ -34,6 +36,8 @@ HVAC_MODE_LOOKUP = {
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
 }
 HVAC_MODE_REVERSE_LOOKUP = {v: k for k, v in HVAC_MODE_LOOKUP.items()}
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -112,10 +116,10 @@ class LGEACClimate(LGEClimate):
             return HVAC_MODE_OFF
         return HVAC_MODE_LOOKUP.get(mode)
 
-    async def async_set_hvac_mode(self, hvac_mode: str) -> None:
+    def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
-            await self._device.power(False)
+            self._device.power(False)
             return
 
         operation_mode = HVAC_MODE_REVERSE_LOOKUP.get(hvac_mode)
@@ -123,8 +127,8 @@ class LGEACClimate(LGEClimate):
             raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
 
         if self.hvac_mode == HVAC_MODE_OFF:
-            await self._device.power(True)
-        await self._device.set_op_mode(operation_mode)
+            self._device.power(True)
+        self._device.set_op_mode(operation_mode)
 
     @property
     def hvac_modes(self):
@@ -145,9 +149,9 @@ class LGEACClimate(LGEClimate):
         """Return the temperature we try to reach."""
         return self._api.state.target_temp
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    def set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        await self._device.set_target_temp(
+        self._device.set_target_temp(
             kwargs.get("temperature", self.target_temperature)
         )
 
@@ -156,9 +160,9 @@ class LGEACClimate(LGEClimate):
         """Return the fan setting."""
         return self._api.state.fan_speed
 
-    async def async_set_fan_mode(self, fan_mode: str) -> None:
+    def set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
-        await self._device.set_fan_speed(fan_mode)
+        self._device.set_fan_speed(fan_mode)
 
     @property
     def fan_modes(self):
@@ -170,13 +174,13 @@ class LGEACClimate(LGEClimate):
         """Return the list of supported features."""
         return SUPPORT_FAN_MODE | SUPPORT_TARGET_TEMPERATURE  # | SUPPORT_SWING_MODE
 
-    async def async_turn_on(self) -> None:
+    def turn_on(self) -> None:
         """Turn the entity on."""
-        await self._device.power(True)
+        self._device.power(True)
 
-    async def async_turn_off(self) -> None:
+    def turn_off(self) -> None:
         """Turn the entity off."""
-        await self._device.power(False)
+        self._device.power(False)
 
     @property
     def min_temp(self) -> float:
