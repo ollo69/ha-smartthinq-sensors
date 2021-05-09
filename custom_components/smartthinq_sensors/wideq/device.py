@@ -1,6 +1,7 @@
 """A high-level, convenient abstraction for interacting with the LG
 SmartThinQ API for most use cases.
 """
+import asyncio
 import base64
 import json
 from collections import namedtuple
@@ -98,15 +99,6 @@ class PlatformType(enum.Enum):
 
     THINQ1 = "thinq1"
     THINQ2 = "thinq2"
-    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
-
-
-class GuideType(enum.Enum):
-    """The category of guide type."""
-
-    TYPE1 = "TYPE1"
-    TYPE4 = "TYPE4"
-    AIR_TYPE1 = "AIR_TYPE1"
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
@@ -263,20 +255,6 @@ class DeviceInfo(object):
         return PlatformType(ptype)
 
     @property
-    def guide_type(self) -> GuideType:
-        """The kind of guide, as a `GuideType` value."""
-        if self._data.get("guideTypeYn") != "Y":
-            return GuideType.UNKNOWN
-        gtype = self._data.get("guideType")
-        if not gtype:
-            return GuideType.UNKNOWN
-        try:
-            return GuideType(gtype)
-        except ValueError:
-            _LOGGER.warning("Unknown gruide type with id %s", gtype)
-            return GuideType.UNKNOWN
-
-    @property
     def snapshot(self) -> Optional[Dict[str, Any]]:
         if "snapshot" in self._data:
             return self._data["snapshot"]
@@ -324,7 +302,7 @@ class ModelInfo(object):
             return EnumValue(d["option"])
         elif d["type"] == "Range":
             return RangeValue(
-                d["option"]["min"], d["option"]["max"], d["option"]["step"]
+                d["option"]["min"], d["option"]["max"], d["option"].get("step", 0)
             )
         elif d["type"] == "Bit":
             bit_values = {}
@@ -695,7 +673,12 @@ class ModelInfoV2(object):
         return data.get(key)
 
 
-class ModelInfoType4(ModelInfo):
+class ModelInfoV2AC(ModelInfo):
+
+    @property
+    def is_info_v2(self):
+        return True
+
     def value_type(self, name):
         if name in self._data["Value"]:
             return self._data["Value"][name]["data_type"]
@@ -712,7 +695,7 @@ class ModelInfoType4(ModelInfo):
             return EnumValue(d["value_mapping"])
         elif d["data_type"] in ("Range", "range"):
             return RangeValue(
-                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"]["step"]
+                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"].get("step", 0)
             )
         # elif d["type"] == "Bit":
         #    bit_values = {}
@@ -804,13 +787,31 @@ class Device(object):
             self._available_features[feature_name] = title
         return title
 
-    def _set_control(self, key, value):
+    def _set_control(self, key, value, ctrl_key, command):
         """Set a device's control for `key` to `value`.
         """
+        if self._should_poll:
+            self._client.session.set_device_controls(
+                self._device_info.id, {key: value},
+            )
+            return
 
-        self._client.session.set_device_controls(
-            self._device_info.id, {key: value},
+        data = dict(ctrlKey=ctrl_key, command=command, dataKey=key, dataValue=value)
+        self._client.session.set_device_v2_controls(
+            self._device_info.id, data
         )
+
+    def set(self, key, value, ctrl_key="basicCtrl", command="Set"):
+        """Set a device's control for `key` to `value`."""
+        _LOGGER.debug("Setting new state: %s - %s - %s", key, value, ctrl_key)
+        self._set_control(key, value, ctrl_key, command)
+        if self._status:
+            self._status.update_status(key, value)
+
+    async def async_set(self, key, value, ctrl_key="basicCtrl", command="Set"):
+        """Async set a device's control for `key` to `value`."""
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self.set, key, value, ctrl_key, command)
 
     def _get_config(self, key):
         """Look up a device's configuration for a given value.
@@ -842,12 +843,15 @@ class Device(object):
                 )
 
             model_data = self._model_data
-            if model_data.get("Monitoring") and model_data.get("Value"):
+            if "Monitoring" in model_data and "Value" in model_data:
+                # this are old V1 model
                 self._model_info = ModelInfo(model_data)
-            elif model_data.get("MonitoringValue"):
+            elif "MonitoringValue" in model_data:
+                # this are new V2 devices
                 self._model_info = ModelInfoV2(model_data)
-            elif self._device_info.guide_type in (GuideType.TYPE4, GuideType.AIR_TYPE1):
-                self._model_info = ModelInfoType4(model_data)
+            elif "ControlDevice" in model_data and "Value" in model_data:
+                # this are new V2 ac
+                self._model_info = ModelInfoV2AC(model_data)
 
         if self._model_info is not None:
             # load model language pack
@@ -1002,12 +1006,19 @@ class DeviceStatus(object):
 
         return STATE_UNKNOWN.UNKNOWN
 
-    def lookup_enum(self, key):
+    def update_status(self, key, value):
+        self._data[key] = value
+
+    def lookup_enum(self, key, data_is_num=False):
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
+        value = self._data[curr_key]
+        if data_is_num:
+            value = str(int(value))
+
         return self._device.model_info.enum_name(
-            curr_key, self._data[curr_key]
+            curr_key, value
         )
 
     def lookup_reference(self, key, ref_key="_comment"):
