@@ -571,6 +571,14 @@ class Session(object):
             },
         )
 
+    def set_device_v2_controls(self, device_id, values):
+        """Control a device's settings based on api V2.
+
+        `values` is a key/value map containing the settings to update.
+        """
+        path = f"/v1/service/devices/{device_id}/control-sync"
+        return self.post2(path, values)
+
     def get_device_config(self, device_id, key, category="Config"):
         """Get a device configuration option.
 
@@ -631,8 +639,11 @@ class ClientV2(object):
     def _inject_thinq2_device(self):
         """This is used only for debug"""
         data_file = os.path.dirname(os.path.realpath(__file__)) + "/deviceV2.txt"
-        with open(data_file, "r") as f:
-            device_v2 = json.load(f)
+        try:
+            with open(data_file, "r") as f:
+                device_v2 = json.load(f)
+        except FileNotFoundError:
+            return
         for d in device_v2:
             self._devices.append(d)
             _LOGGER.debug("Injected debug device: %s", d)

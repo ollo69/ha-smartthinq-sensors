@@ -14,11 +14,12 @@ from typing import Dict
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
 from .wideq.device import DeviceType
+from .wideq.ac import AirConditionerDevice
 from .wideq.dishwasher import DishWasherDevice
 from .wideq.dryer import DryerDevice
+from .wideq.refrigerator import RefrigeratorDevice
 from .wideq.styler import StylerDevice
 from .wideq.washer import WasherDevice
-from .wideq.refrigerator import RefrigeratorDevice
 
 from .wideq.core_exceptions import (
     InvalidCredentialError,
@@ -285,6 +286,10 @@ class LGEDevice:
     def assumed_state(self) -> bool:
         """Return True if unable to access real state of the entity."""
         return self._available and self._disconnected
+
+    @property
+    def device(self) -> str:
+        return self._device
 
     @property
     def name(self) -> str:
@@ -568,6 +573,8 @@ async def lge_devices_setup(hass, client) -> dict:
             dev = LGEDevice(DishWasherDevice(client, device), hass)
         elif device_type == DeviceType.REFRIGERATOR:
             dev = LGEDevice(RefrigeratorDevice(client, device), hass)
+        elif device_type == DeviceType.AC:
+            dev = LGEDevice(AirConditionerDevice(client, device), hass)
 
         if not dev:
             _LOGGER.info(
