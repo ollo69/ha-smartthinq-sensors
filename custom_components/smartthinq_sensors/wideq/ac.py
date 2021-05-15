@@ -5,6 +5,8 @@ import logging
 from typing import Optional
 
 from .device import (
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
     Device,
     DeviceStatus,
 )
@@ -91,21 +93,91 @@ class ACFanSpeed(enum.Enum):
     L_HIGH = "@AC_MAIN_WIND_STRENGTH_HIGH_LEFT_W"
 
 
+class ACVSwingMode(enum.Enum):
+    """The vertical swing mode for an AC/HVAC device.
+
+    Blades are numbered vertically from 1 (topmost)
+    to 6.
+
+    All is 100.
+    """
+
+    OFF = "@OFF"
+    TOP = "@1"
+    MIDDLE_TOP_1 = "@2"
+    MIDDLE_TOP_2 = "@3"
+    MIDDLE_BOTTOM_2 = "@4"
+    MIDDLE_BOTTOM_1 = "@5"
+    BOTTOM = "@6"
+    SWING = "@100"
+
+
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
-    def __init__(self, client, device):
+    def __init__(self, client, device, temp_unit=UNIT_TEMP_CELSIUS):
         super().__init__(client, device, AirConditionerStatus(self, None))
+        self._temperature_unit = (
+            UNIT_TEMP_FAHRENHEIT if temp_unit == UNIT_TEMP_FAHRENHEIT else UNIT_TEMP_CELSIUS
+        )
         self._supported_operation = None
         self._supported_op_modes = None
         self._supported_fan_speeds = None
+        self._supported_vert_swings = None
         self._temperature_range = None
+
+        self._f2c_map = None
+        self._c2f_map = None
+
+    def _f2c(self, value):
+        """Get a dictionary mapping Fahrenheit to Celsius temperatures for
+        this device.
+
+        Unbelievably, SmartThinQ devices have their own lookup tables
+        for mapping the two temperature scales. You can get *close* by
+        using a real conversion between the two temperature scales, but
+        precise control requires using the custom LUT.
+        """
+        if self._temperature_unit == UNIT_TEMP_CELSIUS:
+            return value
+
+        if self._f2c_map is None:
+            mapping = self.model_info.value("TempFahToCel").options
+            self._f2c_map = {int(f): c for f, c in mapping.items()}
+        return self._f2c_map.get(value, value)
+
+    def conv_temp_unit(self, value):
+        """Get an inverse mapping from Celsius to Fahrenheit.
+
+        Just as unbelievably, this is not exactly the inverse of the
+        `f2c` map. There are a few values in this reverse mapping that
+        are not in the other.
+        """
+        if self._temperature_unit == UNIT_TEMP_CELSIUS:
+            return value
+
+        if self._c2f_map is None:
+            mapping = self.model_info.value("TempCelToFah").options
+            out = {}
+            for c, f in mapping.items():
+                try:
+                    c_num = int(c)
+                except ValueError:
+                    c_num = float(c)
+                out[c_num] = f
+            self._c2f_map = out
+        return self._c2f_map.get(value, value)
+
+    def _get_state_key(self, key_name):
+        if isinstance(key_name, list):
+            return key_name[1 if self.model_info.is_info_v2 else 0]
+        return key_name
 
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
 
         if not self._supported_operation:
-            key = AC_STATE_OPERATION[1 if self.model_info.is_info_v2 else 0]
+            key = self._get_state_key(AC_STATE_OPERATION)
             mapping = self.model_info.value(key).options
             self._supported_operation = [ACOp(o) for o in mapping.values()]
         return self._supported_operation
@@ -146,7 +218,7 @@ class AirConditionerDevice(Device):
 
     def _get_temperature_range(self):
         if not self._temperature_range:
-            key = AC_STATE_TARGET_TEMP[1 if self.model_info.is_info_v2 else 0]
+            key = self._get_state_key(AC_STATE_TARGET_TEMP)
             range_info = self.model_info.value(key)
             if not range_info:
                 return None
@@ -156,7 +228,7 @@ class AirConditionerDevice(Device):
     @property
     def op_modes(self):
         if not self._supported_op_modes:
-            key = SUPPORT_AC_OPERATION_MODE[1 if self.model_info.is_info_v2 else 0]
+            key = self._get_state_key(SUPPORT_AC_OPERATION_MODE)
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in ACMode]
             self._supported_op_modes = [ACMode(o).name for o in mapping.values() if o in mode_list]
@@ -164,12 +236,30 @@ class AirConditionerDevice(Device):
 
     @property
     def fan_speeds(self):
-        if not self._supported_fan_speeds:
-            key = SUPPORT_AC_WIND_STRENGTH[1 if self.model_info.is_info_v2 else 0]
+        if self._supported_fan_speeds is None:
+            key = self._get_state_key(SUPPORT_AC_WIND_STRENGTH)
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in ACFanSpeed]
             self._supported_fan_speeds = [ACFanSpeed(o).name for o in mapping.values() if o in mode_list]
         return self._supported_fan_speeds
+
+    @property
+    def vert_swing_modes(self):
+        if self._supported_vert_swings is None:
+            key = self._get_state_key(AC_STATE_WDIR_VSTEP)
+            values = self.model_info.value(key)
+            if not hasattr(values, "options"):
+                self._supported_vert_swings = []
+                return self._supported_vert_swings
+
+            mapping = values.options
+            mode_list = [e.value for e in ACVSwingMode]
+            self._supported_vert_swings = [ACVSwingMode(o).name for o in mapping.values() if o in mode_list]
+        return self._supported_vert_swings
+
+    @property
+    def temperature_unit(self):
+        return self._temperature_unit
 
     @property
     def target_temperature_step(self):
@@ -180,20 +270,20 @@ class AirConditionerDevice(Device):
         temp_range = self._get_temperature_range()
         if not temp_range:
             return None
-        return temp_range[0]
+        return self.conv_temp_unit(temp_range[0])
 
     @property
     def target_temperature_max(self):
         temp_range = self._get_temperature_range()
         if not temp_range:
             return None
-        return temp_range[1]
+        return self.conv_temp_unit(temp_range[1])
 
     def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
         op = self._supported_on_operation() if turn_on else ACOp.OFF
-        key = AC_STATE_OPERATION[1 if self.model_info.is_info_v2 else 0]
+        key = self._get_state_key(AC_STATE_OPERATION)
         op_value = self.model_info.enum_value(key, op.value)
         self.set(key, op_value, AC_CTRL_BASIC)
 
@@ -202,7 +292,7 @@ class AirConditionerDevice(Device):
 
         if mode not in self.op_modes:
             raise ValueError(f"Invalid operating mode: {mode}")
-        key = AC_STATE_OPERATION_MODE[1 if self.model_info.is_info_v2 else 0]
+        key = self._get_state_key(AC_STATE_OPERATION_MODE)
         mode_value = self.model_info.enum_value(key, ACMode[mode].value)
         self.set(key, mode_value, AC_CTRL_BASIC)
 
@@ -211,18 +301,28 @@ class AirConditionerDevice(Device):
 
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
-        key = AC_STATE_WIND_STRENGTH[1 if self.model_info.is_info_v2 else 0]
+        key = self._get_state_key(AC_STATE_WIND_STRENGTH)
         speed_value = self.model_info.enum_value(key, ACFanSpeed[speed].value)
         self.set(key, speed_value, AC_CTRL_BASIC)
+
+    def set_vert_swing_mode(self, mode):
+        """Set the vert swing to a value from the `ACVSwingMode` enum."""
+
+        if mode not in self.vert_swing_modes:
+            raise ValueError(f"Invalid vertical swing mode: {mode}")
+        key = self._get_state_key(AC_STATE_WDIR_VSTEP)
+        swing_mode = self.model_info.enum_value(key, ACVSwingMode[mode].value)
+        self.set(key, swing_mode, AC_CTRL_WIND_DIRECTION)
 
     def set_target_temp(self, temp):
         """Set the device's target temperature in Celsius degrees."""
 
         range_info = self._get_temperature_range()
+        conv_temp = self._f2c(temp)
         if range_info and not (range_info[0] <= temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
-        key = AC_STATE_TARGET_TEMP[1 if self.model_info.is_info_v2 else 0]
-        self.set(key, temp, AC_CTRL_BASIC)
+        key = self._get_state_key(AC_STATE_TARGET_TEMP)
+        self.set(key, conv_temp, AC_CTRL_BASIC)
 
     def reset_status(self):
         self._status = AirConditionerStatus(self, None)
@@ -240,14 +340,7 @@ class AirConditionerDevice(Device):
 
 
 class AirConditionerStatus(DeviceStatus):
-    """Higher-level information about a AC's current status.
-
-    :param device: The Device instance.
-    :param data: JSON data from the API.
-    """
-
-    def __init__(self, device, data):
-        super().__init__(device, data)
+    """Higher-level information about a AC's current status."""
 
     @staticmethod
     def _str_to_num(s):
@@ -266,8 +359,18 @@ class AirConditionerStatus(DeviceStatus):
         else:
             return f
 
+    def _str_to_temp(self, s):
+        """Convert a string to either an `int` or a `float` temperature."""
+        temp = self._str_to_num(s)
+        return self._device.conv_temp_unit(temp)
+
+    def _get_state_key(self, key_name):
+        if isinstance(key_name, list):
+            return key_name[1 if self.is_info_v2 else 0]
+        return key_name
+
     def _get_operation(self):
-        key = AC_STATE_OPERATION[1 if self.is_info_v2 else 0]
+        key = self._get_state_key(AC_STATE_OPERATION)
         try:
             return ACOp(self.lookup_enum(key, True))
         except ValueError:
@@ -289,7 +392,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def operation_mode(self):
-        key = AC_STATE_OPERATION_MODE[1 if self.is_info_v2 else 0]
+        key = self._get_state_key(AC_STATE_OPERATION_MODE)
         try:
             return ACMode(self.lookup_enum(key, True)).name
         except ValueError:
@@ -297,21 +400,29 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def fan_speed(self):
-        key = AC_STATE_WIND_STRENGTH[1 if self.is_info_v2 else 0]
+        key = self._get_state_key(AC_STATE_WIND_STRENGTH)
         try:
             return ACFanSpeed(self.lookup_enum(key, True)).name
         except ValueError:
             return None
 
     @property
+    def vert_swing_mode(self):
+        key = self._get_state_key(AC_STATE_WDIR_VSTEP)
+        try:
+            return ACVSwingMode(self.lookup_enum(key, True)).name
+        except ValueError:
+            return None
+
+    @property
     def current_temp(self):
-        key = AC_STATE_CURRENT_TEMP[1 if self.is_info_v2 else 0]
-        return self._str_to_num(self._data.get(key))
+        key = self._get_state_key(AC_STATE_CURRENT_TEMP)
+        return self._str_to_temp(self._data.get(key))
 
     @property
     def target_temp(self):
-        key = AC_STATE_TARGET_TEMP[1 if self.is_info_v2 else 0]
-        return self._str_to_num(self._data.get(key))
+        key = self._get_state_key(AC_STATE_TARGET_TEMP)
+        return self._str_to_temp(self._data.get(key))
 
     def _update_features(self):
         return

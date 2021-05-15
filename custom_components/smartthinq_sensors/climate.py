@@ -1,8 +1,9 @@
 """Platform for LGE climate integration."""
 import logging
 
-from .wideq.device import DeviceType
+from datetime import timedelta
 from .wideq.ac import AirConditionerDevice, ACMode
+from .wideq.device import UNIT_TEMP_FAHRENHEIT
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
@@ -20,11 +21,11 @@ from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import TEMP_CELSIUS
+from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
+from . import CLIMATE_DEVICE_TYPES, LGEDevice
 from .const import DOMAIN, LGE_DEVICES
 
 HVAC_MODE_LOOKUP = {
@@ -36,6 +37,8 @@ HVAC_MODE_LOOKUP = {
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
 }
 HVAC_MODE_REVERSE_LOOKUP = {v: k for k, v in HVAC_MODE_LOOKUP.items()}
+
+SCAN_INTERVAL = timedelta(seconds=30)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,11 +52,16 @@ async def async_setup_entry(
     if not lge_devices:
         return
 
+    climate_devices = []
+    for dev_type, devices in lge_devices.items():
+        if dev_type in CLIMATE_DEVICE_TYPES:
+            climate_devices.extend(devices)
+
     lge_climates = []
     lge_climates.extend(
         [
             LGEACClimate(lge_device, lge_device.device)
-            for lge_device in lge_devices.get(DeviceType.AC, [])
+            for lge_device in climate_devices
         ]
     )
 
@@ -73,6 +81,15 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
     def device_info(self):
         """Return a device description for device registry."""
         return self._api.device_info
+
+    @property
+    def should_poll(self) -> bool:
+        """We overwrite coordinator property default setting because we need
+           to poll to avoid the effect that after changing a climate settings
+           it is immediately set to prev state. The coordinator polling interval
+           is disabled for climate devices. Side effect is that disabling climate
+           entity all related sensor also stop refreshing."""
+        return True
 
     @property
     def available(self) -> bool:
@@ -106,7 +123,11 @@ class LGEACClimate(LGEClimate):
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        return TEMP_CELSIUS
+        return (
+            TEMP_FAHRENHEIT
+            if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT
+            else TEMP_CELSIUS
+        )
 
     @property
     def hvac_mode(self) -> str:
@@ -170,9 +191,26 @@ class LGEACClimate(LGEClimate):
         return self._device.fan_speeds
 
     @property
+    def swing_mode(self) -> str:
+        """Return the swing mode setting."""
+        return self._api.state.vert_swing_mode
+
+    def set_swing_mode(self, swing_mode: str) -> None:
+        """Set new target swing mode."""
+        self._device.set_vert_swing_mode(swing_mode)
+
+    @property
+    def swing_modes(self):
+        """Return the list of available swing modes."""
+        return self._device.vert_swing_modes
+
+    @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
-        return SUPPORT_FAN_MODE | SUPPORT_TARGET_TEMPERATURE  # | SUPPORT_SWING_MODE
+        features = SUPPORT_FAN_MODE | SUPPORT_TARGET_TEMPERATURE
+        if len(self._device.vert_swing_modes) > 1:
+            features |= SUPPORT_SWING_MODE
+        return features
 
     def turn_on(self) -> None:
         """Turn the entity on."""

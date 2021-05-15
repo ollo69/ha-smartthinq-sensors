@@ -13,7 +13,7 @@ from typing import Dict
 
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
-from .wideq.device import DeviceType
+from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.ac import AirConditionerDevice
 from .wideq.dishwasher import DishWasherDevice
 from .wideq.dryer import DryerDevice
@@ -37,7 +37,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers.typing import HomeAssistantType
 from homeassistant.util import Throttle
 
-from homeassistant.const import CONF_REGION, CONF_TOKEN
+from homeassistant.const import CONF_REGION, CONF_TOKEN, TEMP_CELSIUS
 
 from .const import (
     CLIENT,
@@ -55,6 +55,10 @@ from .const import (
 
 ATTR_MODEL = "model"
 ATTR_MAC_ADDRESS = "mac_address"
+
+CLIMATE_DEVICE_TYPES = [
+    DeviceType.AC,
+]
 
 MAX_RETRIES = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
@@ -288,7 +292,7 @@ class LGEDevice:
         return self._available and self._disconnected
 
     @property
-    def device(self) -> str:
+    def device(self):
         return self._device
 
     @property
@@ -357,13 +361,14 @@ class LGEDevice:
 
     async def _create_coordinator(self):
         """Get the coordinator for a specific device."""
+        should_poll = self._type not in CLIMATE_DEVICE_TYPES
         coordinator = DataUpdateCoordinator(
             self._hass,
             _LOGGER,
             name=f"{DOMAIN}-{self._name}",
             update_method=self.async_device_update,
             # Polling interval. Will only be polled if there are subscribers.
-            update_interval=SCAN_INTERVAL,
+            update_interval=SCAN_INTERVAL if should_poll else None,
         )
         await coordinator.async_refresh()
         self._coordinator = coordinator
@@ -554,6 +559,9 @@ async def lge_devices_setup(hass, client) -> dict:
 
     wrapped_devices = {}
     device_count = 0
+    temp_unit = UNIT_TEMP_CELSIUS
+    if hass.config.units.temperature_unit != TEMP_CELSIUS:
+        temp_unit = UNIT_TEMP_FAHRENHEIT
 
     for device in client.devices:
         device_id = device.id
@@ -574,7 +582,7 @@ async def lge_devices_setup(hass, client) -> dict:
         elif device_type == DeviceType.REFRIGERATOR:
             dev = LGEDevice(RefrigeratorDevice(client, device), hass)
         elif device_type == DeviceType.AC:
-            dev = LGEDevice(AirConditionerDevice(client, device), hass)
+            dev = LGEDevice(AirConditionerDevice(client, device, temp_unit), hass)
 
         if not dev:
             _LOGGER.info(

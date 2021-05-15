@@ -76,6 +76,9 @@ ATTR_FREEZER_TEMP = "freezer_temp"
 ATTR_TEMP_UNIT = "temp_unit"
 ATTR_DOOR_OPEN = "door_open"
 
+# ac sensor attributes
+ATTR_ROOM_TEMP = "room_temperature"
+
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
     STATE_OPTIONITEM_ON: STATE_ON,
@@ -275,6 +278,16 @@ REFRIGERATOR_BINARY_SENSORS = {
     },
 }
 
+AC_SENSORS = {
+    ATTR_ROOM_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Room Temperature",
+        ATTR_UNIT_FN: lambda x: x._temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._curr_temp,
+        ATTR_ENABLED: False,
+    },
+}
+
 WASH_DEVICE_TYPES = [
     DeviceType.DISHWASHER,
     DeviceType.DRYER,
@@ -332,6 +345,17 @@ def setup_sensors(hass, config_entry, async_add_entities, type_binary):
             LGERefrigeratorSensor(lge_device, measurement, definition, type_binary)
             for measurement, definition in refrigerator_sensors.items()
             for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+            if _sensor_exist(lge_device, definition)
+        ]
+    )
+
+    # add AC
+    ac_sensors = {} if type_binary else AC_SENSORS
+    lge_sensors.extend(
+        [
+            LGEACSensor(lge_device, measurement, definition, type_binary)
+            for measurement, definition in ac_sensors.items()
+            for lge_device in lge_devices.get(DeviceType.AC, [])
             if _sensor_exist(lge_device, definition)
         ]
     )
@@ -637,3 +661,18 @@ class LGERefrigeratorSensor(LGESensor):
             state = self._api.state.door_opened_state
             return STATE_LOOKUP.get(state, STATE_OFF)
         return STATE_OFF
+
+
+class LGEACSensor(LGESensor):
+    """A sensor to monitor LGE AC devices"""
+
+    @property
+    def _curr_temp(self):
+        if self._api.state:
+            return self._api.state.current_temp
+        return None
+
+    @property
+    def _temp_unit(self):
+        unit = self._api.device.temperature_unit
+        return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
