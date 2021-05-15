@@ -319,7 +319,7 @@ class AirConditionerDevice(Device):
 
         range_info = self._get_temperature_range()
         conv_temp = self._f2c(temp)
-        if range_info and not (range_info[0] <= temp <= range_info[1]):
+        if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
         key = self._get_state_key(AC_STATE_TARGET_TEMP)
         self.set(key, conv_temp, AC_CTRL_BASIC)

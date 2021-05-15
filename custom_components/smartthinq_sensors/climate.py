@@ -227,7 +227,7 @@ class LGEACClimate(LGEClimate):
         if min_value is not None:
             return min_value
 
-        return DEFAULT_MIN_TEMP
+        return self._device.conv_temp_unit(DEFAULT_MIN_TEMP)
 
     @property
     def max_temp(self) -> float:
@@ -236,4 +236,4 @@ class LGEACClimate(LGEClimate):
         if max_value is not None:
             return max_value
 
-        return DEFAULT_MAX_TEMP
+        return self._device.conv_temp_unit(DEFAULT_MAX_TEMP)
