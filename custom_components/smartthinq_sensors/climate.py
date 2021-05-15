@@ -3,7 +3,7 @@ import logging
 
 from datetime import timedelta
 from .wideq.ac import AirConditionerDevice, ACMode
-from .wideq.device import UNIT_TEMP_FAHRENHEIT
+from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
@@ -25,7 +25,7 @@ from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import CLIMATE_DEVICE_TYPES, LGEDevice
+from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
 
 HVAC_MODE_LOOKUP = {
@@ -52,16 +52,11 @@ async def async_setup_entry(
     if not lge_devices:
         return
 
-    climate_devices = []
-    for dev_type, devices in lge_devices.items():
-        if dev_type in CLIMATE_DEVICE_TYPES:
-            climate_devices.extend(devices)
-
     lge_climates = []
     lge_climates.extend(
         [
             LGEACClimate(lge_device, lge_device.device)
-            for lge_device in climate_devices
+            for lge_device in lge_devices.get(DeviceType.AC, [])
         ]
     )
 
@@ -123,11 +118,9 @@ class LGEACClimate(LGEClimate):
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        return (
-            TEMP_FAHRENHEIT
-            if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT
-            else TEMP_CELSIUS
-        )
+        if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
+            return TEMP_FAHRENHEIT
+        return TEMP_CELSIUS
 
     @property
     def hvac_mode(self) -> str:
