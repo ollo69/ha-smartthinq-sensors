@@ -522,7 +522,7 @@ class ModelInfoV2(object):
 
     def value(self, data):
         """Look up information about a value.
-        
+
         Return either an `EnumValue` or a `RangeValue`.
         """
         data_type = data.get("dataType")
@@ -671,6 +671,57 @@ class ModelInfoV2(object):
         """Decode  status data."""
         return data.get(key)
 
+
+class ModelInfoV1Oven(ModelInfo):
+    """A description of a device model's capabilities.
+        """
+
+    def __init__(self, data):
+        super().__init__(data)
+        self._key_types = {}
+
+    def value_type_for_key(self, key):
+        if key in self._key_types:
+            return self._key_types[key]
+        else:
+            return None
+
+    def enum_name(self, key, value):
+        """Look up the friendly enum name for an encoded value.
+        """
+        value_type = self.value_type_for_key(key)
+        if not value_type:
+            return None
+        if not self.value_type(value_type):
+            return None
+
+        values = self.value(value_type)
+        if not hasattr(values, "options"):
+            return None
+        options = values.options
+        return options.get(value, "")
+
+    def decode_snapshot(self, data, key):
+        """Decode  status data."""
+        decoded = {}
+        if self._data["Monitoring"]["type"] != "THINQ2":
+            return decoded
+        protocol = self._data["Monitoring"]["protocol"]
+        for elem in protocol:
+            key = elem['superSet']
+            value_type = elem['value']
+            value = data;
+            value_key = None
+            for ident in key.split("."):
+                value_key = ident
+                if value is not None:
+                    value = value.get(ident)
+            if value_key is not None and value is not None:
+                if value is not None and isinstance(value, Number):
+                    value = int(value)
+                decoded[value_key] = str(value)
+                self._key_types[value_key] = value_type
+        return decoded
 
 class ModelInfoV2AC(ModelInfo):
 
@@ -843,8 +894,11 @@ class Device(object):
 
             model_data = self._model_data
             if "Monitoring" in model_data and "Value" in model_data:
-                # this are old V1 model
-                self._model_info = ModelInfo(model_data)
+                if isinstance(model_data["Monitoring"]["protocol"], list):
+                    self._model_info = ModelInfoV1Oven(model_data)
+                else:
+                    # this are old V1 model
+                    self._model_info = ModelInfo(model_data)
             elif "MonitoringValue" in model_data:
                 # this are new V2 devices
                 self._model_info = ModelInfoV2(model_data)
