@@ -431,6 +431,7 @@ def setup_sensors(hass, config_entry, async_add_entities, type_binary):
             LGEACSensor(lge_device, measurement, definition, type_binary)
             for measurement, definition in ac_sensors.items()
             for lge_device in lge_devices.get(DeviceType.AC, [])
+            if _sensor_exist(lge_device, definition)
         ]
     )
 

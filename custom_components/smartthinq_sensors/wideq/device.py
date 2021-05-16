@@ -522,7 +522,7 @@ class ModelInfoV2(object):
 
     def value(self, data):
         """Look up information about a value.
-
+        
         Return either an `EnumValue` or a `RangeValue`.
         """
         data_type = data.get("dataType")
