@@ -30,13 +30,13 @@ from .const import DOMAIN, LGE_DEVICES
 
 HVAC_MODE_LOOKUP = {
     ACMode.AI.name: HVAC_MODE_AUTO,
+    ACMode.ENERGY_SAVER.name: HVAC_MODE_AUTO,
     ACMode.HEAT.name: HVAC_MODE_HEAT,
     ACMode.DRY.name: HVAC_MODE_DRY,
     ACMode.COOL.name: HVAC_MODE_COOL,
     ACMode.FAN.name: HVAC_MODE_FAN_ONLY,
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
 }
-HVAC_MODE_REVERSE_LOOKUP = {v: k for k, v in HVAC_MODE_LOOKUP.items()}
 
 SCAN_INTERVAL = timedelta(seconds=30)
 
@@ -99,6 +99,16 @@ class LGEACClimate(LGEClimate):
         """Initialize the climate."""
         super().__init__(device)
         self._device = ac_device
+        self._hvac_mode_lookup = None
+
+    def _available_hvac_modes(self):
+        if self._hvac_mode_lookup is None:
+            modes = {}
+            for key, mode in HVAC_MODE_LOOKUP.items():
+                if key in self._device.op_modes:
+                    modes[key] = mode
+            self._hvac_mode_lookup = modes
+        return self._hvac_mode_lookup
 
     @property
     def unique_id(self) -> str:
@@ -128,7 +138,8 @@ class LGEACClimate(LGEClimate):
         mode = self._api.state.operation_mode
         if not self._api.state.is_on or mode is None:
             return HVAC_MODE_OFF
-        return HVAC_MODE_LOOKUP.get(mode)
+        modes = self._available_hvac_modes()
+        return modes.get(mode)
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
@@ -136,7 +147,9 @@ class LGEACClimate(LGEClimate):
             self._device.power(False)
             return
 
-        operation_mode = HVAC_MODE_REVERSE_LOOKUP.get(hvac_mode)
+        modes = self._available_hvac_modes()
+        reverse_lookup = {v: k for k, v in modes.items()}
+        operation_mode = reverse_lookup.get(hvac_mode)
         if operation_mode is None:
             raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
 
@@ -147,11 +160,8 @@ class LGEACClimate(LGEClimate):
     @property
     def hvac_modes(self):
         """Return the list of available hvac operation modes."""
-        return [HVAC_MODE_OFF] + [
-            HVAC_MODE_LOOKUP.get(mode)
-            for mode in self._device.op_modes
-            if mode in HVAC_MODE_LOOKUP
-        ]
+        modes = self._available_hvac_modes()
+        return [HVAC_MODE_OFF] + list(modes.values())
 
     @property
     def current_temperature(self) -> float:
