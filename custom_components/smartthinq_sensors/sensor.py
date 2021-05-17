@@ -113,6 +113,7 @@ DEVICE_ICONS = {
     DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
     DeviceType.REFRIGERATOR: "mdi:fridge-outline",
+    DeviceType.OVEN: "mdi:stove",
 }
 
 RUN_COMPLETED_PREFIX = {
