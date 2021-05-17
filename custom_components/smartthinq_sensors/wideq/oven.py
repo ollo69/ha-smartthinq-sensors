@@ -88,49 +88,49 @@ class OvenStatus(DeviceStatus):
 
     @property
     def cooktop_left_front_state(self):
-        status = self.lookup_enum(["LFState", "cooktop1CooktopState"])
+        status = self.lookup_enum(["LFState"])
         return self._update_feature(
             FEAT_COOKTOP_LEFT_FRONT_STATE, status, True
         )
 
     @property
     def cooktop_left_rear_state(self):
-        status = self.lookup_enum(["LRState", "cooktop2CooktopState"])
+        status = self.lookup_enum(["LRState"])
         return self._update_feature(
             FEAT_COOKTOP_LEFT_REAR_STATE, status, True
         )
 
     @property
     def cooktop_center_state(self):
-        status = self.lookup_enum(["CenterState", "cooktop3CooktopState"])
+        status = self.lookup_enum(["CenterState"])
         return self._update_feature(
             FEAT_COOKTOP_CENTER_STATE, status, True
         )
 
     @property
     def cooktop_right_front_state(self):
-        status = self.lookup_enum(["RFState", "cooktop4CooktopState"])
+        status = self.lookup_enum(["RFState"])
         return self._update_feature(
             FEAT_COOKTOP_RIGHT_FRONT_STATE, status, True
         )
 
     @property
     def cooktop_right_rear_state(self):
-        status = self.lookup_enum(["RRState", "cooktop5CooktopState"])
+        status = self.lookup_enum(["RRState"])
         return self._update_feature(
             FEAT_COOKTOP_RIGHT_REAR_STATE, status, True
         )
 
     @property
     def oven_lower_state(self):
-        status = self.lookup_enum(["LowerOvenState", "lowerState"])
+        status = self.lookup_enum(["LowerOvenState"])
         return self._update_feature(
             FEAT_OVEN_LOWER_STATE, status, True
         )
 
     @property
     def oven_upper_state(self):
-        status = self.lookup_enum(["UpperOvenState", "upperState"])
+        status = self.lookup_enum(["UpperOvenState"])
         return self._update_feature(
             FEAT_OVEN_UPPER_STATE, status, True
         )
@@ -138,9 +138,9 @@ class OvenStatus(DeviceStatus):
     @property
     def oven_lower_target_temp(self):
         if self.is_info_v2:
-            result = DeviceStatus.int_or_none(self._data.get("lowerTargetTemperatureValue"))
+            result = DeviceStatus.int_or_none(self._data.get("LowerTargetTemp_F"))
         else:
-            result = self._data.get("lowerTargetTemperatureValue")
+            result = self._data.get("LowerTargetTemp_F")
         if result is None:
             result = "N/A"
         return self._update_feature(
@@ -150,9 +150,9 @@ class OvenStatus(DeviceStatus):
     @property
     def oven_upper_target_temp(self):
         if self.is_info_v2:
-            result = DeviceStatus.int_or_none(self._data.get("upperTargetTemperatureValue"))
+            result = DeviceStatus.int_or_none(self._data.get("UpperTargetTemp_F"))
         else:
-            result = self._data.get("upperTargetTemperatureValue")
+            result = self._data.get("UpperTargetTemp_F")
         if result is None:
             result = "N/A"
         return self._update_feature(
