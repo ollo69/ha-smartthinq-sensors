@@ -56,10 +56,6 @@ from .const import (
 ATTR_MODEL = "model"
 ATTR_MAC_ADDRESS = "mac_address"
 
-CLIMATE_DEVICE_TYPES = [
-    DeviceType.AC,
-]
-
 MAX_RETRIES = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
 MIN_TIME_BETWEEN_CLI_REFRESH = 10
@@ -361,14 +357,13 @@ class LGEDevice:
 
     async def _create_coordinator(self):
         """Get the coordinator for a specific device."""
-        should_poll = self._type not in CLIMATE_DEVICE_TYPES
         coordinator = DataUpdateCoordinator(
             self._hass,
             _LOGGER,
             name=f"{DOMAIN}-{self._name}",
             update_method=self.async_device_update,
             # Polling interval. Will only be polled if there are subscribers.
-            update_interval=SCAN_INTERVAL if should_poll else None,
+            update_interval=SCAN_INTERVAL
         )
         await coordinator.async_refresh()
         self._coordinator = coordinator

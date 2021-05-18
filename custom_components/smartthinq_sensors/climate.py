@@ -29,8 +29,8 @@ from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
 
 HVAC_MODE_LOOKUP = {
-    ACMode.AI.name: HVAC_MODE_AUTO,
     ACMode.ENERGY_SAVER.name: HVAC_MODE_AUTO,
+    ACMode.AI.name: HVAC_MODE_AUTO,
     ACMode.HEAT.name: HVAC_MODE_HEAT,
     ACMode.DRY.name: HVAC_MODE_DRY,
     ACMode.COOL.name: HVAC_MODE_COOL,
@@ -79,12 +79,21 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
 
     @property
     def should_poll(self) -> bool:
-        """We overwrite coordinator property default setting because we need
-           to poll to avoid the effect that after changing a climate settings
-           it is immediately set to prev state. The coordinator polling interval
-           is disabled for climate devices. Side effect is that disabling climate
-           entity all related sensor also stop refreshing."""
+        """Return True if entity has to be polled for state.
+
+        We overwrite coordinator property default setting because we need
+        to poll to avoid the effect that after changing a climate settings
+        it is immediately set to prev state. The async_update method here
+        do nothing because the real update is performed by coordinator.
+        """
         return True
+
+    async def async_update(self) -> None:
+        """Update the entity.
+
+        This is a fake update, real update is done by coordinator.
+        """
+        return
 
     @property
     def available(self) -> bool:
@@ -106,8 +115,9 @@ class LGEACClimate(LGEClimate):
             modes = {}
             for key, mode in HVAC_MODE_LOOKUP.items():
                 if key in self._device.op_modes:
-                    modes[key] = mode
-            self._hvac_mode_lookup = modes
+                    # invert key and mode to avoid duplicated HVAC modes
+                    modes[mode] = key
+            self._hvac_mode_lookup = {v: k for k, v in modes.items()}
         return self._hvac_mode_lookup
 
     @property
