@@ -65,7 +65,7 @@ class DeviceType(enum.Enum):
     DISHWASHER = 204
     TOWER_WASHER = 221
     TOWER_DRYER = 222
-    OVEN = 301
+    RANGE = 301
     MICROWAVE = 302
     COOKTOP = 303
     HOOD = 304

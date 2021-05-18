@@ -22,11 +22,13 @@ from .wideq import (
     FEAT_TUBCLEAN_COUNT,
     FEAT_TEMPCONTROL,
     FEAT_WATERTEMP,
+    FEAT_COOKTOP_STATE,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
     FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
+    FEAT_OVEN_STATE,
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_STATE,
 )
@@ -112,7 +114,7 @@ DEVICE_ICONS = {
     DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
     DeviceType.REFRIGERATOR: "mdi:fridge-outline",
-    DeviceType.OVEN: "mdi:stove",
+    DeviceType.RANGE: "mdi:stove",
 }
 
 RUN_COMPLETED_PREFIX = {
@@ -310,11 +312,17 @@ WASH_DEVICE_TYPES = [
     DeviceType.WASHER,
 ]
 
-OVEN_SENSORS = {
+RANGE_SENSORS = {
     DEFAULT_SENSOR: {
         ATTR_MEASUREMENT_NAME: "Default",
         ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FN: lambda x: x._power_state,
+        ATTR_ENABLED: True,
+    },
+    FEAT_COOKTOP_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FN: lambda x: x._cooktop_state,
         ATTR_ENABLED: True,
     },
     FEAT_COOKTOP_LEFT_FRONT_STATE: {
@@ -347,14 +355,20 @@ OVEN_SENSORS = {
         ATTR_VALUE_FEAT: FEAT_COOKTOP_RIGHT_REAR_STATE,
         ATTR_ENABLED: True,
     },
+    FEAT_OVEN_STATE: {
+        ATTR_MEASUREMENT_NAME: "Oven",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FN: lambda x: x._oven_state,
+        ATTR_ENABLED: True,
+    },
     FEAT_OVEN_LOWER_STATE: {
-        ATTR_MEASUREMENT_NAME: "Lower",
+        ATTR_MEASUREMENT_NAME: "Oven Lower",
         ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_OVEN_LOWER_STATE,
         ATTR_ENABLED: True,
     },
     FEAT_OVEN_UPPER_STATE: {
-        ATTR_MEASUREMENT_NAME: "Upper",
+        ATTR_MEASUREMENT_NAME: "Oven Upper",
         ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_OVEN_UPPER_STATE,
         ATTR_ENABLED: True,
@@ -374,7 +388,7 @@ OVEN_SENSORS = {
         ATTR_ENABLED: True,
     },
 }
-OVEN_BINARY_SENSORS = {}
+RANGE_BINARY_SENSORS = {}
 
 
 def _sensor_exist(lge_device, sensor_def):
@@ -439,15 +453,15 @@ def setup_sensors(hass, config_entry, async_add_entities, type_binary):
         ]
     )
 
-    # add ovens
-    oven_sensors = (
-        OVEN_BINARY_SENSORS if type_binary else OVEN_SENSORS
+    # add ranges
+    range_sensors = (
+        RANGE_BINARY_SENSORS if type_binary else RANGE_SENSORS
     )
     lge_sensors.extend(
         [
-            LGEOvenSensor(lge_device, measurement, definition, type_binary)
-            for measurement, definition in oven_sensors.items()
-            for lge_device in lge_devices.get(DeviceType.OVEN, [])
+            LGERangeSensor(lge_device, measurement, definition, type_binary)
+            for measurement, definition in range_sensors.items()
+            for lge_device in lge_devices.get(DeviceType.RANGE, [])
             if _sensor_exist(lge_device, definition)
         ]
     )
@@ -770,13 +784,13 @@ class LGEACSensor(LGESensor):
         return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
 
 
-class LGEOvenSensor(LGESensor):
-    """A sensor to monitor LGE Oven devices"""
+class LGERangeSensor(LGESensor):
+    """A sensor to monitor LGE range devices"""
 
     def __init__(self, device, measurement, definition, is_binary):
         """Initialize the sensor."""
         super().__init__(device, measurement, definition, is_binary)
-
+        
     @property
     def device_state_attributes(self):
         """Return the optional state attributes."""
@@ -801,6 +815,22 @@ class LGEOvenSensor(LGESensor):
                 return STATE_ON
         return STATE_OFF
 
+    @property
+    def _cooktop_state(self):
+        """Current cooktop state"""
+        if self._api.state:
+            if self._api.state.cooktop_state:
+                return STATE_ON
+        return STATE_OFF
+
+    @property
+    def _oven_state(self):
+        """Current oven state"""
+        if self._api.state:
+            if self._api.state.oven_state:
+                return STATE_ON
+        return STATE_OFF
+    
     @property
     def _oven_lower_target_temp(self):
         if self._api.state:
