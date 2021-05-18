@@ -819,7 +819,7 @@ class LGERangeSensor(LGESensor):
     def _cooktop_state(self):
         """Current cooktop state"""
         if self._api.state:
-            if self._api.state.cooktop_state:
+            if self._api.state.is_cooktop_on:
                 return STATE_ON
         return STATE_OFF
 
@@ -827,7 +827,7 @@ class LGERangeSensor(LGESensor):
     def _oven_state(self):
         """Current oven state"""
         if self._api.state:
-            if self._api.state.oven_state:
+            if self._api.state.is_oven_on:
                 return STATE_ON
         return STATE_OFF
     

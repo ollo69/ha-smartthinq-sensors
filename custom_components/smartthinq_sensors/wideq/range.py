@@ -67,13 +67,11 @@ class RangeStatus(DeviceStatus):
 
     def _update_features(self):
         result = [
-            self.cooktop_state,
             self.cooktop_left_front_state,
             self.cooktop_left_rear_state,
             self.cooktop_center_state,
             self.cooktop_right_front_state,
             self.cooktop_right_rear_state,
-            self.oven_state,
             self.oven_lower_state,
             self.oven_lower_target_temp,
             self.oven_upper_state,
@@ -95,22 +93,10 @@ class RangeStatus(DeviceStatus):
 
     @property
     def is_on(self):
-        result = [
-            self.cooktop_left_front_state,
-            self.cooktop_left_rear_state,
-            self.cooktop_center_state,
-            self.cooktop_right_front_state,
-            self.cooktop_right_rear_state,
-            self.oven_lower_state,
-            self.oven_upper_state,
-        ]
-        for r in result:
-            if r != 'Off':
-                return True
-        return False
+        return self.is_cooktop_on or self.is_oven_on
 
     @property
-    def cooktop_state(self):
+    def is_cooktop_on(self):
         result = [
             self.cooktop_left_front_state,
             self.cooktop_left_rear_state,
@@ -125,6 +111,10 @@ class RangeStatus(DeviceStatus):
         
     @property
     def cooktop_left_front_state(self):
+        """For some cooktops (maybe depending on firmware or model), the
+        five burners do not report individual status. Instead, the 
+        cooktop_left_front reports aggregated status for all burners.
+        """
         status = self.lookup_enum(["LFState"])
         return self._update_feature(
             FEAT_COOKTOP_LEFT_FRONT_STATE, status, True
@@ -159,7 +149,7 @@ class RangeStatus(DeviceStatus):
         )
 
     @property
-    def oven_state(self):
+    def is_oven_on(self):
         result = [
             self.oven_lower_state,
             self.oven_upper_state,
