@@ -60,9 +60,8 @@ FEAT_COOKTOP_CENTER_STATE = "cooktop_center_state"
 FEAT_COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
 FEAT_COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
 FEAT_OVEN_LOWER_STATE = "oven_lower_state"
-FEAT_OVEN_LOWER_TARGET_TEMP = "oven_lower_target_temp"
 FEAT_OVEN_UPPER_STATE = "oven_upper_state"
-FEAT_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
+FEAT_OVEN_TEMP_UNIT = "oven_temp_unit"
 
 CIPHERS = ":HIGH:!DH:!aNULL"
 

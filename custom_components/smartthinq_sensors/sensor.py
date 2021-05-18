@@ -28,9 +28,7 @@ from .wideq import (
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_OVEN_LOWER_STATE,
-    FEAT_OVEN_LOWER_TARGET_TEMP,
     FEAT_OVEN_UPPER_STATE,
-    FEAT_OVEN_UPPER_TARGET_TEMP,
 )
 
 from .wideq.device import (
@@ -91,6 +89,7 @@ ATTR_ROOM_TEMP = "room_temperature"
 # oven sensor attributes
 ATTR_OVEN_LOWER_TARGET_TEMP = "oven_lower_target_temp"
 ATTR_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
+ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
@@ -354,21 +353,25 @@ OVEN_SENSORS = {
         ATTR_VALUE_FEAT: FEAT_OVEN_LOWER_STATE,
         ATTR_ENABLED: True,
     },
-    FEAT_OVEN_LOWER_TARGET_TEMP: {
-        ATTR_MEASUREMENT_NAME: "Lower Target Temperature",
-        ATTR_ICON: DEFAULT_ICON,
-        ATTR_VALUE_FEAT: FEAT_OVEN_LOWER_TARGET_TEMP,
-    },
     FEAT_OVEN_UPPER_STATE: {
         ATTR_MEASUREMENT_NAME: "Upper",
         ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_OVEN_UPPER_STATE,
         ATTR_ENABLED: True,
     },
-    FEAT_OVEN_UPPER_TARGET_TEMP: {
+    ATTR_OVEN_LOWER_TARGET_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Lower Target Temperature",
+        ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._oven_lower_target_temp,
+        ATTR_ENABLED: True,
+    },
+    ATTR_OVEN_UPPER_TARGET_TEMP: {
         ATTR_MEASUREMENT_NAME: "Upper Target Temperature",
-        ATTR_ICON: DEFAULT_ICON,
-        ATTR_VALUE_FEAT: FEAT_OVEN_UPPER_TARGET_TEMP,
+        ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._oven_upper_target_temp,
+        ATTR_ENABLED: True,
     },
 }
 OVEN_BINARY_SENSORS = {}
@@ -783,6 +786,7 @@ class LGEOvenSensor(LGESensor):
         data = {
             ATTR_OVEN_LOWER_TARGET_TEMP: self._oven_lower_target_temp,
             ATTR_OVEN_UPPER_TARGET_TEMP: self._oven_upper_target_temp,
+            ATTR_OVEN_TEMP_UNIT: self._oven_temp_unit,
         }
         features = self._get_features_value()
         data.update(features)
@@ -808,3 +812,10 @@ class LGEOvenSensor(LGESensor):
         if self._api.state:
             return self._api.state.oven_upper_target_temp
         return None
+
+    @property
+    def _oven_temp_unit(self):
+        if self._api.state:
+            return self._api.state.oven_temp_unit
+        return None
+

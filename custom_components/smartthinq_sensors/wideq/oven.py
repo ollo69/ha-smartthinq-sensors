@@ -11,18 +11,24 @@ from . import (
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_OVEN_LOWER_STATE,
-    FEAT_OVEN_LOWER_TARGET_TEMP,
     FEAT_OVEN_UPPER_STATE,
-    FEAT_OVEN_UPPER_TARGET_TEMP,
 )
 
 from .device import (
     Device,
     DeviceStatus,
+    UNITTEMPMODES,
+    UNIT_TEMP_FAHRENHEIT,
+    UNIT_TEMP_CELSIUS,
 )
 
 
 _LOGGER = logging.getLogger(__name__)
+
+OVEN_TEMP_UNIT = {
+    "0": UNITTEMPMODES.Fahrenheit,
+    "1": UNITTEMPMODES.Celsius,
+}
 
 
 class OvenDevice(Device):
@@ -55,6 +61,7 @@ class OvenStatus(DeviceStatus):
 
     def __init__(self, device, data):
         super().__init__(device, data)
+        self._oven_temp_unit = None
 
     def _update_features(self):
         result = [
@@ -67,8 +74,20 @@ class OvenStatus(DeviceStatus):
             self.oven_lower_target_temp,
             self.oven_upper_state,
             self.oven_upper_target_temp,
+            self.oven_temp_unit,
         ]
         return
+
+    def _get_oven_temp_unit(self):
+        if not self._oven_temp_unit:
+            oven_temp_unit = self.lookup_enum(["MonTempUnit"])
+            if not oven_temp_unit:
+                self._oven_temp_unit = STATE_OPTIONITEM_NONE
+            else:
+                self._oven_temp_unit = (
+                    OVEN_TEMP_UNIT.get(oven_temp_unit, UNITTEMPMODES.Celsius)
+                ).value
+        return self._oven_temp_unit
 
     @property
     def is_on(self):
@@ -137,25 +156,33 @@ class OvenStatus(DeviceStatus):
 
     @property
     def oven_lower_target_temp(self):
-        if self.is_info_v2:
-            result = DeviceStatus.int_or_none(self._data.get("LowerTargetTemp_F"))
+        unit = self._get_oven_temp_unit()
+        if unit == UNIT_TEMP_FAHRENHEIT:
+            key = "LowerTargetTemp_F"
+        elif unit == UNIT_TEMP_CELSIUS:
+            key = "LowerTargetTemp_C"
         else:
-            result = self._data.get("LowerTargetTemp_F")
+            return "N/A"
+        result = self._data.get(key)
         if result is None:
             result = "N/A"
-        return self._update_feature(
-            FEAT_OVEN_LOWER_TARGET_TEMP, result, False
-        )
+        return result
 
     @property
     def oven_upper_target_temp(self):
-        if self.is_info_v2:
-            result = DeviceStatus.int_or_none(self._data.get("UpperTargetTemp_F"))
+        unit = self._get_oven_temp_unit()
+        if unit == UNIT_TEMP_FAHRENHEIT:
+            key = "UpperTargetTemp_F"
+        elif unit == UNIT_TEMP_CELSIUS:
+            key = "UpperTargetTemp_C"
         else:
-            result = self._data.get("UpperTargetTemp_F")
+            return "N/A"
+        result = self._data.get(key)
         if result is None:
             result = "N/A"
-        return self._update_feature(
-            FEAT_OVEN_UPPER_TARGET_TEMP, result, False
-        )
+        return result
     
+    @property
+    def oven_temp_unit(self):
+        return self._get_oven_temp_unit()
+
