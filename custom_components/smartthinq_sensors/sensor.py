@@ -45,6 +45,7 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_LOCK,
     DEVICE_CLASS_OPENING,
     DEVICE_CLASS_PROBLEM,
+    DEVICE_CLASS_POWER,
 )
 
 from homeassistant.const import (
@@ -319,12 +320,6 @@ RANGE_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._power_state,
         ATTR_ENABLED: True,
     },
-    FEAT_COOKTOP_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop",
-        ATTR_ICON: DEFAULT_ICON,
-        ATTR_VALUE_FN: lambda x: x._cooktop_state,
-        ATTR_ENABLED: True,
-    },
     FEAT_COOKTOP_LEFT_FRONT_STATE: {
         ATTR_MEASUREMENT_NAME: "Cooktop Left Front",
         ATTR_ICON: DEFAULT_ICON,
@@ -349,11 +344,6 @@ RANGE_SENSORS = {
         ATTR_MEASUREMENT_NAME: "Cooktop Right Rear",
         ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_COOKTOP_RIGHT_REAR_STATE,
-    },
-    FEAT_OVEN_STATE: {
-        ATTR_MEASUREMENT_NAME: "Oven",
-        ATTR_ICON: DEFAULT_ICON,
-        ATTR_VALUE_FN: lambda x: x._oven_state,
     },
     FEAT_OVEN_LOWER_STATE: {
         ATTR_MEASUREMENT_NAME: "Oven Lower",
@@ -382,7 +372,17 @@ RANGE_SENSORS = {
         ATTR_ENABLED: True,
     },
 }
-RANGE_BINARY_SENSORS = {}
+RANGE_BINARY_SENSORS = {
+    FEAT_COOKTOP_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop",
+        ATTR_VALUE_FN: lambda x: x._cooktop_state,
+        ATTR_ENABLED: True,
+    },
+    FEAT_OVEN_STATE: {
+        ATTR_MEASUREMENT_NAME: "Oven",
+        ATTR_VALUE_FN: lambda x: x._oven_state,
+    },
+}
 
 
 def _sensor_exist(lge_device, sensor_def):
