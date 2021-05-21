@@ -17,6 +17,7 @@ from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.ac import AirConditionerDevice
 from .wideq.dishwasher import DishWasherDevice
 from .wideq.dryer import DryerDevice
+from .wideq.range import RangeDevice
 from .wideq.refrigerator import RefrigeratorDevice
 from .wideq.styler import StylerDevice
 from .wideq.washer import WasherDevice
@@ -578,6 +579,8 @@ async def lge_devices_setup(hass, client) -> dict:
             dev = LGEDevice(RefrigeratorDevice(client, device), hass)
         elif device_type == DeviceType.AC:
             dev = LGEDevice(AirConditionerDevice(client, device, temp_unit), hass)
+        elif device_type == DeviceType.RANGE:
+            dev = LGEDevice(RangeDevice(client, device), hass)
 
         if not dev:
             _LOGGER.info(

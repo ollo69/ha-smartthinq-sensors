@@ -53,6 +53,17 @@ FEAT_SMARTSAVINGMODE = "smart_saving_mode"
 # FEAT_SMARTSAVING_STATE = "smart_saving_state"
 FEAT_WATERFILTERUSED_MONTH = "water_filter_used_month"
 
+# oven device features
+FEAT_COOKTOP_STATE = "cooktop_state"
+FEAT_COOKTOP_LEFT_FRONT_STATE = "cooktop_left_front_state"
+FEAT_COOKTOP_LEFT_REAR_STATE = "cooktop_left_rear_state"
+FEAT_COOKTOP_CENTER_STATE = "cooktop_center_state"
+FEAT_COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
+FEAT_COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
+FEAT_OVEN_STATE = "oven_state"
+FEAT_OVEN_LOWER_STATE = "oven_lower_state"
+FEAT_OVEN_UPPER_STATE = "oven_upper_state"
+
 CIPHERS = ":HIGH:!DH:!aNULL"
 
 

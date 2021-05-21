@@ -22,6 +22,15 @@ from .wideq import (
     FEAT_TUBCLEAN_COUNT,
     FEAT_TEMPCONTROL,
     FEAT_WATERTEMP,
+    FEAT_COOKTOP_STATE,
+    FEAT_COOKTOP_LEFT_FRONT_STATE,
+    FEAT_COOKTOP_LEFT_REAR_STATE,
+    FEAT_COOKTOP_CENTER_STATE,
+    FEAT_COOKTOP_RIGHT_FRONT_STATE,
+    FEAT_COOKTOP_RIGHT_REAR_STATE,
+    FEAT_OVEN_STATE,
+    FEAT_OVEN_LOWER_STATE,
+    FEAT_OVEN_UPPER_STATE,
 )
 
 from .wideq.device import (
@@ -36,6 +45,7 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_LOCK,
     DEVICE_CLASS_OPENING,
     DEVICE_CLASS_PROBLEM,
+    DEVICE_CLASS_POWER,
 )
 
 from homeassistant.const import (
@@ -79,6 +89,11 @@ ATTR_DOOR_OPEN = "door_open"
 # ac sensor attributes
 ATTR_ROOM_TEMP = "room_temperature"
 
+# oven sensor attributes
+ATTR_OVEN_LOWER_TARGET_TEMP = "oven_lower_target_temp"
+ATTR_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
+ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
+
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
     STATE_OPTIONITEM_ON: STATE_ON,
@@ -100,6 +115,7 @@ DEVICE_ICONS = {
     DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
     DeviceType.REFRIGERATOR: "mdi:fridge-outline",
+    DeviceType.RANGE: "mdi:stove",
 }
 
 RUN_COMPLETED_PREFIX = {
@@ -297,6 +313,77 @@ WASH_DEVICE_TYPES = [
     DeviceType.WASHER,
 ]
 
+RANGE_SENSORS = {
+    DEFAULT_SENSOR: {
+        ATTR_MEASUREMENT_NAME: "Default",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FN: lambda x: x._power_state,
+        ATTR_ENABLED: True,
+    },
+    FEAT_COOKTOP_LEFT_FRONT_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop Left Front",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_COOKTOP_LEFT_FRONT_STATE,
+    },
+    FEAT_COOKTOP_LEFT_REAR_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop Left Rear",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_COOKTOP_LEFT_REAR_STATE,
+    },
+    FEAT_COOKTOP_CENTER_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop Center",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_COOKTOP_CENTER_STATE,
+    },
+    FEAT_COOKTOP_RIGHT_FRONT_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop Right Front",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_COOKTOP_RIGHT_FRONT_STATE,
+    },
+    FEAT_COOKTOP_RIGHT_REAR_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop Right Rear",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_COOKTOP_RIGHT_REAR_STATE,
+    },
+    FEAT_OVEN_LOWER_STATE: {
+        ATTR_MEASUREMENT_NAME: "Oven Lower",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_OVEN_LOWER_STATE,
+        ATTR_ENABLED: True,
+    },
+    FEAT_OVEN_UPPER_STATE: {
+        ATTR_MEASUREMENT_NAME: "Oven Upper",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_OVEN_UPPER_STATE,
+        ATTR_ENABLED: True,
+    },
+    ATTR_OVEN_LOWER_TARGET_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Oven Lower Target Temperature",
+        ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._oven_lower_target_temp,
+        ATTR_ENABLED: True,
+    },
+    ATTR_OVEN_UPPER_TARGET_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Oven Upper Target Temperature",
+        ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FN: lambda x: x._oven_upper_target_temp,
+        ATTR_ENABLED: True,
+    },
+}
+RANGE_BINARY_SENSORS = {
+    FEAT_COOKTOP_STATE: {
+        ATTR_MEASUREMENT_NAME: "Cooktop",
+        ATTR_VALUE_FN: lambda x: x._cooktop_state,
+        ATTR_ENABLED: True,
+    },
+    FEAT_OVEN_STATE: {
+        ATTR_MEASUREMENT_NAME: "Oven",
+        ATTR_VALUE_FN: lambda x: x._oven_state,
+    },
+}
+
 
 def _sensor_exist(lge_device, sensor_def):
     """Check if a sensor exist for device."""
@@ -356,6 +443,19 @@ def setup_sensors(hass, config_entry, async_add_entities, type_binary):
             LGEACSensor(lge_device, measurement, definition, type_binary)
             for measurement, definition in ac_sensors.items()
             for lge_device in lge_devices.get(DeviceType.AC, [])
+            if _sensor_exist(lge_device, definition)
+        ]
+    )
+
+    # add ranges
+    range_sensors = (
+        RANGE_BINARY_SENSORS if type_binary else RANGE_SENSORS
+    )
+    lge_sensors.extend(
+        [
+            LGERangeSensor(lge_device, measurement, definition, type_binary)
+            for measurement, definition in range_sensors.items()
+            for lge_device in lge_devices.get(DeviceType.RANGE, [])
             if _sensor_exist(lge_device, definition)
         ]
     )
@@ -676,3 +776,70 @@ class LGEACSensor(LGESensor):
     def _temp_unit(self):
         unit = self._api.device.temperature_unit
         return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
+
+
+class LGERangeSensor(LGESensor):
+    """A sensor to monitor LGE range devices"""
+
+    def __init__(self, device, measurement, definition, is_binary):
+        """Initialize the sensor."""
+        super().__init__(device, measurement, definition, is_binary)
+        
+    @property
+    def device_state_attributes(self):
+        """Return the optional state attributes."""
+        if not self._is_default:
+            return None
+
+        data = {
+            ATTR_OVEN_LOWER_TARGET_TEMP: self._oven_lower_target_temp,
+            ATTR_OVEN_UPPER_TARGET_TEMP: self._oven_upper_target_temp,
+            ATTR_OVEN_TEMP_UNIT: self._oven_temp_unit,
+        }
+        features = self._get_features_value()
+        data.update(features)
+
+        return data
+
+    @property
+    def _power_state(self):
+        """Current power state"""
+        if self._api.state:
+            if self._api.state.is_on:
+                return STATE_ON
+        return STATE_OFF
+
+    @property
+    def _cooktop_state(self):
+        """Current cooktop state"""
+        if self._api.state:
+            if self._api.state.is_cooktop_on:
+                return STATE_ON
+        return STATE_OFF
+
+    @property
+    def _oven_state(self):
+        """Current oven state"""
+        if self._api.state:
+            if self._api.state.is_oven_on:
+                return STATE_ON
+        return STATE_OFF
+    
+    @property
+    def _oven_lower_target_temp(self):
+        if self._api.state:
+            return self._api.state.oven_lower_target_temp
+        return None
+
+    @property
+    def _oven_upper_target_temp(self):
+        if self._api.state:
+            return self._api.state.oven_upper_target_temp
+        return None
+
+    @property
+    def _oven_temp_unit(self):
+        if self._api.state:
+            return self._api.state.oven_temp_unit
+        return None
+

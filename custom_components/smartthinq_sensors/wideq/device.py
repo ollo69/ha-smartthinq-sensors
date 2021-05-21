@@ -65,7 +65,7 @@ class DeviceType(enum.Enum):
     DISHWASHER = 204
     TOWER_WASHER = 221
     TOWER_DRYER = 222
-    OVEN = 301
+    RANGE = 301
     MICROWAVE = 302
     COOKTOP = 303
     HOOD = 304
@@ -480,11 +480,24 @@ class ModelInfo(object):
         if not info:
             return decoded
         protocol = self._data["Monitoring"]["protocol"]
-        for data_key, value_key in protocol.items():
-            value = info.get(data_key, "")
-            if value is not None and isinstance(value, Number):
-                value = int(value)
-            decoded[value_key] = str(value)
+        if isinstance(protocol, list):
+            for elem in protocol:
+                if "superSet" in elem: 
+                    key = elem["value"]
+                    value = data
+                    for ident in elem["superSet"].split("."):
+                        if value is not None:
+                            value = value.get(ident)
+                    if value is not None:
+                        if isinstance(value, Number):
+                            value = int(value)
+                        decoded[key] = str(value)
+        else:
+            for data_key, value_key in protocol.items():
+                value = info.get(data_key, "")
+                if value is not None and isinstance(value, Number):
+                    value = int(value)
+                decoded[value_key] = str(value)
         return decoded
 
 
