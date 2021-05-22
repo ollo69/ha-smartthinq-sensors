@@ -652,6 +652,9 @@ class ClientV2(object):
     def _load_devices(self, force_update: bool = False):
         if self._session and (self._devices is None or force_update):
             self._devices = self._session.get_devices()
+            # logging information that can be used to create unit tests
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                _LOGGER.debug("Refreshing devices: %s", json.dumps(self._devices, indent=2))
             # for debug
             # self._inject_thinq2_device()
             # for debug
@@ -731,14 +734,17 @@ class ClientV2(object):
         if "session" in state:
             client._session = Session(client.auth, state["session"])
 
-        if "model_info" in state:
-            client._model_info = state["model_info"]
+        if "model_url_info" in state:
+            client._model_url_info = state["model_url_info"]
 
         if "country" in state:
             client._country = state["country"]
 
         if "language" in state:
             client._language = state["language"]
+
+        if "devices" in state:
+            client._devices = state["devices"]
 
         return client
 
@@ -769,6 +775,9 @@ class ClientV2(object):
 
         out["country"] = self._country
         out["language"] = self._language
+
+        if self._devices:
+            out["devices"] = self._devices
 
         return out
 
@@ -851,4 +860,9 @@ class ClientV2(object):
                     url,
                 )
             self._model_url_info[url] = self._load_json_info(url)
+
+            # logging information that can be used to create unit tests
+            if _LOGGER.isEnabledFor(logging.DEBUG):
+                _LOGGER.debug("Updating client: %s", json.dumps(self.dump(), indent=2))
+
         return self._model_url_info[url]

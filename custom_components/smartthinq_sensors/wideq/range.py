@@ -87,7 +87,7 @@ class RangeStatus(DeviceStatus):
         if not self._oven_temp_unit:
             oven_temp_unit = self.lookup_enum(["MonTempUnit"])
             if not oven_temp_unit:
-                self._oven_temp_unit = STATE_OPTIONITEM_NONE
+                self._oven_temp_unit = STATE_OPTIONITEM_OFF
             else:
                 self._oven_temp_unit = (
                     OVEN_TEMP_UNIT.get(oven_temp_unit, UNITTEMPMODES.Celsius)

@@ -1,0 +1,4014 @@
+{
+  "country": "US",
+  "language": "en-US",
+  "model_url_info": {
+    "https://objectstore.lgthinq.com/9a538c62": {
+      "Info": {
+        "productType": "301",
+        "country": "WW",
+        "modelType": "Oven",
+        "model": "DualFuel Slide-in Double",
+        "modelName": "WFZ474PGV",
+        "networkType": "WIFI",
+        "version": "0.4"
+      },
+      "Module": {
+        "WPM": {
+          "GOM_CEN01_Main": "204",
+          "GOM_TIM01_Main": "201",
+          "GUG_CEN03": "001",
+          "GOM_CCH01_Main": "001",
+          "GOM_CCH02_SelectEasyClean": "001",
+          "GOM_CCH03_CheckSaving": "001",
+          "GUG_CCH01": "001",
+          "GCM_SDS01_SdsMain": "001",
+          "GOM_SET01_Main": "201",
+          "GOM_SET02_PushList": "201",
+          "GOM_SET03_SupportVideo": "001",
+          "GOM_SET04_ProdSetting": "201",
+          "GOM_SET05_Vent": "001",
+          "GUG_SET01": "001",
+          "GOM_FOT01_Main": "201"
+        },
+        "Menu": [
+          "GOM_CCH01_Main",
+          "GCM_SDS01_SdsMain",
+          "GOM_SET01_Main"
+        ]
+      },
+      "Config": {
+        "OvenType": "Signature",
+        "ModelType": "COOKTOP_UPPER_LOWER",
+        "energySavingUnit": "Wh",
+        "dashboardDisplayType": "TYPE_3_ITEM",
+        "dashboardDisplaySubType": "COOKTOP_UPPER_LOWER",
+        "blackBox": "Y",
+        "isUpper": true,
+        "isSingle": false,
+        "isCooktop": true,
+        "cooktopInvisible": true,
+        "upperTimerNotSet": true,
+        "cicTel": "1-800-984-6306",
+        "fota": true,
+        "cooktimeEnable": true,
+        "thinqVersion": 2
+      },
+      "ControlWifi": {
+        "type": "JSON",
+        "action": {
+          "SetCookStart": {
+            "command": "Set",
+            "data": {
+              "ovenState": {
+                "cmdOptionContentsType": "",
+                "cmdOptionDataLength": "",
+                "cmdOptionSetCookName": "CookMode",
+                "cmdOptionSetSubCookNumber": "SubCookMode",
+                "cmdOptionSetMyRecipeCookNumber": "CookNum",
+                "cmdOptionSetTargetTemperatureUnit": "TempUnit",
+                "setTargetTemperature": "OvenTemp",
+                "cmdOptionSetTargetTimeHour": "CookTime",
+                "cmdOptionSetTargetTimeMinute": "CookTime",
+                "setTargetProveTemperature": "ProbeTemp"
+              }
+            }
+          },
+          "SetCookStop": {
+            "command": "Set",
+            "data": {
+              "ovenState": {
+                "cmdOptionCookStop": ""
+              }
+            }
+          },
+          "SetTimer": {
+            "command": "Set",
+            "data": {
+              "ovenState": {
+                "cmdOptionContentsType": "",
+                "cmdOptionDataLength": "",
+                "upperTimerSecond": "",
+                "upperTimerMinute": "",
+                "upperTimerHour": "",
+                "lowerTimerSecond": "",
+                "lowerTimerMinute": "",
+                "lowerTimerHour": ""
+              }
+            }
+          },
+          "SetPreference": {
+            "command": "Set",
+            "data": {
+              "ovenState": {
+                "cmdOptionContentsType": "",
+                "cmdOptionDataLength": "",
+                "settingOvenClockTimeHour": "",
+                "settingOvenClockTimeMinute": "",
+                "settingHourMode": "",
+                "settingConvAutoConversion": "",
+                "settingAdjustUnit": "",
+                "settingAdjustUpperTempValue": "",
+                "settingAdjustLowerTempValue": "",
+                "settingPreheatAlarm": "",
+                "settingBeepVolume": "",
+                "settingOvenTempUnit": "",
+                "settingLanguage": "",
+                "settingCooktopAlarmCooktopTimerMIN": "",
+                "settingCooktopBeepVolume": ""
+              }
+            }
+          }
+        }
+      },
+      "UpperManualCook": [
+        {
+          "_comment": "Bake",
+          "label": "@OV_TERM_BAKE_W",
+          "function": {
+            "MenuNum": "BAKE",
+            "CookTemperature": [
+              {
+                "UpperCookTemp_F": {
+                  "default": 350,
+                  "temprange": {
+                    "min": 170,
+                    "max": 500,
+                    "step": 5
+                  }
+                },
+                "UpperCookTemp_C": {
+                  "default": 175,
+                  "temprange": {
+                    "min": 80,
+                    "max": 260,
+                    "step": 1
+                  }
+                }
+              }
+            ],
+            "UpperCookTimeHour": {
+              "type": "Range",
+              "default": 0,
+              "option": {
+                "min": 0,
+                "max": 1,
+                "step": 1
+              }
+            },
+            "UpperCookTimeMin": {
+              "type": "Range",
+              "default": 10,
+              "option": {
+                "min": 0,
+                "max": 59,
+                "step": 1
+              }
+            }
+          }
+        }
+      ],
+      "LowerManualCook": [
+        {
+          "_comment": "Bake",
+          "label": "@OV_TERM_BAKE_W",
+          "function": {
+            "MenuNum": "LOWER_BAKE",
+            "CookTemperature": [
+              {
+                "LowerCookTemp_F": {
+                  "default": 350,
+                  "temprange": {
+                    "min": 170,
+                    "max": 500,
+                    "step": 5
+                  }
+                },
+                "LowerCookTemp_C": {
+                  "default": 175,
+                  "temprange": {
+                    "min": 80,
+                    "max": 260,
+                    "step": 1
+                  }
+                }
+              }
+            ],
+            "LowerCookTimeHour": {
+              "type": "Range",
+              "default": 0,
+              "option": {
+                "min": 0,
+                "max": 1,
+                "step": 1
+              }
+            },
+            "LowerCookTimeMin": {
+              "type": "Range",
+              "default": 10,
+              "option": {
+                "min": 0,
+                "max": 59,
+                "step": 1
+              }
+            }
+          }
+        },
+        {
+          "_comment": "Convection Bake",
+          "label": "@OV_TERM_CONV_BAKE_W",
+          "function": {
+            "MenuNum": "LOWER_CONVECTION_BAKE",
+            "CookTemperature": [
+              {
+                "LowerCookTemp_F": {
+                  "default": 350,
+                  "temprange": {
+                    "min": 300,
+                    "max": 500,
+                    "step": 5
+                  }
+                },
+                "LowerCookTemp_C": {
+                  "default": 175,
+                  "temprange": {
+                    "min": 150,
+                    "max": 260,
+                    "step": 1
+                  }
+                }
+              }
+            ],
+            "LowerCookTimeHour": {
+              "type": "Range",
+              "default": 0,
+              "option": {
+                "min": 0,
+                "max": 1,
+                "step": 1
+              }
+            },
+            "LowerCookTimeMin": {
+              "type": "Range",
+              "default": 10,
+              "option": {
+                "min": 0,
+                "max": 59,
+                "step": 1
+              }
+            }
+          }
+        },
+        {
+          "_comment": "Convection Roast",
+          "label": "@OV_TERM_CONV_ROAST_W",
+          "function": {
+            "MenuNum": "LOWER_CONVECTION_ROAST",
+            "CookTemperature": [
+              {
+                "LowerCookTemp_F": {
+                  "default": 350,
+                  "temprange": {
+                    "min": 300,
+                    "max": 500,
+                    "step": 5
+                  }
+                },
+                "LowerCookTemp_C": {
+                  "default": 175,
+                  "temprange": {
+                    "min": 150,
+                    "max": 260,
+                    "step": 1
+                  }
+                }
+              }
+            ],
+            "LowerCookTimeHour": {
+              "type": "Range",
+              "default": 0,
+              "option": {
+                "min": 0,
+                "max": 1,
+                "step": 1
+              }
+            },
+            "LowerCookTimeMin": {
+              "type": "Range",
+              "default": 10,
+              "option": {
+                "min": 0,
+                "max": 59,
+                "step": 1
+              }
+            }
+          }
+        }
+      ],
+      "SettingOven": [
+        {
+          "_comment": "Hour Mode",
+          "label": "@OV_TERM_HOUR_MODE_W",
+          "function": {
+            "HourMode": {
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "24H_MODE",
+                "12H_MODE"
+              ]
+            }
+          }
+        },
+        {
+          "_comment": "Convection Auto Conversion",
+          "label": "@OV_TERM_AUTO_CONVERSION_W",
+          "function": {
+            "ConvAutoConversion": {
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "DISABLE",
+                "ENABLE"
+              ]
+            }
+          }
+        },
+        {
+          "_comment": "Thermostat Adjustment",
+          "label": "@OV_TERM_THERMOSTAT_W",
+          "function": [
+            {
+              "_comment": "Upper Oven - ThermostatAdjustment",
+              "label": "@OV_TERM_UPPER_W",
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "OFF",
+                "ON"
+              ],
+              "condition": {
+                "1": [
+                  {
+                    "action": "set",
+                    "params": [
+                      {
+                        "ThermostatAdjustment_Temp_F": {
+                          "default": -1,
+                          "tempRange": {
+                            "min": -35,
+                            "max": 35,
+                            "step": 1
+                          }
+                        },
+                        "ThermostatAdjustment_Temp_C": {
+                          "default": -1,
+                          "tempRange": {
+                            "min": -19,
+                            "max": 19,
+                            "step": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "_comment": "Lower Oven - ThermostatAdjustment",
+              "label": "@OV_TERM_LOWER_W",
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "OFF",
+                "ON"
+              ],
+              "condition": {
+                "1": [
+                  {
+                    "action": "set",
+                    "params": [
+                      {
+                        "ThermostatAdjustment_Temp_F": {
+                          "default": -1,
+                          "tempRange": {
+                            "min": -35,
+                            "max": 35,
+                            "step": 1
+                          }
+                        },
+                        "ThermostatAdjustment_Temp_C": {
+                          "default": -1,
+                          "tempRange": {
+                            "min": -19,
+                            "max": 19,
+                            "step": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "_comment": "Preheating Alarm Light",
+          "label": "@OV_TERM_PREHEAT_ALARM_W",
+          "function": {
+            "PreheatingAlarmLight": {
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "OFF",
+                "ON"
+              ]
+            }
+          }
+        },
+        {
+          "_comment": "Beeper Volume",
+          "label": "@OV_TERM_BEEPER_VOLUME_W",
+          "function": {
+            "BeeperVolume": {
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "HIGH",
+                "LOW",
+                "MUTE"
+              ]
+            }
+          }
+        },
+        {
+          "_comment": "Temperature Unit",
+          "label": "@OV_TERM_TEMP_UNIT_W",
+          "function": {
+            "TempUnit": {
+              "default": "NOT_SET",
+              "selectable": [
+                "NOT_SET",
+                "FAHRENHEIT",
+                "CELSIUS"
+              ]
+            }
+          }
+        }
+      ],
+      "Push": [
+        {
+          "category": "PUSH_OVEN_STATE_ALARM",
+          "label": "@OV_TERM_OVEN_STATE_ALARM_UPPER_W",
+          "groupCode": "30101",
+          "pushList": []
+        },
+        {
+          "category": "PUSH_OVEN_STATE_ALARM",
+          "label": "@OV_TERM_OVEN_STATE_ALARM_LOWER_W",
+          "groupCode": "30103",
+          "pushList": []
+        },
+        {
+          "category": "PUSH_OVEN_COOKTOP_USING_ALARM",
+          "label": "@OV_TERM_USING_OVER_ALARM_W",
+          "groupCode": "30104",
+          "pushList": []
+        },
+        {
+          "category": "PUSH_OVEN_CLEAN_PERIOD",
+          "label": "@OV_TERM_CLEAN_CYCLE_ALARM_W",
+          "groupCode": "30102",
+          "pushList": []
+        }
+      ],
+      "Value": {
+        "UpperOvenState": {
+          "type": "Enum",
+          "default": "INITIAL",
+          "option": {
+            "INITIAL": "@OV_STATE_INITIAL_W",
+            "PREHEATING": "@OV_STATE_PREHEAT_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "DONE": "@OV_STATE_COOK_COMPLETE_W",
+            "COOLING": "@OV_TERM_COOLING_W"
+          }
+        },
+        "UpperCookModeState": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 7,
+              "default": 0,
+              "superSet": "ovenState.upperManualCookName",
+              "value": "UpperCookMode"
+            },
+            {
+              "startbit": 7,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperRemoteStartUsing",
+              "value": "UpperRemoteUsing"
+            }
+          ]
+        },
+        "UpperCookMode": {
+          "type": "Enum",
+          "default": "BAKE",
+          "option": {
+            "NONE": "NONE",
+            "BAKE": "@OV_TERM_BAKE_W",
+            "ROAST": "@OV_TERM_ROAST_W",
+            "CONVECTION_BAKE": "@OV_TERM_CONV_BAKE_W",
+            "CONVECTION_ROAST": "@OV_TERM_CONV_ROAST_W",
+            "CRISP_CONVECTION": "@OV_TERM_CRISP_CONV_W",
+            "FAVORITE": "@OV_TERM_FAVORITE_W",
+            "BROIL": "@OV_TERM_BROIL_W",
+            "WARM": "@OV_TERM_WARM_W",
+            "PROOF": "@OV_TERM_PROOF_W",
+            "PIZZA": "@OV_TERM_PIZZA_W",
+            "HEALTH_ROAST": "@OV_TERM_HEALTH_ROAST_W",
+            "PROBE_SET": "@OV_TERM_PROBE_SET_W",
+            "EASY_CLEAN": "@OV_TERM_EASY_CLEAN_W",
+            "SPEED_BROIL": "@OV_TERM_SPEED_BROIL_W",
+            "SELF_CLEAN": "@OV_TERM_SELF_CLEAN_W",
+            "SPEED_ROAST": "@OV_TERM_SPEED_ROAST_W"
+          }
+        },
+        "UpperRemoteUsing": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "superSet": "upperRemoteStartUsing",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperCookTimeHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "UpperCookTimeMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "UpperCookTimeSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "UpperTargetTemp": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 15,
+              "default": 0,
+              "superSet": "ovenState.upperTargetTemperatureValue",
+              "value": "UpperTargetTemp_F"
+            },
+            {
+              "startbit": 15,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperTargetTemperatureUnit",
+              "value": "MonTempUnit"
+            }
+          ]
+        },
+        "UpperTargetTemp_F": {
+          "type": "Range",
+          "default": 350,
+          "option": {
+            "min": 40,
+            "max": 500,
+            "step": 1
+          }
+        },
+        "UpperTargetTemp_C": {
+          "type": "Range",
+          "default": 175,
+          "option": {
+            "min": 80,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "UpperCookTemp_F": {
+          "type": "Range",
+          "default": 350,
+          "option": {
+            "min": 40,
+            "max": 500,
+            "step": 1
+          }
+        },
+        "UpperCookTemp_C": {
+          "type": "Range",
+          "default": 175,
+          "option": {
+            "min": 80,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "UpperProbeTargetTemp_F": {
+          "type": "Range",
+          "default": 150,
+          "option": {
+            "min": 30,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "UpperProbeTargetTemp_C": {
+          "type": "Range",
+          "default": 65,
+          "option": {
+            "min": 27,
+            "max": 200,
+            "step": 1
+          }
+        },
+        "UpperProbeCurrentTemp_F": {
+          "type": "Range",
+          "default": 150,
+          "option": {
+            "min": 30,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "UpperProbeCurrentTemp_C": {
+          "type": "Range",
+          "default": 65,
+          "option": {
+            "min": 27,
+            "max": 200,
+            "step": 1
+          }
+        },
+        "UpperOvenStateInfo": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperDoorLock",
+              "value": "UpperDoorlock"
+            },
+            {
+              "startbit": 1,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperControlLock",
+              "value": "UpperControllock"
+            },
+            {
+              "startbit": 2,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperIsError",
+              "value": "UpperError"
+            },
+            {
+              "startbit": 3,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperDoorOpen",
+              "value": "UpperDoorOpen"
+            }
+          ]
+        },
+        "UpperTimerHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "UpperTimerMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "UpperTimerSec": {
+          "type": "Range",
+          "default": 10,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "UpperWiFiAccess": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperRemoteStart",
+              "value": "UpperRemoteStart"
+            },
+            {
+              "startbit": 1,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperTimerSet",
+              "value": "UpperTimerSet"
+            },
+            {
+              "startbit": 2,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperOptionSet",
+              "value": "UpperOptionSet"
+            },
+            {
+              "startbit": 3,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.upperFotaEnable",
+              "value": "UpperFOTAEnable"
+            }
+          ]
+        },
+        "UpperCookNum": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 65280,
+            "step": 1
+          }
+        },
+        "LowerOvenState": {
+          "type": "Enum",
+          "default": "INITIAL",
+          "option": {
+            "INITIAL": "@OV_STATE_INITIAL_W",
+            "PREHEATING": "@OV_STATE_PREHEAT_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "DONE": "@OV_STATE_COOK_COMPLETE_W",
+            "COOLING": "@OV_TERM_COOLING_W"
+          }
+        },
+        "LowerCookModeState": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 7,
+              "default": 0,
+              "superSet": "ovenState.lowerManualCookName",
+              "value": "LowerCookMode"
+            },
+            {
+              "startbit": 7,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerRemoteStartUsing",
+              "value": "LowerRemoteUsing"
+            }
+          ]
+        },
+        "LowerCookMode": {
+          "type": "Enum",
+          "default": "LOWER_BAKE",
+          "option": {
+            "NONE": "NONE",
+            "LOWER_BAKE": "@OV_TERM_BAKE_W",
+            "LOWER_ROAST": "@OV_TERM_ROAST_W",
+            "LOWER_CONVECTION_BAKE": "@OV_TERM_CONV_BAKE_W",
+            "LOWER_CONVECTION_ROAST": "@OV_TERM_CONV_ROAST_W",
+            "LOWER_CRISP_CONVECTION": "@OV_TERM_CRISP_CONV_W",
+            "LOWER_FAVORITE": "@OV_TERM_FAVORITE_W",
+            "LOWER_BROIL": "@OV_TERM_BROIL_W",
+            "LOWER_KEEP_WARM": "@OV_TERM_WARM_W",
+            "LOWER_PROOF": "@OV_TERM_PROOF_W",
+            "LOWER_PIZZA": "@OV_TERM_PIZZA_W",
+            "LOWER_HEALTH_ROAST": "@OV_TERM_HEALTH_ROAST_W",
+            "LOWER_PROBE_SET": "@OV_TERM_PROBE_SET_W",
+            "LOWER_EASY_CLEAN": "@OV_TERM_EASY_CLEAN_W",
+            "LOWER_SPEED_BROIL": "@OV_TERM_SPEED_BROIL_W",
+            "LOWER_SELF_CLEAN": "@OV_TERM_SELF_CLEAN_W",
+            "LOWER_SPEED_ROAST": "@OV_TERM_SPEED_ROAST_W"
+          }
+        },
+        "LowerRemoteUsing": {
+          "type": "Enum",
+          "default": 0,
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerCookTimeHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "LowerCookTimeMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LowerCookTimeSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LowerTargetTemp": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 15,
+              "default": 0,
+              "superSet": "ovenState.lowerTargetTemperatureValue",
+              "value": "LowerTargetTemp_F"
+            },
+            {
+              "startbit": 15,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerTargetTemperatureUnit",
+              "value": "MonTempUnit"
+            }
+          ]
+        },
+        "LowerTargetTemp_F": {
+          "type": "Range",
+          "default": 350,
+          "option": {
+            "min": 40,
+            "max": 500,
+            "step": 1
+          }
+        },
+        "LowerTargetTemp_C": {
+          "type": "Range",
+          "default": 175,
+          "option": {
+            "min": 80,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "LowerCookTemp_F": {
+          "type": "Range",
+          "default": 350,
+          "option": {
+            "min": 40,
+            "max": 500,
+            "step": 1
+          }
+        },
+        "LowerCookTemp_C": {
+          "type": "Range",
+          "default": 175,
+          "option": {
+            "min": 80,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "LowerProbeTargetTemp_F": {
+          "type": "Range",
+          "default": 150,
+          "option": {
+            "min": 30,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "LowerProbeTargetTemp_C": {
+          "type": "Range",
+          "default": 65,
+          "option": {
+            "min": 27,
+            "max": 200,
+            "step": 1
+          }
+        },
+        "LowerProbeCurrentTemp_F": {
+          "type": "Range",
+          "default": 150,
+          "option": {
+            "min": 30,
+            "max": 300,
+            "step": 1
+          }
+        },
+        "LowerProbeCurrentTemp_C": {
+          "type": "Range",
+          "default": 65,
+          "option": {
+            "min": 27,
+            "max": 200,
+            "step": 1
+          }
+        },
+        "LowerOvenStateInfo": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerDoorLock",
+              "value": "LowerDoorlock"
+            },
+            {
+              "startbit": 1,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerControlLock",
+              "value": "LowerControllock"
+            },
+            {
+              "startbit": 2,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerIsError",
+              "value": "LowerError"
+            },
+            {
+              "startbit": 3,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerDoorOpen",
+              "value": "LowerDoorOpen"
+            }
+          ]
+        },
+        "LowerTimerHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "LowerTimerMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LowerTimerSec": {
+          "type": "Range",
+          "default": 10,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LowerWiFiAccess": {
+          "type": "Serveral",
+          "default": 0,
+          "option": [
+            {
+              "startbit": 0,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerRemoteStart",
+              "value": "LowerRemoteStart"
+            },
+            {
+              "startbit": 1,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerTimerSet",
+              "value": "LowerTimerSet"
+            },
+            {
+              "startbit": 2,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerOptionSet",
+              "value": "LowerOptionSet"
+            },
+            {
+              "startbit": 3,
+              "length": 1,
+              "default": 0,
+              "superSet": "ovenState.lowerFotaEnable",
+              "value": "LowerFOTAEnable"
+            }
+          ]
+        },
+        "LowerCookNum": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 65280,
+            "step": 1
+          }
+        },
+        "LFState": {
+          "type": "Enum",
+          "default": "INIT",
+          "option": {
+            "INIT": "@OV_STATE_INITIAL_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "PAUSED": "@OV_STATE_PAUSE_W",
+            "LOCK": "@OV_TERM_LOCKED_W"
+          }
+        },
+        "LFPowetLevel": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "LFHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "LFMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LFSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "RFState": {
+          "type": "Enum",
+          "default": "INIT",
+          "option": {
+            "INIT": "@OV_STATE_INITIAL_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "PAUSED": "@OV_STATE_PAUSE_W",
+            "LOCK": "@OV_TERM_LOCKED_W"
+          }
+        },
+        "RFPowetLevel": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "RFHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "RFMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "RFSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LRState": {
+          "type": "Enum",
+          "default": "INIT",
+          "option": {
+            "INIT": "@OV_STATE_INITIAL_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "PAUSED": "@OV_STATE_PAUSE_W",
+            "LOCK": "@OV_TERM_LOCKED_W"
+          }
+        },
+        "LRPowetLevel": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "LRHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "LRMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "LRSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "RRState": {
+          "type": "Enum",
+          "default": "INIT",
+          "option": {
+            "INIT": "@OV_STATE_INITIAL_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "PAUSED": "@OV_STATE_PAUSE_W",
+            "LOCK": "@OV_TERM_LOCKED_W"
+          }
+        },
+        "RRPowetLevel": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "RRHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "RRMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "RRSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "CenterState": {
+          "type": "Enum",
+          "default": "INIT",
+          "option": {
+            "INIT": "@OV_STATE_INITIAL_W",
+            "COOKING_IN_PROGRESS": "@OV_STATE_COOK_W",
+            "PAUSED": "@OV_STATE_PAUSE_W",
+            "LOCK": "@OV_TERM_LOCKED_W"
+          }
+        },
+        "CenterPowetLevel": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "CenterHour": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 11,
+            "step": 1
+          }
+        },
+        "CenterMin": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "CenterSec": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 59,
+            "step": 1
+          }
+        },
+        "DrawerPowetLevel": {
+          "type": "Range",
+          "default": 0,
+          "option": {
+            "min": 0,
+            "max": 5,
+            "step": 1
+          }
+        },
+        "MonTempUnit": {
+          "type": "Enum",
+          "_comment": "0 : F , 1 : C",
+          "default": "0",
+          "option": {
+            "FAHRENHEIT": "0",
+            "CELSIUS": "1"
+          }
+        },
+        "UpperRackPlacement": {
+          "type": "Range",
+          "default": 1,
+          "option": {
+            "min": 1,
+            "max": 5,
+            "step": 1
+          }
+        },
+        "LowerRackPlacement": {
+          "type": "Range",
+          "default": 1,
+          "option": {
+            "min": 1,
+            "max": 5,
+            "step": 1
+          }
+        },
+        "CookTemp_HML": {
+          "type": "Enum",
+          "default": "LV3",
+          "option": {
+            "LV3": "@OV_TERM_GOOD_W",
+            "LV1": "@OV_TERM_POOR_W"
+          }
+        },
+        "CookTemp_BROIL": {
+          "type": "Enum",
+          "option": {
+            "BROIL_HIGH": "@OV_TERM_GOOD_W",
+            "BROIL_LOW": "@OV_TERM_POOR_W"
+          }
+        },
+        "Pizza_HML": {
+          "type": "Enum",
+          "default": "P1",
+          "option": {
+            "P1": "P1",
+            "P2": "P2",
+            "P3": "P3"
+          }
+        },
+        "Accessory": {
+          "type": "Enum",
+          "option": {
+            "HEAVY_RACK": "@OV_TERM_HEAVY_RACK_W",
+            "GLIDING_RACK": "@OV_TERM_GLIDING_RACK_W",
+            "OTHER": "@OV_TERM_OTHER_W"
+          }
+        },
+        "HourMode": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "_Comment": "0 = 24H, 1 = 12H",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "12H_MODE": "@CP_UNIT_H_W",
+            "24H_MODE": "@CP_UNIT_H_W"
+          }
+        },
+        "ConvAutoConversion": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "ThermostatAdjustment": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "OFF": "@CP_OFF_EN_W",
+            "ON": "@CP_ON_EN_W"
+          }
+        },
+        "ThermostatAdjustment_Select": {
+          "type": "Enum",
+          "default": "FAHRENHEIT",
+          "option": {
+            "FAHRENHEIT": "\u2109",
+            "CELSIUS": "\u2103"
+          }
+        },
+        "ThermostatAdjustment_Temp_F": {
+          "type": "Range",
+          "default": -1,
+          "option": {
+            "min": -35,
+            "max": 35,
+            "step": 1
+          }
+        },
+        "ThermostatAdjustment_Temp_C": {
+          "type": "Range",
+          "default": -1,
+          "option": {
+            "min": -19,
+            "max": 19,
+            "step": 1
+          }
+        },
+        "PreheatingAlarmLight": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "OFF": "@CP_OFF_EN_W",
+            "ON": "@CP_ON_EN_W"
+          }
+        },
+        "BeeperVolume": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "HIGH": "@OV_TERM_HIGH_W",
+            "LOW": "@OV_TERM_LOW_W",
+            "MUTE": "@OV_TERM_MUTE_W"
+          }
+        },
+        "TempUnit": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "FAHRENHEIT": "@OV_TERM_FAHRENHEIT_W",
+            "CELSIUS": "@OV_TERM_CELSIUS_W"
+          }
+        },
+        "Language": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "ENGLISH": "@OV_TERM_LANGUAGE_EN_W",
+            "SPANISH": "@OV_TERM_LANGUAGE_SP_W",
+            "FRENCH": "@OV_TERM_LANGUAGE_FR_W"
+          }
+        },
+        "CookTopAlarmSet": {
+          "default": 30,
+          "timeRange": {
+            "min": 1,
+            "max": 99,
+            "step": 1
+          }
+        },
+        "CookTopAlarmSetLabel": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "ON": "@CP_OFF_EN_W",
+            "OFF": "@CP_ON_EN_W"
+          }
+        },
+        "CleaningRecommendation": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "1WEEK": "@OV_TERM_PERIOD_1WEEK_W",
+            "2WEEK": "@OV_TERM_PERIOD_2WEEK_W",
+            "1MONTH": "@OV_TERM_PERIOD_1MONTH_W"
+          }
+        },
+        "EnergeSaving": {
+          "upperEasyClean": "100",
+          "upperSelfClean": "10580",
+          "lowerEasyClean": "1000",
+          "lowerSelfClean": "9060"
+        },
+        "CookDataString": {
+          "type": "String",
+          "_comment": "CookData received to Server"
+        },
+        "UpperRemoteStart": {
+          "type": "Enum",
+          "default": false,
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperTimerSet": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperOptionSet": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperFOTAEnable": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperDoorlock": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperControllock": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperError": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperDoorOpen": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerRemoteStart": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerTimerSet": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerOptionSet": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerFOTAEnable": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerDoorlock": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerControllock": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerError": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "LowerDoorOpen": {
+          "type": "Enum",
+          "default": "DISABLE",
+          "option": {
+            "DISABLE": "@CP_DISABLE_W",
+            "ENABLE": "@CP_ENABLE_W"
+          }
+        },
+        "UpperProbeTemp_F": {
+          "type": "Range",
+          "default": 150,
+          "option": {
+            "min": 80,
+            "max": 210,
+            "step": 5
+          }
+        },
+        "UpperProbeTemp_C": {
+          "type": "Range",
+          "default": 65,
+          "option": {
+            "min": 27,
+            "max": 100,
+            "step": 1
+          }
+        },
+        "LowerProbeTemp_F": {
+          "type": "Range",
+          "default": 150,
+          "option": {
+            "min": 80,
+            "max": 210,
+            "step": 5
+          }
+        },
+        "LowerProbeTemp_C": {
+          "type": "Range",
+          "default": 65,
+          "option": {
+            "min": 27,
+            "max": 100,
+            "step": 1
+          }
+        },
+        "CooktopVolume": {
+          "type": "Enum",
+          "default": "NOT_SET",
+          "option": {
+            "NOT_SET": "@OV_TERM_NOT_SET_W",
+            "HIGH": "@OV_TERM_HIGH_W",
+            "LOW": "@OV_TERM_LOW_W",
+            "MUTE": "@OV_TERM_MUTE_W"
+          }
+        }
+      },
+      "Monitoring": {
+        "type": "THINQ2",
+        "protocol": [
+          {
+            "_comment": "Upper Oven Operation State(4byte)",
+            "superSet": "ovenState.upperState",
+            "value": "UpperOvenState"
+          },
+          {
+            "_comment": "Upper CookMode",
+            "superSet": "ovenState.upperManualCookName",
+            "value": "UpperCookMode"
+          },
+          {
+            "_comment": "Upper CookMode",
+            "superSet": "ovenState.upperRemoteStartUsing",
+            "value": "UpperRemoteUsing"
+          },
+          {
+            "_comment": "Upper CookTime(Sec)",
+            "superSet": "ovenState.upperRemainTimeSecond",
+            "value": "UpperCookTimeSec"
+          },
+          {
+            "_comment": "Upper CookTime(Min)",
+            "superSet": "ovenState.upperRemainTimeMinute",
+            "value": "UpperCookTimeMin"
+          },
+          {
+            "_comment": "Upper CookTime(Hour)",
+            "superSet": "ovenState.upperRemainTimeHour",
+            "value": "UpperCookTimeHour"
+          },
+          {
+            "_comment": "Upper Target Temperature F",
+            "superSet": "ovenState.upperTargetTemperatureValue",
+            "value": "UpperTargetTemp_F"
+          },
+          {
+            "_comment": "Upper Target Temperature F",
+            "superSet": "ovenState.upperTargetTemperatureUnit",
+            "value": "MonTempUnit"
+          },
+          {
+            "_comment": "Upper Current Temperature F",
+            "superSet": "ovenState.upperCurrentTemperatureF",
+            "value": "UpperCookTemp_F"
+          },
+          {
+            "_comment": "Upper Probe Target Temperature F",
+            "superSet": "ovenState.upperTargetProveTemperatureF",
+            "value": "UpperProbeTargetTemp_F"
+          },
+          {
+            "_comment": "Upper Probe Current Temperature F",
+            "superSet": "ovenState.upperCurrentProveTemperatureF",
+            "value": "UpperProbeCurrentTemp_F"
+          },
+          {
+            "_comment": "Upper Oven State Information",
+            "superSet": "ovenState.upperDoorLock",
+            "value": "UpperDoorlock"
+          },
+          {
+            "_comment": "Upper Oven State Information",
+            "superSet": "ovenState.upperControlLock",
+            "value": "UpperControllock"
+          },
+          {
+            "_comment": "Upper Oven State Information",
+            "superSet": "ovenState.upperIsError",
+            "value": "UpperError"
+          },
+          {
+            "_comment": "Upper Oven State Information",
+            "superSet": "ovenState.upperDoorOpen",
+            "value": "UpperDoorOpen"
+          },
+          {
+            "_comment": "Upper Timer (Sec)",
+            "superSet": "ovenState.upperTimerSecond",
+            "value": "UpperTimerSec"
+          },
+          {
+            "_comment": "Upper Timer (Min)",
+            "superSet": "ovenState.upperTimerMinute",
+            "value": "UpperTimerMin"
+          },
+          {
+            "_comment": "Upper Timer (Hour)",
+            "superSet": "ovenState.upperTimerHour",
+            "value": "UpperTimerHour"
+          },
+          {
+            "_comment": "Upper Remote Start Flag",
+            "superSet": "ovenState.upperRemoteStart",
+            "value": "UpperRemoteStart"
+          },
+          {
+            "_comment": "Upper Remote Start Flag",
+            "superSet": "ovenState.upperTimerSet",
+            "value": "UpperTimerSet"
+          },
+          {
+            "_comment": "Upper Remote Start Flag",
+            "superSet": "ovenState.upperOptionSet",
+            "value": "UpperOptionSet"
+          },
+          {
+            "_comment": "Upper Remote Start Flag",
+            "superSet": "ovenState.upperFotaEnable",
+            "value": "UpperFOTAEnable"
+          },
+          {
+            "_comment": "Lower Oven Operation State(4byte)",
+            "superSet": "ovenState.lowerState",
+            "value": "LowerOvenState"
+          },
+          {
+            "_comment": "Lower CookMode",
+            "superSet": "ovenState.lowerManualCookName",
+            "value": "LowerCookMode"
+          },
+          {
+            "_comment": "Lower CookMode",
+            "superSet": "ovenState.lowerRemoteStartUsing",
+            "value": "LowerRemoteUsing"
+          },
+          {
+            "_comment": "Lower CookTime(Sec)",
+            "superSet": "ovenState.lowerRemainTimeSecond",
+            "value": "LowerCookTimeSec"
+          },
+          {
+            "_comment": "Lower CookTime(Min)",
+            "superSet": "ovenState.lowerRemainTimeMinute",
+            "value": "LowerCookTimeMin"
+          },
+          {
+            "_comment": "Lower CookTime(Hour)",
+            "superSet": "ovenState.lowerRemainTimeHour",
+            "value": "LowerCookTimeHour"
+          },
+          {
+            "_comment": "Lower Target Temperature F",
+            "superSet": "ovenState.lowerTargetTemperatureValue",
+            "value": "LowerTargetTemp_F"
+          },
+          {
+            "_comment": "Lower Target Temperature F",
+            "superSet": "ovenState.lowerTargetTemperatureUnit",
+            "value": "MonTempUnit"
+          },
+          {
+            "_comment": "Lower Current Temperature F",
+            "superSet": "ovenState.lowerCurrentTemperatureF",
+            "value": "LowerCookTemp_F"
+          },
+          {
+            "_comment": "Lower Probe Target Temperature F",
+            "superSet": "ovenState.lowerTargetProveTemperatureF",
+            "value": "LowerProbeTargetTemp_F"
+          },
+          {
+            "_comment": "Lower Probe Current Temperature F",
+            "superSet": "ovenState.lowerCurrentProveTemperatureF",
+            "value": "LowerProbeCurrentTemp_F"
+          },
+          {
+            "_comment": "Lower Oven State Information",
+            "superSet": "ovenState.lowerDoorLock",
+            "value": "LowerDoorlock"
+          },
+          {
+            "_comment": "Lower Oven State Information",
+            "superSet": "ovenState.lowerControlLock",
+            "value": "LowerControllock"
+          },
+          {
+            "_comment": "Lower Oven State Information",
+            "superSet": "ovenState.lowerIsError",
+            "value": "LowerError"
+          },
+          {
+            "_comment": "Lower Oven State Information",
+            "superSet": "ovenState.lowerDoorOpen",
+            "value": "LowerDoorOpen"
+          },
+          {
+            "_comment": "Lower Timer (Sec)",
+            "superSet": "ovenState.lowerTimerSecond",
+            "value": "LowerTimerSec"
+          },
+          {
+            "_comment": "Lower Timer (Min)",
+            "superSet": "ovenState.lowerTimerMinute",
+            "value": "LowerTimerMin"
+          },
+          {
+            "_comment": "Lower Timer (Hour)",
+            "superSet": "ovenState.lowerTimerHour",
+            "value": "LowerTimerHour"
+          },
+          {
+            "_comment": "Lower Remote Start Flag",
+            "superSet": "ovenState.lowerRemoteStart",
+            "value": "LowerRemoteStart"
+          },
+          {
+            "_comment": "Lower Remote Start Flag",
+            "superSet": "ovenState.lowerTimerSet",
+            "value": "LowerTimerSet"
+          },
+          {
+            "_comment": "Lower Remote Start Flag",
+            "superSet": "ovenState.lowerOptionSet",
+            "value": "LowerOptionSet"
+          },
+          {
+            "_comment": "Lower Remote Start Flag",
+            "superSet": "ovenState.lowerFotaEnable",
+            "value": "LowerFOTAEnable"
+          },
+          {
+            "_comment": "Left Front Burner State",
+            "superSet": "ovenState.cooktop1CooktopState",
+            "value": "LFState"
+          },
+          {
+            "_comment": "Left Front Burner Power Level",
+            "superSet": "ovenState.cooktop1PowerLevel",
+            "value": "LFPowetLevel"
+          },
+          {
+            "_comment": "Left Front Burner Second",
+            "superSet": "ovenState.cooktop1OperationTimeSecond",
+            "value": "LFSec"
+          },
+          {
+            "_comment": "Left Front Burner Minute",
+            "superSet": "ovenState.cooktop1OperationTimeMinute",
+            "value": "LFMin"
+          },
+          {
+            "_comment": "Left Front Burner Hour",
+            "superSet": "ovenState.cooktop1OperationTimeHour",
+            "value": "LFHour"
+          },
+          {
+            "_comment": "Right Front Burner State",
+            "superSet": "ovenState.cooktop4CooktopState",
+            "value": "RFState"
+          },
+          {
+            "_comment": "Right Front Burner Power Level",
+            "superSet": "ovenState.cooktop4PowerLevel",
+            "value": "RFPowetLevel"
+          },
+          {
+            "_comment": "Right Front Burner Second",
+            "superSet": "ovenState.cooktop4OperationTimeSecond",
+            "value": "RFSec"
+          },
+          {
+            "_comment": "Right Front Burner Minute",
+            "superSet": "ovenState.cooktop4OperationTimeMinute",
+            "value": "RFMin"
+          },
+          {
+            "_comment": "Right Front Burner Hour",
+            "superSet": "ovenState.cooktop4OperationTimeHour",
+            "value": "RFHour"
+          },
+          {
+            "_comment": "Left Rear Burner State",
+            "superSet": "ovenState.cooktop2CooktopState",
+            "value": "LRState"
+          },
+          {
+            "_comment": "Left Rear Burner Power Level",
+            "superSet": "ovenState.cooktop2PowerLevel",
+            "value": "LRPowetLevel"
+          },
+          {
+            "_comment": "Left Rear Burner Second",
+            "superSet": "ovenState.cooktop2OperationTimeSecond",
+            "value": "LRSec"
+          },
+          {
+            "_comment": "Left Rear Burner Minute",
+            "superSet": "ovenState.cooktop2OperationTimeMinute",
+            "value": "LRMin"
+          },
+          {
+            "_comment": "Left Rear Burner Hour",
+            "superSet": "ovenState.cooktop2OperationTimeHour",
+            "value": "LRHour"
+          },
+          {
+            "_comment": "Right Rear Burner State",
+            "superSet": "ovenState.cooktop5CooktopState",
+            "value": "RRState"
+          },
+          {
+            "_comment": "Right Rear Burner Power Level",
+            "superSet": "ovenState.cooktop5PowerLevel",
+            "value": "RRPowetLevel"
+          },
+          {
+            "_comment": "Right Rear Burner Second",
+            "superSet": "ovenState.cooktop5OperationTimeSecond",
+            "value": "RRSec"
+          },
+          {
+            "_comment": "Right Rear Burner Minute",
+            "superSet": "ovenState.cooktop5OperationTimeMinute",
+            "value": "RRMin"
+          },
+          {
+            "_comment": "Right Rear Burner Hour",
+            "superSet": "ovenState.cooktop5OperationTimeHour",
+            "value": "RRHour"
+          },
+          {
+            "_comment": "Center Burner State",
+            "superSet": "ovenState.cooktop3CooktopState",
+            "value": "CenterState"
+          },
+          {
+            "_comment": "Center Burner Power Level",
+            "superSet": "ovenState.cooktop3PowerLevel",
+            "value": "CenterPowetLevel"
+          },
+          {
+            "_comment": "Center Burner Second",
+            "superSet": "ovenState.cooktop3OperationTimeSecond",
+            "value": "CenterSec"
+          },
+          {
+            "_comment": "Center Burner Minute",
+            "superSet": "ovenState.cooktop3OperationTimeMinute",
+            "value": "CenterMin"
+          },
+          {
+            "_comment": "Center Burner Hour",
+            "superSet": "ovenState.cooktop3OperationTimeHour",
+            "value": "CenterHour"
+          },
+          {
+            "_comment": "Drawer Power Level",
+            "superSet": "ovenState.drawerPowerLevel",
+            "value": "DrawerPowetLevel"
+          }
+        ]
+      }
+    },
+    "https://objectcontent.lgthinq.com/c3fb96c2": {
+      "subtype": "OV",
+      "pack": {
+        "@OV_UX30_RECIPE_FAIL_DW_OTHER_USER_S": "Dishwasher is in use.",
+        "@OV_UX30_TERM_RECIPE_NAME_W": "Recipe Name",
+        "@OV_UX30_EASYCLEAN_ESTI_SAVE_VALUE_W": "Estimated Savings",
+        "@OV_UX30_EASYCLEAN_DISABLE_TITLE_S": "Unable to start EasyClean. Please try again after checking the status of the product.",
+        "@OV_UX30_STC_AFTER_STAGE_W": "After Stage {{$0}}",
+        "@OV_RECIPE_STAGE_SELECT_GUIDE_S": "N/A",
+        "@OV_INDIC_REG_OVEN_WIFI_TIMER_ON_OFF_AND_REMOTE_2_UI20_S": " Press and hold the Timer On/Off or Wi-Fi button on the oven for 3 seconds.",
+        "@OV_UX30_SETTING_BEEPER_VOLUME_W": "Beeper Volume",
+        "@OV_PRODUCT_REG_ELEC_RANGE_1": "1. Make sure power cord is plugged in.",
+        "@OV_TOAST_REMOVE_SELECTED_RECIPE_S": "The selected recipe is deleted.",
+        "@OV_PRODUCT_REG_ELEC_RANGE_2": "2. Press and hold the Auto Timeset button on the {{$0}} for 3 seconds.",
+        "@OV_UX30_EASYCLEAN_SELECT_OVEN_S": "SELECT OVEN TO CLEAN",
+        "@OV_TERM_NOTHING": "none",
+        "@OV_TERM_SIMPLE_FOOD_W": "Extra simple dishes",
+        "@OV_STATE_PREHEAT_COMPLETE_W": "Preheating is done",
+        "@OV_HMR_NO_RESULT_DESC_2_S": "Try again, making sure to clearly capture the entire front of the HMR package.",
+        "@OV_ERROR_INPUT_W": "Input button error",
+        "@OV_TERM_DEFROST_POULTRY_W": "Poultry",
+        "@OV_UX30_MAIN_START_DESC_S": "Press Start on Oven",
+        "@OV_TERM_MAIN_INGREDIENT_W": "Ingredients",
+        "@OV_OVEN_ERROR_CONTENTS_F11": "No communication with Inverter module.",
+        "@OV_UX30_STATE_ERROR_NEW_W": "Product requires attention",
+        "@OV_STATE_CLEAN_W": "Cleaning",
+        "@OV_TERM_HOT_AIR_COMBI_W": "Hot Air Combi.",
+        "@OV_OVEN_ERROR_CONTENTS_F12": "No communication with LCD module.",
+        "@OV_OVEN_ERROR_CONTENTS_F19": "EXCEPT PROOF and WARM\n    Case 1: start temperature does not exceed 130 \u2109 and oven temperature is less equal than 150 \u2109 and max oven temperature is less equal than start oven temp. + 10 \u2109 over 5 minutes on preheating, where door is closed.\n    Case 2: oven temperature is less equal than 100\u2109 over 5 minutes on preheating, where door is closed.",
+        "@OV_OVEN_ERROR_CONTENTS_F17": "Convection fan operating can't be detected over 1 minute in all cases of right convection fan operating.",
+        "@OV_TERM_DISPLAY_SCROLL_SPEED_W": "Display Scroll Speed",
+        "@OV_TERM_TEMPERATURE_W": "Temperature",
+        "@OV_UX30_SETTING_LANG_NOTI_S": "The app's language does not change.",
+        "@OV_TERM_AUTO_COOK_W": "Auto Cook",
+        "@OV_TERM_LEFT_W": "Left",
+        "@OV_DASHBOARD_MWO_OVEN_STATE_SEND_W": "Sending settings",
+        "@OV_TERM_DIRECTION_W": "Preparation",
+        "@OV_TERM_BROIL_CENTER_W": "Broil Center",
+        "@OV_SDS_AUDIBLE_MWO_GLOBAL_STEP03_UX20_S": "After pressing the Next button, press and hold the Clear button on your microwave oven for at least 8 seconds.",
+        "@OV_DASHBOARD_OVEN_STATE_CLEAN_W": "Running EasyClean",
+        "@OV_UX30_CLEAN_ODOR_S": "Oven Odor Management",
+        "@OV_TERM_ALARM_TIME_SETTING_W": "Alerts time set",
+        "@OV_TERM_BLENDER_COMPLETE_ONE_W": "Press the 'START/STOP' button on the blender.",
+        "@OV_TERM_AUTO_REMOTE_W": "Auto Remote",
+        "@OV_TERM_ACCESSORY_LID_W": "N/A",
+        "@OV_TERM_COOKING_OVEN_W": "Oven to Cook",
+        "@OV_TERM_FORECATING_W": "Estimated",
+        "@OV_UX30_ACT_OVEN_SET_W": "Cook Settings",
+        "@CP_PROD_REG_OV_FUNCTION_BUTTON": " Press the \"Select Function/Add Steam\" button of the oven.",
+        "@OV_TERM_UNIT_COUNT_W": "{{$0}}ea",
+        "@OV_SDS_AUDIBLE_MWO_KR_STEP03_UX20_S": "After pressing the Next button, press and hold the Cancel button on your microwave oven for at least 5 seconds.",
+        "@OV_TERM_HOOD_STATE_ALARM_W": "Hood Alerts",
+        "@OV_SDS_AUDIBLE_MWO_WW_CMO_LWO_STEP01_S": "Smart Diagnosis will not work if the microwave is operating. \nMake sure the microwave is not heating anything.",
+        "@OV_TERM_BAKE_FUNC_W": "Frying function",
+        "@OV_HMR_GUIDE_1_S": "Take a photo of an HMR food package to see its cooking instructions and send cook settings to the oven.",
+        "@OV_TERM_SMART_OVEN_W": "LG Smart Oven",
+        "@OV_STATE_FREEZE_COMPLETE_W": "Cooling is complete",
+        "@OV_ACCESSIBILITY_NEXT_MONTH": "Next month",
+        "@OV_TERM_CUSTOM_COOK_SETTING": "Please set the cooking method to save in Custom Cook.",
+        "@OV_TERM_1ST": "1st",
+        "@OV_TERM_MAIN_FOOD_AMOUNT_W": "Ingredient Quantity",
+        "@OV_TERM_PROBE_SET_W": "Probe Set",
+        "@OV_INDIC_FAVORITE_NOT_SET1_S": "No recipe registered as a favorite.",
+        "@OV_ACC_PHOTO_VIEWER_S": "{{1}}th photo in {{0}} step.",
+        "@OV_OVER_VOLT_PROTECTION": "Input Voltage is High",
+        "@OV_TERM_SETTING_LAMP_SLEEP": "60 sec on",
+        "@OV_TERM_5TH": "5th",
+        "@OV_TERM_GOURMET_STEAM_ASPARAGUS": "Asparagus",
+        "@OV_ACC_ENMTAP_W": "Tab {{$0}} of {{$1}}",
+        "@OV_TERM_SALADS_W": "Salads",
+        "@OV_STATE_ERROR_DESC": "An error has occurred. Check the status of the product.",
+        "@OV_TERM_CANNOT_READ_DATA": "Data can't be retrieved.",
+        "@OV_UX30_SETTING_NO_CHANGE_W": "No Change",
+        "@OV_ACCE_FB_W": "Facebook",
+        "@OV_SDS_AUDIBLE_BLENDER_1_1": "1. Please make sure blender is plugged in.",
+        "@OV_UX30_CLEAN_SEND_GUIDE_S": "Oven settings have been sent. Press Start on the oven.",
+        "@OV_SDS_AUDIBLE_BLENDER_1_2": "2. Set the dial to 'Wi-Fi' position",
+        "@OV_GUG_GUG_SET01_12_W": "\u2022 Thermostat Adjustment",
+        "@OV_INDIC_STEAM_CLEAN_GUIDE2_S": "Wait for about 15 minutes after cooking is finished to start the cleaning function.",
+        "@OV_TERM_IH_LARGE": "Large IH",
+        "@OV_CENTER_TOP_SENSOR_OVER_TEMPERATURE_PROTECTION": "Center Top Sensor detect high Temperature",
+        "@OV_PUSH_301_30103_1013_W": "Timer has been completed on '$alias$'.",
+        "@OV_TERM_TODAY": "Today",
+        "@OV_TERM_LAYER_POS_SELECT_W": "Set Rack Position",
+        "@OV_UX30_CLEAN_ACC_GUIDE_1_S": "Clean with a mild detergent and wipe dry. Soak the enamel dish in hot water for about 30 minutes.",
+        "@OV_TERM_SETTING_PREHEATING_SPEED": "Rapid",
+        "@OV_TERM_STEAMMAINTAENANCE_DRYING_W": "Drying",
+        "@OV_IGBT_SENSOR_OVER_TEMPERATURE_PROTECTION": "IGBT Sensor detect high Temperature",
+        "@OV_TERM_PROBE_TEMP_W": "Probe Temp.",
+        "@OV_TERM_RIGHT_W": "Right",
+        "@OV_INDIC_USING_OVER_ALARM1_S": "Usage duration alarm will be sent to your phone when oven has been running over time.",
+        "@OV_UX30_MAIN_REMOTE_GUIDE_S": "Remote Start Guide",
+        "@OV_INDIC_DOOR_OPEN_CANCEL_REMOTE_S": "Remote Start turned off because the door is opened.",
+        "@OV_INDIC_BAKE_PEN_GUIDE_S": "It is for frying or oven cooking only. Use it alone in level 4.",
+        "@OV_INDIC_KNOB_GUIDE_S": "(If product is a wall oven, rotate the knob in the Tag on position)",
+        "@OV_TERM_SMALL_GRILL_W": "Small Grill",
+        "@OV_UX30_CATEGORY_HOOD_W": "Hood",
+        "@OV_UX30_MAIN_COOLING_W": "Cooling",
+        "@OV_UX30_CLEAN_DOOR_S": "Cleaning the Inner Door",
+        "@OV_TERM_UNIT_W": "Unit",
+        "@OV_UX30_SETTING_NICK_S": "Edit Nickname",
+        "@OV_INDIC_DISCONNECTED_S": "Please turn on the product and connect to a network in order to use all of the functions.",
+        "@OV_TERM_WEIGHT_W": "Weight",
+        "@OV_SDS_AUDIBLE_MWO_NA_CMO_OTR_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_TERM_MENU_FROZEN_PIZZA": "Pizza",
+        "@OV_UX30_TERM_PERIOD_2WEEK_W": "Once every two weeks",
+        "@OV_STATE__INITIAL_TOASTER_DESC_S": "Set the function on toaster",
+        "@OV_POPUP_SHOOT_PHOTO_W": "Take Photos",
+        "@OV_INDIC_DISCONNECTED_W": "Disconnected",
+        "@OV_TERM_CONV_ROAST_W": "Convection Roast",
+        "@OV_POPUP_OVEN_STOP_TITLE_W": "Stop",
+        "@OV_TERM_HEAT_RESISANT_GALSS_W": "Heat-resistant glass containers",
+        "@OV_PUSH_301_30101_9998_W_P_11": "'$alias$' has a temperature sensor error.",
+        "@OV_PUSH_301_30101_9998_W_P_13": "'$alias$' has a temperature sensor error.",
+        "@OV_SMALLTHING_ERROR_CONTENTS_HOT": "The product has stopped due to the overheating prevention function inside the product. Unplug the power cord and let it cool for 30 minutes before using it. If the same problem is repeated, contact LG service center.",
+        "@OV_TERM_TIME_NOT_SET_INFO_DESC_S": "Please enter cooking time.",
+        "@OV_PUSH_301_30101_9998_W_P_19": "'$alias$' has a temperature sensor error.",
+        "@OV_PUSH_302_30201_0103_W": "'$alias$' has a key error.",
+        "@OV_TERM_STEAM_KR_ONLY_W": "Steam",
+        "@OV_UX30_RECIPE_PHOTO_W": "RECIPE PHOTOS",
+        "@OV_PUSH_301_30101_9998_W_P_16": "'$alias$' has a temperature sensor error.",
+        "@OV_GUG_ADD02_OV_2_S": "Smart ThinQ logo position of the oven, please refer to the image below.",
+        "@OV_PUSH_301_30101_9998_W_P_17": "'$alias$' has a temperature sensor error.",
+        "@OV_GUG_GUG_SET01_7_W": "The oven beeper volume can be set in three levels.",
+        "@OV_TERM_GOURMET_FRENCH_FRIES": "French Fries",
+        "@OV_UX30_STC_MYRECIPE_S": "Cook with My Recipe",
+        "@OV_DASHBOARD_MWO_DESC_SEND_COMPLETE_S": "Press Start on microwave to begin cooking.",
+        "@OV_ACT_TRANSFER_HOOD_W": "Send",
+        "@OV_TERM_REMAINING_TIME_W": "Remaining",
+        "@OV_TERM_REMOTE_START_W": "Remote Start",
+        "@OV_TERM_COOKTIME_W": "Cooking time",
+        "@OV_TERM_ENERGY_SAVING_EXPECTATION_W": "Show Usage",
+        "@OV_UX30_TERM_LAYER_POS_SELECT_W": "Rack Position",
+        "@OV_STATE_COMPLETE_W": "Done",
+        "@OV_INDIC_PRODUCT_FRONT_S": "After cooking oily foods such chicken or fish, use a scrubbing cloth soaked in neutral agent and wipe off the front of the cooking room with it. When cleaning, do not go against the grain but move it left and right; use a dry cloth to clean it one more time.",
+        "@OV_TERM_DAY_WED_W": "Wednesday",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_7_S": "Some surfaces may be hot after SpeedClean\u2122(EasyClean\u00ae) cycle. Wear rubber gloves while cleaning to prevent burns.",
+        "@OV_SDS_AUDIBLE_TOASTER_2_1": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_POPUP_OVEN_SETTINGS_GUIDE_W": "Change Settings",
+        "@OV_TERM_SUMMARY_TIME_GUIDE1_UX20_W": "N/A",
+        "@OV_POPUP_OVEN_SETTINGS_GUIDE_S": "Press Save when done making changes.",
+        "@OV_UX30_MAIN_EDIT_COOK_W": "Edit",
+        "@OV_PRODUCT_REG_DIAL_YES_1": "1. Make sure power cord is plugged in.",
+        "@OV_UX30_MWO_SETTINGCLOCK_MODE_W": "Clock Mode",
+        "@OV_PRODUCT_REG_DIAL_YES_2": "2. Press the \u201cSelect Function/Add Steam\u201d button on the {{$0}}",
+        "@OV_UX30_SETTING_LANG_DESC_S": "Select language shown on the screen of {{$0}}.",
+        "@OV_PRODUCT_REG_DIAL_YES_3": "3. Turn the dial to Settings and select Wi-Fi Settings on the {{$0}}",
+        "@OV_UX30_SETTING_MUTE_W": "Silent Mode",
+        "@OV_INDIC_PRODUCT_OUTER_S": "Use neutral agent to wipe off the front glass. Soak a cloth or a sponge in neutral agent and wipe off; after that, clean with a dry cloth.",
+        "@OV_TERM_TIME_UNIT_H_W": "h",
+        "@OV_UX30_POP_EASYCLEAN_DESC6_S": "Probe in oven cavity",
+        "@OV_TERM_CANCEL_BTN_S": "Please check the shape of Cancel button.",
+        "@OV_TERM_AUTO_CONVERSION_W": "Auto Conversion",
+        "@OV_UX30_MWO_MAINDEFROST_GUIDE_W": "Defrost Guide",
+        "@OV_TERM_GOURMET_LEG_OF_LAMB": "Leg of Lamb",
+        "@OV_UX30_EASYCLEAN_START_S": "Start EasyClean",
+        "@OV_TERM_CRISP_CONV_W": "Crisp Convection",
+        "@OV_TERM_MYRECIPES_W": "My Recipes",
+        "@OV_SMALLTHING_ERROR_LABEL_HOT": "Hot",
+        "@OV_TERM_RECIPE_NAME_W": "Recipe Name",
+        "@OV_GUG_ADD01_OV_2_S": "To find out the location of the tag on logo on the product, refer to the below image.",
+        "@OV_INDIC_VENT_NOT_CONNECTION_S": "Vent operation connection could not be set. {{$0}} is either Off or not connected to the network.",
+        "@OV_UX30_HMR_CAUTION_2_S": "The product packaging image above is subject to change.",
+        "@OV_TERM_MODE_MANUAL_MODE": "Manual Mode",
+        "@OV_TERM_OPTION_BROWNING_LEVEL": "Browning Level",
+        "@OV_PUSH_304_30401_4102_W": "'$alias$' has a temperature sensor error.",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_3_S": "\u318dPlastic pan scraper",
+        "@OV_TERM_BEFORE_PRIOR_TO_W": "Just Added",
+        "@OV_INDIC_REMOVE_FOOD_SMELL_2_S": "N/A",
+        "@OV_POPUP_OVER_SAVE_W": "Maximum Capacity Reached",
+        "@OV_INDIC_AUTO_SET_QUANTITY_S": "Cook settings will be adjusted based on the quantity.",
+        "@OV_UX30_INDIC_SELECT_MAIN_QUANTITY_S": "Main ingredient is {{$0}}. Select the amount of it.",
+        "@OV_TERM_IH": "IH",
+        "@OV_INDIC_GRILL_GUIDE_S": "It can be used for all kinds of cooking. Use it alone or together with an enamel dish.",
+        "@OV_PUSH_301_30102_9101_W": "Did you know fresh stains or spills are easier to remove in your oven than old ones?",
+        "@OV_PUSH_303_30301_2005_W": "Center CookTop is running over the set time.",
+        "@OV_TERM_GOURMET_FRESH_PIZZA": "Fresh Pizza",
+        "@OV_TERM_STEAM_INFO_DESC": "Check the water level in the reservoir. Remember to empty the reservoir after use.",
+        "@OV_SDS_AUDIBLE_LWO_KR_STEP03_S2": "After pressing the Next button, press the \u2018Select Function\u2019 button of oven. Select and start \u2018SmartDiagnosis\u2019 from \u2018Setting\u2019 menu of oven.",
+        "@OV_TERM_ESTIMATE_COMPLETE_TIME_W": "Estimated End Time",
+        "@OV_POP_EASYCLEAN_DESC5_S": "Lack of water",
+        "@OV_PUSH_301_30101_0010_W": "Fill up the '$alias$' is water basket to the max level with clean water and then press the 'Select/Start Simple Cooking' button.",
+        "@OV_TERM_MENU_FROZEN_TOAST": "Toast",
+        "@OV_TERM_MODE_FROZEN_MODE": "Frozen Mode",
+        "@OV_TERM_SOFTEM_W": "Soften",
+        "@OV_TERM_MAIN_POWER_OFF_POPUP": "The Power cannot be on at application.",
+        "@OV_STATE__INITIAL_BLENDER_DESC_S": "Set the function on blender",
+        "@OV_ACCE_DEL_IMG_W": "Delete Image",
+        "@OV_INDIC_ACCESSORY_CLEAN5_S": "However, do not wipe with an iron scrubber or add vinegar to the water. If you put vinegar in water and soak it, the coating may peel off due to the acidity of the vinegar.",
+        "@OV_TERM_POWER_LEVEL_MWO_W": "Power Level",
+        "@OV_INDIC_SET_TIMER_S": "Set the oven's timer below. Once the Timer ends the oven will chime and you will receive a push notification.",
+        "@OV_DASHBOARD_OVEN_STATE_SETTING_W": "Configuring",
+        "@OV_TERM_ACCESSORY_INSTALL_DISH_1_S": "N/A",
+        "@OV_UX30_CLEAN_DISH_GUIDE_3_S": "For Oven Reheating",
+        "@OV_DASHBOARD_OVEN_DESC_DISCONNECT1_S": "Did not connect.",
+        "@OV_POPUP_OVEN_SETTINGS_W": "Cook Settings",
+        "@OV_DASHBOARD_OVEN_DESC_NFC_S": "Use the Tag On function to use the '{{$0}}' and '{{$1}}' functions.",
+        "@OV_DASHBOARD_MWO_DESC_NFC_S": "Use the Tag On function to send the Recipes.",
+        "@OV_TERM_HOUR_DISPLAY_W": "Clock Display",
+        "@OV_TERM_COOK_METHOD_W": "Cooking Directions",
+        "@OV_SDS_AUDIBLE_MWO_US_STEP03_OTR_SUBTITLE_UX20_S": "OTR (Over-the-Range) Microwave:",
+        "@OV_OVEN_ERROR_CONTENTS_F25": "From starting of steam heater operation, the result of ADC over 60 seconds is over 240 counts. (Except Autocook Mode.)",
+        "@OV_FOTA_NOTICE_TURNED_OFF_S": "The product may be turned off during the update.",
+        "@OV_UX30_CLEAN_REDUCE_ODOR_S": "After cooking, use this function to remove odors in the oven.",
+        "@OV_OVEN_ERROR_CONTENTS_F24": "From 5 minutes after steam heater operated, the result of ADC over 60 seconds is under 5 counts. (In case of Cook stop while error detection, the count of 5 minutes becomes refreshed except Autocook Mode.)",
+        "@OV_STATE_INITIAL_DESC_S": "Set the function on toaster",
+        "@OV_TERM_SPEED_CLEAN_COUNT_W": "SpeedClean\u2122 total use count",
+        "@OV_OVEN_ERROR_CONTENTS_F22": "From starting of steam heater operation, the result of ADC over 60 seconds is over 240 counts. (Except Autocook Mode.)",
+        "@OV_OVEN_ERROR_CONTENTS_F21": "From 5 minutes after steam heater operated, the result of ADC over 60 seconds is under 5 counts. (In case of Cook stop while error detection, the count of 5 minutes becomes refreshed except Autocook Mode.)",
+        "@OV_GUG_GUG_SET01_4_W": "\u2022 Preheating Alarm Light",
+        "@OV_OVEN_ERROR_CONTENTS_F20": "Detected Auto Door System fault",
+        "@OV_COOKTEMP_HML_LEVEL1_W": "Level 1",
+        "@OV_TERM_MENU_CROISSANT": "Croissant",
+        "@OV_TERM_CONVECTION_COMBI_W": "Convection Combi.",
+        "@OV_GUG_ADD03_OV_2_S": "For the position of the Smart Diagnosis logo on the oven, refer to the following image.",
+        "@OV_UX30_RECIPE_FAV_GUIDE_2_S": "Tap \u2605 to add to Favorites.",
+        "@OV_TERM_OFF_ACC": "off",
+        "@OV_BUTTON": "Button",
+        "@OV_TERM_REMOVE_FOOD_SMELL_W": "N/A",
+        "@OV_GUG_SDS_SOUND_1_S": "Smart Diagnosis will not work if the oven is operating. Make sure the oven is not heating anything.",
+        "@OV_UX30_CLEAN_ETC_ODOR_S": "Removing Other Strong Odors",
+        "@OV_INDIC_PRESS_START1_S": "Press {{$0}} on the Oven.",
+        "@OV_TERM_ACCESSORY_HOTPAN_2_S": "N/A",
+        "@OV_TERM_COOKTOP_SET_COMPLETE": "Cooktop setting complete",
+        "@OV_TERM_TIME_SET_W": "Time",
+        "@OV_REG_iOS_SOFT_AP_S": "Turn on Wi-Fi settings, then connection to the Wi-Fi network named  {{$0}}.\nIf required, enter the following:",
+        "@OV_TERM_OTHER_W": "Other",
+        "@OV_POPUP_ADD_PHOTO_W": "Add Photos",
+        "@OV_UX30_DASHBOARD_MWO_OVEN_STATE_COOKING_W": "Cooking",
+        "@OV_DASHBOARD_OVEN_DESC_COOLING_COMPLETE_S": "The oven will unlock once it has cooled down.",
+        "@OV_SHOPPING_POLICY_S": "N/A",
+        "@OV_UX30_STC_STAGE_W": "Stage {{$0}}",
+        "@OV_STATE_INITIAL3_W": "Stanby",
+        "@OV_ACT_TRANSFER_BLENDER_W": "Send",
+        "@OV_TERM_PREVIOUS": "Previous",
+        "@OV_TERM_MENU_AND_INGREDIENT_RECIPE_W": "Cooking menu/recipe for each ingredient",
+        "@OV_TOAST_TRANSFER_SETTINGS_INFO_S": "Settings information sent",
+        "@OV_TERM_TITLE_DEODORIZTION_W": "Oven Odor Management",
+        "@OV_TERM_MENU_BAGEL": "Bagel",
+        "@OV_POPUP_INPUT_RECIPE_NAME_S": "Enter Recipe name",
+        "@OV_GUG_GUG_ADD03_RA_1_S": "Position of the Smart Diagnosis logo on the microwave oven",
+        "@OV_POPUP_INPUT_RECIPE_NAME_W": "Enter Recipe name",
+        "@OV_TERM_COOLING2_W": "Cooling in progress...",
+        "@OV_UX20_PREHEAT_START_W": "Start",
+        "@OV_UX30_COOKTOP_STATE_OFF_DESC_W": "Use the product controls to turn the cooktop on and adjust settings.",
+        "@OV_TERM_OVEN_SELELT_W": "Select Which Oven",
+        "@OV_UX30_RECIPE_DELETE_RECIPE_S": "Delete the recipe?",
+        "@OV_PUSH_301_30104_2003_W": "Left Rear Burner Cooktop is running over the set time.",
+        "@OV_ACC_PHOTO_ATTACH_TOAST_S": "Photo registerd.",
+        "@OV_TERM_CHOCOLATE_W": "Chocolate",
+        "@OV_UX30_FOTA_NOTICE_PUSH_ALRAM_S": "(You will receive a push notification when the update is complete.)",
+        "@OV_STAGE_1_W": "N/A",
+        "@OV_GUG_ADD03_OV_3_S": "[Slide-in]",
+        "@OV_TERM_CHECK_SPEEDCLEAN_DESC_1_S": "On the {{$0}} oven, SpeedClean\u2122 can be started remotely from the app.",
+        "@OV_TOAST_MAX_ACCESSORY_UPTO_2_S": "You can set up to 2 accessories.",
+        "@OV_TERM_GOURMET_FROZEN_PIZZA_THIN": "Frozen Pizza (Thin)",
+        "@OV_TOAST_MAX_TIME_SET_S": "{{$0}}'s cook time can only be set between {{$1}}~{{$2}}.",
+        "@OV_TERM_BURNER": "Burner",
+        "@OV_TERM_GOURMET_HAMBURGERS": "Hamburgers",
+        "@OV_TERM_SPICE_N_SOURCE_W": "Condiments and sauces",
+        "@OV_ARMSHORT_PROTECTION": "Inverter parts has been damaged",
+        "@OV_SDS_AUDIBLE_MWO_US_STEP03_OTR_DESC_UX20_S": "After pressing the Next button, press and hold the Start button on your microwave oven for at least 3 seconds.",
+        "@OV_UX30_RECIPE_DELETE_IMAGE_S": "Delete the image?",
+        "@OV_TERM_GOURMET_STEAM_GREEN_BEANS": "Green Beans",
+        "@OV_TERM_PERIOD_2WEEK_W": "Once every two weeks",
+        "@OV_TERM_SETTING_TIME_W": "Time",
+        "@OV_SDS_AUDIBLE_MWO_KR_STEP03_S": "After pressing the Next button, press and hold the Cancel button until a countdown displays on the oven.",
+        "@OV_DASHBOARD_OVEN_DESC_READY_S": "Please enter oven settings.",
+        "@OV_UX30_CLEAN_ACC_GRILL_S": "Grill Pan",
+        "@OV_UX30_GUIDE_GRAPH_W": "The graph shows the sun of the hours for each burner and may differ from the actual usage time. The graph updates after the burner is turned off.",
+        "@OV_TERM_BROILER_PEN_W": "Broiler Pan",
+        "@OV_ACT_CREATE_RECIPE_W": "Make new recipe",
+        "@OV_ACT_TRANSFER_COOKTOP_W": "Send",
+        "@OV_TERM_ADD_STEP_W": "Add Another Step",
+        "@OV_TERM_WEEK_W": "Week",
+        "@OV_UX30_CLEAN_RECOMMEND_TIME_S": "Wait for about 15 minutes after cooking is finished to start the cleaning function.",
+        "@OV_UX30_MWO_SETTINGSCROLL_SPEED_S": "Display Scroll Speed",
+        "@OV_UX30_TERM_COOK_TIME_S_W": "Cook time",
+        "@OV_INDIC_STEAM_CLEAN_S": "Used to clean oil stains on the wall or floor of the cooking room.",
+        "@OV_TERM_CURRENT_TIME_W": "Current Time",
+        "@OV_SMALLTHING_ERROR_TITLE_F11": "Communication Error (Main-Inverter)",
+        "@OV_SMALLTHING_ERROR_TITLE_F13": "Inverter Over Current",
+        "@OV_SMALLTHING_ERROR_TITLE_F14": "Inverter Over Voltage",
+        "@OV_SMALLTHING_ERROR_TITLE_F15": "Inverter IGBT Over Current",
+        "@OV_TERM_TITLE_AVAILABLE_DISH_W": "2. Available containers",
+        "@OV_TERM_GOURMET_ROAST_VEAL": "Roast Veal",
+        "@OV_INDIC_CLEAN_RECOMMEND_S": "It is the alarm that guides the user in using the multi-clean (deodorant, steam cleaning, etc.) features of the light wave oven.\nMulti-clean is not carried out directly by alarm.",
+        "@OV_TERM_COOKING_TIP_W": "Cooking Tips",
+        "@OV_TERM_GOURMET_ROAST_CHICKEN": "Roast Chicken",
+        "@OV_TERM_OFF_AFTER": "Off in {{$0}}:{{$1}} later",
+        "@OV_UX30_CLEAN_STEAM_GEN_DETAIL_GUIDE_1_S": "Fill the water tank with a mixture of vinegar and water (7 oz/200 cc water, 1 oz/30 cc vinegar).",
+        "@OV_DASHBOARD_OVEN_DESC_CLEAN_COMPLETE_S": "Cleaning is done.",
+        "@OV_SMALL_THING_LINK_COOK_BOOK_W": "Cookbook",
+        "@OV_UX30_ACT_EDIT_RECIPE_W": "Edit recipe",
+        "@OV_INDIC_CLEAN_STEAM_GENERATOR_GUIDE2_LEGACY_S": "While the steam generator cleaning function operates, you will hear a melody, and the display unit will indicate \"Select/Start\" \"Fill Water.\" In that case, fill it up with clean water up to the MAX level. Press the \"Select/Start/Simple Cooking\" button.",
+        "@OV_TERM_GOURMET_FISH_SCHNITZEL": "Fish Schnitzel",
+        "@OV_PUSH_301_30101_0001_W": "'$alias$' preheating is done.",
+        "@OV_POPUP_TRANSFER_SUCCESS_N_PRESS_START_RANGE_S": "Press Start on the microwave.",
+        "@OV_TERM_SET_POWER": "Power level",
+        "@OV_UX30_TERM_CONTROL_INCORRECT_TIMER": "Selection exceeds the remaining time.Please select again.",
+        "@OV_TERM_GOURMET_STEAM_EGGS": "Eggs",
+        "@OV_UX30_HMR_GUIDE_1_S": "Send recipes for HMRs to oven.",
+        "@OV_DASHBOARD_HOOD_STATE_USING_W": "In use",
+        "@OV_TERM_TOASTER_STATE_ALARM_W": "N/A",
+        "@OV_INDIC_DEFROSTING_FOODS_30_S": "Manually defrsting foods, such as bread, fish, meats, poultry, and precooked foods",
+        "@OV_DASHBOARD_MWO_DESC_READY_S": "Select a recipe or enter settings.",
+        "@OV_PUSH_301_30101_0005_W": "'$alias$' Need to Selfcleaning",
+        "@OV_GUG_GUG_SET01_16_W": "It is to set the language of the display on your oven.",
+        "@OV_TERM_REMOVE_FISH_SMELL_W": "Removing fish smells",
+        "@OV_PUSH_301_30101_0009_W": "'$alias$' is done cleaning the steam generator.",
+        "@OV_BD_OPEN_SHORT_PROTECTION": "BD Sensor is opend or shorted",
+        "@OV_TERM_ON_W": "On",
+        "@OV_UX30_DASHBOARD_HOOD_DESC_READY_S": "Adjust Fan and Light settings and press Send to change on hood.",
+        "@OV_POPUP_ERROR_CONTROL_W": "Request Failed",
+        "@OV_TERM_RACK_BOTTOM_W": "Lower",
+        "@OV_TERM_GRID_W": "Grid",
+        "@OV_UX30_SETTING_TEMP_ADJUST_DESC_S": "Adjust the thermostat on the oven.",
+        "OV_TERM_ON": "On",
+        "@OV_UX30_SETTING_LANG_W": "Language",
+        "@OV_ACCESSIBILITY_NEXT_WEEK": "Next week",
+        "@CP_PROD_CHECK_BELOW_INST_FOR_CLASSIFY_S": "Verify your appliance type.",
+        "@OV_TERM_PIZZA_W": "Pizza",
+        "@OV_UX30_RECIPE_THEME_S": "By Theme",
+        "@OV_TERM_COMPLETE_PHOTO_W": "Recipe Photos",
+        "@OV_INDIC_COOLING_AFTER_UNLOCK_S": "The oven will unlock once it has cooled down.",
+        "@OV_TERM_NORMAL_W": "Normal",
+        "@OV_DASHBOARD_REMAINTIME_S": "Left",
+        "@OV_TERM_OFFSET_RACK_W": "Roasting Rack",
+        "@OV_TERM_RANGE_HEAT_DISH_W": "Woods or paper container",
+        "@OV_TERM_OVEN_DISH_W": "China, heat-resistant glass material",
+        "@OV_PUSH_301_30101_3001_W": "'$alias$' has a temperature sensor error.",
+        "@OV_TERM_POWER": "Power level",
+        "@OV_UX30_MAIN_START_PREHEAT_W": "Start",
+        "@OV_POPUP_AUTO_MODE_START_S": "Auto mode has been activated.",
+        "@OV_TERM_RELIEVE_W": "unmark",
+        "@OV_TERM_MUTE_W": "Mute",
+        "@OV_TERM_ACCESSORY_DISH_1_S": "N/A",
+        "@OV_TERM_BROIL_W": "Broil",
+        "@OV_TERM_EASYCLEAN_VS_SELFCLEAN_SAVE_GAS_S": "Assuming the same number of use, we can expect the amount of energy saving by {{$0}}Btu compared to when we use self clean.",
+        "@OV_TERM_LG_RECIPE_W": "LG Recipes",
+        "@OV_COOKTOP_ERROR_LABEL_F51": "F-51",
+        "@OV_COOKTOP_ERROR_LABEL_F52": "F-52",
+        "@OV_UX30_HMR_INSTRUCTION_W": "Cooking Instructions",
+        "@OV_COOKTOP_ERROR_TITLE_F33": "RF Top Sensor Open/Short",
+        "@OV_COOKTOP_ERROR_TITLE_F34": "RR Top Sensor Open/Short",
+        "@OV_TERM_INVERTER_DEFROST_W": "Inverter Defrost",
+        "@OV_UX30_CLEAN_USAGE_ACC_GUIDE_1_S": "Use for all kinds of cooking. Use recommended rack position.",
+        "@OV_COOKTOP_ERROR_LABEL_F59": "F-59",
+        "@OV_UX30_STC_FOOD_STATUS_W": "Starting Temperature",
+        "@OV_UX30_RECIPE_YOUTUBE_GUIDE_S": "This recipe is a YouTuber's personal recipe and cannot be modified or distributed without permission.",
+        "@OV_CONNECTIVITY_POPUP_FAIL_DESCRIPTION_USING_WP_S": "N/A",
+        "@OV_COOKTOP_ERROR_LABEL_F56": "F-56",
+        "@OV_GUG_ADD02_LWO_3_S": "[Lightwave Oven]",
+        "@OV_GUG_EASYCLEAN_6_S": "Then spray or pour another 1cup(8oz) of water onto the bottom center of the oven cavity.",
+        "@OV_INDIC_REMOVE_FISH_SMELL_S": "Before frying fish, pour one small spoon of vinegar on the two grooves marked on the frying pan to reduce the fish smells.",
+        "@OV_TERM_COOK_PROCESS_W": "Preparation",
+        "@OV_TERM_SUMMARY_TIME_GUIDE_W": "Total time the cooktop has been on. The usage data displayed may differ from actual use. Total time is updated after the bruner is truned off.",
+        "@OV_UX30_ETC_ODOR_GUIDE_3_S": "Turn the oven off, place coffee grounds on the dish, and leave them until the oven cools.",
+        "@OV_TERM_TITLE_CONTAINER_W": "Check Cookware Compatibility",
+        "@OV_TERM_MENU_PIZZA": "Pizza",
+        "@OV_TERM_COOKTOP_SET_OFF": "The burner is off.",
+        "@OV_INDIC_REG_OVEN_WIFI_TIMER_ON_OFF_AND_REMOTE_2_S": "If there is a knob in the oven, Press the Timer On/Off button of the oven for longer than 3 seconds.\nOtherwise, Press the Wi-Fi button of the oven for longer than 3 seconds.",
+        "@OV_COOKTOP_ERROR_TITLE_F45": "IH Box Fan Error",
+        "@OV_UX30_EASYCLEAN_ESTI_SAVE_W": "Estimated Savings",
+        "@OV_COOKTOP_ERROR_LABEL_F46": "F-46",
+        "@OV_UX30_TERM_TITLE_CONTAINER_W": "Check Cookware Compatibility",
+        "@OV_UX30_REGI_KNOB_W": "Oven with Knob",
+        "@OV_PUSH_301_30101_0106_W": "'$alias$' has a No Heating Error.",
+        "@OV_COOKTOP_ERROR_LABEL_F45": "F-45",
+        "@OV_GUG_EASYCLEAN_2_S": "1. Remove oven racks and accessories from the oven.",
+        "@OV_UX30_TERM_FAN_W": "Fan",
+        "@OV_INDIC_SELECT_MAIN_QUANTITY_S": "Main ingredient is {{$0}}. Select the amount of it.",
+        "@OV_TERM_LOWER_RIGHT": "Lower right",
+        "@OV_RECIPE_INPUT_MSG_S": "Enter keyword",
+        "@OV_TERM_GOURMET_LAMB_CHOPS": "Lamb Chops",
+        "@OV_COOKTOP_ERROR_TITLE_F36": "Right IGBT Sensor Open/Short",
+        "@OV_TERM_SPEED_CLEAN_W": "SpeedClean\u2122",
+        "@OV_TERM_COOKTOP_POWER_RECOVERY_ALARM_W": "Power Alerts",
+        "@OV_COOKTOP_ERROR_TITLE_F38": "Right Comm. Error",
+        "@OV_UX30_SETTING_12H_W": "12-Hour",
+        "@OV_TERM_REMOVE_WATER_W": "Removal of residual water",
+        "@OV_COOKTOP_ERROR_TITLE_F56": "Griddle Plate Hot",
+        "@OV_COOKTOP_ERROR_TITLE_F51": "Open Griddle Sensor",
+        "@OV_COOKTOP_ERROR_TITLE_F52": "Short Griddle Sensor",
+        "@OV_UNIT_S_W": "S",
+        "@OV_OVEN_ERROR_LABEL_F25": "F-25",
+        "@OV_INDIC_STEAM_CLEAN_GUIDE1_S": "Fill the water tank.",
+        "@OV_COOKTOP_ERROR_LABEL_F33": "F-33",
+        "@OV_TERM_BAKE_PEN_KR_ONLY_W": "Frying pan",
+        "@OV_DASHBOARD_OVEN_DESC_SETTING2_S": "Please wait.",
+        "@OV_COOKTOP_ERROR_LABEL_F34": "F-34",
+        "@OV_COOKTOP_ERROR_LABEL_F36": "F-36",
+        "@OV_COOKTOP_ERROR_LABEL_F38": "F-38",
+        "@OV_UX30_TERM_TIMER_W": "Timer",
+        "@OV_PUSH_301_30101_3012_W": "'$alias$' has a connection error with the display operation.",
+        "@OV_TERM_GOURMET_STEAM_BROCCOLI_CAULIFLOWER": "Broccoli/Cauliflower",
+        "@OV_OVEN_ERROR_LABEL_F24": "F-24",
+        "@OV_OVEN_ERROR_LABEL_F21": "F-21",
+        "@OV_OVEN_ERROR_LABEL_F22": "F-22",
+        "@OV_OVEN_ERROR_LABEL_F20": "F-20",
+        "@OV_COOKTOP_ERROR_TITLE_F46": "IH Blow Fan Error",
+        "@OV_TERM_LAMP_LEVEL_W": "Light",
+        "@OV_UX30_CLEAN_EMPTY_TANK_S": "Empty the water tank before using.",
+        "@OV_OVEN_ERROR_LABEL_F19": "F-19",
+        "@CP_PROD_HAS_KNOB_S": "Does the {{$product}} have a Knob?",
+        "@OV_LWO_MAIN_STATE_INITIAL_DESC_S": "Please enter oven settings.",
+        "@OV_TERM_STEAMMAINT__DRYING_W": "Drying",
+        "@OV_PUSH_301_30101_3016_W": "'$alias$' has a pyrogen temperature sensor error during the inverter operation.",
+        "@OV_UX30_TERM_USEMONTH_W": "Monthly Usage Time",
+        "@OV_OVEN_ERROR_LABEL_F17": "F-17",
+        "@OV_COOKTOP_ERROR_TITLE_F62": "Short Sous-Vide Sensor",
+        "@OV_UX30_MAIN_CHANGE_SETTING_S": "Change Settings",
+        "@OV_POPUP_TIMER_OVER_S": "A timer ended, so the hood has been stopped.",
+        "@OV_TERM_ADD_W": "add",
+        "@OV_UX30_SETTING_TEMP_UNIT_W": "Temperature unit",
+        "@OV_UX30_SETTING_PREHEAT_ALARM_DESC_S": "When the oven reaches the set temperature, the Preheat Alarm Light blinks until the door is opened.",
+        "@OV_TERM_ELAPSED_TIME_NEW_W": "Elapsed",
+        "@OV_TERM_COOLING_LOCK_W": "Cooling/Lock",
+        "@OV_TERM_SIDES_W": "Sides",
+        "@OV_OVEN_ERROR_LABEL_F11": "F-11",
+        "@OV_OVEN_ERROR_LABEL_F12": "F-12",
+        "@OV_TERM_FISH_W": "Fish",
+        "@OV_COOKTOP_ERROR_TITLE_F59": "Griddle No Heating",
+        "@OV_TERM_DEFROST_FISH_W": "Fish",
+        "@OV_TERM_GOURMET_GRATINATED_POTATOES": "Gratinated Potato",
+        "@OV_TERM_POWER_OFF_POPUP": "The Power cannot be on at application.",
+        "@OV_ACT_COOK_START_W": "Start Cooking",
+        "@OV_UX30_MAIN_TIME_DESC_S": "Include preheat time when setting cook time.",
+        "@OV_PUSH_303_30301_2001_W": "Left Front Burner Cooktop is running over the set time.",
+        "@OV_UX30_TERM_STEAM_CLEAN_W": "Steam Clean",
+        "@OV_TERM_HOURS_PRIOR_TO_W": "hour(s) ago",
+        "@OV_TERM_GOURMET_ROAST_POTATOES": "Roast Potatoes",
+        "@OV_TERM_REMOTE_GUIDE_W": "Remote Guide",
+        "@OV_UX30_FOTA_UPDATE_WAITTING_S": "This process may take up to {{$0}} minutes. Please wait.",
+        "@OV_TERM_HOUR": "Hour",
+        "@OV_TOAST_HOOD_TRANSFER_SUCCESS_S": "Hood settings have been sent.",
+        "@OV_TERM_SET_TIMER": "Set timer",
+        "@OV_TERM_DEODORIZATION_W": "Deodorization",
+        "@OV_UX30_CLEAN_HOW_TO_CLEAN_S": "OVEN CLEANING",
+        "@OV_TERM_UNIT_LBS_W": "{{$0}}lbs",
+        "@OV_UX30_CLEAN_WINDOW_S": "Cleaning the Oven Door Glass",
+        "@OV_TERM_SECOND": "second",
+        "@OV_TERM_FROSTING_W": "Frosting",
+        "@OV_TERM_ROASTING_COMBI_W": "Roast Combi.",
+        "@OV_TERM_STEAM_CLEAN_W": "Steam cleaning",
+        "@OV_PRODUCT_REG_SKS_1": "1. Make sure power cord is plugged in.",
+        "@OV_PRODUCT_REG_SKS_2": "2. Press and hold the Wi-Fi or Connect button on the {{$0}} for 3 seconds.",
+        "@OV_TERM_GOURMET_FISH_FILLET": "Fish Fillets",
+        "@OV_TERM_TIME_UNIT_M_W": "m",
+        "@OV_PRODUCT_REG_SKS_3": "3. The Wi-Fi LED blinks during the connection process.",
+        "@OV_TERM_UNIT_MARI_W": "{{$0}}ea",
+        "@OV_TERM_DAY_FRI_W": "Friday",
+        "@OV_COOKTOP_PROD_TRUNON_WIFI": "Access the Settings menu on the Cooktop and set Wi-Fi to Reset",
+        "@OV_TERM_HIGH_W": "High",
+        "@OV_INDIC_REMOVE_WATER_GUIDE1_S": "Before use, be sure to empty the water basket.",
+        "@OV_INDIC_REMOVE_OTHER_38LSMELL_S": "Use the product deodorization function.",
+        "@OV_TERM_PRODUCT_MANAGE_W": "Product Details",
+        "@OV_POPUP_CHANGE_PHOTO_W": "Change Photo",
+        "@OV_UX30_MAIN_REMAIN_TIME_TYPE2_S": "{{$0}} hr. {{$1}} min. left",
+        "@OV_CONNECTIVITY_POPUP_FAIL_DESCRIPTION_USING_DW_S": "N/A",
+        "@OV_ACC_NO_SELECT_W": "Not Selected",
+        "@OV_TERM_DAYS_PRIOR_TO_W": "day(s) ago",
+        "@OV_COMMUNICATION _ERROR": "Inverter communication is unstabled",
+        "@OV_INDIC_ACCESSORY_CLEAN1_S": "Use neutral agent to clean it thoroughly and remove moisture.",
+        "@OV_TERM_SETTING_PREHEATING_NORMAL": "Normal",
+        "@OV_PRODUCT_REG_2NE4_1": "1. Make sure power cord is plugged in.",
+        "@OV_PRODUCT_REG_2NE4_2": "2. Press and hold the Wi-Fi button on the {{$0}} for 3 seconds.",
+        "@OV_PRODUCT_REG_2NE4_3": "3. The Wi-Fi LED blinks during the connection process.",
+        "@OV_UX30_TERM_USEYEAR_W": "Yearly Usage Time",
+        "@OV_DASHBOARD_OVEN_DESC_COOK_DONE_S": "Check the oven.",
+        "@OV_UX30_ACT_TRANSFER_HOOD_W": "Send",
+        "@OV_TERM_ACCESSORY_HIGHGRILL_1_S": "N/A",
+        "@CP_PROD_HAS_COOKTOP_S": "Does the {{$product}} have a Cooktop?",
+        "@OV_UNIT_H_W": "H",
+        "@OV_GUG_REMOTESTART_1_S": "Open the door to the oven you want to remote start. Make sure the oven check the inside.\nClose the door and if there is a knob in the oven, Turn the oven knob to \u2018Remote Start\u2019. Otherwise press the 'Remote Start' button or the 'Easy Clean' Key of the oven.  Confirm the oven display panel.",
+        "@OV_COOKTOP_ERROR_LABEL_F62": "F-62",
+        "@OV_FOTA_UPDATE_FINISH_S": "{{$0}} update has been completed.",
+        "@OV_UX30_RECIPE_NO_RESULT_S": "No matches found",
+        "@OV_FOTA_UPDATE_FINISH_W": "Update is completed.",
+        "@OV_POPUP_INPUT_OVEN_SETTINGS_TRANSFER_S": "Set the cooking modes.",
+        "@OV_ACT_RECIPE_SHARE_W": "Sharing recipes",
+        "@OV_TERM_LOW_EN_W": "LOW",
+        "@OV_TERM_MICRO_W": "Microwave",
+        "@OV_UX30_TIMER_STOP_W": "Cancel",
+        "@OV_TERM_DEEP_TRAY_W": "Deep Tray",
+        "@OV_UX30_SETTING_LIST_CHANGE_NETWORK_W": "Change Network",
+        "@OV_TERM_ACCESSORY_INSTALL_DISH2_W": "Enamel plate installation",
+        "@OV_POP_EASYCLEAN_DESC6_S": "Probe in oven cavity",
+        "@OV_ACT_ROTATE_LEFT_W": "Rotate Left",
+        "@OV_SETTING_LIST_MANAGE_USERS_W": "Manage Users",
+        "@OV_INDIC_REMOVE_FOOD_SMELL_1_S": "N/A",
+        "@OV_SIG_CEN03_SINGLE_REMOTE_START_3": "Close oven door then Remote Start is set on oven.",
+        "@OV_SIG_CEN03_SINGLE_REMOTE_START_1": "Select Remote Start in Settings menu on product's control panel.",
+        "@OV_SIG_CEN03_SINGLE_REMOTE_START_2": "Open the oven door and make sure the oven is empty.",
+        "@OV_TERM_YEAR_STANDARD_W": "Comparison on {{$0}}",
+        "@OV_GUG_GUG_SET01_13_W": "Your new oven cooks differently than the one it replaced. If you find that your oven cooks \"too hot\" or \"too cool,\" you can adjust the thermostat yourself to match your expected cooking performance.",
+        "@OV_TERM_USING_OVER_ALARM_W": "Cooktop Timer",
+        "@OV_PUSH_301_30101_3007_W": "'$alias$' has an error with the temperature sensor in the steam generator.",
+        "@OV_POP_EASYCLEAN_DESC2_S": "Door opened",
+        "@OV_TERM_SPEEDCLEAN_AVAILABILITY_S": "Using SpeedClean\u2122 may reduce energy by up to {{$0}}%.",
+        "@OV_UX30_CLEAN_ACC_GUIDE_2_S": "Use a cloth, sponge, or non-abrasive scrub pad to clean off remaining soil.",
+        "@OV_UX30_EASYCLEAN_APP_START_DESC_S": "Start EasyClean from LG ThinQ.",
+        "@OV_TERM_OVEN_STATE_ALARM_LOWER_W": "Lower Oven Alerts",
+        "@OV_DASHBOARD_MWO_OVEN_STATE_COOKING_W": "Cooking",
+        "@OV_TERM_HOME_BRUNCH_W": "Home brunch",
+        "@OV_TERM_ESTIMATE_W": "Calc.",
+        "@OV_TERM_SEARCH_INGREDIENT_W": "Ingredient",
+        "@OV_UX30_TERM_TITLE_SMELL_W": "1. HOW TO REMOVE ODORS",
+        "@OV_TERM_PRODUCT_OUTER_W": "Cleaning the Oven Door Glass",
+        "@OV_TERM_KID_SANCK_W": "Kids' snacks",
+        "@OV_TERM_TITLE_MULTI_CLEAN_W": "Multi-clean cleaning",
+        "@OV_TERM_BOTTOM_HEAT_W": "Bottom Heat",
+        "@OV_UX30_TERM_UPPER_W": "Upper",
+        "@OV_UX30_TERM_LAMP_LEVEL_W": "Light",
+        "@OV_TERM_GOURMET_DEFROST_COOK": "Defrost & Cook",
+        "@OV_UX30_TIMER_DESC_2_S": "This feature serves as an extra timer. It does not start or stop cooking.",
+        "@OV_TERM_DEFROST_WEIGHT_MODE_W": "Weight Mode",
+        "@OV_UX30_MWO_SETTINGHIDE_W": "Hide",
+        "@OV_TERM_ENERGY_SAVING_W": "Energy Comparison",
+        "@OV_GUG_EASYCLEAN_12_S": "Clean and wipe the oven cavity immediately after the SpeedClean\u2122(EasyClean\u00ae) cycle.",
+        "@OV_TERM_AUTOSTEAM_W": "Auto Steam",
+        "@OV_UX30_CLEAN_FISH_ODOR_S": "Removing Fishy Odors",
+        "@OV_TERM_DAY_MON_W": "Monday",
+        "@OV_TERM_ACCESSORY_LWOGRILL_W": "N/A",
+        "@OV_INDIC_SMART_DATA_DEC_S": "Allow LG to collect usage data to improve the performance of the app",
+        "@OV_TERM_ACCESSORY_GRILL_1_S": "N/A",
+        "@OV_STATE_COOK_BLEND_W": "Blending",
+        "@OV_UX30_TERM_OPTION_TEMPERATURE": "Temperature",
+        "@OV_TERM_PREHEAT_INCLUDED_W": "Preheating included",
+        "@OV_TERM_SELF_CLEAN_W": "Self Clean",
+        "@OV_GUG_EASYCLEAN_1_S": "SpeedClean\u2122(EasyClean\u00ae) guide",
+        "@OV_TERM_REMOTE_START_GUIDE_W": "Remote Start Guide",
+        "@OV_HMR_GUIDE_2_S": "Use the portrait mode on your phone, and capture the entire front of the package.",
+        "@OV_UX30_MWO_MAINCUSTUM_COOK_DESC_S": "Enter power level and cook time to set Custom Cook.",
+        "@OV_POPUP_CUSTOM_COOK_SAVING_S": "Saving this Custom Cook will overwrite the existing data. Are you sure you want to save?",
+        "@OV_HMR_RESTRICTION_GUIDE_1_S": "Make sure  there is enough light for a clear shot.",
+        "@OV_TERM_RACK_TOP_W": "Upper",
+        "@OV_TERM_SOUSVIDE_W": "Sous vide",
+        "@OV_GUG_ADD02_OV_3_S": "[Slide-in]",
+        "@OV_TERM_AUTO_W": "Auto",
+        "@OV_SDS_AUDIBLE_BLENDER_2_1": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_TERM_TIMER_W": "Timer",
+        "@OV_TERM_ACCESSORY_INSTALL_DISH_W": "N/A",
+        "@OV_PRODUCT_REG_HOOD_2": "2. Press and hold the Wi-Fi button on the {{$0}} for 3 seconds.",
+        "@OV_ACCE_MOVE_PRE_W": "Move to previous step",
+        "@OV_TERM_FOOD_CHANNEL_RECIPE_W": "Food Channel Recipes",
+        "@OV_SDS_TFT_LCD_1": "Activate the Smart Diagnosis function in the oven settings.",
+        "@OV_PRODUCT_REG_HOOD_3": "3. The Wi-Fi LED blinks during the connection process.",
+        "@OV_SDS_TFT_LCD_2": "Place your smartphone\u2019s mouthpiece near the top left corner of the oven display screen.",
+        "@OV_POPUP_REMOVE_RECIPE_W": "Delete Recipe",
+        "@OV_UX30_TERM_UNIT_W": "Unit",
+        "@OV_SDS_TFT_LCD_3": "After pressing the Start Diagnosis button below, press the Start button on the oven display screen to start the diagnostic tone.",
+        "@OV_SDS_AUDIBLE_MWO_KR_CMO_LWO_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_PRODUCT_REG_HOOD_1": "1. Turn on the {{$0}}.",
+        "@OV_UX30_GUIDE_RANGEUSE_2_W": "please set it up in the product.",
+        "@OV_TERM_OVEN_HEAT_FUNC_W": "Oven function (simple heating)",
+        "@OV_DISCARD_CHANGE_POPUP_S": "Discard the changes?",
+        "@OV_UX30_TERM_CONNECT_PRODUCT_W": "Connected product",
+        "@OV_TERM_DAY_W": "Day",
+        "@OV_TERM_SPEED_AUTO_COMBINATION_W": "Speed Auto Combination",
+        "@OV_TERM_CONVECTION_W": "Convection",
+        "@OV_TERM_BUTTER_W": "Butter",
+        "@OV_TERM_CLEAN_TIME_W": "Clean Time",
+        "@OV_PUSH_302_30201_0002_W": "It's time to flip over or stir your food in '$alias$'.",
+        "@OV_TERM_MENU_SOUP": "Soup",
+        "@OV_INDIC_DISPLAY_RECENT_USED_VALUE_S": "Cook Settings from last Used.",
+        "@OV_PUSH_304_30401_4001_W": "'$alias$' has operated in auto mode.",
+        "@OV_INDIC_HIGH_TEMP_NOT_REMOTE_S": "If the temperature is hot, the oven can not be operated remotely.",
+        "@OV_UX30_RECIPE_DW_CONNECTIVITY_W": "Connected to dishwasher",
+        "@OV_INDIC_REMOVE_OTHER_SMELL2_S": "After cooking, place a coffee bean in a container and put it in the cooking room.",
+        "@OV_UX30_CLEAN_ETC_ODOR_GUIDE_1_S": "Slide a rack into the lowest rack position in the oven.",
+        "@OV_INDIC_TAKING_CHILL_OUT_FRUIT_10_S": "Taking chill out of fruit",
+        "@OV_TERM_PRODUCT_FRONT_W": "Cleaning the front of the cooking room",
+        "@OV_TERM_START_KEY_W": "Start",
+        "@OV_GUG_ADD03_OV_7_S": "[Freestanding]",
+        "@OV_TERM_FAN_W": "Fan",
+        "@OV_PUSH_301_30101_3011_W": "'$alias$' has a connection error with the inverter operation.",
+        "@OV_UX30_MAIN_REMOTE_GUIDE_1_S": "Remote Start must be enabled on product before controlling oven via the LG ThinQ app.",
+        "@OV_TOAST_ABLE_COOK_TIME_RANGE_S": "Cook Time can be 0:10 through 99:59.",
+        "@OV_TERM_DEFROST_BREAD_W": "Bread",
+        "@OV_TERM_FRONT_WIDE_ZONE": "Front WIDE",
+        "@OV_TERM_THERMOSTAT_LOWER_W": "Thermostat Adjustment (Lower)",
+        "@OV_DESC_SW_UPDATE_FAIL_RETRY_W": "Please try again.",
+        "@OV_INDIC_CLEAN_REMOVE_OIL_S": "Used to clean oil stains on the wall or floor of the cooking room.",
+        "@OV_TERM_CONV_BAKE_W": "Convection Bake",
+        "@OV_TERM_ELAPSED_TIME_W": "Estimated Cooking Time",
+        "@OV_GUG_EASYCLEAN_9_S": "Mist Setting on the spary bottle.",
+        "@OV_SDS_AUDIBLE_MWO_WW_CMO_LWO_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_TERM_ONCE_QUANTITY_W": "One serving",
+        "@OV_PUSH_302_30201_0102_W": "'$alias$' has a sensor short.",
+        "@OV_DASHBOARD_MWO_DESC_COOK_DONE_S": "Check the microwave.",
+        "@OV_TERM_HEALTH_ROAST_W": "Health Roast",
+        "@OV_TERM_FAHRENHEIT_W": "Fahrenheit",
+        "@OV_UX20_MYRECIPE_FUNCTION_SETTING_W": "COOK SETTINGS (*Required field)",
+        "@OV_TERM_SOUPS_W": "Soups",
+        "@OV_TERM_GENERAL_GLASSWARE_W": "General glassware",
+        "@OV_UX30_RECIPE_VIEW_ALL_S": "View All",
+        "@OV_SDS_AUDIBLE_MWO_US_STEP03_COUNTERTOP_SUBTITLE_UX20_S": "Countertop Microwave:",
+        "@OV_DASHBOARD_OVEN_DESC_NFC_ARTICLE1_S": "Oven Cleaning",
+        "@CP_PROD_REG_OV_PRESS_ADD_STEAM_3SECS_S": "Press the \"Add Steam\" button of the oven for longer than 3 seconds.",
+        "@OV_UX30_TERM_POWER_LEVEL_MWO_W": "Power Level",
+        "@OV_TERM_TOP_BOTTOM_HEAT_W": "Top Bottom Heat",
+        "@OV_PRODUCT_REG_2NE4_2_CONFIRM": "Press the 'Wi-Fi' button for at least 3 seconds.",
+        "@OV_GUG_GUG_SET01_8_W": "\u2022 Temperature Unit",
+        "@OV_INDIC_AUTO_SET_QUANTITY__HMR_S": "N/A",
+        "@OV_UX30_CLEAN_STEAM_GEN_DESC_S": "Removes residual water in the steam generator.",
+        "@OV_TERM_CO2_BAKE_W": "Co-2 (Bake)",
+        "@OV_TERM_GOURMET_ROAST_BEEF": "Roast Beef",
+        "@OV_TERM_RECIPE_CREATE_DATE_W": "Recipe Created On",
+        "@OV_TERM_NEXT": "Next",
+        "@OV_TERM_REMOTE_OFF_W": "Remote Off",
+        "@OV_TERM_SETTINGS_W": "Settings",
+        "@OV_STATE_PREHEAT2_W": "Preheating...",
+        "@OV_UX30_MAIN_MWO_DISCONNECT_GUIDE_S": "The network is temporarily unavailable while the microwave is in use. Returning to the main screen.",
+        "@OV_TERM_WATT_W": "Reduce power consumption by up to {{$0}} Wh",
+        "@OV_TERM_WARM_DISHES_W": "Warm Dishes",
+        "@OV_UX30_RECIPE_ADD_STEP_S": "Add Step",
+        "@OV_UX30_TERM_TITLE_ACCESSORY_CLEAN_W": "2. CLEANING ACCESSORIES",
+        "@OV_TERM_FAST_W": "Fast",
+        "@OV_UX30_CLEAN_DISH_GUIDE_2_S": "For Microwave Reheating",
+        "@OV_TERM_CERAMIC_W": "Ceramics",
+        "@OV_TERM_GOURMET_COOKIES": "Cookies",
+        "@OV_TERM_UNIT_JANG_W": "{{$0}}ea",
+        "@OV_TERM_BLENDER_STATE_ALARM_W": "N/A",
+        "@OV_TERM_WELLBEING_W": "Well-being dishes",
+        "@OV_INDIC_TIMER_NOT_COOK_START_S": "\u203b This feature serves as an extra timer. It does not start or stop cooking.",
+        "@OV_TERM_APPETIZERS_W": "Appetizers",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_8_S": "During the SpeedClean\u2122(EasyClean\u00ae) cycle, the oven may become hot enough to cause burns. After the cycle ends, open the oven door and wait 5minutes before wiping the inside surface of the oven. Failure to do so may result in burns.",
+        "@OV_UX30_MWO_SETTINGSOUND_W": "Sound",
+        "@OV_POPUP_SELETE_ALBUM_W": "Select From Album",
+        "@OV_TERM_GOURMET_POPULAR_MENU": "Popular Menu",
+        "@OV_UX30_TERM_LOWER_W": "Lower",
+        "@OV_UX30_COOK_STEAM_W": "Steam",
+        "@OV_TERM_BEEPER_VOLUME_W": "Beeper Volume",
+        "@OV_TERM_CONTROL_INCORRECT_TIMER": "More than timer time. Please select again",
+        "@OV_PUSH_304_30401_4103_W": "'$alias$' has a fan error.",
+        "@OV_UX30_POPUP_SHOOT_PHOTO_W": "Take Photos",
+        "@OV_UX30_SETTING_VENT_PAIR_DESC_S": "Automatically turns the hood on when the range is in use and turns it off when the range is no longer in use.",
+        "@OV_TERM_LANGUAGE_RU_W": "Russian",
+        "@OV_SDS_AUDIBLE_MWO_NA_CMO_OTR_STEP03_S": "After pressing the Start Diagnosis button, press and hold the Start button until a countdown displays on the oven.",
+        "@OV_PUSH_301_30101_0014_W": "Delayed Start has started.",
+        "@OV_TERM_AMOUNT_W": "Amount",
+        "@OV_TERM_GOURMET_SALMON_STEAK": "Salmon Steaks",
+        "@OV_TERM_PROOF_EN_W": "Proof",
+        "@OV_TERM_DRY_KITCHEN_W": "Drying cooking room",
+        "@OV_HMR_NO_RESULT_DESC_1_S": "No matches found.",
+        "@OV_TERM_CLEAN_STEAN_GENERATOR_W": "Descale",
+        "@OV_TOP_SENSOR_OPEN_SHORT_PROTECTION": "Top Sensor is opend or shorted",
+        "@OV_SDS_AUDIBLE_BUILTIN_RANGE_2NE4_BEST_STEP01_S": "Smart Diagnosis will not work if the oven is operating. Make sure the oven is off and not heating.",
+        "@OV_UX30_GUIDE_REMOTE_W": "For safety reasons, the timer cannot be set higher in the app than the current setting on the product.",
+        "@OV_INDIC_PRODUCT_INNER_S": "Soak a cloth or a sponge in neutral agent and wipe off by moving left and right; after that, clean with a dry cloth.",
+        "@OV_ACT_EASY_CLEAN_SET_W": "Start EasyClean\u00ae",
+        "@OV_TERM_GOURMET_PORK_CHOPS": "Pork Chops",
+        "@OV_UX30_MAIN_COOLING_DESC_S": "Wait for oven to cool.",
+        "@OV_TERM_USING_TIME_W": "Usage time",
+        "@OV_REG_iOS_SOFT_AP_PW_S": "Ex) {{$0}}_{{$1}} password is {{$1}}{{$1}} (case-sensitivity).",
+        "@OV_UX30_SETTING_PREFERENCE_S": "Preference",
+        "@OV_TERM_UNIT_NUMBER_W": "{{$0}}ea",
+        "@OV_TERM_REMOTE_START_OFF_W": "Remote Start Off",
+        "@OV_SMALLTHING_ERROR_CONTENTS_LE": "The blade cannot be rotated due to material jamming. Open the auxiliary lid and mix the ingredients evenly by inserting the pusher bar. If the same problem is repeated, contact LG service center.",
+        "@OV_UX30_TERM_SLOW_W": "Slow",
+        "@OV_TERM_POWER_LEVEL_W": "Power Level",
+        "@OV_GUG_ADD01_LWO_3_S": "[Lightwave oven]",
+        "@OV_UX30_MWO_MAINSEND_COMPLETE_S": "Finished sending.",
+        "@OV_UX30_RECIPE_THEME_GOUNTRY_S": "By Country",
+        "@OV_GUG_ADD01_OV_5_S": "[Freestanding]",
+        "@OV_TERM_CONVAL_HEAT_W": "Conventional Heat",
+        "@OV_TERM_LANGUAGE_EN_W": "English",
+        "@OV_DASHBOARD_OVEN_DESC_DISCONNECT2_S": "Tap to review the product setup information.",
+        "@OV_TERM_CONV_HEAT_W": "Convection Heat",
+        "@OV_TERM_GRIDDLE_RACK_W": "Griddle",
+        "@OV_UX30_POP_EASYCLEAN_DESC5_S": "Lack of water",
+        "@OV_TERM_BEFORE_HOUR_W": "{{$0}} hour(s) ago",
+        "@OV_UX30_TERM_MICRO_W": "Microwave",
+        "@OV_ACT_TRANSFER_OVEN_W": "Send",
+        "@OV_UX30_EASYCLEAN_NOTICE_SAVE_VALUE_S": "The actual energy consumption may differ from this estimate.",
+        "@OV_TERM_SERACH_W": "serach",
+        "@OV_GUG_GUG_SET01_3_W": "If you select the hour mode, the clock will be set automatically when setting your Smartphone to your oven.",
+        "@OV_POPUP_TRANSFER_SUCCESS_W": "Successfully sent",
+        "@OV_GUG_SDS_SOUND_2_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_INDIC_CANCEL_OPEN_DOOR_REMOTE_S": "It will automatically cancel when oven door opens.",
+        "@OV_TERM_PASSED": "Passed",
+        "@OV_STATE_PREHEAT_W": "Preheating",
+        "@OV_TERM_SENSOR_REHEAT_W": "Sensor Reheat",
+        "@CP_PROD_HAS_DIAL_CHECK": "Check if there is a dial on the oven.",
+        "@OV_GUG_ADD01_OV_1_S": "Location of the product tag on logo",
+        "@OV_UX30_SETTING_BEEPER_VOLUME_DESC_S": "Set {{$0}}'s beeper volume.",
+        "@OV_UX30_TERM_ON_W": "On",
+        "@CP_PROD_REG_OV_DIAL_WIFI": "Turn the dial to select \"Settings\" and select \"Wi-Fi Settings\" to display the Wi-Fi connection screen.",
+        "@OV_TERM_2ND": "2nd",
+        "@OV_TERM_SMART_DIAGNOSIS_ING_WAIT_MOMENT_S": "Smart Diagnosis is in progress",
+        "@OV_TERM_ACCESSORY_HOTPAN_1_S": "N/A",
+        "@OV_TERM_RECIPE_W": "Recipe",
+        "@OV_UX30_SETTING_CLOCK_W": "Clock Mode",
+        "@OV_UX30_PUSH_CLEAN_PERIOD_GUIDE_S": "Alerts you when {{$0}} should be run.",
+        "@OV_TERM_ACCESSORY_INSTALL_DISH_4_S": "N/A",
+        "@OV_INDIC_EASY_CLEAN_RECOMMEND_S": "Alerts you when EasyClean\u00ae should be run.",
+        "@OV_TERM_BAKING_TRAY_W": "Baking Tray",
+        "@OV_PRODUCT_REG_COOKTOP_UX30": "Press the 'Wi-Fi' or '1' button on the range for at least 3 seconds.",
+        "@OV_TERM_ECO_HOT_AIR_W": "Eco Hot Air",
+        "@OV_TERM_MENU_FROZEN_BAGEL": "Bagel",
+        "@OV_TERM_TIMER_END_W": "Cancel",
+        "@OV_TERM_VINYL_PACK_W": "Vinyl packs",
+        "@OV_TERM_WRAP_W": "Wraps",
+        "@OV_TERM_FROZEN_MEAL_W": "Frozen Meal",
+        "@OV_TERM_COOLING_W": "Cooling",
+        "@OV_TERM_CUISINE_W": "Cuisine",
+        "@OV_TERM_COOKTOP_STATE_ALARMW": "Cooktop Alerts",
+        "@OV_TOP_SENSOR_OVER_TEMPERATURE_PROTECTION": "Top Sensor detect high Temperature",
+        "@OV_UX30_PUSH_NOT_USE_W": "Not Used",
+        "@OV_TERM_QUICK_W": "Quick",
+        "@OV_TERM_CATEGORY_W": "Category",
+        "@OV_TERM_COOK_TIME_S_W": "Cook time",
+        "@OV_TERM_GOURMET_POTATO_GRATIN": "Potato Gratin",
+        "@OV_UX30_SETTING_PREHEAT_ALARM_W": "Preheating Alarm Light",
+        "@OV_GUG_ADD03_OV_4_S": "Right side to the oven control panel",
+        "@OV_ERROR_COOLING_FAN_W": "Cooling fan operation error",
+        "@OV_PUSH_301_30104_2004_W": "Right Rear Burner Cooktop is running over the set time.",
+        "@OV_UX30_MAIN_COOK_MODE_W": "Cook Mode",
+        "@OV_SDS_AUDIBLE_RANGE_ARAMIS_STEP03_S": "After pressing the Start Diagnosis button, press and hold the 7 button until a countdown displays on the oven.",
+        "@OV_UX30_MAIN_PAUSE_W": "Paused",
+        "@OV_POPUP_HOOD_SETTINGS_W": "Hood Settings",
+        "@OV_GUG_GUG_SET01_17_W": "The language of the application remains in English.",
+        "@OV_UX30_TERM_AFTERHOUR_W": "after a minute",
+        "@OV_TERM_ENAMEL_KR_ONLY_W": "Enamel dish",
+        "@OV_TERM_GOURMET_STEAM_WHITE_RICE": "White Rice",
+        "@OV_UX30_MWO_COOK_SETTING_S": "Cook Settings",
+        "@OV_UX30_CLEAN_STEAM_GEN_DETAIL_GUIDE_2_MOTHER_S": "During the cleaning cycle, a melody sounds and the display shows \"Fill Water.\" At that time, fill the water tank with clean water up to the MAX fill line. Press the Select/Start/Simple Cooking button to finish cleaning.",
+        "@OV_TERM_HMR": "Home Meal Replacement",
+        "@OV_INDIC_COOKTOP_POWER_RECOVERY_DEC_S": "If power supply to the cooktop is cut off, alerts are provided to allow for its normal use through a data reset after restoring the power supply.",
+        "@OV_TERM_CLEAN_RECOMMEND_W": "Cleaning Reminder",
+        "@OV_ACCE_CNG_IMG_W": "Change Image",
+        "@OV_TERM_TURN_FOOD_OVER_W": "Flip Food",
+        "@OV_UX30_TERM_OFF_ACC": "off",
+        "@OV_UX30_STATE_PREHEAT_W": "Preheating",
+        "@OV_UX20_PERIOD_W": "Period",
+        "@OV_ACCESSIBILITY_PREVIOUS_YEAR": "Previous year",
+        "@OV_TERM_REMAIN": "Remaining",
+        "@OV_TERM_GOURMET_ROAST_BAKE": "Roast & Bake",
+        "@OV_UX30_TERM_MAIN_INGREDIENT_W": "Ingredients",
+        "@OV_TERM_SPEED_CLEAN_SPEND_ENERGY_W": "SpeedClean\u2122 cumulative power consumption",
+        "@OV_TERM_COOKTOP_CONTROL_INFORM": "For safe use the firepower and timer can be adjusted lower than set value",
+        "@OV_TERM_PRODUCT_NAME_W": "Light wave oven",
+        "@OV_INDIC_PRESS_START2_SET_OVEN_CANCEL_S": "Press Start on the product soon or the cooking settings will be deleted.",
+        "@OV_UX30_RECIPE_FAIL_WF_OTHER_USER_S": "Water dispenser is in use.",
+        "@OV_UX30_EASYCLEAN_SETTING_APP_S": "EasyClean can now be set on the {{$0}} oven using LG ThinQ.",
+        "@OV_HMR_ARCHIVE_STATUS_W": "Select Storage Status",
+        "@OV_TERM_USING_TAGON_WHEN_SEVERAL_FAIL_S": "\u203b If it fails to send the data several times, use Tag On.",
+        "@OV_UX30_EASYCLEAN_REDUCE_GUIDE_S": "This estimate is based on EasyClean using {{$0}} {{$1}} less than Self Clean.",
+        "@OV_HMR_RE_PHOTO": "Retry",
+        "@OV_TOAST_PRODUCT_MANAGE_TRANSFER_CANCEL_S": "Oven settings have not been sent.",
+        "@OV_POP_ALARM_NETWORK_W": "Network disconnected guide",
+        "@OV_SETTING_LIST_APP_PUSH_ALERTS_W": "App Push Alerts",
+        "@OV_GUG_EASYCLEAN_5_S": "3. Using a spray bottle, spray 1/4cup(2oz) of water to fully saturate the soils on both the walls and in the corners of the oven.",
+        "@OV_UX30_ETC_ODOR_GUIDE_2_S": "Place a slice of lemon or an orange peel on the broiler pan and set it on the rack. Set the oven to Bake at 180\u00b0F/82\u00b0C and leave it on for 8 to 10 minutes.",
+        "@OV_COOKTOP_ERROR_CONTENTS_F62": "Sous Vide Thermistor is short for over 1 min after cook starts during cooking.",
+        "@OV_STATE_PRODUCT_SETTING_W": "Ready to Start",
+        "@OV_PUSH_301_30101_0002_W": "It's time to flip your food over in '$alias$'.",
+        "@OV_COOKTOP_ERROR_CONTENTS_F56": "Griddle temperature is over 550\u2109 continuously during 2 minutes on cooking",
+        "@OV_SDS_AUDIBLE_TOASTER_3_1": "After pressing the Start Diagnosis button, press and hold the Start/Cancel button until a countdown displays on the toaster.",
+        "@OV_COOKTOP_ERROR_CONTENTS_F59": "start temperature does not exceed 130 \u2109 and griddle temperature is less equal than 150 \u2109 and max griddle temperature is less equal than start oven temp. + 30 \u2109 over 5 minutes on preheating.",
+        "@OV_STATE_SEND_COMPLETE_W": "Send Complete",
+        "@OV_UX30_EASYCLEAN_GUIDE_S": "EasyClean Guide",
+        "@OV_DASHBOARD_OVEN_DESC_SEND_COMPLETE_S": "Press Start on the Oven.",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F6": "Motor Fuse is Open",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F7": "Motor Hall Sensor is Open",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F4": "N/A",
+        "@OV_TERM_PROGRESS_W": "Elapsed",
+        "@OV_PRODUCT_REGISTER_BLENDER_2": "2.\u00a0Turn the dial to Wi-Fi and\u00a0press\u00a0the\u00a0START/STOP button\u00a0on the\u00a0'$alias$'.",
+        "@OV_TERM_MENU_JUICE": "Juice",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F3": "When some key is continuously short or no communication for  >= 60 seconds",
+        "@OV_PRODUCT_REGISTER_BLENDER_1": "1.\u00a0Make sure power cord is plugged in.",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F1": "N/A",
+        "@OV_PRODUCT_REGISTER_BLENDER_3": "3.\u00a0The Wi-Fi LED blinks during the connection process.",
+        "@OV_TERM_MELT_W": "Melt",
+        "@OV_UX30_HMR_GUIDE_2_S": "Position barcode attached to a food product in this frame.",
+        "@OV_POPUP_SETTING_TRANSFER_VALUE_S": "Set the cooking modes",
+        "@OV_COOKTOP_ERROR_CONTENTS_F52": "Griddle Thermistor is short for over 1 min after cook starts during cooking.",
+        "@OV_COOKTOP_ERROR_CONTENTS_F51": "Griddle Thermistor remains open for over 1 min, after cook starts during cooking.",
+        "@OV_TERM_FAVORITE_W": "Favorites",
+        "@OV_TERM_POWER_OFF_POPUP_TITLE": "{{$0}} Power Off",
+        "@OV_TOAST_TRANSFER_OVEN_SETTINGS_S": "Settings information sent.",
+        "@OV_COOKTOP_ERROR_CONTENTS_F45": "Box fan not working properly",
+        "@OV_POPUP_SENSOR_ERROR_S": "Temperature Sensor Error.",
+        "@OV_COOKTOP_ERROR_CONTENTS_F46": "IH Blow fan not working properly",
+        "@OV_UX30_SETTING_TEMP_SETTING_W": "TEMPERATURE SETTING",
+        "@OV_TERM_AUTO_ROAST_COMBI_W": "Auto Roast Combi.",
+        "@OV_TERM_GOURMET_CHICKEN_WINGS": "Chicken Wings",
+        "@OV_TERM_WIDE_ZONE_W": "WIDE ZONE",
+        "@OV_TERM_ACC_POP_UP": "To enjoy the most delicious, please check the accessory guide and send it.",
+        "@OV_PUSH_303_30303_1999_W": "Cannot operate ventilation. Please try again after checking the power of product or the network of product is connected.",
+        "@OV_TERM_DAY_THU_W": "Thursday",
+        "@OV_UX30_EASYCLEAN_START_APP_S": "You can start EasyClean on the {{$0}} oven using the app.",
+        "@OV_UX30_RECIPE_SEARCH_GUIDE_S": "Search for Recipes.",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_4_S": "\u318dPlastic paint scraper",
+        "@OV_TERM_GOURMET_APPLE_TART": "Apple Tart",
+        "@OV_UX30_STC_BEFORE_START_W": "Before Start",
+        "@OV_TERM_AUTOCOOK_W": "Auto Cook",
+        "@OV_COOKTOP_ERROR_CONTENTS_F38": "Communication Error at Right Module",
+        "@OV_COOKTOP_ERROR_CONTENTS_F36": "Right IGBT Sensor is Open or Short",
+        "@OV_COOKTOP_ERROR_CONTENTS_F33": "RF Top Sensor is Open or Short",
+        "@OV_COOKTOP_ERROR_CONTENTS_F34": "RR Top Sensor is Open or Short",
+        "@OV_PUSH_301_30101_0006_W": "'$alias$' is steam cleaning is done.",
+        "@OV_INDIC_REG_OV_PRESS_ZERO_BUTTON_3SECS_AND_REMOTE_S": " Press and hold the 0 or Wi-Fi button on the oven for 3 seconds.",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F8": "Motor sensor does not work, please contact LG Electronics Service Center.",
+        "@OV_PUSH_302_30201_0013_W": "Timer has been completed on '$alias$'.",
+        "@OV_DASHBOARD_HOOD_DESC_READY_S": "Enter settings for the fan and light.",
+        "@OV_IGBT_SENSOR_OPEN_SHORT_PROTECTION": "IGBT Sensor is opend or shorted",
+        "@OV_TERM_FAMILY_RESTAURANT_W": "Catch up with family restaurants",
+        "@OV_UX30_RECIPE_STEP_NUM_S": "{{n}} Step",
+        "@OV_UX30_BUTTON_SHOPPING_W": "Purchase",
+        "@OV_TERM_VENT_CONNECTION_SET_W": "Connected Ventilation Settings",
+        "@OV_TERM_EN_OFF_W": "OFF",
+        "@OV_DASHBOARD_OVEN_DESC_READY_REMOTE_OFF_S": "Turn Remote Control on to control oven via smartphone.",
+        "@OV_SDS_AUDIBLE_BUILTIN_RANGE_2NE4_BETTER_STEP01_S": "Smart Diagnosis will not work if the oven is operating. Make sure the oven is off and not heating.",
+        "@OV_TERM_PERIOD_1MONTH_W": "Once a month",
+        "@OV_TERM_ACCESSORY_DISH_2_S": "N/A",
+        "@OV_TERM_CUSTOM_VIDEO_SUPPORT_W": "Customer Support Videos",
+        "@OV_TERM_LOW_W": "Low",
+        "@OV_PUSH_301_30106_1999_W": "Cannot operate ventilation. Please try again after checking the power of product or the network of product is connected.",
+        "@OV_TERM_CLEAN_CYCLE_ALARM_W": "Cleaning Status",
+        "@OV_PUSH_301_30103_1014_W": "Delayed Start has started.",
+        "@OV_TERM_INTERNATIONAL_W": "International",
+        "@OV_PUSH_303_30301_2002_W": "Right Front Burner Cooktop is running over the set time.",
+        "@OV_GUG_SDS_SOUND_3_S": "After pressing the Next button, press and hold the Start button on your oven for at least 3 seconds.",
+        "@OV_UX30_REGI_FUNC_W": "N/A",
+        "@OV_UX30_MWO_MAINSEND_GUIDE_S": "Oven settings have been sent. Press Start on the microwave.",
+        "@OV_TERM_RECOMMEND_RECIPE_W": "Recommended recipe",
+        "@OV_TERM_STIR_W": "Stir",
+        "@OV_TERM_6TH": "6th",
+        "@OV_TITLE_SABBATH_W": "SABBATH",
+        "@OV_TERM_ROASTING_W": "Roasting",
+        "@OV_TERM_STEAM_W": "Steam Level",
+        "@OV_TERM_BROIL_FULL_W": "Broil",
+        "@OV_TERM_SELECT_VENT_S": "Select a product to connect to the ventilation.",
+        "@OV_INDIC_ACCESSORY_CLEAN2_S": "Soak enamel dishes in water for about 30 minutes and use cloth, sponge, or scrubbing cloth to wipe them off.",
+        "@OV_TERM_UNSEND_COOK_W": "This recipe can not be sent to the Oven.",
+        "@OV_UX30_PUSH_CLEAN_PERIOD_W": "Cleaning Cycle",
+        "@OV_TERM_KEEP_WARM_W": "Keep Warm",
+        "@OV_TERM_GOURMET_COOK_W": "Gourmet Chef",
+        "@OV_TERM_USE_W": "When Used",
+        "@OV_UX30_SETTING_TEMP_UNIT_DESC_S": "Choose the temperature unit for {{$0}}.",
+        "@OV_UX30_RECIPE_SELECT_PROD_S": "Select products to be sent.",
+        "@OV_UX30_HMR_CAUSTION_TIMER": "Scan to Cook cannot be used while the timer is running. Cancel the timer operation to use Scan to Cook.",
+        "@OV_TERM_SPEED_BROIL_W": "Speed Broil",
+        "@OV_TERM_TIMES_W": "{{$0}} time(s)",
+        "@OV_FOTA_NOTICE_PUSH_ALRAM_S": "(You will receive a push notification when the update is complete.)",
+        "@OV_TERM_BAKE_W": "Bake",
+        "@OV_POPUP_OVEN_WORKING_W": "The oven is currently in use. Try again when it is off.",
+        "@OV_TERM_RANGE_HEAT_FUNC_W": "Microwave oven function (simple heating)",
+        "@OV_UX30_RECIPE_SEND_DW_ACTION_GUIDE_S": "Finished send. To start the selected cycle, select the Download cycle on the product.",
+        "@OV_TERM_UP": "Up",
+        "@OV_UX30_CLEAN_USAGE_ACC_S": "USING ACCESSORIES",
+        "@OV_UX30_RECIPE_RECOMMEND_W": "Recommended Recipes",
+        "@OV_ERROR_NO_HEAT_W": "Oven Not heating",
+        "@OV_TERM_TITLE_ACCESSORY_CLEAN_W": "2. How to clean parts",
+        "@OV_TERM_MARSHMALLOW_W": "Marshmallow",
+        "@OV_HMR_RESTRICTION_GUIDE_2_S": "N/A",
+        "@OV_UX30_TERM_DRY_KITCHEN_W": "Cavity Dry",
+        "@OV_INDIC_USING_OVER_ALARM2_S": "Alarm is only supported on your phone. Alarm will not be sent to oven.",
+        "@OV_TERM_KIDS_MEAL_W": "KIDS MEAL",
+        "@OV_UX30_MAIN_SABBATH_DESC_S": "Settings cannot be changed in Sabbath mode.",
+        "@OV_UX30_CLEAN_DOOR_GUIDE_S": "For best results, clean the inside of the door after each use. Use a damp cloth and mild soapy water. Wipe with a clean, damp cloth and polish dry with a soft cloth, rubbing in the direction of the grain.",
+        "@OV_UX30_MAIN_DISCONNECT_DESC_S": "Turn on the product and check the Wi-Fi connection.",
+        "@OV_PUSH_302_30201_0107_W": "'$alias$' has a damper error.",
+        "@OV_ACT_TRANSFER_EDIT_OVEN_W": "Edit",
+        "@OV_TERM_PRE_METHOD_W": "Heating up phase",
+        "@OV_TERM_MENU_ICE_CRUSH": "Ice Crush",
+        "@OV_ACT_SETTING_W": "Ready to Start",
+        "@OV_TERM_GOURMET_FROZEN_PIZZA_THICK": "Frozen Pizza (Thick)",
+        "@OV_INDIC_MELTING_CHOCOLATE_40_S": "Melting Chocolate",
+        "@OV_TERM_OVEN_LAMP_W": "Oven lighting",
+        "@OV_TERM_AUTOMATIC_W": "Automatic",
+        "@OV_TERM_GOURMET_STEAM_CHICKEN_BREAST": "Chicken Breasts",
+        "@OV_PRODUCT_REGISTER_TOASTER_1": "1.\u00a0Make sure power cord is plugged in.",
+        "@OV_ERROR_KEY_SHORT_W": "Key Short",
+        "@OV_TERM_GOURMET_STEAM_BAGUETTE": "Baguette",
+        "@OV_PRODUCT_REGISTER_TOASTER_2": "2.\u00a0Turn the left dial to Wi-Fi\u00a0and\u00a0press\u00a0the START/STOP button\u00a0on the\u00a0'$alias$'.",
+        "@OV_PRODUCT_REGISTER_TOASTER_3": "3.\u00a0The Wi-Fi LED blinks during the connection process.",
+        "@OV_TERM_BREAD_AND_COOKIE_W": "Bread and cookies",
+        "@OV_TERM_TEMP_UNIT_W": "Temperature Unit",
+        "@OV_INDIC_REG_OVEN_WIFI_TIMER_ON_OFF_AND_REMOTE_1_S": " Make sure power cord is plugged in.",
+        "@OV_TERM_RECENT_SPEEDCLEAN_W": "Recent SpeedClean\u2122 usage history",
+        "@OV_INDIC_COOKING_N_HEATING_70_S": "Cooking and heating foods that need a Cook Power lower than high (for example, whole fish and meat loaf) or when food is cooking too fast",
+        "@OV_PUSH_301_30101_0105_W": "Error in '$alias$' cooling fan activation.",
+        "@OV_UX30_TERM_LG_RECIPE_W": "LG Recipes",
+        "@OV_TERM_APPLIED_OVEN_VALUE_W": "Cook Settings",
+        "@OV_UNIT_M_W": "M",
+        "@OV_ACC_INDEX_W": "index",
+        "@OV_TERM_THERMOSTAT_UPPER_W": "Thermostat Adjustment (Upper)",
+        "@OV_TERM_RD_SMALL": "Small RA",
+        "@OV_INDIC_PRESS_START2_CLEAN_CANCEL_S": "Press Start on the product soon or Cleaning will be canceled.",
+        "@OV_GUG_GUG_ADD03_RA_4_S": "For some products, the Smart Diagnosis logo can be seen by opening the door.",
+        "@OV_TERM_LOWER_LEFT": "Lower left",
+        "@OV_UX30_MAIN_REMAIN_TIME_TYPE1_S": "{{$0}} hr. {{$1}} min. left",
+        "@OV_POP_EASYCLEAN_DESC1_S": "Unable to start EasyClean\u00ae. Please try again after checking the status of the product.",
+        "@OV_TERM_SETTING_RANGE_VALUE_W": "Cook Settings",
+        "@OV_STATE_COOK_W": "Cooking",
+        "@OV_OVEN_ERROR_CONTENTS_HEATING_S": "Oven has a heating error.",
+        "@OV_INDIC_COOKING_SPECIAL_CARE_60_S": "Cooking requiring special care, such as cheese and egg dishes, pudding, and custards",
+        "@OV_TERM_BEEP_SOUND_ON_OFF_W": "Beep Sound On/Off",
+        "@OV_TERM_ENERGYMON_MONTHLY_W": "Monthly",
+        "@OV_TERM_GOURMET_ROAST_PORK": "Roast Pork",
+        "@OV_UX30_EASYCLEAN_COUNT_S": "EasyClean Total Use Count",
+        "@OV_STATE_CLEANING_W": "Cleaning",
+        "@OV_TERM_FOOD_DRY_KR_ONLY_W": "Food drying",
+        "@OV_TERM_OVEN_KR_ONLY_W": "Oven",
+        "@OV_TERM_PROOF_W": "Proof",
+        "@OV_UX30_STC_COOK_SETTING_W": "Cooking Settings",
+        "@OV_CONNECTIVITY_SEND_DW_W": "N/A",
+        "@OV_INDIC_REMOVE_WATER_S": "Use it to remove residual water in the steam generator.",
+        "@CP_NET_CHECK_CONNECTED_W": "Verify Connection",
+        "@OV_TERM_ENERGYMON_WEEKLY_W": "Weekly",
+        "@OV_BLENDER_START_W": "Press the 'Start' button on the blender.",
+        "@OV_ACT_STOP_W": "Stop",
+        "@OV_TERM_MICROWAVE_STEAM_W": "Steam Combi.",
+        "@OV_UX30_RECIPE_DELETE_SELECTED_RECPIE_S": "Delete the recipe?",
+        "@OV_OVEN_ERROR_TITLE_F17": "Convection Fan Motor Operating Error",
+        "@OV_ACT_MY_RECIPE_SAVE_W": "Save in My Recipes",
+        "@OV_TERM_POWER_CONSUMPTION_UNIT_W": "{{$0}}Wh",
+        "@OV_FOTA_NOTICE_DO_NOT_UNPLUG_S": "Do not unplug the power cord.",
+        "@OV_DASHBOARD_MWO_OVEN_STATE_COOK_DONE_W": "Done",
+        "@OV_UX30_TERM_COOK_PROCESS_W": "Preparation",
+        "@OV_TERM_THERMOSTAT_RIGHT_W": "Thermostat Adjustment (RIGHT)",
+        "@OV_OVEN_ERROR_TITLE_F12": "Communication Error",
+        "@OV_INDIC_REGIST_PHOTO_S": "Upload a photo of the final cooked product.",
+        "@OV_OVEN_ERROR_TITLE_F11": "Communication Error",
+        "@OV_UX30_CLEAN_WATER_TANK_TRAY_S": "Water Tank and Drip Tray",
+        "@OV_SMALLTHING_ERROR_LABEL_F2": "F-02",
+        "@OV_SMALLTHING_ERROR_LABEL_F3": "F3",
+        "@OV_TERM_MENU_FRENCH_TOAST": "French Toast",
+        "@OV_SMALLTHING_ERROR_LABEL_F1": "F-01",
+        "@OV_TOAST_FOTA_CANCEL_S": "{{$0}} update is canceled.",
+        "@OV_UX30_RECIPE_NEW_MYRECIPE_GUIDE_S": "No recipes saved. Select Make New Recipe to enter your own recipes.",
+        "@OV_OVEN_ERROR_TITLE_F19": "Oven No Heating",
+        "@OV_NETWORK_CHANGING_W": "Changing",
+        "@CP_PROD_REG_OV_PRESS_ARROW_AND_PLUS_3SECS_S": "Press the \"\u25c1\" button and the \"+\" button of the oven for longer than 3 seconds.",
+        "@OV_SMALLTHING_ERROR_LABEL_F8": "F8",
+        "@OV_SMALLTHING_ERROR_LABEL_F7": "F7",
+        "@OV_SMALLTHING_ERROR_LABEL_F6": "F6",
+        "@OV_RESONANT_CURRENT_PROTEDCTION": "Over current in the inverter coil",
+        "@OV_SMALLTHING_ERROR_LABEL_F5": "F-05",
+        "@OV_POPUP_SET_SPEED_CLEAN_S": "SpeedClean\u2122 uses only water for 10 minutes in low temperatures to help loosen light solid before hand cleaning. \nRefer to the Instruction Guide for details.",
+        "@OV_SMALLTHING_ERROR_LABEL_F4": "F-04",
+        "@OV_INDIC_INPUT_RECIPE_NAME_S": "Enter recipe name",
+        "@OV_TOAST_REMOVE_FAVORITE_S": "Favorite is canceled.",
+        "@OV_ACT_EASY_CLEAN_GUIDE_W": "EasyClean\u00ae Guide",
+        "@OV_GUG_GUG_SET01_9_W": "The oven temperature settings can either be set to Fahrenheit or Celsius.",
+        "@OV_UX30_STC_MYRECIPE_DESC_1_S": "Adjust Temperature and Cook Time settings based on your cooking preferences.",
+        "@OV_UX30_MAIN_STEAM_TANK_GUIDE_S": "Check the water level in the water tank. Empty the tank after cooking.",
+        "@OV_UX30_CLEAN_USAGE_ACC_GUIDE_3_S": "Use for grilling or oven cooking only. In the oven, use it at rack position 4 only.",
+        "@OV_UX30_GUIDE_RANGEUSE_1_W": "To use the range",
+        "@OV_POPUP_SET_SPEED_CLEAN_W": "Set SpeedClean\u2122",
+        "@OV_TERM_CUSTOM_COOK_W": "Custom Cook",
+        "@OV_TERM_RAPIDHITROASTPLUS_W": "RapidHeat Roast+",
+        "@OV_UX30_CLEAN_DISH_GUIDE_S": "Make sure cookware is compatible for the cooking mode selected.",
+        "@OV_GUG_ADD02_LWO_1_S": "Oven Smart ThinQ logo position",
+        "@OV_PUSH_303_30302_2006_W": "'$alias$' has returned after a cut power supply, so it is necessary to set usage time over alerts time again.",
+        "@OV_POPUP_OVEN_STOP_REQUEST_S": "Are you sure you want to stop cooking and turn the oven off?",
+        "@OV_SETTING_LIST_CHANGE_NETWORK_W": "Change Network",
+        "@OV_INDIC_PRODUCT_SETTING_S": "The user sets the function of the oven. After setup is complete, you can use the app's functionality.",
+        "@OV_UX30_MAIN_COOKTIME_GUIDE_S": "Continue cooking without setting a cook time?",
+        "@OV_TERM_COOKTOP_SET_IMPOSSIBLE_S": "For safety reasons, the burners may operate at a lower power level.",
+        "@OV_TERM_COOKTOP_SETTINGS_DONE": "Done",
+        "@OV_RECIPE_STAGE_SELECT_W": "N/A",
+        "@OV_TERM_3RD": "3rd",
+        "@OV_UX30_TIMER_DESC_1_S": "Set the oven's timer below. Once the Timer ends the oven will chime and you will receive a push notification.",
+        "@OV_ACT_PREVIEW_W": "Preview Photos",
+        "@OV_UNDER_VOLT_PROTECTION": "Input Voltage is Low",
+        "@OV_OVEN_ERROR_LABEL_F8": "F-8",
+        "@OV_OVEN_ERROR_LABEL_F7": "F-7",
+        "@OV_OVEN_ERROR_LABEL_F9": "F-9",
+        "@OV_TERM_BEVERAGES_W": "Beverages",
+        "@OV_POPUP_REMOVE_FAVORITE_W": "Confirmation",
+        "@OV_OVEN_ERROR_LABEL_F2": "F-2",
+        "@OV_INDIC_SPEED_CLEAN_RECOMMEND_S": "Alerts you when SpeedClean\u2122 should be run.",
+        "@OV_OVEN_ERROR_LABEL_F1": "F-1",
+        "@OV_POPUP_REMOVE_FAVORITE_S": "Are you sure you want to delete the recipe from Favorites?",
+        "@OV_OVEN_ERROR_LABEL_F3": "F-3",
+        "@OV_COOKTOP_SIMMER_W": "S",
+        "@OV_SDS_AUDIBLE_MWO_WW_CMO_LWO_STEP03_S": "After pressing the Start Diagnosis button, press and hold the Clear button until a countdown displays on the microwave.",
+        "@OV_TERM_MONTH_W": "Month",
+        "@OV_GUG_EASYCLEAN_8_S": "Spray bottle (1ea)",
+        "@OV_INDIC_REG_OV_DIAL_WIFI": " Turn the dial to select \"Settings\" and select \"Wi-Fi Settings\" to display the Wi-Fi connection screen.",
+        "@OV_TERM_LAMP_W": "Light",
+        "@OV_TERM_MENU_OVEN_SETTINGS_W": "Preference",
+        "@OV_TERM_COOKMODE_FAVORITE_W": "Favorite",
+        "@OV_UX30_SETTING_AUTO_CONV_W": "Auto Conversion",
+        "@OV_TERM_OVEN_HEAT_DISH_W": "Aluminum foil",
+        "@OV_ACCE_SELECTED_W": "Selected",
+        "@OV_INDIC_PRESS_START2_RECIPE_CANCEL_S": "Press Start on the product soon or the recipe cooking settings will be deleted.",
+        "@OV_TERM_UNIT_BUNDLE_W": "{{$0}}Bundle",
+        "@CP_PROD_REG_KR_OV_WIFI_NFC_IOS_3STEPS_S": "1. Check if the oven is in standby.\n2. Press the \"Add Steam\" button of the oven for longer than 3 seconds.\n3. n3. When the washing machine can be set, \"Set Wi-Fi\" flickers on the screen of the oven.n3. When the washing machine can be set, \"Set Wi-Fi\" flickers on the screen of the oven.",
+        "@OV_TERM_COURSE_W": "Course",
+        "@OV_GUG_EASYCLEAN_13_S": "Some surfaces may be hot after the SpeedClean\u2122(EasyClean\u00ae) cycle. Wear rubber gloves while cleaning to prevent burns.",
+        "@OV_TOAST_ADD_FAVORITE_S": "Registered as a favorite.",
+        "@OV_STATE_PAUSE_W": "Paused",
+        "@OV_TERM_EN_ON_W": "ON",
+        "@OV_UX30_TERM_TITLE_MULTI_CLEAN_W": "Multi-clean Options",
+        "@OV_POPUP_CHECK_OVEN_SETTINGS_W": "Confirm Changes",
+        "@OV_PRODUCT_REG_COOKTOP_SKS_GAS_3": "3. The Wi-Fi LED blinks during the connection process.",
+        "@OV_TERM_ACCESSORY_HOTPAN_4_S": "N/A",
+        "@OV_POPUP_CHECK_OVEN_SETTINGS_S": "Are you sure you want to send the changes to the product?",
+        "@OV_PRODUCT_REG_COOKTOP_SKS_GAS_2": "2. Press and hold the Connect button on the {{$0}} for 3 seconds.",
+        "@OV_PRODUCT_REG_COOKTOP_SKS_GAS_1": "1. Turn on the {{$0}}.",
+        "@OV_TERM_GRILL_KR_ONLY_W": "Grate",
+        "@OV_TERM_SLOW_W": "Slow",
+        "@OV_UX30_SETTING_ON_W": "On",
+        "@OV_POP_EASYCLEAN_DESC7_S": "Maximum use time of steam exceeded",
+        "@OV_ACC_PHOTO_DELETE_TOAST_S": "Photo deleted.",
+        "@OV_TERM_COOK_PHOTO_W": "Cooking Photos",
+        "@OV_PROD_HAS_LCD_LWO_S": "Is your product's display the same as the following?",
+        "@OV_TERM_MODE_RPM_MODE": "RPM Mode",
+        "@OV_TERM_HR_W": "hr",
+        "@OV_UX30_NETWORK_DISCONNECT_DESC_S": "Please check the Wi-Fi connection.",
+        "@OV_POP_EASYCLEAN_DESC3_S": "Oven cavity is above 150\u2109 (65\u2103)",
+        "@OV_TERM_REMOVE_OTHER_SMELL_W": "Removing other bad smells",
+        "@OV_TERM_IH_COOK_W": "IH Grill Mode",
+        "@OV_UX30_CLEAN_ACC_GUIDE_3_S": "Use a sponge to clean the grill pan. Do not use an abrasive scrub pad. Doing so can damage the special surface coating.",
+        "@OV_POPUP_RANGE_MONITORING_S": "The network is temporarily released while the microwave oven function is in use. Try again after finishing the operation of the microwave oven function.",
+        "@OV_TERM_OVEN_STATE_ALARM_W": "Cooking Alerts",
+        "@OV_PUSH_301_30101_3008_W": "'$alias$' has an error with the temperature sensor in the steam generator.",
+        "@OV_GUG_ADD01_LWO_2_S": "Tag logo on the location of the oven, please refer to the image below.",
+        "@OV_TERM_UNIT_MO_W": "{{$0}}ea",
+        "@OV_UX30_SETTING_TEMP_W": "Temperature",
+        "@OV_SDS_AUDIBLE_BLENDER_3_1": "After pressing the Start Diagnosis button, press and hold the Start/Cancel button until a countdown displays on the blender.",
+        "@OV_TERM_IH_MID": "Mid IH",
+        "@OV_TERM_FAIR_W": "Medium",
+        "@OV_UX30_RECIPE_INPUTBOX_HINT_DESC_S": "Description",
+        "@OV_TERM_NOT_SET_W": "NO CHANGE",
+        "@OV_POPUP_INPUT_HOOD_SETTINGS_TRANSFER_S": "Set the Hood Settings.",
+        "@OV_TERM_HOLIDAY_FOOD_W": "Easy dish for the holidays",
+        "@OV_TERM_LEVEL_SET_W": "Level",
+        "@OV_UX30_MAIN_READY_S": "Ready to Start",
+        "@OV_TERM_ACCESSORY_INSTALL_DISH_3_S": "N/A",
+        "@OV_SDS_AUDIBLE_MWO_ONLY_KR_STEP02_ADDITIONAL_UX20_S": "N/A",
+        "@OV_TERM_LOWER_W": "Lower",
+        "@OV_TERM_ICECREAM_W": "Ice Cream",
+        "@OV_SDS_AUDIBLE_LWO_KR_STEP03_S": "After pressing the Start Diagnosis button, press and hold the Clear button until a countdown displays on the microwave.",
+        "@OV_TERM_DOWN": "Down",
+        "@OV_TERM_CENTER": "Center",
+        "@OV_INDIC_REG_OVEN_WIFI_TIMER_ON_OFF_AND_REMOTE_3_UI20_S": " The Wi-Fi LED blinks during the connection process.",
+        "@OV_PUSH_304_30401_4002_W": "'$alias$'s auto mode has stopped.",
+        "@OV_UX30_STC_CAUSTION_START_S": "After the notification, 2 mins. elapse without opening the door or opening and closing the door of the product automatically starts the next step. Please cook according to the guide.",
+        "@OV_HMR_RECIPE_SEARCH_W": "Scan to cook",
+        "@OV_TERM_STEAM_ASSIST_W": "Steam-assist",
+        "@OV_TERM_ENTREES_W": "Entrees",
+        "@OV_TERM_POPCORN_W": "Popcorn",
+        "@OV_TERM_DEFROST_INFO_W": "Defrost Settings",
+        "@OV_OVEN_ERROR_TITLE_F21": "Steam Sensor Open",
+        "@OV_UX30_HMR_QUANTITY_GUIDE_S": "Cook settings will be adjusted based on the quantity.",
+        "@OV_OVEN_ERROR_TITLE_F22": "Steam Sensor Short",
+        "@OV_STATE_CLEAN_COMPLETE_W": "Cleaning is done",
+        "@OV_OVEN_ERROR_TITLE_F24": "Steam Sensor Open",
+        "@OV_TERM_CO1_ROAST_W": "Co-1 (Roast)",
+        "@OV_TERM_INGREDIENT_W": "Ingredients",
+        "@OV_OVEN_ERROR_TITLE_F25": "Steam Sensor Short",
+        "@OV_TERM_OVEN_STATE_ALARM_UPPER_W": "Upper Oven Alerts",
+        "@OV_GUG_GUG_SET01_2_W": "It is to set the hour mode on the clock on your oven.",
+        "@OV_ACT_CLEAN_OVEN_W": "Select Which Oven",
+        "@OV_UX30_CLEAN_LIGHTWAVEOVEN_S": "Lightwave Oven",
+        "@OV_OVEN_ERROR_TITLE_F8": "Shorted Steam Sensor",
+        "@OV_TERM_HOUR_MODE_W": "Clock",
+        "@OV_POPUP_SET_EASY_CLEAN_W": "Set EasyClean\u00ae",
+        "@OV_OVEN_ERROR_TITLE_F7": "Convection Fan Motor Operating Error",
+        "@OV_OVEN_ERROR_TITLE_F2": "Shorted Oven Sensor",
+        "@OV_OVEN_ERROR_TITLE_F1": "Opened Oven Sensor",
+        "@OV_OVEN_ERROR_TITLE_F20": "Auto Door Error",
+        "@OV_POPUP_SET_EASY_CLEAN_S": "EasyClean\u00ae uses only water for 10minutes in low temperatures to help loosen light soiled before hand cleaning. \nRefer to the Instruction Guide for details.",
+        "@OV_OVEN_ERROR_TITLE_F3": "Key Error",
+        "@OV_TERM_STANDARD_RACK_W": "Standard Rack",
+        "@OV_OVEN_ERROR_TITLE_F9": "Oven No Heating",
+        "@OV_LWO_MAIN_STATE_SEND_COMPLETE_DESC_S": "Press Start on the product soon or the cooking settings will be deleted.",
+        "@OV_TERM_RA_LARGE": "Large RA",
+        "@OV_TERM_MICROWAVE_OUTPUT_W": "MICROWAVE OUTPUT",
+        "@OV_TERM_MIDDLE_RIGHT": "Middle right",
+        "@OV_UX30_TERM_HOOD_STATE_IMAGE_W": "Current hood status image",
+        "@OV_TERM_CLOCK_SET_W": "Clock Set",
+        "@OV_TERM_FUNC_SET_W": "Cook mode",
+        "@OV_UX30_RECIPE_MAKE_RECIPE_W": "Make New Recipe",
+        "@OV_SDS_AUDIBLE_BUILTIN_RANGE_2NE4_BEST_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_INDIC_KEEPING_FOOD_WARM_10_S": "Keeping food warm",
+        "@OV_UX30_SETTING_VENT_PAIR_W": "Connected Ventilation Settings",
+        "@OV_POPUP_DISCONNECTED_W": "Unable to use",
+        "@OV_POPUP_DELETE_PHOTO_S": "Delete the image?",
+        "@OV_POPUP_DISCONNECTED_S": "Returning to the main screen because the product is powered off or the network connection is lost.",
+        "@OV_TERM_DISCONNECTION_ALARM_W": "Disconnect Alerts during vent connection",
+        "@OV_TERM_LEVEL_W": "{{$0}} Level",
+        "@OV_UX30_GUIDE_NOTINFO_W": "Cannot load data.",
+        "@OV_ACCESSIBILITY_PREVIOUS_MONTH": "Previous month",
+        "@OV_BUTTON_SHOPPING_W": "Go to buy",
+        "@OV_UX30_SETTING_SELECT_PROD_S": "Select products to be connected.",
+        "@OV_UX30_RECIPE_RECIPE_LIMITE_DESC_S": "The maximum number of recipes has been reached. Delete existing recipes to save new ones.",
+        "@OV_GUG_ADD01_OV_4_S": "[Wall Oven]",
+        "@OV_GUG_ADD02_OV_4_S": "[Wall Oven]",
+        "@OV_UX30_RECIPE_WF_CONNECTIVITY_DESC_S": "Send info of {{$1}} ml of water to water dispenser for cooking {{$0}} servings.",
+        "@OV_UX30_REGI_PRESS_REGISTER_COMMON_TWO": "Press and hold the {{$1}} button on the {{$0}} for 3 seconds.",
+        "@OV_UX30_EVENT_OTHER_USING_S": "Adjusting settings on oven. Try again in a few minutes.",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_5_S": "\u318dOld credit card",
+        "@OV_TERM_STEAMMAINT_EVAPORATION_W": "Evaporation",
+        "@OV_UX30_REGI_PRESS_REGISTER_KR32OVEN": "N/A",
+        "@OV_TERM_ACCESSORY_DISH_W": "N/A",
+        "@OV_DASHBOARD_MWO_STATE_SETTING_W": "In use",
+        "@OV_TERM_EBONY_SOUSVIDE_W": "Sous Vide",
+        "@OV_SDS_AUDIBLE_MWO_KR_STEP03_02_S": "After clicking'Next', press the'Cancel/*Lock' button for at least 8 seconds.",
+        "@OV_TERM_AUTO_ROAST_W": "Auto Roast",
+        "@OV_UX30_RECIPE_DELETE_STEP_S": "Delete {{$0}} step?",
+        "@OV_TERM_GUEST_TABLE_W": "Special guest treat",
+        "@OV_PUSH_301_30103_1004_W": "'$alias$' is turned off.",
+        "@OV_DASHBOARD_MWO_STATE_SEND_COMPLETE_W": "Settings accepted",
+        "@OV_UX30_CLEAN_REMOVE_WATER_GUIDE_S": "Removes any remaining moisture inside the oven cavity after steam cooking or cleaning.",
+        "@OV_TERM_TEMP_SET_W": "Temperature",
+        "@OV_TERM_CELSIUS_W": "Celsius",
+        "@OV_TERM_SERVINGS_W": "Servings",
+        "@OV_INDIC_HEATING_RICE_PASTA_80_S": "Heating rice, pasta, or casseroles",
+        "@OV_PUSH_301_30104_2001_W": "Left Front Burner Cooktop is running over the set time.",
+        "@OV_UX30_SETTING_INFORM_SAVE_S": "All preferences set in the app are initialized when restarting the app.",
+        "@OV_UX30_PUSH_USE_W": "Used",
+        "@OV_SDS_AUDIBLE_MWO_KR_STEP01_S": "Smart Diagnosis will not work if the oven is operating. Make sure the oven is off and not heating.",
+        "@OV_TERM_GOURMET_STEAM_WHITE_BREAD": "White Bread",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_1_S": "Suggestted plastic scrapers",
+        "@OV_TERM_GAS_W": "Reduce gas consumption by up to {{$0}} Btu",
+        "@OV_UX30_CLEAN_METHOD_S": "Cleaning Method",
+        "@OV_STATE_ERROR_NEW_W": "Product requires attention",
+        "@OV_UX30_MWO_SETTINGCURRENT_TIME_W": "Current Time",
+        "@OV_TERM_IH_SMALL": "Small IH",
+        "@OV_TERM_SPEED_CLEANING_W": "SpeedClean\u2122 is On",
+        "@OV_TERM_ACCESSORY_GRILL_W": "N/A",
+        "@OV_ACT_OVEN_SET_W": "Cook Settings",
+        "@OV_PUSH_301_30101_0012_W": "Self Clean is complete on '$alias$' and is cooling down.",
+        "@OV_ACT_FAVORITE_CANCEL_W": "Cancel Favorite",
+        "@OV_TERM_BLENDER_COMPLETE_TWO_W": "Recipe setting is canceled after a certain period of time.",
+        "@OV_PUSH_301_30103_1011_W": "EasyClean\u00ae is complete on '$alias$'.",
+        "@OV_TERM_ACCESSORY_LWOGRILL_1_S": "N/A",
+        "@OV_TERM_GOURMET_WEDGE_POTATOES": "Wedge Potatoes",
+        "@OV_ACC_CHILDLOCK_W": "Child Lock",
+        "@OV_GUG_GUG_SET01_14_W": "We recommend using your new oven for a few weeks (or after 10-15 recipes) to become more familiar with it before changing the temperature settings.",
+        "@OV_INDIC_CLEAN_STEAM_GENERATOR_S": "Use it to remove the precipitates that can accumulate inside the steam generator after steam cooking for a very long time.",
+        "@OV_POPUP_FOTA_UNAVAILABLE_S": "Product update is available after the appliance is turned on and connected to the internet.",
+        "@OV_SMALLTHING_ERROR_TITLE_F6": "Opened Motor Fuse",
+        "@OV_SMALLTHING_ERROR_TITLE_F7": "Opened Motor Hall sensor",
+        "@OV_SMALLTHING_ERROR_TITLE_F3": "Key Error",
+        "@OV_TERM_CHECK_EASYCLEAN_DESC_2_S": "On the {{$0}} oven, you must start EasyClean\u00ae from the control panel.",
+        "@OV_INDIC_WAIT_COOL_S": "For safety reasons, wait unit the oven has cooled off.",
+        "@OV_UX30_STC_MYRECIPE_SAVE_S": "Save this recipe to My Recipe?",
+        "@OV_ACT_TRANSFER_RANGE_CANCEL_W": "Cancel",
+        "@OV_UX30_EASYCLEAN_DESC_S": "EasyClean is quick and effective at loosening small and light soil before hand-cleaning.\nIt runs for 10 minutes and uses only water, not harsh chemicals.",
+        "@OV_GUG_GUG_SET01_10_W": "\u2022 Auto Conversion",
+        "@OV_TERM_RANGE_COOK_FUNC_W": "Microwave oven function (for cooking)",
+        "@OV_UX30_REGI_TIMER_W": "Timer On/Off",
+        "@OV_CONNECTIVITY_POPUP_DESCRIPTION2_WP_S": "N/A",
+        "@OV_UX30_SETTING_POWER_W": "Power strength",
+        "@OV_GUG_GUG_SET01_18_W": "You will be informed when the set time is reached.",
+        "@OV_TOAST_RECIPE_SAVE_S": "Recipe is saved.",
+        "@OV_UX30_SETTING_VERSION_W": "Software Version",
+        "@CP_PROD_REG_KR_OV_WIFI_IOS_3STEPS_S": "1. Check if the oven is in standby.\n2. Press the \"\u25c1\" button and the \"+\" button of the oven for longer than 3 seconds.\n3. When the washing machine can be set, \"Set Wi-Fi\" flickers on the screen of the oven.",
+        "@OV_ACC_MYRECIPE_MAIN_NO_PHOTO_S": "No main photo in {{0}} recipe.",
+        "@OV_UX30_TERM_RANGE_HEAT_DISH_W": "Wood or paper containers",
+        "@OV_PUSH_301_30103_1103_W": "'$alias$' has a key short error.",
+        "@OV_GUG_ADD03_OV_6_S": "Left side to the oven control panel",
+        "@OV_TERM_USING_OVER_TIME_ALARM_W": "Time for elapsed time Alerts",
+        "@OV_UX30_CLEAN_DISH_GUIDE_1_S": "For Microwave Cooking",
+        "@OV_INDIC_INPUT_COOK_PROCESS_S": "Description",
+        "@OV_TERM_VENT_W": "Vent",
+        "@OV_TERM_WARM_W": "Warm",
+        "@OV_OVEN_ERROR_CONTENTS_LONG_HEATING_S": "A defect in the mechanical parts of the product has been detected. If the same problem occurs again, contact the service center.",
+        "@OV_INDIC_REG_OVEN_WIFI_TIMER_ON_OFF_AND_REMOTE_3_UI20_S_MWO": "Press the 'Wi-Fi' button on the oven for more than 3 seconds.",
+        "@OV_TERM_COUNTRY_RECIPE_W": "Recipe for each country",
+        "@OV_TERM_UNIT_AMOUNT_OF_COUNT_W": "{{$0}}Quantity",
+        "@OV_COOKTEMP_HML_LEVEL3_W": "Level 3",
+        "@OV_UX30_HMR_NAME_W": "Scan to cook",
+        "@OV_TERM_STRENGTH_W": "N/A",
+        "@OV_UX30_TERM_MATERIAL_W": "Ingredient",
+        "@OV_GUG_GUG_ADD03_RA_3_S": "[Normal microwave oven]",
+        "@OV_TERM_GOURMET_SAUSAGES": "Sausages",
+        "@OV_UX30_TITLE_SABBATH_W": "SABBATH",
+        "@OV_UX30_MAIN_REMOTE_GUIDE_3_S": "1. Open the door to the oven you want to start remotely.\n2. Make sure that the oven is empty and close the door.\n3. Activate the Remote Start function in the oven settings.\n4. Make sure that Remote Start appears in the display.",
+        "@OV_TERM_GRILL_COMBI_W": "Grill Combi.",
+        "@OV_DASHBOARD_MWO_DESC_SETTING_S": "The microwave is in use. Please wait.",
+        "@OV_UX30_ACT_ADD_STEAM_W": "Add steam",
+        "@OV_SDS_AUDIBLE_RANGE_ARAMIS_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_GUG_EASYCLEAN_4_S": "Plastic scraper (1ea)",
+        "@OV_STATE_PAUSE2_W": "Paused",
+        "@OV_TERM_UPPER_W": "Upper",
+        "@OV_TERM_EASY_CLEAN_W": "EasyClean\u00ae",
+        "@OV_PUSH_302_30201_0101_W": "'$alias$' has a sensor open.",
+        "@OV_INDIC_KITCHEN_DRY_S": "After using the steam function such as in steam cooking or cleaning, use the function to remove the remaining moisture inside the cooking room.",
+        "@OV_DESC_SW_UPDATE_FAIL_W": "Update failed.",
+        "@OV_DASHBOARD_OVEN_DESC_SETTING_S": "The oven is in use. Please wait.",
+        "@OV_HMR_GUIDE_1_BARCODE_S": "N/A",
+        "@OV_CP_PROD_TURNON_WIFI_OV_S": "Access the Settings menu on the oven and set Wi-Fi to Reset.",
+        "@OV_COOK_STEAM_W": "Steam",
+        "@OV_UX30_POP_EASYCLEAN_DESC4_S": "Water tank not inserted",
+        "@OV_UX30_RECIPE_SEND_WF_ACTION_GUIDE_S": "Sent. Water dispenser is ready. Dispense water within 1 minute. Press any button to stop.",
+        "@OV_POWER": "Power",
+        "@OV_UX30_RECIPE_RECIPE_STEP_GUIDE_S": "Up to 10 steps can be created.",
+        "@OV_STATE_INUSING_W": "In Use",
+        "@OV_TERM_GOURMET_STEAM_CARROT": "Carrot",
+        "@OV_CONNECTIVITY_SEND_WP_W": "N/A",
+        "@OV_HMR_KEEP_FROZEN_W": "Frozen",
+        "@OV_PUSH_301_30101_0007_W": "'$alias$' is now dry.",
+        "@OV_UX30_RECIPE_DISCARD_CHANGE_S": "Discard the changes?",
+        "@OV_ACT_SAVE_CUSTOM_COOK_W": "Custom Cook saved",
+        "@OV_TOAST_NOT_SUPPORT_TEXT_W": "You can not enter that special character.",
+        "@OV_UX30_RECIPE_VIDEO_W": "Video",
+        "@OV_TERM_POULTRY_W": "Poultry",
+        "@OV_UX30_CLEAN_ACC_GRILL_RACK_S": "Wire Grill Rack",
+        "@OV_UX30_EASYCLEAN_DISABLE_DOOR_OPEN_W": "Door open",
+        "@OV_INDIC_MODEL_VARIATION_REMOTE_S": "'Remote Start' location can be different for each model.",
+        "@OV_SDS_AUDIBLE_TOASTER_1_2": "2. Set the left side dial to 'Wi-Fi' position",
+        "@OV_SDS_AUDIBLE_TOASTER_1_1": "1. Please make sure toaster is plugged in.",
+        "@OV_UX30_CLEAN_MAINTENANCE_GUIDE_S": "Learn how to clean the oven, including odor management after cooking.",
+        "@OV_UX30_CLEAN_STEAM_GEN_GUIDE_1_S": "Removes the deposits that can build up inside the steam generator after long-term use.",
+        "@OV_TERM_INPUT_RECIPE_METHOD_S": "Set the cooking modes.",
+        "@OV_UX30_PUSH_ALARM_W": "Alarm Settings",
+        "@OV_PRODUCT_REG_SKS_PRORANGE_1": "1. Make sure power cord is plugged in.",
+        "@OV_TERM_RA_MID": "Mid RA",
+        "@OV_PRODUCT_REG_SKS_PRORANGE_2": "2. Access the Settings menu on the {{$0}} and set Wi-Fi to On.",
+        "@OV_TERM_CHECK_EASYCLEAN_DESC_1_S": "On the {{$0}} oven, EasyClean\u00ae can be started remotely from the app.",
+        "@OV_POPUP_FAN_ERROR_S": "Fan Movement  Error.",
+        "@OV_TERM_STEAM_MAINTENANCE_W": "Steam Maintenance",
+        "@OV_UX30_TERM_CLEAN_STEAN_GENERATOR_W": "Descale",
+        "@OV_TERM_MIDDLE_LEFT": "Middle left",
+        "@OV_UX30_EASYCLEAN_START_DESC_S": "Start EasyClean from the product controls.",
+        "@OV_ACC_MYRECIPE_MAIN_PHOTO_S": "Main photo of {{0}} recipe.",
+        "@OV_SET_BURNER": "Set Burner",
+        "@OV_UX30_CLEAN_STEAM_GEN_GUIDE_S": "Use when water drips from the steam nozzle.",
+        "@OV_TERM_WARM_DISH_W": "Warmming Dishes",
+        "@OV_SDS_AUDIBLE_BUILTIN_RANGE_2NE4_BETTER_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_ACC_RECIPE_SEARCH_KEYOWORD_S": "Example Photo",
+        "@OV_TERM_REAR_WIDE_ZONE": "Rear WIDE",
+        "@OV_PUSH_301_30101_0013_W": "Timer has been completed on '$alias$'.",
+        "@OV_ACT_SENDING_W": "Sending",
+        "@OV_TERM_EASYCLEAN_AVAILABILITY_S": "Using EasyClean\u00ae may reduce energy by up to {{$0}}%.",
+        "@OV_TERM_COMB_MODE_W": "Combi. Mode",
+        "@OV_TERM_TIME_NOT_SET_INFO_TITLE_W": "Cook time setting",
+        "@OV_TERM_SINGLE_OVEN_W": "OVEN",
+        "@OV_PUSH_301_30101_0003_W": "'$alias$' needs a water refill.",
+        "@OV_TERM_NO_USAGE_S": "No history",
+        "@OV_PUSH_301_30101_0102_W": "Error in '$alias$' sensor short-circuit.",
+        "@OV_UX30_CLEAN_WATER_TANK_S": "Fill the water tank.",
+        "@OV_UX30_REGI_1_W": "1",
+        "@OV_TERM_SMART_DATA_W": "Smart Data",
+        "@OV_INDIC_FISHING_COOKING_CASSEROLES_60_S": "Finishing cooking casseroles",
+        "@OV_TERM_PREHEAT_ALARM_W": "Preheating Alarm Light",
+        "@OV_TERM_PIZZA_MODE_W": "Pizza Mode",
+        "@OV_TERM_SPEED_CONVECTION_W": "Speed Convection",
+        "@OV_TERM_COOKTOP_VOLUME_W": "Cooktop On alert",
+        "@OV_UX30_SETTING_CLOCK_UNIT_DESC_S": "Set the clock mode for {{$0}}.",
+        "@OV_PUSH_303_30301_2003_W": "Left Rear Burner Cooktop is running over the set time.",
+        "@OV_TERM_MID_EN_W": "MED",
+        "@OV_TERM_GOURMET_BAGUETTE_CROISSANT": "Baguette/Croissant",
+        "@OV_UX30_MWO_CLOCK_SET_W": "Clock Set",
+        "@OV_ACCESSIBILITY_NEXT_YEAR": "Next year",
+        "@OV_SIG_CEN03_SINGLE_REMOTE_1": "Select Remote On in Settings menu on product's control panel.",
+        "@OV_TERM_BEFORE_DATE_W": "{{$0}} day(s) ago",
+        "@OV_INDIC_VENT_CONNECTION_S": "When the cooktop turns on, the ventilation of Over the Range Microwave oven also turns on automatically. The ventilation stops when cooktop turned off.",
+        "@OV_TERM_CHEF_RECIPE_W": "Chef Recipe",
+        "@OV_INDIC_MY_RECIPE_NOT_SET2_S": "Press the Make New Recipe\nto create your own recipes.",
+        "@OV_UX30_TERM_SPICE_N_SOURCE_W": "Condiments and sauces",
+        "@OV_TERM_RD_MID": "Mid RA",
+        "@OV_TERM_ACCESSORY_HIGHGRILL_W": "High Grill",
+        "@OV_FOTA_UPDATE_FAIL_S": "Update has failed.\nAfter checking the network condition of the {{$0}} or home network, try again.",
+        "@OV_TERM_POOR_W": "Low",
+        "@OV_TOAST_REMOCON_TRANSFER_CANCEL_S": "Data transfer has been canceled.",
+        "@OV_INDIC_CLEAN_STEAM_GENERATOR_GUIDE1_S": "Fill the water tank with a mixture of vinegar and water (7 oz/200 cc water, 1 oz/30 cc vinegar).",
+        "@OV_TERM_RINSING_W": "Rinsing",
+        "@OV_UX30_TERM_INGREDIENT_W": "Ingredients",
+        "@OV_TERM_MICROWAVE_W": "Microwave",
+        "@OV_TERM_UNIT_G_W": "{{$0}}g",
+        "@OV_UX30_MAIN_STOP_GUIDE_S": "Cancel? The existing settings will be lost.",
+        "@OV_UX30_TERM_FAVORITE_W": "Favorites",
+        "@OV_TERM_MINUTE": "Minutes",
+        "@OV_TERM_TRANS_POP_UP": "Send",
+        "@OV_TERM_ACCESSORY_DISH_3_S": "The enamel dish must always be attached to the product.",
+        "@OV_INDIC_MULTI_CLEAN_S": "Remove odors and clean the inside of the oven using the Multi-clean function.",
+        "@OV_SDS_AUDIBLE_BUILTIN_RANGE_2NE4_BEST_STEP03_S": "After pressing the Start Diagnosis button, press and hold the OK button until a countdown displays on the oven.",
+        "@OV_UX30_MAIN_TIME_PASSED_W": "Elapsed",
+        "@OV_PUSH_302_30201_0104_W": "'$alias$' has a humidity sensor error.",
+        "@OV_POPUP_SETTING_RANGE_VALUE_S": "Set the cooking modes.",
+        "@OV_HMR_RESULT_LIST_INDEX_W": "Search Results",
+        "@OV_GUG_GUG_SET01_6_W": "\u2022 Beeper Volume",
+        "@CP_PROD_REG_US_OV_WIFI_IOS_PRESS_CONNECT_OK_BUTTON_S": "Click 'Verify Connection' button after Wi-Fi connection is completed.",
+        "@OV_TERM_OPTION_TEMPERATURE": "Temperature",
+        "@OV_TERM_MAIN_FOOD_AMOUNT_SELECT_W": "Ingredient Quantity",
+        "@OV_TERM_UNIT_SONG_E_W": "{{$0}}Bunch",
+        "@OV_TERM_DEFROST_MEAT_W": "Meat",
+        "@OV_TERM_LANGUAGE_FR_W": "French",
+        "@OV_STAGE_3_W": "N/A",
+        "@OV_PUSH_301_30101_9999_W_P_1": "Error.",
+        "@OV_PUSH_301_30101_9999_W_P_2": "Error.",
+        "@OV_PUSH_301_30101_9999_W_P_3": "Error.",
+        "@OV_INDIC_TIMER_END_S": "Timer has ended on {{$0}}.",
+        "@OV_PUSH_301_30101_3019_W": "'$alias$' has an excess current error in the inverter switching device.",
+        "@OV_PUSH_301_30104_2005_W": "Center CookTop is running over the set time.",
+        "@OV_TERM_RINSING_PANNEL_W": "Rinsing",
+        "@OV_TERM_MAIN_OR_RECIPE_NAME_W": "Enter Recipe",
+        "@OV_ACCE_FAV_BUT_W": "Favorite button",
+        "@OV_INDIC_REMOVE_OTHER_SMELL1_S": "Place a dish with a slice of lemon or tangerine at level 1. Use the oven function to set the temperature to 180 degrees and cook it for 8 to 10 minutes.",
+        "@OV_PUSH_301_30100_1998_W": "Do not facilitate the current wireless network environment, you can not run the Cook Clear.",
+        "@OV_UX30_TERM_FAST_W": "Fast",
+        "@OV_UX30_PUSH_STATUS_W": "{{$0}} Status",
+        "@OV_TERM_ACCESSORY_W": "Enamel dish, frying pan, grate, water basket, and gutter",
+        "@OV_ACC_NOTIME_W": "No time information",
+        "@OV_TERM_GOURMET_STEAM_SPINACH": "Spinach",
+        "@OV_CONNECTIVITY_POPUP_FAIL_TITLE_USING_W": "N/A",
+        "@OV_UX30_TERM_TIME_NOT_SET_INFO_DESC_S": "It is not the minimum or maximum time that can be set. Please set at least {{$0}} or more and maximum {{$1}} or less.",
+        "@OV_INDIC_REG_OVEN_WIFI_TIMER_ON_OFF_AND_REMOTE_S": "1. Check if the oven is in standby.\n2. If there is a knob in the oven, Press the Timer On/Off button of the oven for longer than 3 seconds.\nOtherwise, Press the Wi-Fi button of the oven for longer than 3 seconds.",
+        "@OV_TERM_GOURMET_RICE_PASTA": "Rice/Pasta",
+        "@OV_TERM_MUST_W": "*Required field",
+        "@OV_SDS_AUDIBLE_MWO_US_STEP03_COUNTERTOP_DESC_UX20_S": "After pressing the Next button, press and hold the Stop/Clear button on your microwave oven for at least 8 seconds.",
+        "@OV_TERM_COMPLETE_TIME_W": "Estimated End Time",
+        "@OV_PUSH_301_30101_0104_W": "Error in '$alias$' humidity sensor.",
+        "@OV_TERM_RANGE_STATE_ALARM_W": "Microwave Alerts",
+        "@OV_TERM_EASYCLEAN_VALUE_DIFFERENCE_NOTICE_S": "The energy consumption data displayed may differ from actual use.",
+        "@OV_UX30_TERM_WEIGHT_W": "Weight",
+        "@OV_UX30_TERM_USEWEEK_W": "Weekly Usage Time",
+        "@OV_UX30_MWO_MAINPL_GUIDE_W": "Power Level Guide",
+        "@OV_UX30_MAIN_SELECT_RECIPE_S": "Choose Recipe to Cook",
+        "@OV_ACCESSIBILITY_PREVIOUS_WEEK": "Previous week",
+        "@OV_PUSH_301_30101_9999_W_P_6": "Error.",
+        "@OV_PUSH_301_30101_9999_W_P_5": "Error.",
+        "@OV_PUSH_301_30101_9999_W_P_4": "Error.",
+        "@OV_UX30_CLEAN_WINDOW_GUIDE_S": "Use mild soap on a damp cloth or sponge to clean the oven door glass. Wipe with a clean, damp cloth and polish dry with a soft cloth.",
+        "@OV_TERM_STEAMMAINTAENANCE_DESCALE_W": "Descaling",
+        "@OV_SMALLTHING_ERROR_LABEL_LE": "LE",
+        "@OV_TERM_RANGE_KR_ONLY_W": "Range",
+        "@OV_UX30_RECIPE_PRIVIEW_PHOTO_W": "See Image",
+        "@OV_UX30_MWO_MAINUSER_GUIDE_W": "User Guide",
+        "@OV_PUSH_301_30101_3009_W": "'$alias$' has an error with the cooling fan.",
+        "@OV_INDIC_CONTAINER_S": "Check which containers are available for cooking.",
+        "@OV_TERM_MODE_RPM": "RPM",
+        "@OV_UX30_TERM_PERIOD_1MONTH_W": "Once a month",
+        "@OV_PUSH_301_30101_9998_W_P_3": "'$alias$' has a temperature sensor error.",
+        "@OV_UX30_RECIPE_FAIL_WF_S": "Cannot send. Make sure the product is on and connected to the network.",
+        "@OV_PUSH_301_30101_9998_W_P_2": "'$alias$' has a temperature sensor error.",
+        "@OV_PUSH_301_30101_9998_W_P_1": "'$alias$' has a temperature sensor error.",
+        "@OV_TERM_PLASTIC_CONTAINER_W": "Plastic containers that are heat-resistant up to 120 \u00baC",
+        "@OV_INDIC_DEODORIZATION_S": "After cooking, use this function to remove odors in the cooking room.",
+        "@OV_DASHBOARD_OVEN_STATE_READY_W": "Off",
+        "@OV_TERM_FAN_GRILL_W": "Fan Grill",
+        "@OV_TERM_GLIDING_RACK_W": "Gliding Rack",
+        "@OV_PUSH_301_30101_9998_W_P_9": "'$alias$' has a temperature sensor error.",
+        "@OV_UX30_TERM_DEFROST_W": "Defrost",
+        "@OV_POP_OPERATING_OTHER_FUNC_RETRY_LATER_S": "{{$0}} is locked or busy with another task. Try again after it is finished.",
+        "@OV_TERM_ACCESSORY_SET_W": "Accessories",
+        "@OV_PUSH_301_30101_9998_W_P_8": "'$alias$' has a temperature sensor error.",
+        "@OV_PUSH_301_30101_9998_W_P_7": "'$alias$' has a temperature sensor error.",
+        "@OV_TERM_DEFROST_GUIDE_W": "Defrost Guide",
+        "@OV_TERM_APPLIED_MAIN_INGREDIENT_W": "Main Ingredients",
+        "@OV_TERM_CRISPY_GRILL_W": "Crispy Grill",
+        "@OV_UX30_REGI_PRESS_REGISTER_CHECK_DIAL": "Dose your {{$0}} have a knob?",
+        "@OV_OVEN_ERROR_TITLE_F12_THERMISTOR": "Low Thermistor Opened Sensor",
+        "@OV_TERM_LARGE_GRILL_W": "Large Grill",
+        "@OV_TERM_EVERY_DISH_W": "Everyday side dish",
+        "@OV_UX30_HMR_TIP_S": "Cook settings will be adjusted based on the quantity.",
+        "@OV_UX30_HMR_GUIDE_3_S": "Only available on some products.",
+        "@OV_PUSH_301_30103_1106_W": "'$alias$' has a No Heating Error.",
+        "@OV_INDIC_INPUT_INGREDIENT_S": "Enter ingredients",
+        "@OV_TERM_RAPIDHITROAST_W": "RapidHeat Roast",
+        "@OV_TERM_UNIT_PEOPLE_W": "{{$0}}Serving(s)",
+        "@OV_TERM_MATERIAL_W": "ingredients",
+        "@OV_PUSH_302_30201_0001_W": "'$alias$' preheating is done.",
+        "@OV_TERM_OVEN_FUNC_W": "Oven function",
+        "@OV_UX30_SETTING_DELETE_PROD_S": "The product has been deleted.",
+        "@OV_TERM_CONNECT_PRODUCT_W": "Connected product",
+        "@OV_TERM_ACCESSORY_LID_3_W": "N/A",
+        "@OV_TERM_VENT_CONNECTION_W": "Connected Ventilation",
+        "@OV_TERM_ACCESSORY_LID_3_S": "N/A",
+        "@OV_TERM_WARM_PANNEL_W": "Warm",
+        "@OV_UX30_HMR_NO_SUPPORT_S": "This is not a supported food product.",
+        "@OV_PUSH_301_30101_3003_W": "'$alias$' has an error with the control panel.",
+        "@OV_TERM_TIME_UNIT_S_W": "s",
+        "@OV_TERM_DEFROST_W": "Defrost",
+        "@OV_INDIC_ACCESSORY_CLEAN3_S": "If you use a scrubbing cloth for the frying pan, the special coating can get peeled off. Use a sponge instead.",
+        "@OV_ACT_TRANSFER_OVEN_CANCEL_W": "Cancel",
+        "@OV_TERM_GOURMET_STEAM_DICED_POTATOES": "Diced Potatoes",
+        "@OV_FOTA_DONOT_TURNOFF_PRODUCT_S": "\u203b The product may be turned off during the update. Do not unplug the power cord.",
+        "@OV_UX30_SETTING_COMPLETE_S": "Applied in product",
+        "@OV_INDIC_NOTHING_RECENT_SET_VALUE_S": "No recent usage history.",
+        "@CP_PROD_REG_OV_CHECK_PROD_READY_S": "Check if the product is in standby.",
+        "@OV_GUG_REMOTESTART_3_S": "'Remote Start' location can be different for each model.",
+        "@OV_UX30_GUIDE_NOTUSE_W": "No history",
+        "@OV_TERM_MINUTES_PRIOR_TO_W": "{{$0}}minute(s) ago",
+        "@OV_UX30_TERM_MY_RECIPE_W": "My Recipes",
+        "@OV_TOAST_HMR__BARCODE_FAIL_S": "N/A",
+        "@OV_STATE_COOK_COMPLETE_W": "Done",
+        "@OV_TERM_HOURS_BEFORE_W": "{{$0}} hour(s) ago",
+        "@OV_TERM_BAKE_KR_ONLY_W": "Fry",
+        "@OV_TERM_4TH": "4th",
+        "@OV_UX30_HMR_PREPAIR_W": "Preparing Oven",
+        "@OV_INDIC_SIMMERING_STEWS_50_S": "Simmering stews",
+        "@OV_UX30_CLEAN_CAVITY_GUIDE_S": "Cleans grease stains on the sides and bottom of the oven cavity.",
+        "@OV_TERM_UNIT_KG_W": "{{$0}}kg",
+        "@OV_TERM_SMART_REMOTE_CONTROL_W": "Cook Settings",
+        "@OV_UX30_REGI_SET_W": "N/A",
+        "@OV_TERM_PREP_TIME_W": "Prep time",
+        "@OV_TERM_GOURMET_CHICKEN_NUGGETS": "Chicken Nuggets",
+        "@OV_UX30_SETTING_24H_W": "24-Hour",
+        "@OV_TERM_POWER_LEVEL_GUIDE_W": "Power Level Guide",
+        "@OV_UX30_TERM_ACCESSORY_SET_W": "Accessories",
+        "@OV_UX30_REGI_PRESS_REGISTER_COMMON_ONE": "Press and hold the {{$1}} or {{$2}} button on the {{$0}} for 3 seconds.",
+        "@OV_POP_EASYCLEAN_DESC4_S": "Water tank not inserted",
+        "@OV_ACCE_MAXTEXT_S": "Maximum {{$0}}text of {{$1}}text",
+        "@OV_TERM_EASY_CLEAN_COUNT_W": "EasyClean\u00ae total use count",
+        "@OV_ERROR_TEMP_W": "Temperature sensor error",
+        "@OV_UX30_CLEAN_USAGE_ACC_GUIDE_2_S": "Use for all kinds of cooking. Use it alone or with the {{broiler pan}}.",
+        "@OV_ACT_CANCEL_W": "Cancelling",
+        "@OV_TOAST_TRANSFER_CANCEL_S": "Transfer canceled.",
+        "@OV_GUG_GUG_SET01_11_W": "When cooking using convection cycle (Convection Bake or Roast) the oven temperature is automatically reduced by 25 \u00b0F.",
+        "@OV_INDIC_OPEN_DOOR_AUTO_CANCEL_S": "Remote Start will automatically be canceled when the oven door opens.",
+        "@OV_TERM_LOCKED_W": "LOCK",
+        "@OV_GUG_ADD02_LWO_2_S": "Smart ThinQ position of the oven, please refer to the image below.",
+        "@OV_UX30_TERM_OVEN_HEAT_DISH_W": "Aluminum foil",
+        "@OV_UX30_SETTING_TEMP_ADJUST_W": "Temperature Adjustment",
+        "@OV_TERM_RELISH_W": "Simple side dishes for alcohol",
+        "@OV_CONNECTIVITY_POPUP_FAIL_DESCRIPTION_DW_S": "N/A",
+        "@OV_GUG_EASYCLEAN_10_S": "Do not spray water directly on the door because of dripping to the floor.",
+        "@OV_INDIC_PLACE_REMOTE_START_S": "Open the door to the oven you want to remote start. Make sure the oven check the inside. Close the door and if there is a knob in the oven, Turn the oven knob to \u2018Remote Start\u2019. Otherwise press the \u2018Remote Start\u2019 button or the \u2018Easy Clean\u2019 Key of the oven.  Confirm the oven display panel.",
+        "@OV_UX30_OPTION_REMOTE_START_W": "Remote Start",
+        "@OV_ERROR_STEAM_GEN_W": "Steam generator temperature sensor error",
+        "@OV_TERM_GOURMET_STEAM_FISH_FILLETS": "Fish Fillets",
+        "@OV_FAN_LOCK_PROTECTION": "Fan is stalled",
+        "@OV_TERM_DAY_SAT_W": "Saturday",
+        "@OV_ON": "ON",
+        "@OV_ACT_SPEED_CLEAN_SET_W": "Start SpeedClean\u2122",
+        "@OV_TERM_STEAMMAINTAENANCE_EVAPORATION_W": "Evaporation",
+        "@OV_POPUP_DISPOSE_OVEN_SETTINGS_S": "Are you sure you want to exit without saving?",
+        "@OV_TERM_ENAMEL_AND_BAKE_PEN_KR_ONLY_W": "Enamel dish and frying pan",
+        "@OV_COOKTEMP_HML_LEVEL2_W": "Level 2",
+        "@OV_POPUP_DISPOSE_OVEN_SETTINGS_W": "Confirm Changes",
+        "@OV_GUG_GUG_SET01_19_W": "The cooktop on alert volume can be set in three levels.",
+        "@OV_PROD_REG_PASSWD_EXAMPLE_S": "Ex) {{$0}}_{{$1}} password is {{$1}}{{$1}} (case-sensitive).",
+        "@OV_INDIC_NO_MATCHING_RESULT_S": "Nothing matches your search.",
+        "@OV_INDIC_REG_OV_NO_DIAL_WIFI_UI20": "(For discontinued models, press the 'Add Steam' button for more than 3 seconds, or press the '\u25c1' button and the '+' button for more than 3 seconds.)",
+        "@OV_TERM_GOURMET_CHICKEN_LEGS": "Chicken (Legs)",
+        "@OV_TERM_SHARE_W": "Share",
+        "@OV_TERM_SUMMARY_TIME_GUIDE2_UX20_W": "N/A",
+        "@OV_GUG_EASYCLEAN_14_S": "For more details, refer to the manual.",
+        "@CP_PROD_REG_CONNECT_PROD_AP_SSL_IOS_S": "Connect Wi-Fi network named \u201c{{$apName}}~\u201d after turning on Wi-Fi from Settings.\nPassword required, get a password from the end of {{$apName}}_XXXX. Enter alphanumeric characters twice.\nex) {{$apName}}_015E password is 015E015E. (Check case-sensitivity.)",
+        "@OV_STATE_COOK_COMPLETE_TOASTER_DESC_S": "Check the toaster",
+        "@OV_INDIC_QUICK_HEATING_FOOD_100_S": "Quick heating food with high water content, such as soups and beverages.",
+        "@OV_SYNC_SENDING_TO_PRODUCT_W": "Save",
+        "@OV_TERM_EASYCLEAN_VS_SELFCLEAN_SAVE_S": "Assuming the same number of use, we can expect the amount of energy saving by {{$0}}Wh compared to when we use self clean.",
+        "@OV_UX30_CLEAN_ACC_DISH_GUIDE_S": "COMPATIBLE COOKWARE",
+        "@OV_UX30_RECIPE_YOUTUBE_W": "YouTube Recipe",
+        "@CP_PROD_CLASSIFY_W": "Classify Product",
+        "@OV_UX30_MAIN_SEND_TO_OVEN_W": "Send",
+        "@OV_ERROR_W": "Error",
+        "@OV_TERM_GOURMET_HEALTHY_FRY": "Healthy Fry",
+        "@OV_GUG_ADD01_LWO_1_S": "Oven Tag On logo position",
+        "@CP_INDIC_TAKE_MORE_5_MINS_S": "The process may take more than {{$0}} minutes.",
+        "@OV_TERM_LOWER_CENTER": "Lower center",
+        "@OV_TERM_RECIPE_NUM_W": "Recipe number",
+        "@OV_TERM_AUTO_START_W": "Automatic start",
+        "@OV_CONNECTIVITY_POPUP_DESCRIPTION_DW_S": "N/A",
+        "@OV_TERM_GOURMET_CHICKEN_WHOLE": "Chicken (Whole)",
+        "@OV_INDIC_REMOTE_OFF_S": "To remotely control the oven, activate the Remote function.",
+        "@OV_TERM_ACCESSORY_INSTALL_DISH_2_S": "N/A",
+        "@OV_INDIC_SOFTENING_BUTTER_CHEESE_20_S": "Softening butter, cheese, and ice cream",
+        "@OV_TERM_STEAM_ROAST_W": "Steam Roast",
+        "@OV_TERM_CHEESE_W": "Cheese",
+        "@OV_TERM_GOURMET_STEAM_PRAWNS": "Prawns",
+        "@OV_TERM_RECENT_EASYCLEAN_W": "Recent EasyClean\u00ae usage history",
+        "@OV_UX20_FUNCTION_SETTING_W": "Cook settings",
+        "@OV_INDIC_ENAMEL_GUIDE_S": "It can be used for all kinds of cooking; when using them, check the level position.",
+        "@OV_TERM_COMBI_W": "Combination",
+        "@OV_PUSH_304_30401_4003_W": "Timer has been completed and '$alias$' has been stopped.",
+        "@OV_UX30_EASYCLEAN_SEND_S": "Set EasyClean",
+        "@OV_TERM_STEAMMAINT__DESCALE_W": "Descaling",
+        "@OV_CONNECTIVITY_POPUP_MULTI_PRODUCT_TITLE_S": "N/A",
+        "@OV_GUG_GUG_SET01_1_W": "\u2022 Clock",
+        "@OV_INDIC_REMOVE_WATER_GUIDE2_S": "Use it when the steam ejection hole ejects water and steam at the same time.",
+        "@OV_TERM_PREHEAT_W": "Preheat",
+        "@OV_INDIC_COOKING_TENDER_MEAT_100_S": "Cooking tender cuts of meat, ground meat",
+        "@OV_GUG_EASYCLEAN_7_S": "The indentation on the oven bottom should be fully covered to submerge all soils. Add water if necessary.",
+        "@OV_ACT_CLEANING_COACH_W": "Cleaning",
+        "@OV_INDIC_HEATING_PASTRIES_40_S": "Heating pastries",
+        "@OV_ACCE_MOVE_NEXT_W": "Move to next step",
+        "@OV_TERM_CREAMCHEESE_W": "Cream Cheese",
+        "@OV_TERM_MENU_TOAST": "Toast",
+        "@OV_TERM_RA_SMALL": "Small RA",
+        "@OV_UX30_COOKTOP_STATE_ON_W": "Burner On",
+        "@OV_TERM_TITLE_PRODUCT_CLEAN_W": "3. How to clean the product",
+        "@OV_UX30_CLEAN_TITLE_WATER_REMOVE_S": "Water Removal",
+        "@OV_TERM_USED_TIME_MONITORING": "Time Monitoring",
+        "@OV_STATE_USING_W": "On",
+        "@OV_PUSH_301_30103_1012_W": "Self Clean is complete on '$alias$' and is cooling down.",
+        "@OV_TERM_WIRE_GRILL_W": "Wire Tray",
+        "@OV_TERM_MY_RECIPE_W": "My Recipes",
+        "@OV_UX30_TERM_RECIPE_W": "Recipe",
+        "@OV_TERM_MEAT_PROBE_W": "Meat Probe",
+        "@OV_PUSH_303_30301_2004_W": "Right Rear Burner Cooktop is running over the set time.",
+        "@OV_HMR_RESULT_LIST_COUNT_S": "{{$0}} matches found. Please choose the correct product.",
+        "@OV_TERM_SUMMARY_TIME_GUIDE3_UX20_W": "N/A",
+        "@OV_ACCE_NAVERAPP_S": "Switch to Naver Cafe app",
+        "@OV_INDIC_SETTING_AFTER_NOCHANGE_S": "To keep the current settings, select NO CHANGE.",
+        "@OV_TERM_COOKTOP_STATE_ALARM_W": "Cooktop Alerts",
+        "@OV_FOTA_NOTICE_WAITING_S": "This process may take up to {{$0}} minutes.\nPlease wait.",
+        "@OV_TERM_REMOTE_START_GUIDE": "Press the Remote Start button to set after power on the Cooktop.",
+        "@OV_POPUP_AUTO_MODE_STOP_S": "Auto mode has been stopped.",
+        "@OV_INDIC_DEODORIZTION_S": "Learn how to clean the oven, including odor management after cooking.",
+        "@OV_TERM_GOURMET_SMALL_CAKES": "Small Cakes",
+        "@OV_TERM_MENU_SMOOTHIE": "Smoothie",
+        "@OV_TERM_ACCESSORY_HOTPAN_3_S": "N/A",
+        "@OV_UX30_SETTING_HIGH_W": "High",
+        "@OV_TOAST_REMOVE_SELECTED_FAVORITE_S": "The selected recipe is deleted from Favorities.",
+        "@OV_UX30_SETTING_AUTO_CONV_DESC_S": "When using convection modes, the entered temperature is automatically reduced by 25\u00b0F (14\u00b0C).",
+        "@OV_TERM_PRODUCT_INNER_W": "Cleaning the inside of the cooking room",
+        "@OV_UX30_RECIPE_DIFFICULT_S": "Difficulty",
+        "@OV_TOAST_COOKTOP_POWER_OFF_UX20": "{{$0}} is powered off.",
+        "@OV_UX30_COOKTOP_STATE_OFF_W": "Burner Off",
+        "@OV_INDIC_COOKING_HAM_50_S": "Cooking ham, whole poultry, and pot roasts",
+        "@OV_UX30_MAIN_DONE_W": "Done",
+        "@OV_UX30_CLEAN_CAVITY_DETAIL_GUIDE_S": "Remove odors and clean the inside of the oven using the Multi-clean function. Use a damp cloth and mild soapy water. Wipe with a clean, damp cloth and polish dry with a soft cloth, rubbing in the direction of the grain.",
+        "@OV_UX30_CHECK_CONNECT_W": "Please check the Wi-Fi connection.",
+        "@OV_UX30_REGI_LCD_W": "Oven with LCD display",
+        "@OV_ACCE_NO_SELECT_W": "Not Selected",
+        "@OV_TERM_UPPER_LEFT": "Upper left",
+        "@OV_KEY_SHORT_ERROR": "Key Short",
+        "@OV_GUG_ADD03_OV_1_S": "Position of the Smart Diagnosis logo on the oven",
+        "@OV_STATE_ERROR_W": "Error",
+        "@OV_STATE_CLEAN2_W": "Cleaning...",
+        "@OV_SDS_AUDIBLE_MWO_NA_CMO_OTR_STEP01_S": "Smart Diagnosis will not work if the oven is operating. Make sure the oven is off and not heating.",
+        "@OV_PUSH_301_30104_2002_W": "Right Front Burner Cooktop is running over the set time.",
+        "@OV_TERM_BREAKFAST_W": "Breakfast",
+        "@OV_TERM_MODE_PULSE_MODE": "Pulse Mode",
+        "@OV_SMALLTHING_TOASTER_ERROR_CONTENTS_F8": "N/A",
+        "@OV_UX30_TERM_LEFT_W": "Left",
+        "@OV_TERM_AIR_FRY_W": "Air Fry",
+        "@OV_STATE_INITIAL_W": "Off",
+        "@OV_TERM_UPPER_CENTER": "Upper center",
+        "@OV_SMALLTHING_ERROR_LABEL_F15": "F15",
+        "@OV_POPUP_REMOVE_STEP_S": "Are you sure you want to delete the step?",
+        "@OV_TERM_EASY_CLEAN_SPEND_ENERGY_W": "EasyClean\u00ae cumulative power consumption",
+        "@OV_TERM_AIR_SOUSVIDE_W": "Air Sous-Vide",
+        "@OV_POPUP_REMOVE_STEP_W": "Confirmation",
+        "@OV_TERM_ACCESSORY_HOTPAN_W": "N/A",
+        "@OV_TERM_HIGH_EN_W": "HIGH",
+        "@OV_TERM_ROAST_W": "Roast",
+        "@OV_SMALLTHING_ERROR_LABEL_F12": "F12",
+        "@OV_TERM_MOTOR_SPEED_W": "Motor Speed Level",
+        "@OV_SMALLTHING_ERROR_LABEL_F11": "F11",
+        "@OV_SDS_AUDIBLE_MWO_KR_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_SMALLTHING_ERROR_LABEL_F14": "F14",
+        "@OV_SMALLTHING_ERROR_LABEL_F13": "F13",
+        "@OV_TOAST_START_W": "Press the 'Start' button on the toaster.",
+        "@OV_HMR_KEEP_REFRIGERATE_W": "Refrigerated",
+        "@OV_UX30_RECIPE_FAIL_DW_S": "Cannot send. Check dishwasher's internet connection.",
+        "@OV_UX30_SETTING_LOW_W": "Low",
+        "@OV_UX30_HMR_CAUTION_1_S": "Please adjust the cooking time according to the cooking condition.",
+        "@OV_TERM_OFF": "off",
+        "@OV_UX30_POP_EASYCLEAN_DESC3_S": "Oven cavity is above 150\u2109 (65\u2103)",
+        "@OV_TERM_GRILL_AND_ENAMEL_KR_ONLY_W": "Grate and enamel dish",
+        "@OV_SDS_AUDIBLE_RANGE_LUPIN_STEP02_S": "Position the phone's mic on the Smart Diagnosis logo.",
+        "@OV_PUSH_301_30101_0011_W": "EasyClean\u00ae is complete on '$alias$'.",
+        "@OV_RECIPE_STAGE_SELECT_GUIDE_NEXT_S": "N/A",
+        "@OV_TERM_CUSTOM_SET_D_W": "Custom Set",
+        "@OV_TERM_EASYCLEAN_DESC_S": "SpeedClean\u2122(EasyClean\u00ae) is quick and effective at loosening small and light soil before hand-cleaning. It runs for 10 minutes and uses only water, not harsh chemicals.",
+        "@OV_TERM_BUTTON_SEND_CONTROL_W": "Send to Cooktop",
+        "@OV_PRODUCT_REG_COOKTOP_SKS_ELEC_1": "1. Turn on the {{$0}}.",
+        "@OV_PRODUCT_REG_COOKTOP_SKS_ELEC_2": "2. Press and hold the 1 button on the {{$0}} for 3 seconds.",
+        "@OV_PRODUCT_REG_COOKTOP_SKS_ELEC_3": "3. The Wi-Fi LED blinks during the connection process.",
+        "@OV_TERM_PASSED_MIN": "m passed",
+        "@OV_GUG_ADD02_OV_1_S": "Oven Smart ThinQ logo position",
+        "@OV_PUSH_301_30103_1001_W": "'$alias$' preheating is done.",
+        "@OV_UX30_MAIN_PROVE_TEMP_W": "Probe Temperature",
+        "@OV_PUSH_301_30101_0016_W": "'$alias$' is turned off.",
+        "@OV_UX30_STATE_CLEAN_W": "Cleaning",
+        "@OV_OVEN_ERROR_CONTENTS_F7": "Convection fan operating can't be detected over 1 minute in all cases of right convection fan operating.",
+        "@OV_UX30_CLEAN_OVEN_FUNC_S": "For Oven Cooking",
+        "@OV_OVEN_ERROR_CONTENTS_F8": "Steam Temperature Sensor is Short",
+        "@OV_OVEN_ERROR_CONTENTS_F9": "EXCEPT PROOF and WARM\n    Case 1: start temperature does not exceed 130 \u2109 and oven temperature is less equal than 150 \u2109 and max oven temperature is less equal than start oven temp. + 10 \u2109 over 5 minutes on preheating, where door is closed.\n    Case 2: oven temperature is less equal than 100\u2109 over 5 minutes on preheating, where door is closed.",
+        "@OV_GUG_ADD02_OV_5_S": "[Freestanding]",
+        "@OV_INDIC_FAVORITE_NOT_SET2_S": "Press the star icon\nto add it as a favourite.",
+        "@OV_INDIC_REG_OV_NO_DIAL_WIFI": " Press the '\u25c1' button and the '+' button on the optical wave oven for more than 3 seconds. (press the 'Add Steam' button if you have a dial)",
+        "@OV_OVEN_ERROR_CONTENTS_F1": "Oven Temperature Sensor is Open",
+        "@OV_OVEN_ERROR_CONTENTS_F2": "Oven Temperature Sensor is Short",
+        "@OV_OVEN_ERROR_CONTENTS_F3": "When some key is continuously short or no communication for  >= 60 seconds. (except oven temp >= 500)",
+        "@OV_TERM_GOURMET_JUMBO_SHRIMPS": "Jumbo Shrimps",
+        "@OV_UX30_CLEAN_STEAM_GEN_DETAIL_GUIDE_2_S": "During the cleaning cycle, a melody sounds and the display shows \"Fill Water.\" At that time, fill the water tank with clean water up to the MAX fill line. Press the START/Enter/+30 sec. button to finish cleaning.",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_6_S": "3. Fill the steam feeder tank with water to the maximum fill line (34 oz/1000 cc).",
+        "@OV_INDIC_HOME_REMOTE_W": "The Oven can be turned on remotely following the instructions in the guide below.",
+        "@OV_UX30_RECIPE_RECOMMEND_RECIPE_S": "Recommended Recipes",
+        "@OV_UX30_TERM_RANGE_COOK_DISH_W": "Ceramics, heat-resistant glass containers, plastic containers that are heat-resistant up to 248 \u00b0F/120 \u00baC, plastic wrap, resealable plastic bags",
+        "@OV_TERM_MAIN_QUANTITY_NOT_SET_W": "Main ingredient not set",
+        "@OV_SDS_AUDIBLE_MWO_KR_STEP03_01_S": "After pressing the Next button, press and hold the Cancel button until a countdown displays on the oven.",
+        "@OV_PRODUCT_REG_DIAL_NO_2": "2. Press and hold the \u25c1 and + button simultaneously on the {{$0}} for 3 seconds.",
+        "@OV_PRODUCT_REG_DIAL_NO_3": "3. \u2018Set Wi-Fi\u2019 flashes on the display during the connection process.",
+        "@OV_HMR_DETAIL_INFO_S": "N/A",
+        "@OV_TERM_GOOD_W": "High",
+        "@OV_UX30_MAIN_TIME_LEFT_W": "Left",
+        "@OV_PUSH_301_30103_1005_W": "'$alias$' Need to Selfcleaning.",
+        "@OV_TOAST_COMPLETE_SHARE_S": "Successfully shared.",
+        "@OV_GUG_ADD03_OV_5_S": "[Wall Oven]",
+        "@OV_TERM_STEAM_BAKE_W": "Steam Bake",
+        "@OV_UX30_STC_STAGE_DONE_S": "Stage {{$0}} cooking done",
+        "@OV_COOKTOP_MELT_W": "M",
+        "@OV_TERM_TOTAL_USING_TIME_W": "Total time",
+        "@OV_TERM_APPLIED_RANGE_VALUE_W": "Cook Settings",
+        "@OV_PRODUCT_REG_DIAL_NO_1": "1. Make sure power cord is plugged in.",
+        "@OV_UX30_SETTING_TEMP_ADJUST_UNIT_DESC_S": "Changing the unit resets the set temperature value.",
+        "@OV_DASHBOARD_OVEN_STATE_COOLING_W": "Cooling",
+        "@OV_GUG_EASYCLEAN_ONLY_STEAM_2_S": "\u318dHard plastic spatula",
+        "@OV_TERM_QUICK_DEFROST_W": "Quick defrost",
+        "@OV_TERM_OFF_AFTER_MIN": "Off in {{$0}}:{{$1}}m later",
+        "@OV_TERM_SPEED_ROAST_W": "Speed Roast",
+        "@OV_TOAST_COOKING_STOP": "Cooking has been stopped.",
+        "@OV_UX30_TERM_COOK_METHOD_W": "Cooking Directions",
+        "@OV_ACT_EDIT_RECIPE_W": "Edit recipe",
+        "@OV_CENTER_TOP_SENSOR_OPEN_SHORT_PROTECTION": "Center Top Sensor is opend or shorted",
+        "@OV_UX30_MWO_SETTINGSHOW_W": "Show",
+        "@OV_UX30_STC_MYRECIPE_DESC_S": "Save settings and use them when the item is scanned again.",
+        "@OV_ACT_TRANSFER_RANGE_W": "Send",
+        "@OV_UX30_RECIPE_FAV_GUIDE_1_S": "No recipes are saved in Favorites. Tap \u2605 to add recipes that you like to Favorites.",
+        "@OV_SDS_AUDIBLE_RANGE_ARAMIS_STEP01_S": "Smart Diagnosis will not work if the oven is operating. Make sure the oven is off and not heating.",
+        "@OV_OVEN_AND_RECIPE_W": "Oven & the Recipe",
+        "@OV_TERM_GRILL_W": "Grill",
+        "@OV_TERM_SENSOR_COOK_W": "Sensor Cook",
+        "@OV_TERM_DAY_TUE_W": "Tuesday",
+        "@OV_TOAST_TRANSFER_SUCCESS_S": "Successfully sent.",
+        "@OV_TERM_ACCESSORY_TURN_W": "N/A",
+        "@OV_TERM_RANGE_W": "Oven",
+        "@OV_UX30_RECIPE_QUANTITY_GUIDE_S": "Cook settings will be adjusted based on the quantity.",
+        "@OV_STATE_INITIAL2_W": "Standby\u2026",
+        "@OV_TERM_HOT_AIR_W": "Hot Air",
+        "@OV_ACC_EXAMPLE_PHOTO_W": "Example Photo",
+        "@OV_TERM_SAVED_SUCCESSFULLY_S": "Saved",
+        "@OV_UX30_RECIPE_SEND_DW_W": "Send to dishwasher.",
+        "@OV_GUG_GUG_SET01_15_W": "\u2022 Language",
+        "@OV_POPUP_TRANSFER_SUCCESS_AND_START_S": "Press Start on the Oven.",
+        "@OV_TERM_THERMOSTAT_W": "Thermostat Adjustment",
+        "@OV_STATE_COOK_COMPLETE_BLENDER_DESC_S": "Check the blender",
+        "@OV_SDS_AUDIBLE_MWO_GLOBAL_STEP01_UX20_S": "Smart Diagnosis will not work if the microwave oven is operating. Make sure the microwave oven is not heating anything.",
+        "@OV_TERM_ACE_CLEAN_W": "Ace Clean",
+        "@OV_UX30_CLEAN_DISH_GUIDE_4_S": "Grilling Function",
+        "@OV_UX30_MWO_MAINSEND_W": "Send",
+        "@OV_SMALLTHING_TOASTER_ERROR_LABEL_F8": "F-08",
+        "@OV_ACT_ROTATE_RIGHT_W": "Rotate Right",
+        "@OV_INDIC_ACCESSORY_CLEAN4_S": "After steam cooking is finished, empty the water basket and gutter and clean them thoroughly for use next time.",
+        "@OV_TERM_GOURMET_STEAM_W": "Gourmet Steam",
+        "@OV_OPTION_REMOTE_START_W": "Remote Start",
+        "@OV_TERM_LIGHT_ROAST_W": "Light Roast",
+        "@OV_TERM_WEAKNESS_W": "N/A",
+        "@OV_UX30_TERM_UTENSIL_W": "Utensil",
+        "@OV_ALL_UX20_FUNCTION_SETTING_W": "CONTROLS",
+        "@OV_UX30_TERM_RANGE_KR_ONLY_W": "Range",
+        "@OV_TERM_LANGUAGE_GR_W": "German",
+        "@OV_TERM_GOURMET_FROZEN_LASAGNA": "Frozen Lasagna",
+        "@OV_STATE_COOK2_W": "Cooking",
+        "@OV_UX30_TERM_NORMAL_W": "Normal",
+        "@OV_TERM_SETTING_LAMP_CONTINUE": "Fully on",
+        "@OV_UX30_REGI_WIFI_W": "Wi-Fi",
+        "@OV_TERM_EASY_CLEANING_W": "EasyClean\u00ae is On",
+        "@OV_UX30_MWO_MAINCUSTUM_COOK_W": "Set Custom Cook",
+        "@OV_TERM_LANGUAGE_SP_W": "Spanish",
+        "@OV_OVEN_ERROR_CONTENTS_STEAM_S": "Oven has an error with the steam sensor.",
+        "@OV_TERM_STEAM_COMBI_W": "Steam Combi",
+        "@OV_UX30_HMR_SELECT_QUANTITY_S": "Quantity",
+        "@OV_INDIC_REMOTE_START_OFF_S": "To remotely control the oven, activate the Remote Start function.",
+        "@OV_POPUP_CUSTOM_COOK_NOT_SAVING_DEFROST_S": "Custom Cook can not be used with Defrost.",
+        "@OV_TERM_PERIOD_1WEEK_W": "Once a week",
+        "@OV_UX30_TERM_PERIOD_1WEEK_W": "Once a week",
+        "@OV_TERM_SLOW_COOK_W": "Slow Cook",
+        "@OV_TERM_TITLE_ACCESSORY_USER_GUIDE_W": "1. Types of parts and how to use them",
+        "@OV_UX30_HMR_PACKAGE_GUIDE_S": "See a food package for further details",
+        "@OV_GUG_GUG_ADD03_RA_2_S": "For the position of the Smart Diagnosis logo on the oven, refer to the following image.",
+        "@OV_ACC_EXPLAIN": "explanation",
+        "@OV_TERM_GENERAL_PLASTIC_W": "General Plastics",
+        "@OV_PUSH_301_30101_0004_W": "'$alias$' is turned off.",
+        "@OV_POPUP_TIMER_ERROR_S": "Product power is OFF, or product cannot be connected due to network problem. Check the product status, and try again.",
+        "@OV_ACC_PROD_HAS_LCD_LWO_S": "N/A",
+        "@OV_GUG_EASYCLEAN_3_S": "2. Scrape off any burnt-on debris with a plastic scraper.",
+        "@OV_PUSH_301_30101_0107_W": "Error in '$alias$' damper activation.",
+        "@OV_PUSH_301_30101_0101_W": "Error in '$alias$' sensor opening.",
+        "@OV_GUG_ADD01_OV_3_S": "[Slide-In]",
+        "@OV_TERM_CUSTOM_COOK_INFO_W": "Custom Cook Settings",
+        "@OV_TERM_MY_AVERAGE_W": "My Avg.",
+        "@OV_INDIC_INPUT_COMMENT_S": "Leave your opinions here.",
+        "@OV_UX30_TERM_MAIN_FOOD_AMOUNT_SELECT_W": "Ingredient Quantity",
+        "@OV_TERM_MENU_SELF_CLEAN": "Self Clean",
+        "@OV_UX30_RECIPE_MORE_W": "View More",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F11": "No communication with Inverter module.",
+        "@OV_POPUP_MAX_SAVE_S": "The maximum of 999 recipes has already been saved. Delete recipes if you want to create a new one.",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F12": "The product has been stopped because an overcurrent has been detected inside the product.Contact LG Electronics Service Center.",
+        "@OV_TERM_STEAM_INFO_TITLE": "Steam guide",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F13": "Detected Inverter Over Current",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F14": "Detected Inverter Over Voltage",
+        "@OV_SMALLTHING_ERROR_CONTENTS_F15": "Detected Inverter IGBT Over Current",
+        "@OV_TOAST_RECIPE_TRANSFER_CANCEL_S": "Recipe transfer has been canceled.",
+        "@OV_FOTA_UPDATE_WAITTING_S": "This process may take up to {{$0}} minutes.\nPlease wait.",
+        "@OV_UX30_CLEAN_GUIDE_S": "Remove odors and clean the inside of the oven using the Multi-clean function.",
+        "@OV_PUSH_301_30105_2006_W": "'$alias$' has returned after a cut power supply, so it is necessary to set usage time over alerts time again.",
+        "@OV_TERM_CLOCK_DISPLAY_ON_OFF_W": "Clock Display On/Off",
+        "@OV_UX30_RECIPE_REG_PHOTO_S": "Upload a photo.",
+        "@OV_PUSH_301_30101_0008_W": "'$alias$' is remaining water is removed.",
+        "@OV_INDIC_MY_RECIPE_NOT_SET1_S": "No recipe registered.",
+        "@OV_UX30_ACC_REGI_IMG": "Set product's Wi-Fi Image",
+        "@OV_BD_OVER_TEMPERATURE_PROTECTION": "BD Sensor detect high Temperature",
+        "@OV_UX30_SETTING_USE_W": "On",
+        "@OV_TERM_WARM_EN_W": "Warm",
+        "@OV_TERM_CUSTOM_SET_W": "Preference",
+        "@OV_TERM_DAY_SUN_W": "Sunday",
+        "@OV_TERM_ADD_ACC_1": "using",
+        "@OV_TERM_ADD_ACC_2": "using",
+        "@OV_TERM_SPECIAL_DISH_W": "One-dish Meal",
+        "@OV_TERM_TEMP_W": "Temperature",
+        "@OV_UX30_CATEGORY_COOKTOP_W": "Cooktop",
+        "@OV_UX30_TERM_OFF": "Off",
+        "@OV_UX30_STC_NOTICE_W": "Notice",
+        "@OV_GUG_GUG_SET01_5_W": "When the oven reaches its set\u2013temperature, the preheating alarm light will flash.",
+        "@OV_TERM_UNIT_JOKAK_W": "{{$0}}Piece",
+        "@OV_PUSH_302_30201_0105_W": "'$alias$' has a cooling error.",
+        "@OV_ACT_ADD_STEAM_W": "Add steam",
+        "@OV_TERM_TOASTER_COMPLETE_ONE_W": "Press the 'START/STOP' button on the toaster.",
+        "@OV_UX30_ACT_TRANSFER_OVEN_CANCEL_W": "Cancel",
+        "@OV_SDS_AUDIBLE_BUILTIN_RANGE_2NE4_BETTER_STEP03_S": "After pressing the Start Diagnosis button, press and hold the Clear button until a countdown displays on the oven.",
+        "@OV_POPUP_RANGE_WORKING_W": "Microwave Oven is already in use",
+        "@OV_UX30_RECIPE_SEND_WF_W": "Send to water dispenser.",
+        "@OV_TERM_GOURMET_STEAM_BROCCOLI": "Broccoli",
+        "@OV_TERM_CHECK_SPEEDCLEAN_DESC_2_S": "On the {{$0}} oven, you must start SpeedClean\u2122 from the control panel.",
+        "@OV_CONNECTIVITY_DESCRIPTION_WP_S": "N/A",
+        "@OV_UX30_MWO_SETTINGWEIGHT_UNIT_W": "Weight Units",
+        "@OV_TERM_GAS_CONSUMPTION_UNIT_W": "{{$0}}Btu",
+        "@OV_TERM_THEME_RECIPE_W": "Recipe for each theme",
+        "@OV_TERM_SPEED_CLEAN_NOT_TM_W": "Speed Clean",
+        "@OV_UX30_MWO_MAINNEW_CUSTUM_COOK_DESC_S": "Saving this Custom Cook will overwrite the existing data. Save this Custom Cook?",
+        "@OV_PUSH_301_30103_1016_W": "'$alias$' is turned off.",
+        "@OV_UX30_CLEAN_CAVITY_S": "Cleaning the Oven Cavity",
+        "@OV_UX30_POPUP_SELETE_ALBUM_W": "Select From Album",
+        "@OV_UX30_CLEAN_ACC_GUIDE_4_S": "After steam cooking is finished, empty the water tank and drip tray and clean them thoroughly for future use.",
+        "@OV_ACCE_TWIT_W": "Twitter",
+        "@OV_TERM_USED_TIME": "Progress time",
+        "@OV_TERM_PROD_OPER_ALARM_W": "Product Status",
+        "@OV_TERM_CARAMEL_W": "Caramel",
+        "@OV_UX30_RECIPE_DW_CONNECTIVITY_GUIDE_S": "Send info on dishes used for recipe to dishwasher to select an appropriate cycle for the dishes.",
+        "@OV_TERM_GOURMET_FILLET_OF_BEEF": "Fillet of Beef",
+        "@OV_UX30_TERM_YEAR_W": "Year",
+        "@OV_TERM_BASIC_RECIPE_W": "Basic Recipe",
+        "@OV_TERM_DIFFICULTY_W": "Level of difficulty",
+        "@OV_TERM_MEAT_W": "Meat",
+        "@OV_TERM_UPPER_RIGHT": "Upper right",
+        "@OV_TERM_PROOF_PANNEL_W": "Proof",
+        "@OV_SDS_AUDIBLE_LWO_KR_STEP01_S": "Smart Diagnosis will not work if the microwave is operating. Make sure the microwave is not heating anything.",
+        "@OV_PRODUCT_REG_COOKTOP_3": "3. The Wi-Fi LED blinks during the connection process.",
+        "@OV_PRODUCT_REG_COOKTOP_1": "1. Turn on the {{$0}}.",
+        "@OV_PRODUCT_REG_COOKTOP_2": "2. Press and hold the Wi-Fi or 1 button on the {{$0}} for 3 seconds.",
+        "@OV_ACC_SELECTED_W": "Selected",
+        "@OV_PUSH_301_30101_0103_W": "'$alias$' has a key short error.",
+        "@OV_INDIC_CLEAN_STEAM_GENERATOR_GUIDE2_S": "While the steam generator cleaning function operates, you will hear a melody, and the display unit will indicate \"Select/Start\" \"Fill Water.\" In that case, fill it up with clean water up to the MAX level. Press the \"Select/Start/Simple Cooking\" button.",
+        "@OV_MWO_MAIN_STATE_INITIAL_DESC_S": "Please enter microwave settings.",
+        "@OV_UX30_CLEAN_FISH_ODOR_GUIDE_S": "Before grilling fish, pour a teaspoon of vinegar on the two grooves marked on the grill pan to reduce the smell of fish.",
+        "@OV_UX30_MAIN_STOP_COOK_W": "Cancel",
+        "@OV_PUSH_301_30101_3002_W": "Error in '$alias$' temperature sensor.",
+        "@OV_UX30_SETTING_NOT_USE_W": "Off",
+        "@OV_CONNECTIVITY_CATEGORY_DW_W": "N/A",
+        "@OV_UX30_SENDRANGE_W": "Send",
+        "@OV_TERM_DESSERTS_W": "Desserts",
+        "@OV_TERM_GOURMET_LASAGNA": "Lasagna",
+        "@OV_TERM_CONNECT_VENT": "Connected Vent",
+        "@OV_TERM_HEAVY_RACK_W": "Heavy rack",
+        "@OV_CONNECTIVITY_POPUP_FAIL_DESCRIPTION_WP_S": "N/A",
+        "@OV_ACT_SAVING_W": "Saving",
+        "@OV_TERM_TIP_W": "Tip",
+        "@OV_POPUP_REMOVE_SELECTED_RECIPE_S": "Are you sure you want to delete the recipe?",
+        "@OV_TERM_DISPLAY_LATEST_OVEN_VALUE_S": "Last cook mode used",
+        "@OV_INDIC_HEATING_CREAM_SOUPS_90_S": "Heating cream soups",
+        "@OV_UX30_REGI_WIFISET_W": "N/A",
+        "@OV_ACCE_SELECT_W": "Selected",
+        "@OV_PUSH_304_30401_4101_W": "'$alias$' has a temperature sensor error.",
+        "@OV_TERM_COOK_TIME_W": "Cook Time",
+        "@OV_TERM_REMOTE_W": "Remote",
+        "@OV_TERM_FROZEN_W": "Frozen",
+        "@OV_TERM_USER_GUIDE_UI20_W": "User Guide",
+        "@OV_SDS_AUDIBLE_START": "Start Diagnosis",
+        "@OV_UX30_MAIN_REMOTE_GUIDE_2_S": "1. Open the door to the oven you want to start remotely.\n2. Make sure that the oven is empty and close the door.\n3. Either turn the knob to Remote Start or press the Remote Start button. \n4. Make sure that Remote Start appears in the display.",
+        "@OV_DESC_SABBATH_W": "Settings cannot be changed in Sabbath mode.",
+        "@OV_STAGE_2_W": "N/A",
+        "@OV_TERM_DAYS_BEFORE_W": "{{$0}} day(s) ago",
+        "@OV_UX30_TERM_RIGHT_W": "Right",
+        "@OV_INDIC_STANDING_TIME_OVEN_0_S": "Standing time in oven",
+        "@OV_TERM_RANGE_COOK_DISH_W": "Ceramics, heat-resistant glass containers, plastic containers that are heat-resistant up to 120 \u00baC, wraps, vinyl packs",
+        "@OV_CONNECTIVITY_POPUP_DESCRIPTION1_WP_S": "N/A",
+        "@OV_TERM_FAN_ASSISTED_AIR_W": "Fan Assisted Air",
+        "@OV_LWO_MAIN_STATE_SETTING_DESC_S": "The oven is in use.\nPlease wait.",
+        "@OV_TERM_POWER_OFF_POPUP_TITLE_UX20": "Power off the burner",
+        "@OV_TERM_GOURMET_SALMON_FILLET": "Salmon Fillets",
+        "@OV_TERM_THERMOSTAT_LEFT_W": "Thermostat Adjustment (LEFT)",
+        "@OV_TERM_COOKTOP_SETTINGS": "Setting",
+        "@OV_TERM_ACCESSORY_TURN_AXIS_W": "Rotating shaft",
+        "@OV_UX30_REGI_LWO_EVOLUTION_S": "N/A",
+        "@OV_TOAST_COOKTOP_POWER_OFF_S": "Cooktop  is powered off.",
+        "@OV_TERM_TITLE_SMELL_W": "1. How to remove odors",
+        "@OV_TERM_FERMENT_KR_ONLY_W": "Fermentation",
+        "@OV_UX30_TOAST_HOOD_TRANSFER_SUCCESS_S": "Hood settings have been sent.",
+        "@OV_TERM_SOUND_W": "Sound",
+        "@OV_UX30_CLEAN_KIND_OF_DISH_S": "Ceramics, heat-resistant glass material",
+        "@OV_UX30_MWO_SETTINGCLOCK_SET_W": "Clock Setting",
+        "@OV_UX30_SETTING_LOCATION_W": "Location",
+        "@OV_CONNECTIVITY_DESCRIPTION_DW_S": "N/A",
+        "@OV_TERM_AFTER_MIN": "min after",
+        "@OV_TERM_ACCESSORY_LID_2_S": "N/A",
+        "@OV_UX30_TERM_LAMP_W": "Light",
+        "@OV_PUSH_301_30101_3013_W": "'$alias$' has an excess current error during the range operation.",
+        "@OV_TERM_ACCESSORY_LID_2_W": "N/A",
+        "@OV_TERM_BREAD_W": "Bread",
+        "@OV_UX30_MAIN_DISCONNECT_W": "Disconnected",
+        "@OV_PROD_REG_OV_SET_WIFI_DISPLAY_S": " \u2018Set Wi-Fi\u2019 flashes on the display during the connection process.",
+        "@OV_ACT_SPEED_CLEAN_GUIDE_W": "SpeedClean\u2122 Guide",
+        "@OV_LINK_SHOPPING_W": "Go to buy",
+        "@OV_TERM_SANDWICHES_W": "Sandwiches",
+        "@OV_UX30_TERM_RACK_W": "Rack location",
+        "@OV_TERM_DEODORANT_W": "Deodorant",
+        "@OV_TERM_KNOB_IS_NOT_IN_TAGON_S": "The knob is not in the Tag On position.",
+        "@OV_MENU_ENERGYMON_W": "Usage History",
+        "@OV_INDIC_REHEATING_SERVING_FOOD_70_S": "Reheating a single serving of food",
+        "@OV_UX30_CLEAN_TITLE_DEODORIZE_S": "Deodorize",
+        "@OV_UX30_MAX_TEXT_WARNING_S": "The text is too long.",
+        "@OV_INDIC_REG_3STEPS_COOKTOP_S": "1. Turn on the power of {{$0}}.\n2. Press the 'Wi-Fi' button or 1 digit button for longer than 3 seconds.\n3. When the {{$0}} can be set, 'Wi-Fi' LED flashes.",
+        "@OV_PUSH_302_30201_0004_W": "'$alias$' is done cooking.",
+        "@OV_TERM_OPERATION_LEVEL_W": "Fan",
+        "@OV_UX30_EASYCLEAN_COUNT_NUM_S": "{{$0}} time(s)",
+        "@OV_TERM_RD_LARGE": "Large RA",
+        "@OV_UX30_MAIN_OVEN_SETTING_S": "Oven Settings",
+        "@OV_PUSH_301_30101_3017_W": "'$alias$' has an inverter temperature sensor error.",
+        "@OV_GUG_REMOTESTART_2_S": "It will automatically cancel when oven door opens.",
+        "@OV_TOAST_UPDATE_SAVING_ENERGY_S": "Energy Comparison updated.",
+        "@OV_UX30_MAIN_SETTING_W": "Setting"
+      },
+      "ver": "36.4",
+      "type": "PP",
+      "lang": "en-US"
+    }
+  },
+  "devices": [
+    {
+      "appType": "NUTS",
+      "modelCountryCode": "US",
+      "countryCode": "US",
+      "modelName": "WFZ474PGV",
+      "deviceType": 301,
+      "deviceCode": "KI03",
+      "alias": "Range",
+      "deviceId": "1a0bcc7d-3320-1a2c-a3be-acf1087816e0",
+      "fwVer": "",
+      "imageFileName": "home_appliances_img_oven.png",
+      "imageUrl": "https://objectstore.lgthinq.com/407d9997",
+      "smallImageUrl": "https://objectstore.lgthinq.com/aa3ffa5b",
+      "ssid": "secret",
+      "softapId": "",
+      "softapPass": "",
+      "macAddress": "",
+      "networkType": "02",
+      "timezoneCode": "America/New_York",
+      "timezoneCodeAlias": "USA/New_York",
+      "utcOffset": -5,
+      "utcOffsetDisplay": "-05:00",
+      "dstOffset": -4,
+      "dstOffsetDisplay": "-04:00",
+      "curOffset": -4,
+      "curOffsetDisplay": "-04:00",
+      "sdsGuide": "{\"deviceCode\":\"KI03\"}",
+      "newRegYn": "N",
+      "remoteControlType": "",
+      "userNo": "US2012265634649",
+      "tftYn": "N",
+      "modelJsonVer": 0.4,
+      "modelJsonUri": "https://objectstore.lgthinq.com/9a538c62",
+      "appModuleVer": 200.57,
+      "appModuleUri": "https://objectstore.lgthinq.com/ee005eda",
+      "appRestartYn": "Y",
+      "appModuleSize": 3849573,
+      "langPackProductTypeVer": 36.4,
+      "langPackProductTypeUri": "https://objectcontent.lgthinq.com/c3fb96c2",
+      "deviceState": "E",
+      "snapshot": {
+        "ovenState": {
+          "upperControlLock": "DISABLE",
+          "cooktop1CooktopState": "INIT",
+          "cooktop2CooktopState": "COOKING_IN_PROGRESS",
+          "cooktop5PowerLevel": 0.0,
+          "cooktop1OperationTimeHour": 0.0,
+          "cooktop5CooktopState": "INIT",
+          "lowerRemainTimeSecond": 0.0,
+          "lowerRemoteStartUsing": "DISABLE",
+          "cooktop2OperationTimeSecond": 0.0,
+          "upperTargetTemperatureUnit": "FAHRENHEIT",
+          "cooktop3CooktopState": "INIT",
+          "cooktop4OperationTimeSecond": 0.0,
+          "cooktop2OperationTimeHour": 0.0,
+          "lowerDoorLock": "DISABLE",
+          "cooktop4CooktopState": "INIT",
+          "upperTimerSecond": 0.0,
+          "upperSabbath": "DISABLE",
+          "upperState": "INITIAL",
+          "upperDoorLock": "DISABLE",
+          "lowerMyRecipeCookNumber": 0.0,
+          "cooktop4PowerLevel": 0.0,
+          "cooktop3OperationTimeHour": 0.0,
+          "upperTimerSet": "ENABLE",
+          "cooktop5OperationTimeHour": 0.0,
+          "lowerDoorOpen": "DISALBE",
+          "upperTargetTempShow": "DISABLE",
+          "lowerCurrentTemperatureUnit": "FAHRENHEIT",
+          "lowerRemainTimeMinute": 0.0,
+          "lowerTimerHour": 0.0,
+          "upperTimerHour": 0.0,
+          "cooktop1PowerLevel": 0.0,
+          "lowerEasyCleanCount": 0.0,
+          "upperRemainTimeMinute": 0.0,
+          "upperTimerMinute": 0.0,
+          "cooktop3PowerLevel": 0.0,
+          "lowerManualCookName": "NONE",
+          "lowerSabbath": "DISABLE",
+          "lowerTimerSecond": 0.0,
+          "drawerPowerLevel": 0.0,
+          "burnerState": "OFF",
+          "lowerCurrentProveTemperatureF": 0.0,
+          "upperTargetTemperatureValue": 0.0,
+          "upperRemoteStart": "DISABLE",
+          "upperRemainTimeHour": 0.0,
+          "upperFotaEnable": "DISABLE",
+          "upperDoorOpen": "DISALBE",
+          "cooktop1OperationTimeSecond": 0.0,
+          "cooktop3OperationTimeSecond": 0.0,
+          "lowerRemainTimeHour": 0.0,
+          "upperCurrentTemperatureValue": 71.0,
+          "lowerIsError": "DISABLE",
+          "lowerTargetProveTemperatureF": 0.0,
+          "lowerTargetTemperatureValue": 350.0,
+          "cooktop5OperationTimeSecond": 0.0,
+          "lowerTimerSet": "ENABLE",
+          "upperRemainTimeSecond": 0.0,
+          "lowerControlLock": "DISABLE",
+          "lowerCurrentTemperatureValue": 68.0,
+          "upperRemoteStartUsing": "DISABLE",
+          "upperTargetProveTemperatureF": 0.0,
+          "upperOptionSet": "ENABLE",
+          "cooktop2PowerLevel": 0.0,
+          "lowerTimerMinute": 0.0,
+          "lowerTargetTempShow": "DISABLE",
+          "burnerOnCounter": 0.0,
+          "lowerState": "PREHEATING",
+          "lowerFotaEnable": "DISABLE",
+          "cooktop1OperationTimeMinute": 0.0,
+          "upperIsError": "DISABLE",
+          "upperEasyCleanCount": 0.0,
+          "upperCurrentTemperatureUnit": "FAHRENHEIT",
+          "cooktop2OperationTimeMinute": 0.0,
+          "cooktop4OperationTimeMinute": 0.0,
+          "lowerOptionSet": "ENABLE",
+          "upperManualCookName": "NONE",
+          "cooktop3OperationTimeMinute": 0.0,
+          "cooktop5OperationTimeMinute": 0.0,
+          "lowerRemoteStart": "DISABLE",
+          "cooktop4OperationTimeHour": 0.0
+        },
+        "mid": 2144380988.0,
+        "online": true,
+        "static": {
+          "deviceType": "301",
+          "countryCode": "US"
+        },
+        "meta": {
+          "allDeviceInfoUpdate": false,
+          "messageId": "3uGIe22MSTW1ZIXzx_2cYw"
+        },
+        "timestamp": 1621641563240.0
+      },
+      "online": true,
+      "platformType": "thinq2",
+      "area": 331972,
+      "regDt": 20210109183209.0,
+      "blackboxYn": "Y",
+      "modelProtocol": "",
+      "order": 0,
+      "drServiceYn": "N",
+      "modemInfo": {
+        "modelName": "WFZ474PGV",
+        "appVersion": "clip_hna_v1.9.080",
+        "modemType": "QCOM_QCA4010",
+        "ruleEngine": "y"
+      },
+      "guideTypeYn": "Y",
+      "guideType": "TYPE3",
+      "regDtUtc": "20210109223209",
+      "regIndex": 0,
+      "groupableYn": "N",
+      "controllableYn": "N",
+      "combinedProductYn": "N",
+      "masterYn": "Y",
+      "pccModelYn": "Y",
+      "autoOrderYn": "N",
+      "initDevice": false,
+      "existsEntryPopup": "N",
+      "tclcount": 0
+    }
+  ]
+}
