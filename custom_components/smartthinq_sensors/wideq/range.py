@@ -1,17 +1,14 @@
 """------------------for Oven"""
-import enum
 import logging
 
 from typing import Optional
 
 from . import (
-    FEAT_COOKTOP_STATE,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
     FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
-    FEAT_OVEN_STATE,
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_STATE,
 )
@@ -22,11 +19,9 @@ from .device import (
     UNITTEMPMODES,
     UNIT_TEMP_FAHRENHEIT,
     UNIT_TEMP_CELSIUS,
+    STATE_OPTIONITEM_NONE,
     STATE_OPTIONITEM_OFF,
 )
-
-
-_LOGGER = logging.getLogger(__name__)
 
 OVEN_TEMP_UNIT = {
     "0": UNITTEMPMODES.Fahrenheit,
@@ -34,6 +29,8 @@ OVEN_TEMP_UNIT = {
 }
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class RangeDevice(Device):
@@ -68,24 +65,9 @@ class RangeStatus(DeviceStatus):
         super().__init__(device, data)
         self._oven_temp_unit = None
 
-    def _update_features(self):
-        result = [
-            self.cooktop_left_front_state,
-            self.cooktop_left_rear_state,
-            self.cooktop_center_state,
-            self.cooktop_right_front_state,
-            self.cooktop_right_rear_state,
-            self.oven_lower_state,
-            self.oven_lower_target_temp,
-            self.oven_upper_state,
-            self.oven_upper_target_temp,
-            self.oven_temp_unit,
-        ]
-        return
-
     def _get_oven_temp_unit(self):
         if not self._oven_temp_unit:
-            oven_temp_unit = self.lookup_enum(["MonTempUnit"])
+            oven_temp_unit = self.lookup_enum("MonTempUnit")
             if not oven_temp_unit:
                 self._oven_temp_unit = STATE_OPTIONITEM_NONE
             else:
@@ -97,6 +79,10 @@ class RangeStatus(DeviceStatus):
     @property
     def is_on(self):
         return self.is_cooktop_on or self.is_oven_on
+
+    @property
+    def oven_temp_unit(self):
+        return self._get_oven_temp_unit()
 
     @property
     def is_cooktop_on(self):
@@ -118,47 +104,47 @@ class RangeStatus(DeviceStatus):
         five burners do not report individual status. Instead, the 
         cooktop_left_front reports aggregated status for all burners.
         """
-        status = self.lookup_enum(["LFState"])
+        status = self.lookup_enum("LFState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_COOKTOP_LEFT_FRONT_STATE, status, True
+            FEAT_COOKTOP_LEFT_FRONT_STATE, status
         )
 
     @property
     def cooktop_left_rear_state(self):
-        status = self.lookup_enum(["LRState"])
+        status = self.lookup_enum("LRState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_COOKTOP_LEFT_REAR_STATE, status, True
+            FEAT_COOKTOP_LEFT_REAR_STATE, status
         )
 
     @property
     def cooktop_center_state(self):
-        status = self.lookup_enum(["CenterState"])
+        status = self.lookup_enum("CenterState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_COOKTOP_CENTER_STATE, status, True
+            FEAT_COOKTOP_CENTER_STATE, status
         )
 
     @property
     def cooktop_right_front_state(self):
-        status = self.lookup_enum(["RFState"])
+        status = self.lookup_enum("RFState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_COOKTOP_RIGHT_FRONT_STATE, status, True
+            FEAT_COOKTOP_RIGHT_FRONT_STATE, status
         )
 
     @property
     def cooktop_right_rear_state(self):
-        status = self.lookup_enum(["RRState"])
+        status = self.lookup_enum("RRState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_COOKTOP_RIGHT_REAR_STATE, status, True
+            FEAT_COOKTOP_RIGHT_REAR_STATE, status
         )
 
     @property
@@ -174,20 +160,20 @@ class RangeStatus(DeviceStatus):
     
     @property
     def oven_lower_state(self):
-        status = self.lookup_enum(["LowerOvenState"])
+        status = self.lookup_enum("LowerOvenState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_OVEN_LOWER_STATE, status, True
+            FEAT_OVEN_LOWER_STATE, status
         )
 
     @property
     def oven_upper_state(self):
-        status = self.lookup_enum(["UpperOvenState"])
+        status = self.lookup_enum("UpperOvenState")
         if status and status == ITEM_STATE_OFF:
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(
-            FEAT_OVEN_UPPER_STATE, status, True
+            FEAT_OVEN_UPPER_STATE, status
         )
 
     @property
@@ -198,11 +184,8 @@ class RangeStatus(DeviceStatus):
         elif unit == UNIT_TEMP_CELSIUS:
             key = "LowerTargetTemp_C"
         else:
-            return "N/A"
-        result = self._data.get(key)
-        if result is None:
-            result = "N/A"
-        return result
+            return None
+        return self._data.get(key)
 
     @property
     def oven_upper_target_temp(self):
@@ -212,13 +195,17 @@ class RangeStatus(DeviceStatus):
         elif unit == UNIT_TEMP_CELSIUS:
             key = "UpperTargetTemp_C"
         else:
-            return "N/A"
-        result = self._data.get(key)
-        if result is None:
-            result = "N/A"
-        return result
-    
-    @property
-    def oven_temp_unit(self):
-        return self._get_oven_temp_unit()
+            return None
+        return self._data.get(key)
 
+    def _update_features(self):
+        result = [
+            self.cooktop_left_front_state,
+            self.cooktop_left_rear_state,
+            self.cooktop_center_state,
+            self.cooktop_right_front_state,
+            self.cooktop_right_rear_state,
+            self.oven_lower_state,
+            self.oven_upper_state,
+        ]
+        return

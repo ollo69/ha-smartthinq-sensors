@@ -22,13 +22,11 @@ from .wideq import (
     FEAT_TUBCLEAN_COUNT,
     FEAT_TEMPCONTROL,
     FEAT_WATERTEMP,
-    FEAT_COOKTOP_STATE,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
     FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
-    FEAT_OVEN_STATE,
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_STATE,
 )
@@ -45,7 +43,6 @@ from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_LOCK,
     DEVICE_CLASS_OPENING,
     DEVICE_CLASS_PROBLEM,
-    DEVICE_CLASS_POWER,
 )
 
 from homeassistant.const import (
@@ -89,9 +86,11 @@ ATTR_DOOR_OPEN = "door_open"
 # ac sensor attributes
 ATTR_ROOM_TEMP = "room_temperature"
 
-# oven sensor attributes
+# range sensor attributes
+ATTR_COOKTOP_STATE = "cooktop_state"
 ATTR_OVEN_LOWER_TARGET_TEMP = "oven_lower_target_temp"
 ATTR_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
+ATTR_OVEN_STATE = "oven_state"
 ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 
 STATE_LOOKUP = {
@@ -304,15 +303,6 @@ AC_SENSORS = {
     },
 }
 
-WASH_DEVICE_TYPES = [
-    DeviceType.DISHWASHER,
-    DeviceType.DRYER,
-    DeviceType.STYLER,
-    DeviceType.TOWER_DRYER,
-    DeviceType.TOWER_WASHER,
-    DeviceType.WASHER,
-]
-
 RANGE_SENSORS = {
     DEFAULT_SENSOR: {
         ATTR_MEASUREMENT_NAME: "Default",
@@ -373,16 +363,25 @@ RANGE_SENSORS = {
     },
 }
 RANGE_BINARY_SENSORS = {
-    FEAT_COOKTOP_STATE: {
+    ATTR_COOKTOP_STATE: {
         ATTR_MEASUREMENT_NAME: "Cooktop",
         ATTR_VALUE_FN: lambda x: x._cooktop_state,
         ATTR_ENABLED: True,
     },
-    FEAT_OVEN_STATE: {
+    ATTR_OVEN_STATE: {
         ATTR_MEASUREMENT_NAME: "Oven",
         ATTR_VALUE_FN: lambda x: x._oven_state,
     },
 }
+
+WASH_DEVICE_TYPES = [
+    DeviceType.DISHWASHER,
+    DeviceType.DRYER,
+    DeviceType.STYLER,
+    DeviceType.TOWER_DRYER,
+    DeviceType.TOWER_WASHER,
+    DeviceType.WASHER,
+]
 
 
 def _sensor_exist(lge_device, sensor_def):
@@ -840,6 +839,6 @@ class LGERangeSensor(LGESensor):
     @property
     def _oven_temp_unit(self):
         if self._api.state:
-            return self._api.state.oven_temp_unit
-        return None
-
+            unit = self._api.state.oven_temp_unit
+            return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
+        return TEMP_CELSIUS

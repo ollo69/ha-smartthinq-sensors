@@ -14,13 +14,7 @@ from typing import Dict
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
 from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
-from .wideq.ac import AirConditionerDevice
-from .wideq.dishwasher import DishWasherDevice
-from .wideq.dryer import DryerDevice
-from .wideq.range import RangeDevice
-from .wideq.refrigerator import RefrigeratorDevice
-from .wideq.styler import StylerDevice
-from .wideq.washer import WasherDevice
+from .wideq.factory import get_lge_device
 
 from .wideq.core_exceptions import (
     InvalidCredentialError,
@@ -563,34 +557,22 @@ async def lge_devices_setup(hass, client) -> dict:
         device_id = device.id
         device_name = device.name
         device_type = device.type
+        network_type = device.network_type
         model_name = device.model_name
         device_count += 1
 
-        dev = None
-        if device_type in [DeviceType.WASHER, DeviceType.TOWER_WASHER]:
-            dev = LGEDevice(WasherDevice(client, device), hass)
-        elif device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
-            dev = LGEDevice(DryerDevice(client, device), hass)
-        elif device_type == DeviceType.STYLER:
-            dev = LGEDevice(StylerDevice(client, device), hass)
-        elif device_type == DeviceType.DISHWASHER:
-            dev = LGEDevice(DishWasherDevice(client, device), hass)
-        elif device_type == DeviceType.REFRIGERATOR:
-            dev = LGEDevice(RefrigeratorDevice(client, device), hass)
-        elif device_type == DeviceType.AC:
-            dev = LGEDevice(AirConditionerDevice(client, device, temp_unit), hass)
-        elif device_type == DeviceType.RANGE:
-            dev = LGEDevice(RangeDevice(client, device), hass)
-
-        if not dev:
+        lge_dev = get_lge_device(client, device, temp_unit)
+        if not lge_dev:
             _LOGGER.info(
-                "Found unsupported LGE Device. Name: %s - Type: %s - InfoUrl: %s",
+                "Found unsupported LGE Device. Name: %s - Type: %s - NetworkType: %s - InfoUrl: %s",
                 device_name,
                 device_type.name,
+                network_type.name,
                 device.model_info_url,
             )
             continue
 
+        dev = LGEDevice(lge_dev, hass)
         if not await dev.init_device():
             _LOGGER.error(
                 "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
