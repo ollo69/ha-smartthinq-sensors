@@ -875,8 +875,7 @@ class Device(object):
         return value
 
     def init_device_info(self):
-        if self._device_info.platform_type == PlatformType.UNKNOWN:
-            return False
+        """Initialize the information for the device"""
 
         if self._model_info is None:
             if self._model_data is None:

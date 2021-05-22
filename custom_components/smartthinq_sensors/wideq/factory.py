@@ -7,15 +7,24 @@ from .refrigerator import RefrigeratorDevice
 from .styler import StylerDevice
 from .washer import WasherDevice
 
-from .device import UNIT_TEMP_CELSIUS, DeviceInfo, DeviceType, NetworkType
+from .device import(
+    UNIT_TEMP_CELSIUS,
+    DeviceInfo,
+    DeviceType,
+    NetworkType,
+    PlatformType,
+)
 
 
 def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
     """Return a device based on the device type."""
 
     device_type = device.type
+    platform_type = device.platform_type
     network_type = device.network_type
 
+    if platform_type == PlatformType.UNKNOWN:
+        return None
     if network_type != NetworkType.WIFI:
         return None
 
