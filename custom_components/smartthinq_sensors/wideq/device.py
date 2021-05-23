@@ -4,6 +4,7 @@ SmartThinQ API for most use cases.
 import base64
 import json
 from collections import namedtuple
+from datetime import datetime
 import enum
 import logging
 from numbers import Number
@@ -110,6 +111,10 @@ class NetworkType(enum.Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
+DEVICE_UPDATE_INTERVAL = 600
+DEVICES_REQUIRE_UPDATE = [DeviceType.AC]
+
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -174,6 +179,10 @@ class DeviceInfo(object):
 
     def __init__(self, data: Dict[str, Any]) -> None:
         self._data = data
+        self._device_id = None
+        self._device_type = None
+        self._platform_type = None
+        self._network_type = None
 
     def _get_data_key(self, keys):
         for key in keys:
@@ -195,7 +204,9 @@ class DeviceInfo(object):
 
     @property
     def id(self) -> str:
-        return self._get_data_value("deviceId")
+        if self._device_id is None:
+            self._device_id = self._get_data_value("deviceId")
+        return self._device_id
 
     @property
     def model_info_url(self) -> str:
@@ -244,42 +255,44 @@ class DeviceInfo(object):
     @property
     def type(self) -> DeviceType:
         """The kind of device, as a `DeviceType` value."""
-        device_type = self._get_data_value("deviceType")
-        try:
-            ret_val = DeviceType(device_type)
-        except ValueError:
-            _LOGGER.warning("Device %s: unknown device type with id %s", self.id, device_type)
-            ret_val = DeviceType.UNKNOWN
-        return ret_val
+        if self._device_type is None:
+            device_type = self._get_data_value("deviceType")
+            try:
+                ret_val = DeviceType(device_type)
+            except ValueError:
+                _LOGGER.warning("Device %s: unknown device type with id %s", self.id, device_type)
+                ret_val = DeviceType.UNKNOWN
+            self._device_type = ret_val
+        return self._device_type
 
     @property
     def platform_type(self) -> PlatformType:
         """The kind of platform, as a `PlatformType` value."""
-        plat_type = self._data.get("platformType")
-        if plat_type is None:
-            # for the moment, probably not available in APIv1
-            return PlatformType.THINQ1
-        try:
-            ret_val = PlatformType(plat_type)
-        except ValueError:
-            _LOGGER.warning("Device %s: unknown platform type with id %s", self.id, plat_type)
-            ret_val = PlatformType.UNKNOWN
-        return ret_val
+        if self._platform_type is None:
+            # for the moment if unavailable set THINQ1, probably not available in APIv1
+            plat_type = self._data.get("platformType", PlatformType.THINQ1.value)
+            try:
+                ret_val = PlatformType(plat_type)
+            except ValueError:
+                _LOGGER.warning("Device %s: unknown platform type with id %s", self.id, plat_type)
+                ret_val = PlatformType.UNKNOWN
+            self._platform_type = ret_val
+        return self._platform_type
 
     @property
     def network_type(self) -> NetworkType:
         """The kind of network, as a `NetworkType` value."""
-        net_type = self._data.get("networkType")
-        if net_type is None:
+        if self._network_type is None:
             # for the moment we set WIFI if not available
-            return NetworkType.WIFI
-        try:
-            ret_val = NetworkType(net_type)
-        except ValueError:
-            _LOGGER.warning("Device %s: unknown network type with id %s", self.id, net_type)
-            # for the moment we set WIFI if unknown
-            ret_val = NetworkType.WIFI
-        return ret_val
+            net_type = self._data.get("networkType", NetworkType.WIFI.value)
+            try:
+                ret_val = NetworkType(net_type)
+            except ValueError:
+                _LOGGER.warning("Device %s: unknown network type with id %s", self.id, net_type)
+                # for the moment we set WIFI if unknown
+                ret_val = NetworkType.WIFI
+            self._network_type = ret_val
+        return self._network_type
 
     @property
     def snapshot(self) -> Optional[Dict[str, Any]]:
@@ -781,6 +794,8 @@ class Device(object):
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
         self._mon = None
+        self._control_set = 0
+        self._last_dev_query = datetime.now()
         self._available_features = available_features or {}
 
         # for logging unknown states received
@@ -827,29 +842,30 @@ class Device(object):
             self._available_features[feature_name] = title
         return title
 
-    def _set_control(self, key, value, ctrl_key, command):
+    def _set_control(self, ctrl_key, command, *, key=None, value=None, data=None):
         """Set a device's control for `key` to `value`.
         """
         if self._should_poll:
             self._client.session.set_device_controls(
-                self._device_info.id, {key: value},
+                self._device_info.id,
+                ctrl_key, command,
+                value={key: value} if key and value else value or "",
+                data={key: data} if key and data else data or "",
             )
+            self._control_set = 2
             return
 
         self._client.session.set_device_v2_controls(
             self._device_info.id,
-            {
-                "ctrlKey": ctrl_key,
-                "command": command,
-                "dataKey": key,
-                "dataValue": value,
-            }
+            ctrl_key, command,
+            key=key,
+            value=value,
         )
 
-    def set(self, key, value, ctrl_key="basicCtrl", command="Set"):
+    def set(self, ctrl_key, command, *, key=None, value=None, data=None):
         """Set a device's control for `key` to `value`."""
-        _LOGGER.debug("Setting new state: %s - %s - %s", key, value, ctrl_key)
-        self._set_control(key, value, ctrl_key, command)
+        _LOGGER.debug("Setting new state: %s - %s - %s - %s", ctrl_key, command, key, value)
+        self._set_control(ctrl_key, command, key=key, value=value, data=data)
         if self._status:
             self._status.update_status(key, value)
 
@@ -925,10 +941,37 @@ class Device(object):
         self._mon.stop()
         self._mon = None
 
-    def delete_permission(self):
+    def _require_update(self):
+        if self._device_info.type not in DEVICES_REQUIRE_UPDATE:
+            return False
+        call_time = datetime.now()
+        difference = (call_time - self._last_dev_query).total_seconds()
+        if difference < DEVICE_UPDATE_INTERVAL:
+            return False
+        self._last_dev_query = datetime.now()
+        return True
+
+    def _get_device_snapshot(self, force_update=False):
+
+        if self._require_update() or force_update:
+            result = self._client.session.get_device_v2_settings(self._device_info.id)
+            return result.get("snapshot")
+
+        self._client.refresh_devices()
+        device_data = self._client.get_device(self._device_info.id)
+        if device_data:
+            return device_data.snapshot
+        return None
+
+    def _delete_permission(self):
+        """Remove permission acquired in set command."""
         if not self._should_poll:
             return
-        self._client.session.delete_permission(self._device_info.id)
+        if self._control_set <= 0:
+            return
+        if self._control_set == 1:
+            self._client.session.delete_permission(self._device_info.id)
+        self._control_set -= 1
 
     def device_poll(self, snapshot_key=""):
         """Poll the device's current state.
@@ -944,11 +987,7 @@ class Device(object):
 
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
-            snapshot = None
-            self._client.refresh_devices()
-            device_data = self._client.get_device(self._device_info.id)
-            if device_data:
-                snapshot = device_data.snapshot
+            snapshot = self._get_device_snapshot()
             if not snapshot:
                 return None
             res = self._model_info.decode_snapshot(snapshot, snapshot_key)
@@ -958,6 +997,8 @@ class Device(object):
             # Abort if monitoring has not started yet.
             if not self._mon:
                 return None
+
+            self._delete_permission()
             data = self._mon.poll()
             if not data:
                 return None

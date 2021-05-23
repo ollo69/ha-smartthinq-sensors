@@ -20,9 +20,9 @@ PROPERTY_VANE_VERTICAL = "vane_vertical"
 AC_FLAG_ON = "@ON"
 AC_FLAG_OFF = "@OFF"
 
-AC_CTRL_BASIC = "basicCtrl"
-AC_CTRL_SETTING = "settingInfo"
-AC_CTRL_WIND_DIRECTION = "wDirCtrl"
+AC_CTRL_BASIC = ["Control", "basicCtrl"]
+AC_CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
+# AC_CTRL_SETTING = "settingInfo"
 # AC_CTRL_WIND_MODE = "wModeCtrl"
 
 SUPPORT_AC_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
@@ -34,6 +34,13 @@ AC_STATE_TARGET_TEMP = ["TempCfg", "airState.tempState.target"]
 AC_STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
 AC_STATE_WDIR_HSTEP = ["WDirHStep", "airState.wDir.hStep"]
 AC_STATE_WDIR_VSTEP = ["WDirVStep", "airState.wDir.vStep"]
+
+CMD_STATE_OPERATION = [AC_CTRL_BASIC, "Set", AC_STATE_OPERATION]
+CMD_STATE_OP_MODE = [AC_CTRL_BASIC, "Set", AC_STATE_OPERATION_MODE]
+CMD_STATE_TARGET_TEMP = [AC_CTRL_BASIC, "Set", AC_STATE_TARGET_TEMP]
+CMD_STATE_WIND_STRENGTH = [AC_CTRL_BASIC, "Set", AC_STATE_WIND_STRENGTH]
+CMD_STATE_WDIR_HSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_HSTEP]
+CMD_STATE_WDIR_VSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSTEP]
 
 AC_STATE_WIND_UP_DOWN_V2 = "airState.wDir.upDown"
 AC_STATE_WIND_LEFT_RIGHT_V2 = "airState.wDir.leftRight"
@@ -173,6 +180,13 @@ class AirConditionerDevice(Device):
             return key_name[1 if self.model_info.is_info_v2 else 0]
         return key_name
 
+    def _get_cmd_keys(self, key_name):
+        ctrl = self._get_state_key(key_name[0])
+        cmd = self._get_state_key(key_name[1])
+        key = self._get_state_key(key_name[2])
+
+        return [ctrl, cmd, key]
+
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
 
@@ -283,36 +297,36 @@ class AirConditionerDevice(Device):
         """Turn on or off the device (according to a boolean)."""
 
         op = self._supported_on_operation() if turn_on else ACOp.OFF
-        key = self._get_state_key(AC_STATE_OPERATION)
-        op_value = self.model_info.enum_value(key, op.value)
-        self.set(key, op_value, AC_CTRL_BASIC)
+        keys = self._get_cmd_keys(CMD_STATE_OPERATION)
+        op_value = self.model_info.enum_value(keys[2], op.value)
+        self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
     def set_op_mode(self, mode):
         """Set the device's operating mode to an `OpMode` value."""
 
         if mode not in self.op_modes:
             raise ValueError(f"Invalid operating mode: {mode}")
-        key = self._get_state_key(AC_STATE_OPERATION_MODE)
-        mode_value = self.model_info.enum_value(key, ACMode[mode].value)
-        self.set(key, mode_value, AC_CTRL_BASIC)
+        keys = self._get_cmd_keys(CMD_STATE_OP_MODE)
+        mode_value = self.model_info.enum_value(keys[2], ACMode[mode].value)
+        self.set(keys[0], keys[1], key=keys[2], value=mode_value)
 
     def set_fan_speed(self, speed):
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
 
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
-        key = self._get_state_key(AC_STATE_WIND_STRENGTH)
-        speed_value = self.model_info.enum_value(key, ACFanSpeed[speed].value)
-        self.set(key, speed_value, AC_CTRL_BASIC)
+        keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
+        speed_value = self.model_info.enum_value(keys[2], ACFanSpeed[speed].value)
+        self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
     def set_vert_swing_mode(self, mode):
         """Set the vert swing to a value from the `ACVSwingMode` enum."""
 
         if mode not in self.vert_swing_modes:
             raise ValueError(f"Invalid vertical swing mode: {mode}")
-        key = self._get_state_key(AC_STATE_WDIR_VSTEP)
-        swing_mode = self.model_info.enum_value(key, ACVSwingMode[mode].value)
-        self.set(key, swing_mode, AC_CTRL_WIND_DIRECTION)
+        keys = self._get_cmd_keys(CMD_STATE_WDIR_VSTEP)
+        swing_mode = self.model_info.enum_value(keys[2], ACVSwingMode[mode].value)
+        self.set(keys[0], keys[1], key=keys[2], value=swing_mode)
 
     def set_target_temp(self, temp):
         """Set the device's target temperature in Celsius degrees."""
@@ -321,8 +335,8 @@ class AirConditionerDevice(Device):
         conv_temp = self._f2c(temp)
         if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
-        key = self._get_state_key(AC_STATE_TARGET_TEMP)
-        self.set(key, conv_temp, AC_CTRL_BASIC)
+        keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
+        self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
 
     def reset_status(self):
         self._status = AirConditionerStatus(self, None)

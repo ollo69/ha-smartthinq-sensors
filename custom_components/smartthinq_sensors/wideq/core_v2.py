@@ -554,31 +554,36 @@ class Session(object):
             {"cmd": "Mon", "cmdOpt": "Stop", "deviceId": device_id, "workId": work_id},
         )
 
-    def set_device_controls(self, device_id, values):
+    def set_device_controls(self, device_id, ctrl_key, command, value, data):
         """Control a device's settings.
 
         `values` is a key/value map containing the settings to update.
         """
-
         return self.post(
             "rti/rtiControl",
             {
-                "cmd": "Control",
-                "cmdOpt": "Set",
-                "value": values,
+                "cmd": ctrl_key,
+                "cmdOpt": command,
+                "value": value,
+                "data": data,
                 "deviceId": device_id,
                 "workId": gen_uuid(),
-                "data": "",
             },
         )
 
-    def set_device_v2_controls(self, device_id, values):
-        """Control a device's settings based on api V2.
+    def set_device_v2_controls(self, device_id, ctrl_key, command, key, value):
+        """Control a device's settings based on api V2."""
 
-        `values` is a key/value map containing the settings to update.
-        """
         path = f"service/devices/{device_id}/control-sync"
-        return self.post2(path, values)
+        return self.post2(
+            path,
+            {
+                "ctrlKey": ctrl_key,
+                "command": command,
+                "dataKey": key,
+                "dataValue": value,
+            },
+        )
 
     def get_device_config(self, device_id, key, category="Config"):
         """Get a device configuration option.
@@ -600,7 +605,13 @@ class Session(object):
         )
         return res["returnData"]
 
+    def get_device_v2_settings(self, device_id):
+        """Get a device's settings based on api V2."""
+        result = self.get2(f"service/devices/{device_id}")
+        return result
+
     def delete_permission(self, device_id):
+        """Delete permission on V1 device after a control command"""
         self.post("rti/delControlPermission", {"deviceId": device_id})
 
 
