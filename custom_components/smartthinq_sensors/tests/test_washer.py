@@ -4,7 +4,7 @@ from .test_device import DeviceTest
 class RangeTest(DeviceTest):
 
     def test_status(self):
-        device, status = super().setup("./tests/fixtures/washer.json", DeviceType.WASHER)
+        device, status = super().setup(DeviceType.WASHER, "./tests/fixtures/washer.json")
         self.assertTrue(status.is_on)
         self.assertFalse(status.is_run_completed)
         self.assertFalse(status.is_error)

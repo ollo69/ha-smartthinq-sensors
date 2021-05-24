@@ -4,7 +4,7 @@ from .test_device import DeviceTest
 class RangeTest(DeviceTest):
 
     def test_status(self):
-        device, status = super().setup("./tests/fixtures/range.json", DeviceType.RANGE)
+        device, status = super().setup(DeviceType.RANGE, "./tests/fixtures/range.json")
         self.assertTrue(status.is_on)
         self.assertTrue(status.is_cooktop_on)
         self.assertEqual("off", status.cooktop_left_front_state)
