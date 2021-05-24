@@ -704,6 +704,8 @@ class ModelInfoV2(object):
         control = None
         if "ControlWifi" in self._data:
             control = self._data["ControlWifi"].get(cmd_key)
+            if control:
+                control["ctrlKey"] = cmd_key
         return control
 
     @property
