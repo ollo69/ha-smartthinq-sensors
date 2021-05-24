@@ -479,6 +479,10 @@ class ModelInfo(object):
             return reference[value].get("label")
         return None
 
+    def get_control_cmd(self, cmd_key):
+        """Get the payload used to send the command."""
+        return None
+
     @property
     def binary_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE).
@@ -695,6 +699,13 @@ class ModelInfoV2(object):
 
         return data.get("targetKey", {}).get(target, {}).get(value)
 
+    def get_control_cmd(self, cmd_key):
+        """Get the payload used to send the command."""
+        control = None
+        if "ControlWifi" in self._data:
+            control = self._data["ControlWifi"].get(cmd_key)
+        return control
+
     @property
     def binary_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE).
@@ -842,6 +853,20 @@ class Device(object):
             self._available_features[feature_name] = title
         return title
 
+    def _get_state_key(self, key_name):
+        """Get the key used for state from an array based on info type"""
+        if isinstance(key_name, list):
+            return key_name[1 if self.model_info.is_info_v2 else 0]
+        return key_name
+
+    def _get_cmd_keys(self, key_name):
+        """Get the keys used for control based on info type"""
+        ctrl = self._get_state_key(key_name[0])
+        cmd = self._get_state_key(key_name[1])
+        key = self._get_state_key(key_name[2])
+
+        return [ctrl, cmd, key]
+
     def _set_control(self, ctrl_key, command, *, key=None, value=None, data=None):
         """Set a device's control for `key` to `value`.
         """
@@ -866,8 +891,6 @@ class Device(object):
         """Set a device's control for `key` to `value`."""
         _LOGGER.debug("Setting new state: %s - %s - %s - %s", ctrl_key, command, key, value)
         self._set_control(ctrl_key, command, key=key, value=value, data=data)
-        if self._status:
-            self._status.update_status(key, value)
 
     def _get_config(self, key):
         """Look up a device's configuration for a given value.

@@ -51,6 +51,9 @@ AC_STATE_AIRCLEAN_MODE_V2 = "airState.wMode.airClean"
 AC_STATE_FILTER_MAX_TIME_V2 = "airState.filterMngStates.maxTime"
 AC_STATE_FILTER_REMAIN_TIME_V2 = "airState.filterMngStates.useTime"
 
+DEFAULT_MIN_TEMP = 16
+DEFAULT_MAX_TEMP = 30
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -175,18 +178,6 @@ class AirConditionerDevice(Device):
             self._c2f_map = out
         return self._c2f_map.get(value, value)
 
-    def _get_state_key(self, key_name):
-        if isinstance(key_name, list):
-            return key_name[1 if self.model_info.is_info_v2 else 0]
-        return key_name
-
-    def _get_cmd_keys(self, key_name):
-        ctrl = self._get_state_key(key_name[0])
-        cmd = self._get_state_key(key_name[1])
-        key = self._get_state_key(key_name[2])
-
-        return [ctrl, cmd, key]
-
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
 
@@ -235,8 +226,12 @@ class AirConditionerDevice(Device):
             key = self._get_state_key(AC_STATE_TARGET_TEMP)
             range_info = self.model_info.value(key)
             if not range_info:
-                return None
-            self._temperature_range = [range_info.min, range_info.max]
+                min_temp = DEFAULT_MIN_TEMP
+                max_temp = DEFAULT_MAX_TEMP
+            else:
+                min_temp = min(range_info.min, DEFAULT_MIN_TEMP)
+                max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
+            self._temperature_range = [min_temp, max_temp]
         return self._temperature_range
 
     @property
@@ -337,6 +332,12 @@ class AirConditionerDevice(Device):
             raise ValueError(f"Target temperature out of range: {temp}")
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
         self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
+
+    def set(self, ctrl_key, command, *, key=None, value=None, data=None):
+        """Set a device's control for `key` to `value`."""
+        super().set(ctrl_key, command, key=key, value=value, data=data)
+        if self._status:
+            self._status.update_status(key, value)
 
     def reset_status(self):
         self._status = AirConditionerStatus(self, None)

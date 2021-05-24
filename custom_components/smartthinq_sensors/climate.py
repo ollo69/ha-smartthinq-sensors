@@ -38,7 +38,7 @@ HVAC_MODE_LOOKUP = {
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
 }
 
-SCAN_INTERVAL = timedelta(seconds=30)
+SCAN_INTERVAL = timedelta(seconds=120)
 
 _LOGGER = logging.getLogger(__name__)
 
