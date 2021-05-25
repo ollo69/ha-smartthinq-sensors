@@ -42,14 +42,14 @@ CMD_STATE_WIND_STRENGTH = [AC_CTRL_BASIC, "Set", AC_STATE_WIND_STRENGTH]
 CMD_STATE_WDIR_HSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_HSTEP]
 CMD_STATE_WDIR_VSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSTEP]
 
-AC_STATE_WIND_UP_DOWN_V2 = "airState.wDir.upDown"
-AC_STATE_WIND_LEFT_RIGHT_V2 = "airState.wDir.leftRight"
+# AC_STATE_WIND_UP_DOWN_V2 = "airState.wDir.upDown"
+# AC_STATE_WIND_LEFT_RIGHT_V2 = "airState.wDir.leftRight"
 
-AC_STATE_CURRENT_HUMIDITY_V2 = "airState.humidity.current"
-AC_STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
-AC_STATE_AIRCLEAN_MODE_V2 = "airState.wMode.airClean"
-AC_STATE_FILTER_MAX_TIME_V2 = "airState.filterMngStates.maxTime"
-AC_STATE_FILTER_REMAIN_TIME_V2 = "airState.filterMngStates.useTime"
+# AC_STATE_CURRENT_HUMIDITY_V2 = "airState.humidity.current"
+# AC_STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
+# AC_STATE_AIRCLEAN_MODE_V2 = "airState.wMode.airClean"
+# AC_STATE_FILTER_MAX_TIME_V2 = "airState.filterMngStates.maxTime"
+# AC_STATE_FILTER_REMAIN_TIME_V2 = "airState.filterMngStates.useTime"
 
 DEFAULT_MIN_TEMP = 16
 DEFAULT_MAX_TEMP = 30
@@ -112,14 +112,34 @@ class ACVSwingMode(enum.Enum):
     All is 100.
     """
 
-    OFF = "@OFF"
-    TOP = "@1"
-    MIDDLE_TOP_1 = "@2"
-    MIDDLE_TOP_2 = "@3"
-    MIDDLE_BOTTOM_2 = "@4"
-    MIDDLE_BOTTOM_1 = "@5"
-    BOTTOM = "@6"
-    SWING = "@100"
+    VerticalOff = "@OFF"
+    VerticalTop = "@1"
+    VerticalMiddleTop1 = "@2"
+    VerticalMiddleTop2 = "@3"
+    VerticalMiddleBottom2 = "@4"
+    VerticalMiddleBottom1 = "@5"
+    VerticalBottom = "@6"
+    VerticalSwing = "@100"
+
+
+class ACHSwingMode(enum.Enum):
+    """The horizontal swing mode for an AC/HVAC device.
+    Blades are numbered horizontally from 1 (leftmost)
+    to 5.
+    Left half goes from 1-3, and right half goes from
+    3-5.
+    All is 100.
+    """
+
+    HorizontalOff = "@OFF"
+    HorizontalLeft = "@1"
+    HorizontalMiddleLeft = "@2"
+    HorizontalCenter = "@3"
+    HorizontalMiddleRight = "@4"
+    HorizontalRight = "@5"
+    HorizontalLeftHalf = "@13"
+    HorizontalRightHalf = "@35"
+    HorizontalSwing = "@100"
 
 
 class AirConditionerDevice(Device):
@@ -133,7 +153,8 @@ class AirConditionerDevice(Device):
         self._supported_operation = None
         self._supported_op_modes = None
         self._supported_fan_speeds = None
-        self._supported_vert_swings = None
+        self._supported_horizontal_swings = None
+        self._supported_vertical_swings = None
         self._temperature_range = None
 
         self._f2c_map = None
@@ -253,18 +274,36 @@ class AirConditionerDevice(Device):
         return self._supported_fan_speeds
 
     @property
-    def vert_swing_modes(self):
-        if self._supported_vert_swings is None:
+    def horizontal_swing_modes(self):
+        if self._supported_horizontal_swings is None:
+            key = self._get_state_key(AC_STATE_WDIR_HSTEP)
+            values = self.model_info.value(key)
+            if not hasattr(values, "options"):
+                self._supported_horizontal_swings = []
+                return self._supported_horizontal_swings
+
+            mapping = values.options
+            mode_list = [e.value for e in ACHSwingMode]
+            self._supported_horizontal_swings = [
+                ACHSwingMode(o).name for o in mapping.values() if o in mode_list
+            ]
+        return self._supported_horizontal_swings
+
+    @property
+    def vertical_swing_modes(self):
+        if self._supported_vertical_swings is None:
             key = self._get_state_key(AC_STATE_WDIR_VSTEP)
             values = self.model_info.value(key)
             if not hasattr(values, "options"):
-                self._supported_vert_swings = []
-                return self._supported_vert_swings
+                self._supported_vertical_swings = []
+                return self._supported_vertical_swings
 
             mapping = values.options
             mode_list = [e.value for e in ACVSwingMode]
-            self._supported_vert_swings = [ACVSwingMode(o).name for o in mapping.values() if o in mode_list]
-        return self._supported_vert_swings
+            self._supported_vertical_swings = [
+                ACVSwingMode(o).name for o in mapping.values() if o in mode_list
+            ]
+        return self._supported_vertical_swings
 
     @property
     def temperature_unit(self):
@@ -314,10 +353,19 @@ class AirConditionerDevice(Device):
         speed_value = self.model_info.enum_value(keys[2], ACFanSpeed[speed].value)
         self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
-    def set_vert_swing_mode(self, mode):
-        """Set the vert swing to a value from the `ACVSwingMode` enum."""
+    def set_horizontal_swing_mode(self, mode):
+        """Set the hor swing to a value from the `ACHSwingMode` enum."""
 
-        if mode not in self.vert_swing_modes:
+        if mode not in self.horizontal_swing_modes:
+            raise ValueError(f"Invalid horizontal swing mode: {mode}")
+        keys = self._get_cmd_keys(CMD_STATE_WDIR_HSTEP)
+        swing_mode = self.model_info.enum_value(keys[2], ACHSwingMode[mode].value)
+        self.set(keys[0], keys[1], key=keys[2], value=swing_mode)
+
+    def set_vertical_swing_mode(self, mode):
+        """Set the vertical swing to a value from the `ACVSwingMode` enum."""
+
+        if mode not in self.vertical_swing_modes:
             raise ValueError(f"Invalid vertical swing mode: {mode}")
         keys = self._get_cmd_keys(CMD_STATE_WDIR_VSTEP)
         swing_mode = self.model_info.enum_value(keys[2], ACVSwingMode[mode].value)
@@ -422,7 +470,15 @@ class AirConditionerStatus(DeviceStatus):
             return None
 
     @property
-    def vert_swing_mode(self):
+    def horizontal_swing_mode(self):
+        key = self._get_state_key(AC_STATE_WDIR_HSTEP)
+        try:
+            return ACHSwingMode(self.lookup_enum(key, True)).name
+        except ValueError:
+            return None
+
+    @property
+    def vertical_swing_mode(self):
         key = self._get_state_key(AC_STATE_WDIR_VSTEP)
         try:
             return ACVSwingMode(self.lookup_enum(key, True)).name

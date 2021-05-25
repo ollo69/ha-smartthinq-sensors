@@ -17,6 +17,7 @@ LABEL_BIT_ON = "@CP_ON_EN_W"
 
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
+DEVICE_UPDATE_INTERVAL = 600  # seconds
 
 STATE_OPTIONITEM_OFF = "off"
 STATE_OPTIONITEM_ON = "on"
@@ -109,10 +110,6 @@ class NetworkType(enum.Enum):
     NFC3 = "03"
     NFC4 = "04"
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
-
-
-DEVICE_UPDATE_INTERVAL = 600
-DEVICES_REQUIRE_UPDATE = [DeviceType.AC]
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -706,6 +703,8 @@ class ModelInfoV2(object):
             control = self._data["ControlWifi"].get(cmd_key)
             if control:
                 control["ctrlKey"] = cmd_key
+                if "data" in control:
+                    control["dataSetList"] = control.pop("data")
         return control
 
     @property
@@ -967,18 +966,24 @@ class Device(object):
         self._mon = None
 
     def _require_update(self):
-        if self._device_info.type not in DEVICES_REQUIRE_UPDATE:
-            return False
+        """Check if dedicated update is required."""
+
         call_time = datetime.now()
         difference = (call_time - self._last_dev_query).total_seconds()
-        if difference < DEVICE_UPDATE_INTERVAL:
-            return False
-        self._last_dev_query = datetime.now()
-        return True
+        return difference >= DEVICE_UPDATE_INTERVAL
 
-    def _get_device_snapshot(self, force_update=False):
+    def _get_device_snapshot(self, device_update=False, force_device_update=False):
+        """Get snapshot for ThinQ2 devices.
 
-        if self._require_update() or force_update:
+        Perform dedicated device query every DEVICE_UPDATE_INTERVAL seconds
+        if device_update is set to true, otherwise use the dashboard result
+        """
+
+        if device_update and not force_device_update:
+            device_update = self._require_update()
+
+        if device_update or force_device_update:
+            self._last_dev_query = datetime.now()
             result = self._client.session.get_device_v2_settings(self._device_info.id)
             return result.get("snapshot")
 
@@ -998,7 +1003,7 @@ class Device(object):
             self._client.session.delete_permission(self._device_info.id)
         self._control_set -= 1
 
-    def device_poll(self, snapshot_key=""):
+    def device_poll(self, snapshot_key="", *, device_update=False):
         """Poll the device's current state.
         
         Monitoring must be started first with `monitor_start`. Return
@@ -1012,7 +1017,7 @@ class Device(object):
 
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
-            snapshot = self._get_device_snapshot()
+            snapshot = self._get_device_snapshot(device_update)
             if not snapshot:
                 return None
             res = self._model_info.decode_snapshot(snapshot, snapshot_key)

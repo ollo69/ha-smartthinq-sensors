@@ -38,6 +38,9 @@ HVAC_MODE_LOOKUP = {
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
 }
 
+ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
+ATTR_SWING_VERTICAL = "swing_mode_vertical"
+
 SCAN_INTERVAL = timedelta(seconds=120)
 
 _LOGGER = logging.getLogger(__name__)
@@ -109,6 +112,9 @@ class LGEACClimate(LGEClimate):
         super().__init__(device)
         self._device = ac_device
         self._hvac_mode_lookup = None
+        self._support_ver_swing = len(self._device.vertical_swing_modes) > 0
+        self._support_hor_swing = len(self._device.horizontal_swing_modes) > 0
+        self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
 
     def _available_hvac_modes(self):
         if self._hvac_mode_lookup is None:
@@ -129,6 +135,17 @@ class LGEACClimate(LGEClimate):
     def name(self):
         """Return the display name of this entity."""
         return self._name
+
+    @property
+    def device_state_attributes(self):
+        """Return the optional state attributes with device specific additions."""
+        attr = {}
+        if self._support_hor_swing:
+            attr[ATTR_SWING_HORIZONTAL] = self._api.state.horizontal_swing_mode
+        if self._support_ver_swing:
+            attr[ATTR_SWING_VERTICAL] = self._api.state.vertical_swing_mode
+
+        return attr
 
     @property
     def target_temperature_step(self) -> float:
@@ -206,22 +223,41 @@ class LGEACClimate(LGEClimate):
     @property
     def swing_mode(self) -> str:
         """Return the swing mode setting."""
-        return self._api.state.vert_swing_mode
+        if self._set_hor_swing and self._support_hor_swing:
+            return self._api.state.horizontal_swing_mode
+        return self._api.state.vertical_swing_mode
 
     def set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing mode."""
-        self._device.set_vert_swing_mode(swing_mode)
+        set_hor_swing = False
+        if swing_mode in self._device.horizontal_swing_modes:
+            set_hor_swing = True
+            curr_mode = self._api.state.horizontal_swing_mode
+        elif swing_mode in self._device.vertical_swing_modes:
+            curr_mode = self._api.state.vertical_swing_mode
+        else:
+            raise ValueError(f"Invalid swing_mode [{swing_mode}].")
+
+        if curr_mode != swing_mode:
+            if set_hor_swing:
+                self._device.set_horizontal_swing_mode(swing_mode)
+            else:
+                self._device.set_vertical_swing_mode(swing_mode)
+        self._set_hor_swing = set_hor_swing
 
     @property
     def swing_modes(self):
         """Return the list of available swing modes."""
-        return self._device.vert_swing_modes
+        list_modes = list()
+        list_modes.append(self._device.vertical_swing_modes)
+        list_modes.append(self._device.horizontal_swing_modes)
+        return list_modes
 
     @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
         features = SUPPORT_FAN_MODE | SUPPORT_TARGET_TEMPERATURE
-        if len(self._device.vert_swing_modes) > 1:
+        if self._support_ver_swing or self._support_hor_swing:
             features |= SUPPORT_SWING_MODE
         return features
 

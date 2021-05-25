@@ -30,6 +30,8 @@ ATTR_ICON = "icon"
 ATTR_DEVICE_CLASS = "device_class"
 ATTR_VALUE_FEAT = "value_feat"
 ATTR_VALUE_FN = "value_fn"
+ATTR_TURN_OFF_FN = "turn_off_fn"
+ATTR_TURN_ON_FN = "turn_on_fn"
 ATTR_ENABLED = "enabled"
 
 # general sensor attributes
@@ -61,6 +63,7 @@ WASH_DEV_SWITCH = {
         # ATTR_ICON: DEFAULT_ICON,
         # ATTR_DEVICE_CLASS: None,
         ATTR_VALUE_FN: lambda x: x._power_on,
+        ATTR_TURN_OFF_FN: lambda x: x._api.device.power_off(),
         ATTR_ENABLED: True,
     },
 }
@@ -106,7 +109,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     lge_switch.extend(
         [
-            LGEWashDeviceSwitch(lge_device, measurement, definition)
+            LGESwitch(lge_device, measurement, definition)
             for measurement, definition in WASH_DEV_SWITCH.items()
             for lge_device in wash_devices
             if _feature_exist(lge_device, definition)
@@ -129,6 +132,24 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         self._name_slug = device.name
         self._measurement = measurement
         self._def = definition
+
+    @property
+    def should_poll(self) -> bool:
+        """Return True if entity has to be polled for state.
+
+        We overwrite coordinator property default setting because we need
+        to poll to avoid the effect that after changing a climate settings
+        it is immediately set to prev state. The async_update method here
+        do nothing because the real update is performed by coordinator.
+        """
+        return True
+
+    async def async_update(self) -> None:
+        """Update the entity.
+
+        This is a fake update, real update is done by coordinator.
+        """
+        return
 
     @property
     def entity_registry_enabled_default(self) -> bool:
@@ -177,7 +198,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._api.available
+        return self._api.available and self._power_on
 
     @property
     def assumed_state(self) -> bool:
@@ -194,23 +215,19 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         """Return the device info."""
         return self._api.device_info
 
-    @property
-    def should_poll(self) -> bool:
-        """Return True if entity has to be polled for state.
+    def turn_off(self):
+        """Turn the entity off."""
+        if ATTR_TURN_OFF_FN not in self._def:
+            raise NotImplementedError()
+        if self.is_on:
+            self._def[ATTR_TURN_OFF_FN](self)
 
-        We overwrite coordinator property default setting because we need
-        to poll to avoid the effect that after changing a climate settings
-        it is immediately set to prev state. The async_update method here
-        do nothing because the real update is performed by coordinator.
-        """
-        return True
-
-    async def async_update(self) -> None:
-        """Update the entity.
-
-        This is a fake update, real update is done by coordinator.
-        """
-        return
+    def turn_on(self):
+        """Turn the entity on."""
+        if ATTR_TURN_ON_FN not in self._def:
+            raise NotImplementedError()
+        if not self.is_on:
+            self._def[ATTR_TURN_ON_FN](self)
 
     @property
     def _power_on(self):
@@ -240,18 +257,3 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         for feature in features.values():
             ret_val[feature] = states.get(feature)
         return ret_val
-
-
-class LGEWashDeviceSwitch(LGESwitch):
-    """A switch to control LGE Wash devices"""
-
-    def turn_off(self):
-        """Turn the entity off."""
-        if self._measurement == ATTR_POWER_OFF:
-            if self._power_on:
-                self._api.device.power_off()
-
-    @property
-    def available(self) -> bool:
-        """Return True if entity is available."""
-        return self._api.available and self._power_on
