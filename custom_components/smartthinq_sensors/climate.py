@@ -249,8 +249,8 @@ class LGEACClimate(LGEClimate):
     def swing_modes(self):
         """Return the list of available swing modes."""
         list_modes = list()
-        list_modes.append(self._device.vertical_swing_modes)
-        list_modes.append(self._device.horizontal_swing_modes)
+        list_modes.extend(self._device.vertical_swing_modes)
+        list_modes.extend(self._device.horizontal_swing_modes)
         return list_modes
 
     @property
