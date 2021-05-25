@@ -112,14 +112,14 @@ class ACVSwingMode(enum.Enum):
     All is 100.
     """
 
-    VerticalOff = "@OFF"
-    VerticalTop = "@1"
-    VerticalMiddleTop1 = "@2"
-    VerticalMiddleTop2 = "@3"
-    VerticalMiddleBottom2 = "@4"
-    VerticalMiddleBottom1 = "@5"
-    VerticalBottom = "@6"
-    VerticalSwing = "@100"
+    Off = "@OFF"
+    Top = "@1"
+    MiddleTop1 = "@2"
+    MiddleTop2 = "@3"
+    MiddleBottom2 = "@4"
+    MiddleBottom1 = "@5"
+    Bottom = "@6"
+    Swing = "@100"
 
 
 class ACHSwingMode(enum.Enum):
@@ -131,15 +131,15 @@ class ACHSwingMode(enum.Enum):
     All is 100.
     """
 
-    HorizontalOff = "@OFF"
-    HorizontalLeft = "@1"
-    HorizontalMiddleLeft = "@2"
-    HorizontalCenter = "@3"
-    HorizontalMiddleRight = "@4"
-    HorizontalRight = "@5"
-    HorizontalLeftHalf = "@13"
-    HorizontalRightHalf = "@35"
-    HorizontalSwing = "@100"
+    Off = "@OFF"
+    Left = "@1"
+    MiddleLeft = "@2"
+    Center = "@3"
+    MiddleRight = "@4"
+    Right = "@5"
+    LeftHalf = "@13"
+    RightHalf = "@35"
+    Swing = "@100"
 
 
 class AirConditionerDevice(Device):

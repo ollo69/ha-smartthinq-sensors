@@ -40,6 +40,7 @@ HVAC_MODE_LOOKUP = {
 
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
 ATTR_SWING_VERTICAL = "swing_mode_vertical"
+SWING_PREFIX = ["Vertical", "Horizontal"]
 
 SCAN_INTERVAL = timedelta(seconds=120)
 
@@ -117,6 +118,7 @@ class LGEACClimate(LGEClimate):
         self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
 
     def _available_hvac_modes(self):
+        """Return available hvac modes from lookup dict."""
         if self._hvac_mode_lookup is None:
             modes = {}
             for key, mode in HVAC_MODE_LOOKUP.items():
@@ -125,6 +127,16 @@ class LGEACClimate(LGEClimate):
                     modes[mode] = key
             self._hvac_mode_lookup = {v: k for k, v in modes.items()}
         return self._hvac_mode_lookup
+
+    def _get_swing_mode(self, hor_mode=False):
+        """Return the current swing mode for vert of hor mode."""
+        if hor_mode:
+            mode = self._api.state.horizontal_swing_mode
+        else:
+            mode = self._api.state.vertical_swing_mode
+        if mode:
+            return f"{SWING_PREFIX[1 if hor_mode else 0]}{mode}"
+        return None
 
     @property
     def unique_id(self) -> str:
@@ -141,9 +153,9 @@ class LGEACClimate(LGEClimate):
         """Return the optional state attributes with device specific additions."""
         attr = {}
         if self._support_hor_swing:
-            attr[ATTR_SWING_HORIZONTAL] = self._api.state.horizontal_swing_mode
+            attr[ATTR_SWING_HORIZONTAL] = self._get_swing_mode(True)
         if self._support_ver_swing:
-            attr[ATTR_SWING_VERTICAL] = self._api.state.vertical_swing_mode
+            attr[ATTR_SWING_VERTICAL] = self._get_swing_mode(False)
 
         return attr
 
@@ -224,33 +236,44 @@ class LGEACClimate(LGEClimate):
     def swing_mode(self) -> str:
         """Return the swing mode setting."""
         if self._set_hor_swing and self._support_hor_swing:
-            return self._api.state.horizontal_swing_mode
-        return self._api.state.vertical_swing_mode
+            return self._get_swing_mode(True)
+        return self._get_swing_mode(False)
 
     def set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing mode."""
-        set_hor_swing = False
-        if swing_mode in self._device.horizontal_swing_modes:
-            set_hor_swing = True
-            curr_mode = self._api.state.horizontal_swing_mode
-        elif swing_mode in self._device.vertical_swing_modes:
-            curr_mode = self._api.state.vertical_swing_mode
-        else:
+        avl_mode = False
+        curr_mode = None
+        set_hor_swing = swing_mode.startswith(SWING_PREFIX[1])
+        dev_mode = swing_mode.removeprefix(
+            SWING_PREFIX[1 if set_hor_swing else 0]
+        )
+        if set_hor_swing:
+            if dev_mode in self._device.horizontal_swing_modes:
+                avl_mode = True
+                curr_mode = self._api.state.horizontal_swing_mode
+        elif swing_mode.startswith(SWING_PREFIX[0]):
+            if dev_mode in self._device.vertical_swing_modes:
+                avl_mode = True
+                curr_mode = self._api.state.vertical_swing_mode
+
+        if not avl_mode:
             raise ValueError(f"Invalid swing_mode [{swing_mode}].")
 
-        if curr_mode != swing_mode:
+        if curr_mode != dev_mode:
             if set_hor_swing:
-                self._device.set_horizontal_swing_mode(swing_mode)
+                self._device.set_horizontal_swing_mode(dev_mode)
             else:
-                self._device.set_vertical_swing_mode(swing_mode)
+                self._device.set_vertical_swing_mode(dev_mode)
         self._set_hor_swing = set_hor_swing
 
     @property
     def swing_modes(self):
         """Return the list of available swing modes."""
         list_modes = list()
-        list_modes.extend(self._device.vertical_swing_modes)
-        list_modes.extend(self._device.horizontal_swing_modes)
+        for mode in self._device.vertical_swing_modes:
+            list_modes.append(f"{SWING_PREFIX[0]}{mode}")
+        for mode in self._device.horizontal_swing_modes:
+            list_modes.append(f"{SWING_PREFIX[1]}{mode}")
         return list_modes
 
     @property
