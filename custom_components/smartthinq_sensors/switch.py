@@ -9,6 +9,7 @@ from .wideq.device import (
     STATE_OPTIONITEM_ON,
     DeviceType,
 )
+from .wideq import FEAT_ECOFRIENDLY
 
 from homeassistant.components.switch import (
     DOMAIN as SENSOR_DOMAIN,
@@ -25,7 +26,7 @@ from .const import DOMAIN, LGE_DEVICES
 from . import LGEDevice
 
 # switch definition
-ATTR_MEASUREMENT_NAME = "measurement_name"
+ATTR_SWITCH_NAME = "switch_name"
 ATTR_ICON = "icon"
 ATTR_DEVICE_CLASS = "device_class"
 ATTR_VALUE_FEAT = "value_feat"
@@ -59,11 +60,21 @@ DEVICE_ICONS = {
 
 WASH_DEV_SWITCH = {
     ATTR_POWER_OFF: {
-        ATTR_MEASUREMENT_NAME: "Power Off",
+        ATTR_SWITCH_NAME: "Power Off",
         # ATTR_ICON: DEFAULT_ICON,
         # ATTR_DEVICE_CLASS: None,
         ATTR_VALUE_FN: lambda x: x._power_on,
         ATTR_TURN_OFF_FN: lambda x: x._api.device.power_off(),
+        ATTR_ENABLED: True,
+    },
+}
+
+REFR_DEV_SWITCH = {
+    FEAT_ECOFRIENDLY: {
+        ATTR_SWITCH_NAME: "Eco Friendly",
+        ATTR_VALUE_FEAT: FEAT_ECOFRIENDLY,
+        ATTR_TURN_OFF_FN: lambda x: x._api.device.set_eco_friendly(False),
+        ATTR_TURN_ON_FN: lambda x: x._api.device.set_eco_friendly(True),
         ATTR_ENABLED: True,
     },
 }
@@ -85,8 +96,9 @@ def _feature_exist(lge_device, switch_def):
 
     if ATTR_VALUE_FEAT in switch_def:
         feature = switch_def[ATTR_VALUE_FEAT]
-        if feature in lge_device.available_features:
-            return True
+        for feat_name in lge_device.available_features.values():
+            if feat_name == feature:
+                return True
 
     return False
 
@@ -109,12 +121,22 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     lge_switch.extend(
         [
-            LGESwitch(lge_device, measurement, definition)
-            for measurement, definition in WASH_DEV_SWITCH.items()
+            LGESwitch(lge_device, def_id, definition)
+            for def_id, definition in WASH_DEV_SWITCH.items()
             for lge_device in wash_devices
             if _feature_exist(lge_device, definition)
         ]
     )
+
+    # add refrigerators
+    # lge_switch.extend(
+    #     [
+    #         LGESwitch(lge_device, def_id, definition)
+    #         for def_id, definition in REFR_DEV_SWITCH.items()
+    #         for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+    #         if _feature_exist(lge_device, definition)
+    #     ]
+    # )
 
     async_add_entities(lge_switch)
 
@@ -123,14 +145,14 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     def __init__(
             self,
             device: LGEDevice,
-            measurement,
+            def_id,
             definition,
     ):
         """Initialize the switch."""
         super().__init__(device.coordinator)
         self._api = device
         self._name_slug = device.name
-        self._measurement = measurement
+        self._def_id = def_id
         self._def = definition
 
     @property
@@ -159,13 +181,13 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        name = self._def[ATTR_MEASUREMENT_NAME]
+        name = self._def[ATTR_SWITCH_NAME]
         return f"{self._name_slug} {name}"
 
     @property
     def unique_id(self) -> str:
         """Return a unique ID."""
-        return f"{self._api.unique_id}-{self._measurement}-switch"
+        return f"{self._api.unique_id}-{self._def_id}-switch"
 
     @property
     def device_class(self):

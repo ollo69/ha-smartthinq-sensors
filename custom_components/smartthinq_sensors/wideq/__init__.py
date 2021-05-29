@@ -12,6 +12,9 @@ DATA_ROOT = "lgedmRoot"
 DEFAULT_COUNTRY = "US"
 DEFAULT_LANGUAGE = "en-US"
 
+# ac devices features
+FEAT_ENERGY_CURRENT = "energy_current"
+
 # wash devices features
 FEAT_RUN_STATE = "run_state"
 FEAT_PRE_STATE = "pre_state"

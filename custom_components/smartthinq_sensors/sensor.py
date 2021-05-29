@@ -10,6 +10,7 @@ from .wideq import (
     FEAT_DOOROPEN,
     FEAT_DRYLEVEL,
     FEAT_DUALZONE,
+    FEAT_ENERGY_CURRENT,
     FEAT_ERROR_MSG,
     FEAT_HALFLOAD,
     FEAT_PRE_STATE,
@@ -46,7 +47,9 @@ from homeassistant.components.binary_sensor import (
 )
 
 from homeassistant.const import (
+    DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
+    ENERGY_KILO_WATT_HOUR,
     STATE_ON,
     STATE_OFF,
     STATE_UNAVAILABLE,
@@ -299,7 +302,12 @@ AC_SENSORS = {
         ATTR_UNIT_FN: lambda x: x._temp_unit,
         ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
         ATTR_VALUE_FN: lambda x: x._curr_temp,
-        ATTR_ENABLED: False,
+    },
+    FEAT_ENERGY_CURRENT: {
+        ATTR_MEASUREMENT_NAME: "Energy Current",
+        ATTR_UNIT_FN: lambda x: ENERGY_KILO_WATT_HOUR,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_POWER,
+        ATTR_VALUE_FEAT: FEAT_ENERGY_CURRENT,
     },
 }
 
@@ -391,8 +399,9 @@ def _sensor_exist(lge_device, sensor_def):
 
     if ATTR_VALUE_FEAT in sensor_def:
         feature = sensor_def[ATTR_VALUE_FEAT]
-        if feature in lge_device.available_features:
-            return True
+        for feat_name in lge_device.available_features.values():
+            if feat_name == feature:
+                return True
 
     return False
 

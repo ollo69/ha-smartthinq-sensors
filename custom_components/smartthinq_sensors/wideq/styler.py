@@ -45,7 +45,8 @@ class StylerDevice(Device):
         if self._status:
             status_key = self._get_state_key(key)
             status_value = self.model_info.enum_value(status_key, value)
-            self._status.update_status(status_key, status_value)
+            if status_value:
+                self._status.update_status(status_key, status_value)
 
     def power_off(self):
         """Power off the device."""
@@ -112,9 +113,13 @@ class StylerStatus(DeviceStatus):
                 self._error = error
         return self._error
 
-    def update_status(self, key, value):
-        super().update_status(key, value)
+    def update_status(self, key, value, upd_features=False):
+        if not super().update_status(key, value):
+            return False
         self._run_state = None
+        if upd_features:
+            self._update_features()
+        return True
 
     @property
     def is_on(self):

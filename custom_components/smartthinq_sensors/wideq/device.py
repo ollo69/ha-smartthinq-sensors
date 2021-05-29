@@ -368,10 +368,12 @@ class ModelInfo(object):
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name.
         """
+        if not self.value_type(key):
+            return None
 
         options = self.value(key).options
         options_inv = {v: k for k, v in options.items()}  # Invert the map.
-        return options_inv[name]
+        return options_inv.get(name)
 
     def enum_name(self, key, value):
         """Look up the friendly enum name for an encoded value.
@@ -623,11 +625,11 @@ class ModelInfoV2(object):
         """
         data = self.data_root(key)
         if not data:
-            return str(name)
+            return None
 
         options = self.value(data)
-        options_inv = {v: k for k, v in options.items()}  # Invert the map.
-        return options_inv[name]
+        options_inv = {v["label"]: k for k, v in options.items() if v.get("label")}  # Invert the map.
+        return options_inv.get(name)
 
     def enum_name(self, key, value):
         """Look up the friendly enum name for an encoded value.
@@ -1120,7 +1122,10 @@ class DeviceStatus(object):
         return STATE_UNKNOWN.UNKNOWN
 
     def update_status(self, key, value):
-        self._data[key] = value
+        if key in self._data:
+            self._data[key] = value
+            return True
+        return False
 
     def lookup_enum(self, key, data_is_num=False):
         curr_key = self._get_data_key(key)

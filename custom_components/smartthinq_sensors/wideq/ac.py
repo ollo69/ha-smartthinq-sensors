@@ -10,6 +10,7 @@ from .device import (
     Device,
     DeviceStatus,
 )
+from . import FEAT_ENERGY_CURRENT
 
 PROPERTY_TARGET_TEMPERATURE = "target_temperature"
 PROPERTY_OPERATION_MODE = "operation_mode"
@@ -53,6 +54,9 @@ CMD_STATE_WDIR_VSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSTEP]
 
 DEFAULT_MIN_TEMP = 16
 DEFAULT_MAX_TEMP = 30
+
+TEMP_STEP_WHOLE = 1.0
+TEMP_STEP_HALF = 0.5
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -156,6 +160,7 @@ class AirConditionerDevice(Device):
         self._supported_horizontal_swings = None
         self._supported_vertical_swings = None
         self._temperature_range = None
+        self._temperature_step = TEMP_STEP_WHOLE
 
         self._f2c_map = None
         self._c2f_map = None
@@ -185,7 +190,7 @@ class AirConditionerDevice(Device):
         are not in the other.
         """
         if self._temperature_unit == UNIT_TEMP_CELSIUS:
-            return value
+            return float(value)
 
         if self._c2f_map is None:
             mapping = self.model_info.value("TempCelToFah").options
@@ -198,6 +203,14 @@ class AirConditionerDevice(Device):
                 out[c_num] = f
             self._c2f_map = out
         return self._c2f_map.get(value, value)
+
+    def _adjust_temperature_step(self, target_temp):
+        if self._temperature_step != TEMP_STEP_WHOLE:
+            return
+        if target_temp is None:
+            return
+        if int(target_temp) != target_temp:
+            self._temperature_step = TEMP_STEP_HALF
 
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
@@ -311,7 +324,7 @@ class AirConditionerDevice(Device):
 
     @property
     def target_temperature_step(self):
-        return 1
+        return self._temperature_step
 
     @property
     def target_temperature_min(self):
@@ -399,6 +412,8 @@ class AirConditionerDevice(Device):
             return None
 
         self._status = AirConditionerStatus(self, res)
+        if self._temperature_step == TEMP_STEP_WHOLE:
+            self._adjust_temperature_step(self._status.target_temp)
         return self._status
 
 
@@ -419,12 +434,13 @@ class AirConditionerStatus(DeviceStatus):
         f = float(s)
         if f == int(f):
             return int(f)
-        else:
-            return f
+        return f
 
     def _str_to_temp(self, s):
         """Convert a string to either an `int` or a `float` temperature."""
         temp = self._str_to_num(s)
+        if temp is None:
+            return None
         return self._device.conv_temp_unit(temp)
 
     def _get_state_key(self, key_name):
@@ -495,5 +511,16 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(AC_STATE_TARGET_TEMP)
         return self._str_to_temp(self._data.get(key))
 
+    @property
+    def energy_current(self):
+        value = None
+        if self.is_info_v2:
+            value = self._data.get("airState.energy.onCurrent")
+        return self._update_feature(
+            FEAT_ENERGY_CURRENT, value, False
+        )
+
     def _update_features(self):
-        return
+        result = [
+            self.energy_current
+        ]
