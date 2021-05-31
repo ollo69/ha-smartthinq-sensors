@@ -32,6 +32,8 @@ STATE_DRYER_ERROR_NO_ERROR = [
     "No_Error",
 ]
 
+WM_CTRL = "WMControl"
+
 POWER_STATUS_KEY = ["State", "state"]
 CMD_POWER_OFF = [["Control", "WMOff"], ["Power", None],  ["Off", None]]
 
@@ -54,7 +56,7 @@ class DryerDevice(Device):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
         if not keys[1]:
-            ctr_key = self.model_info.get_control_cmd(keys[0])
+            ctr_key = self.model_info.get_control_cmd(keys[0], WM_CTRL)
         else:
             ctr_key = keys[0]
         if ctr_key:

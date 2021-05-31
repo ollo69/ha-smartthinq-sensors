@@ -698,13 +698,13 @@ class ModelInfoV2(object):
 
         return data.get("targetKey", {}).get(target, {}).get(value)
 
-    def get_control_cmd(self, cmd_key):
+    def get_control_cmd(self, cmd_key, ctrl_key=None):
         """Get the payload used to send the command."""
         control = None
         if "ControlWifi" in self._data:
             control = self._data["ControlWifi"].get(cmd_key)
             if control:
-                control["ctrlKey"] = cmd_key
+                control["ctrlKey"] = ctrl_key or cmd_key
                 if "data" in control:
                     control["dataSetList"] = control.pop("data")
         return control

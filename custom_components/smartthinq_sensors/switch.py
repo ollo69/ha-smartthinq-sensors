@@ -82,7 +82,7 @@ REFR_DEV_SWITCH = {
 WASH_DEVICE_TYPES = [
     # DeviceType.DISHWASHER,
     DeviceType.DRYER,
-    DeviceType.STYLER,
+    # DeviceType.STYLER,
     DeviceType.TOWER_DRYER,
     DeviceType.TOWER_WASHER,
     DeviceType.WASHER,
@@ -268,14 +268,3 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
                 return self._api.state.device_features.get(feature)
 
         return None
-
-    def _get_features_value(self):
-        ret_val = {}
-        if self._api.state:
-            states = self._api.state.device_features
-        else:
-            states = {}
-        features = self._api.available_features
-        for feature in features.values():
-            ret_val[feature] = states.get(feature)
-        return ret_val

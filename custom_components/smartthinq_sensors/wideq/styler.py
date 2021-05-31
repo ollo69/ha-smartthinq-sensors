@@ -30,9 +30,6 @@ STATE_STYLER_ERROR_NO_ERROR = [
     "No_Error",
 ]
 
-POWER_STATUS_KEY = ["State", "state"]
-CMD_POWER_OFF = [["Control", "offPower"], ["Power", None],  ["Off", None]]
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -40,24 +37,6 @@ class StylerDevice(Device):
     """A higher-level interface for a styler."""
     def __init__(self, client, device):
         super().__init__(client, device, StylerStatus(self, None))
-
-    def _update_status(self, key, value):
-        if self._status:
-            status_key = self._get_state_key(key)
-            status_value = self.model_info.enum_value(status_key, value)
-            if status_value:
-                self._status.update_status(status_key, status_value)
-
-    def power_off(self):
-        """Power off the device."""
-        keys = self._get_cmd_keys(CMD_POWER_OFF)
-        if not keys[1]:
-            ctr_key = self.model_info.get_control_cmd(keys[0])
-        else:
-            ctr_key = keys[0]
-        if ctr_key:
-            self.set(ctr_key, keys[1], value=keys[2])
-            self._update_status(POWER_STATUS_KEY, STATE_STYLER_POWER_OFF)
 
     def reset_status(self):
         self._status = StylerStatus(self, None)
