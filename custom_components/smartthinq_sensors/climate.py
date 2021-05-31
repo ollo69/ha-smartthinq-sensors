@@ -1,7 +1,8 @@
 """Platform for LGE climate integration."""
 import logging
-
 from datetime import timedelta
+
+from .wideq import FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
 from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
 
@@ -113,8 +114,8 @@ class LGEACClimate(LGEClimate):
         super().__init__(device)
         self._device = ac_device
         self._hvac_mode_lookup = None
-        self._support_ver_swing = len(self._device.vertical_swing_modes) > 0
-        self._support_hor_swing = len(self._device.horizontal_swing_modes) > 0
+        self._support_ver_swing = len(self._device.vertical_step_modes) > 0
+        self._support_hor_swing = len(self._device.horizontal_step_modes) > 0
         self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
 
     def _available_hvac_modes(self):
@@ -131,9 +132,9 @@ class LGEACClimate(LGEClimate):
     def _get_swing_mode(self, hor_mode=False):
         """Return the current swing mode for vert of hor mode."""
         if hor_mode:
-            mode = self._api.state.horizontal_swing_mode
+            mode = self._api.state.horizontal_step_mode
         else:
-            mode = self._api.state.vertical_swing_mode
+            mode = self._api.state.vertical_step_mode
         if mode:
             return f"{SWING_PREFIX[1 if hor_mode else 0]}{mode}"
         return None
@@ -205,7 +206,12 @@ class LGEACClimate(LGEClimate):
     @property
     def current_temperature(self) -> float:
         """Return the current temperature."""
-        return self._api.state.current_temp
+        curr_temp = None
+        if self._device.is_air_to_water:
+            curr_temp = self._api.state.device_features.get(FEAT_OUT_WATER_TEMP)
+        if curr_temp is None:
+            curr_temp = self._api.state.current_temp
+        return curr_temp
 
     @property
     def target_temperature(self) -> float:
@@ -248,38 +254,40 @@ class LGEACClimate(LGEClimate):
             SWING_PREFIX[1 if set_hor_swing else 0]
         )
         if set_hor_swing:
-            if dev_mode in self._device.horizontal_swing_modes:
+            if dev_mode in self._device.horizontal_step_modes:
                 avl_mode = True
-                curr_mode = self._api.state.horizontal_swing_mode
+                curr_mode = self._api.state.horizontal_step_mode
         elif swing_mode.startswith(SWING_PREFIX[0]):
-            if dev_mode in self._device.vertical_swing_modes:
+            if dev_mode in self._device.vertical_step_modes:
                 avl_mode = True
-                curr_mode = self._api.state.vertical_swing_mode
+                curr_mode = self._api.state.vertical_step_mode
 
         if not avl_mode:
             raise ValueError(f"Invalid swing_mode [{swing_mode}].")
 
         if curr_mode != dev_mode:
             if set_hor_swing:
-                self._device.set_horizontal_swing_mode(dev_mode)
+                self._device.set_horizontal_step_mode(dev_mode)
             else:
-                self._device.set_vertical_swing_mode(dev_mode)
+                self._device.set_vertical_step_mode(dev_mode)
         self._set_hor_swing = set_hor_swing
 
     @property
     def swing_modes(self):
         """Return the list of available swing modes."""
         list_modes = list()
-        for mode in self._device.vertical_swing_modes:
+        for mode in self._device.vertical_step_modes:
             list_modes.append(f"{SWING_PREFIX[0]}{mode}")
-        for mode in self._device.horizontal_swing_modes:
+        for mode in self._device.horizontal_step_modes:
             list_modes.append(f"{SWING_PREFIX[1]}{mode}")
         return list_modes
 
     @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
-        features = SUPPORT_FAN_MODE | SUPPORT_TARGET_TEMPERATURE
+        features = SUPPORT_TARGET_TEMPERATURE
+        if len(self._device.fan_speeds) > 0:
+            features |= SUPPORT_FAN_MODE
         if self._support_ver_swing or self._support_hor_swing:
             features |= SUPPORT_SWING_MODE
         return features
