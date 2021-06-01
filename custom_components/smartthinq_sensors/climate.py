@@ -48,6 +48,13 @@ SCAN_INTERVAL = timedelta(seconds=120)
 _LOGGER = logging.getLogger(__name__)
 
 
+def remove_prefix(text: str, prefix: str) -> str:
+    """Remove a prefix from a string."""
+    if text.startswith(prefix):
+        return text[len(prefix):]
+    return text
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ):
@@ -250,8 +257,8 @@ class LGEACClimate(LGEClimate):
         avl_mode = False
         curr_mode = None
         set_hor_swing = swing_mode.startswith(SWING_PREFIX[1])
-        dev_mode = swing_mode.removeprefix(
-            SWING_PREFIX[1 if set_hor_swing else 0]
+        dev_mode = remove_prefix(
+            swing_mode, SWING_PREFIX[1 if set_hor_swing else 0]
         )
         if set_hor_swing:
             if dev_mode in self._device.horizontal_step_modes:
