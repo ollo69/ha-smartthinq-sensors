@@ -41,10 +41,8 @@ STATE_WASHER_ERROR_NO_ERROR = [
     "No_Error",
 ]
 
-WM_CTRL = "WMControl"
-
 POWER_STATUS_KEY = ["State", "state"]
-CMD_POWER_OFF = [["Control", "WMOff"], ["Power", None],  ["Off", None]]
+CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,16 +59,20 @@ class WasherDevice(Device):
             if status_value:
                 self._status.update_status(status_key, status_value)
 
+    def _prepare_command(self, ctrl_key, command, key, value):
+        """Prepare command for specific device."""
+        cmd = self.model_info.get_control_cmd(command, ctrl_key)
+        if not cmd:
+            return None
+        if "data" in cmd:
+            cmd["dataSetList"] = cmd.pop("data")
+        return cmd
+
     def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
-        if not keys[1]:
-            ctr_key = self.model_info.get_control_cmd(keys[0], WM_CTRL)
-        else:
-            ctr_key = keys[0]
-        if ctr_key:
-            self.set(ctr_key, keys[1], value=keys[2])
-            self._update_status(POWER_STATUS_KEY, STATE_WASHER_POWER_OFF)
+        self.set(keys[0], keys[1], value=keys[2])
+        self._update_status(POWER_STATUS_KEY, STATE_WASHER_POWER_OFF)
 
     def reset_status(self):
         self._status = WasherStatus(self, None)

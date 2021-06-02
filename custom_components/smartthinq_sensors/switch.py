@@ -129,14 +129,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
 
     # add refrigerators
-    # lge_switch.extend(
-    #     [
-    #         LGESwitch(lge_device, def_id, definition)
-    #         for def_id, definition in REFR_DEV_SWITCH.items()
-    #         for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
-    #         if _feature_exist(lge_device, definition)
-    #     ]
-    # )
+    lge_switch.extend(
+        [
+            LGESwitch(lge_device, def_id, definition)
+            for def_id, definition in REFR_DEV_SWITCH.items()
+            for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+            if _feature_exist(lge_device, definition)
+        ]
+    )
 
     async_add_entities(lge_switch)
 

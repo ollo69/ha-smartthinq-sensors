@@ -559,17 +559,27 @@ class Session(object):
 
         `values` is a key/value map containing the settings to update.
         """
-        return self.post(
-            "rti/rtiControl",
-            {
+        res = {}
+        payload = None
+        if isinstance(ctrl_key, dict):
+            payload = ctrl_key
+        elif command is not None:
+            payload = {
                 "cmd": ctrl_key,
                 "cmdOpt": command,
                 "value": value,
                 "data": data,
+            }
+
+        if payload:
+            payload.update({
                 "deviceId": device_id,
                 "workId": gen_uuid(),
-            },
-        )
+            })
+            res = self.post("rti/rtiControl", payload)
+            _LOGGER.debug("Set V1 result: %s", str(res))
+
+        return res
 
     def set_device_v2_controls(self, device_id, ctrl_key, command=None, key=None, value=None):
         """Control a device's settings based on api V2."""
@@ -589,6 +599,8 @@ class Session(object):
 
         if payload:
             res = self.post2(path, payload)
+            _LOGGER.debug("Set V2 result: %s", str(res))
+
         return res
 
     def get_device_config(self, device_id, key, category="Config"):

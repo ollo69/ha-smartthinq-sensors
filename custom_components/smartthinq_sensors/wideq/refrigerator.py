@@ -42,10 +42,11 @@ REFRTEMPUNIT = {
 #     "\u02daC": UNITTEMPMODES.Celsius,
 # }
 
+REFR_ROOT_DATA = "refState"
 REFR_CTRL_BASIC = ["Control", "basicCtrl"]
 
 REFR_STATE_ECO_FRIENDLY = ["EcoFriendly", "ecoFriendly"]
-CMD_STATE_ECO_FRIENDLY = [REFR_CTRL_BASIC, "Set", ["REEF", "ecoFriendly"]]
+CMD_STATE_ECO_FRIENDLY = [REFR_CTRL_BASIC, ["Set", "basicCtrl"], ["REEF", "ecoFriendly"]]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,6 +83,26 @@ class RefrigeratorDevice(Device):
             return def_value
         return FEATURE_DESCR.get(title_value, def_value)
 
+    def _prepare_command(self, ctrl_key, command, key, value):
+        """Prepare command for specific device."""
+        cmd = self.model_info.get_control_cmd(command, ctrl_key)
+        if not cmd:
+            return None
+
+        data_set = cmd.pop("data", None)
+        if not data_set:
+            return None
+
+        for cmd_key, cmd_value in data_set[REFR_ROOT_DATA].items():
+            if cmd_key == key:
+                replace_item = value
+            else:
+                replace_item = "IGNORE"
+            data_set[REFR_ROOT_DATA][cmd_key] = replace_item
+        cmd["dataSetList"] = data_set
+
+        return cmd
+
     def set_eco_friendly(self, turn_on=False):
         """Switch the echo friendly status."""
 
@@ -101,7 +122,7 @@ class RefrigeratorDevice(Device):
     def poll(self) -> Optional["RefrigeratorStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("refState")
+        res = self.device_poll(REFR_ROOT_DATA)
         if not res:
             return None
 

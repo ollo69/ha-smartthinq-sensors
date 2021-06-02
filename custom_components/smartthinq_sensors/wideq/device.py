@@ -478,7 +478,7 @@ class ModelInfo(object):
             return reference[value].get("label")
         return None
 
-    def get_control_cmd(self, cmd_key):
+    def get_control_cmd(self, cmd_key, ctrl_key=None):
         """Get the payload used to send the command."""
         return None
 
@@ -702,11 +702,11 @@ class ModelInfoV2(object):
         """Get the payload used to send the command."""
         control = None
         if "ControlWifi" in self._data:
-            control = self._data["ControlWifi"].get(cmd_key)
-            if control:
-                control["ctrlKey"] = ctrl_key or cmd_key
-                if "data" in control:
-                    control["dataSetList"] = control.pop("data")
+            control_data = self._data["ControlWifi"].get(cmd_key)
+            if control_data:
+                control = control_data.copy()  # we copy so that we can manipulate
+                if ctrl_key:
+                    control["ctrlKey"] = ctrl_key
         return control
 
     @property
@@ -890,10 +890,28 @@ class Device(object):
             value=value,
         )
 
+    def _prepare_command(self, ctrl_key, command, key, value):
+        """Prepare command for specific device.
+        Overwrite for specific device settings.
+        """
+        return None
+
     def set(self, ctrl_key, command, *, key=None, value=None, data=None):
         """Set a device's control for `key` to `value`."""
-        _LOGGER.debug("Setting new state: %s - %s - %s - %s", ctrl_key, command, key, value)
-        self._set_control(ctrl_key, command, key=key, value=value, data=data)
+        full_key = self._prepare_command(ctrl_key, command, key, value)
+        if full_key:
+            _LOGGER.debug(
+                "Setting new state for device %s: %s",
+                self._device_info.id, str(full_key),
+            )
+            self._set_control(full_key, None)
+        else:
+            _LOGGER.debug(
+                "Setting new state for device %s:  %s - %s - %s - %s",
+                self._device_info.id,
+                ctrl_key, command, key, value,
+            )
+            self._set_control(ctrl_key, command, key=key, value=value, data=data)
 
     def _get_config(self, key):
         """Look up a device's configuration for a given value.
