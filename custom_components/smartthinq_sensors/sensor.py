@@ -647,7 +647,7 @@ class LGESensor(CoordinatorEntity):
 
         return None
 
-    def _get_features_value(self):
+    def _get_features_attributes(self):
         ret_val = {}
         if self._api.state:
             states = self._api.state.device_features
@@ -681,7 +681,7 @@ class LGEWashDeviceSensor(LGESensor):
             ATTR_RESERVE_TIME: self._reserve_time,
             ATTR_CURRENT_COURSE: self._current_course,
         }
-        features = self._get_features_value()
+        features = self._get_features_attributes()
         data.update(features)
 
         return data
@@ -760,7 +760,7 @@ class LGERefrigeratorSensor(LGESensor):
         }
 
         if self._api.state:
-            features = self._get_features_value()
+            features = self._get_features_attributes()
             data.update(features)
 
         return data
@@ -825,7 +825,7 @@ class LGERangeSensor(LGESensor):
             ATTR_OVEN_UPPER_TARGET_TEMP: self._oven_upper_target_temp,
             ATTR_OVEN_TEMP_UNIT: self._oven_temp_unit,
         }
-        features = self._get_features_value()
+        features = self._get_features_attributes()
         data.update(features)
 
         return data

@@ -329,6 +329,9 @@ class ModelInfo(object):
         else:
             return None
 
+    def value_exist(self, name):
+        return name in self._data["Value"]
+
     def value(self, name):
         """Look up information about a value.
         
@@ -565,6 +568,9 @@ class ModelInfoV2(object):
 
     def value_type(self, name):
         return None
+
+    def value_exist(self, name):
+        return name in self._data["MonitoringValue"]
 
     def data_root(self, name):
         if name in self._data["MonitoringValue"]:
@@ -1144,6 +1150,14 @@ class DeviceStatus(object):
             self._data[key] = value
             return True
         return False
+
+    def key_exist(self, keys):
+        if isinstance(keys, list):
+            for key in keys:
+                if self._device.model_info.value_exist(key):
+                    return True
+            return False
+        return self._device.model_info.value_exist(keys)
 
     def lookup_enum(self, key, data_is_num=False):
         curr_key = self._get_data_key(key)

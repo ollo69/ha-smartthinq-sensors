@@ -1,11 +1,10 @@
 
 from .ac import AirConditionerDevice
 from .dishwasher import DishWasherDevice
-from .dryer import DryerDevice
 from .range import RangeDevice
 from .refrigerator import RefrigeratorDevice
 from .styler import StylerDevice
-from .washer import WasherDevice
+from .washerDryer import WMDevice
 
 from .device import(
     UNIT_TEMP_CELSIUS,
@@ -14,6 +13,13 @@ from .device import(
     NetworkType,
     PlatformType,
 )
+
+WM_DEVICES = [
+    DeviceType.DRYER,
+    DeviceType.TOWER_DRYER,
+    DeviceType.TOWER_WASHER,
+    DeviceType.WASHER,
+]
 
 
 def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
@@ -32,15 +38,13 @@ def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
         return AirConditionerDevice(client, device, temp_unit)
     if device_type == DeviceType.DISHWASHER:
         return DishWasherDevice(client, device)
-    if device_type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
-        return DryerDevice(client, device)
     if device_type == DeviceType.RANGE:
         return RangeDevice(client, device)
     if device_type == DeviceType.REFRIGERATOR:
         return RefrigeratorDevice(client, device)
     if device_type == DeviceType.STYLER:
         return StylerDevice(client, device)
-    if device_type in [DeviceType.WASHER, DeviceType.TOWER_WASHER]:
-        return WasherDevice(client, device)
+    if device_type in WM_DEVICES:
+        return WMDevice(client, device)
 
     return None

@@ -1,15 +1,11 @@
 # LG ThinQ Devices integration for HomeAssistant
-A Homeassistant custom component to monitor LG Washer, Dryer, DishWasher and Refrigerators using ThinQ API
-based on [WideQ project][wideq].<br/>
+A Homeassistant custom component to monitor LG Air Conditioner, Washer, Dryer, DishWasher, Refrigerator, Styler and Range 
+using ThinQ API based on [WideQ project][wideq].<br/>
 
 **Important Version note:** 
 1. From version 0.3.x component name changed from `smartthinq_washer` to `smartthinq_sensors`
 If you are upgrading to version 0.3.x from previous version, you must **remove component configuration and uninstall component**
 from Home Assistant before upgrade.<br/>
-
-2. From version 0.5.x devices state labels are loaded from "language pack" and shown in the language related to your account.
-This change should solve all case of "unknown state" warning, due to the big change some sensors may not work as expected.
-Please open issue with all possible detail to help me to fix possible new issues introduced.
 
 **Important**: The component will **not work if you have logged into the ThinQ application and registered your devices using a social network account** (google, facebook or amazon). In order to use the component you need to create a new independent LG account and make sure you log into the ThinQ app and associate your devices with it.
 If during configuration you receive the message "No SmartThinQ devices found", probably your devices are still associated with the social network account. To solve the problem perform the following step:
