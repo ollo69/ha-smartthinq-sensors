@@ -7,6 +7,7 @@ from datetime import timedelta
 from .wideq.device import (
     STATE_OPTIONITEM_OFF,
     STATE_OPTIONITEM_ON,
+    WM_DEVICE_TYPES,
     DeviceType,
 )
 from .wideq import FEAT_ECOFRIENDLY
@@ -79,15 +80,6 @@ REFR_DEV_SWITCH = {
     },
 }
 
-WASH_DEVICE_TYPES = [
-    # DeviceType.DISHWASHER,
-    DeviceType.DRYER,
-    # DeviceType.STYLER,
-    DeviceType.TOWER_DRYER,
-    DeviceType.TOWER_WASHER,
-    DeviceType.WASHER,
-]
-
 
 def _feature_exist(lge_device, switch_def):
     """Check if a switch exist for device."""
@@ -116,7 +108,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # add wash devices
     wash_devices = []
     for dev_type, devices in lge_devices.items():
-        if dev_type in WASH_DEVICE_TYPES:
+        if dev_type in WM_DEVICE_TYPES:
             wash_devices.extend(devices)
 
     lge_switch.extend(

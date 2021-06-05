@@ -40,6 +40,7 @@ from .wideq.device import (
     STATE_OPTIONITEM_ON,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
+    WM_DEVICE_TYPES,
     DeviceType,
 )
 
@@ -52,7 +53,7 @@ from homeassistant.components.binary_sensor import (
 from homeassistant.const import (
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
-    ENERGY_KILO_WATT_HOUR,
+    POWER_WATT,
     STATE_ON,
     STATE_OFF,
     STATE_UNAVAILABLE,
@@ -60,10 +61,14 @@ from homeassistant.const import (
     TEMP_FAHRENHEIT,
 )
 from homeassistant.core import callback
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LGE_DEVICES
 from . import LGEDevice
+
+# service definition
+SERVICE_REMOTE_START = "remote_start"
 
 # sensor definition
 ATTR_MEASUREMENT_NAME = "measurement_name"
@@ -326,7 +331,7 @@ AC_SENSORS = {
     },
     FEAT_ENERGY_CURRENT: {
         ATTR_MEASUREMENT_NAME: "Energy Current",
-        ATTR_UNIT_FN: lambda x: ENERGY_KILO_WATT_HOUR,
+        ATTR_UNIT_FN: lambda x: POWER_WATT,
         ATTR_DEVICE_CLASS: DEVICE_CLASS_POWER,
         ATTR_VALUE_FEAT: FEAT_ENERGY_CURRENT,
     },
@@ -391,6 +396,7 @@ RANGE_SENSORS = {
         ATTR_ENABLED: True,
     },
 }
+
 RANGE_BINARY_SENSORS = {
     ATTR_COOKTOP_STATE: {
         ATTR_MEASUREMENT_NAME: "Cooktop",
@@ -403,13 +409,9 @@ RANGE_BINARY_SENSORS = {
     },
 }
 
-WASH_DEVICE_TYPES = [
+WASH_DEVICE_TYPES = WM_DEVICE_TYPES + [
     DeviceType.DISHWASHER,
-    DeviceType.DRYER,
     DeviceType.STYLER,
-    DeviceType.TOWER_DRYER,
-    DeviceType.TOWER_WASHER,
-    DeviceType.WASHER,
 ]
 
 
@@ -496,6 +498,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the LGE sensors."""
     _LOGGER.info("Starting LGE ThinQ sensors...")
     setup_sensors(hass, config_entry, async_add_entities, False)
+
+    # register services
+    platform = entity_platform.current_platform.get()
+    platform.async_register_entity_service(
+        SERVICE_REMOTE_START,
+        None,
+        "async_remote_start",
+    )
 
 
 class LGESensor(CoordinatorEntity):
@@ -657,6 +667,12 @@ class LGESensor(CoordinatorEntity):
         for feature in features.values():
             ret_val[feature] = states.get(feature)
         return ret_val
+
+    async def async_remote_start(self):
+        """Call the remote start command for WM devices."""
+        if self._api.type not in WM_DEVICE_TYPES:
+            raise NotImplementedError()
+        await self.hass.async_add_executor_job(self._api.device.remote_start)
 
 
 class LGEWashDeviceSensor(LGESensor):

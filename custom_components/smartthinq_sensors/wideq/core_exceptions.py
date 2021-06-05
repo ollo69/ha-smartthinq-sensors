@@ -65,3 +65,7 @@ class MonitorError(APIError):
     def __init__(self, device_id, code):
         self.device_id = device_id
         self.code = code
+
+
+class InvalidDeviceStatus(Exception):
+    """Device exception occurred when status of device is not valid."""

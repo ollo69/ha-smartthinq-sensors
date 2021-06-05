@@ -85,6 +85,9 @@ class RefrigeratorDevice(Device):
 
     def _prepare_command(self, ctrl_key, command, key, value):
         """Prepare command for specific device."""
+        if not self.model_info.is_info_v2:
+            return None
+
         cmd = self.model_info.get_control_cmd(command, ctrl_key)
         if not cmd:
             return None

@@ -17,6 +17,9 @@ from . import (
     FEAT_OUT_WATER_TEMP,
 )
 
+from .core_exceptions import InvalidRequestError
+
+
 LABEL_VANE_HSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_LEFT_RIGHT_W"
 LABEL_VANE_VSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_UP_DOWN_W"
 LABEL_VANE_HSWING = "@AC_MAIN_WIND_DIRECTION_SWING_LEFT_RIGHT_W"
@@ -34,9 +37,9 @@ SUPPORT_AC_RAC_SUBMODE = ["SupportRACSubMode", "support.racSubMode"]
 AC_STATE_OPERATION = ["Operation", "airState.operation"]
 AC_STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
 AC_STATE_CURRENT_TEMP = ["TempCur", "airState.tempState.current"]
-AC_STATE_HOT_WATER_TEMP = ["TempHotWaterCur", "airState.tempState.hotWaterCurrent"]
-AC_STATE_IN_WATER_TEMP = ["TempInWaterCur", "airState.tempState.inWaterCurrent"]
-AC_STATE_OUT_WATER_TEMP = ["TempOutWaterCur", "airState.tempState.outWaterCurrent"]
+AC_STATE_HOT_WATER_TEMP = ["HotWaterTempCur", "airState.tempState.hotWaterCurrent"]
+AC_STATE_IN_WATER_TEMP = ["WaterInTempCur", "airState.tempState.inWaterCurrent"]
+AC_STATE_OUT_WATER_TEMP = ["WaterTempCur", "airState.tempState.outWaterCurrent"]
 AC_STATE_TARGET_TEMP = ["TempCfg", "airState.tempState.target"]
 AC_STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
 AC_STATE_WDIR_HSTEP = ["WDirHStep", "airState.wDir.hStep"]
@@ -53,6 +56,7 @@ CMD_STATE_WDIR_VSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSTEP]
 CMD_STATE_WDIR_HSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSWING]
 
+AC_STATE_POWER_V1 = "InOutInstantPower"
 # AC_STATE_CURRENT_HUMIDITY_V2 = "airState.humidity.current"
 # AC_STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
 # AC_STATE_AIRCLEAN_MODE_V2 = "airState.wMode.airClean"
@@ -66,6 +70,8 @@ MAX_AWHP_TEMP = 80
 
 TEMP_STEP_WHOLE = 1.0
 TEMP_STEP_HALF = 0.5
+
+ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -180,6 +186,9 @@ class AirConditionerDevice(Device):
         self._supported_vertical_swings = None
         self._temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
+
+        self._current_power = 0
+        self._current_power_supported = True
 
         self._f2c_map = None
         self._c2f_map = None
@@ -496,6 +505,19 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
         self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
 
+    def get_power(self):
+        """Get the instant power usage in watts of the whole unit"""
+        if not self._current_power_supported:
+            return 0
+
+        try:
+            value = self._get_config(AC_STATE_POWER_V1)
+            return value[AC_STATE_POWER_V1]
+        except (ValueError, InvalidRequestError):
+            # Device does not support whole unit instant power usage
+            self._current_power_supported = False
+            return 0
+
     def set(self, ctrl_key, command, *, key=None, value=None, data=None):
         """Set a device's control for `key` to `value`."""
         super().set(ctrl_key, command, key=key, value=value, data=data)
@@ -506,12 +528,22 @@ class AirConditionerDevice(Device):
         self._status = AirConditionerStatus(self, None)
         return self._status
 
+    def _get_device_info(self):
+        """Call additional method to get device information.
+
+        Called by 'device_poll' method using a lower poll rate
+        """
+        if not self.is_air_to_water:
+            self._current_power = self.get_power()
+
     def poll(self) -> Optional["AirConditionerStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll()
+        res = self.device_poll(additional_poll_interval=ADD_FEAT_POLL_INTERVAL)
         if not res:
             return None
+        if self._should_poll and not self.is_air_to_water:
+            res[AC_STATE_POWER_V1] = self._current_power
 
         self._status = AirConditionerStatus(self, res)
         if self._temperature_step == TEMP_STEP_WHOLE:
@@ -541,7 +573,7 @@ class AirConditionerStatus(DeviceStatus):
     def _str_to_temp(self, s):
         """Convert a string to either an `int` or a `float` temperature."""
         temp = self._str_to_num(s)
-        if temp is None:
+        if not temp:  # value 0 return None!!!
             return None
         return self._device.conv_temp_unit(temp)
 
@@ -661,9 +693,11 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def energy_current(self):
-        if not self.is_info_v2:
-            return None
-        value = self._data.get("airState.energy.onCurrent")
+        if self.is_info_v2:
+            key = "airState.energy.onCurrent"
+        else:
+            key = AC_STATE_POWER_V1
+        value = self._data.get(key)
         return self._update_feature(
             FEAT_ENERGY_CURRENT, value, False
         )

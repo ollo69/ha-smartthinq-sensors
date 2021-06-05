@@ -1,4 +1,5 @@
 """------------------for Washer and Dryer"""
+import base64
 import logging
 from typing import Optional
 
@@ -28,7 +29,10 @@ from .device import (
     Device,
     DeviceStatus,
     STATE_OPTIONITEM_NONE,
+    STATE_OPTIONITEM_ON,
 )
+
+from .core_exceptions import InvalidDeviceStatus
 
 STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
 STATE_WM_END = [
@@ -43,8 +47,12 @@ STATE_WM_ERROR_NO_ERROR = [
     "No_Error",
 ]
 
+WM_ROOT_DATA = "washerDryer"
+
 POWER_STATUS_KEY = ["State", "state"]
+
 CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
+CMD_REMOTE_START = [["Control", "WMStart"], ["OperationStart", "WMStart"], ["Start", "WMStart"]]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,20 +69,86 @@ class WMDevice(Device):
             if status_value:
                 self._status.update_status(status_key, status_value)
 
+    def _prepare_command_v1(self, cmd, key, value):
+        """Prepare command for specific ThinQ1 device."""
+        if "data" in cmd:
+            str_data = cmd["data"]
+            status_data = self._status.data
+            for dt_key, dt_value in status_data.items():
+                # for start command we set initial bit to 1, assuming that
+                # is the 1st bit of Option2. This probably should be reviewed
+                # to use right address from model_info
+                if key and key == "Start" and dt_key == "Option2":
+                    dt_value = str(int(dt_value) | 1)
+                str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
+            encode = cmd.pop("encode", False)
+            if encode:
+                str_data = base64.b64encode(str.encode(str_data)).decode("utf-8")
+            cmd["data"] = str_data
+        return cmd
+
+    def _prepare_command_v2(self, cmd, key, value):
+        """Prepare command for specific ThinQ2 device."""
+        data_set = cmd.pop("data", None)
+        if not data_set:
+            return cmd
+
+        if key and key == "WMStart":
+            status_data = self._status.data
+            cmd_data_set = {}
+
+            for cmd_key, cmd_value in data_set[WM_ROOT_DATA].items():
+                if cmd_key in ["course", "Course", "ApCourse"]:
+                    course_key = self.model_info.config_value("courseType")
+                    course_type = self._status.lookup_reference(course_key, ref_key="courseType")
+                    if course_type:
+                        cmd_data_set[course_key] = status_data.get(course_key)
+                        cmd_data_set["courseType"] = course_type
+                    else:
+                        cmd_data_set[course_key] = "NOT_SELECTED"
+                elif cmd_key == "SmartCourse":
+                    course_key = self.model_info.config_value("smartCourseType")
+                    course_type = self._status.lookup_reference(course_key, ref_key="courseType")
+                    if course_type:
+                        cmd_data_set[course_key] = status_data.get(course_key)
+                        cmd_data_set["courseType"] = course_type
+                    else:
+                        cmd_data_set[course_key] = "NOT_SELECTED"
+                elif cmd_key == "initialBit":
+                    cmd_data_set[cmd_key] = "INITIAL_BIT_ON"
+                else:
+                    cmd_data_set[cmd_key] = status_data.get(cmd_key, cmd_value)
+            data_set[WM_ROOT_DATA] = cmd_data_set
+
+        cmd["dataSetList"] = data_set
+
+        return cmd
+
     def _prepare_command(self, ctrl_key, command, key, value):
         """Prepare command for specific device."""
         cmd = self.model_info.get_control_cmd(command, ctrl_key)
         if not cmd:
             return None
-        if "data" in cmd:
-            cmd["dataSetList"] = cmd.pop("data")
-        return cmd
+
+        if self.model_info.is_info_v2:
+            return self._prepare_command_v2(cmd, key, value)
+        return self._prepare_command_v1(cmd, key, value)
 
     def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
         self.set(keys[0], keys[1], value=keys[2])
         self._update_status(POWER_STATUS_KEY, STATE_WM_POWER_OFF)
+
+    def remote_start(self):
+        """Remote start the device."""
+        if not self._status:
+            raise InvalidDeviceStatus()
+        if self._status.remotestart_state != STATE_OPTIONITEM_ON:
+            raise InvalidDeviceStatus()
+
+        keys = self._get_cmd_keys(CMD_REMOTE_START)
+        self.set(keys[0], keys[1], key=keys[2])
 
     def reset_status(self):
         self._status = WMStatus(self, None)
@@ -83,7 +157,7 @@ class WMDevice(Device):
     def poll(self) -> Optional["WMStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("washerDryer")
+        res = self.device_poll(WM_ROOT_DATA)
         if not res:
             return None
 
@@ -165,9 +239,7 @@ class WMStatus(DeviceStatus):
     @property
     def current_course(self):
         if self.is_info_v2:
-            course_key = self._device.model_info.config_value(
-                "courseType"
-            )
+            course_key = self._device.model_info.config_value("courseType")
         else:
             course_key = ["APCourse", "Course"]
         course = self.lookup_reference(course_key, ref_key="name")
@@ -176,9 +248,7 @@ class WMStatus(DeviceStatus):
     @property
     def current_smartcourse(self):
         if self.is_info_v2:
-            course_key = self._device.model_info.config_value(
-                "smartCourseType"
-            )
+            course_key = self._device.model_info.config_value("smartCourseType")
         else:
             course_key = "SmartCourse"
         smart_course = self.lookup_reference(course_key, ref_key="name")

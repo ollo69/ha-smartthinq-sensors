@@ -8,18 +8,12 @@ from .washerDryer import WMDevice
 
 from .device import(
     UNIT_TEMP_CELSIUS,
+    WM_DEVICE_TYPES,
     DeviceInfo,
     DeviceType,
     NetworkType,
     PlatformType,
 )
-
-WM_DEVICES = [
-    DeviceType.DRYER,
-    DeviceType.TOWER_DRYER,
-    DeviceType.TOWER_WASHER,
-    DeviceType.WASHER,
-]
 
 
 def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
@@ -44,7 +38,7 @@ def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
         return RefrigeratorDevice(client, device)
     if device_type == DeviceType.STYLER:
         return StylerDevice(client, device)
-    if device_type in WM_DEVICES:
+    if device_type in WM_DEVICE_TYPES:
         return WMDevice(client, device)
 
     return None

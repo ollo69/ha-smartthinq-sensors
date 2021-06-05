@@ -112,6 +112,13 @@ class NetworkType(enum.Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
+WM_DEVICE_TYPES = [
+    DeviceType.DRYER,
+    DeviceType.TOWER_DRYER,
+    DeviceType.TOWER_WASHER,
+    DeviceType.WASHER,
+]
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -483,7 +490,14 @@ class ModelInfo(object):
 
     def get_control_cmd(self, cmd_key, ctrl_key=None):
         """Get the payload used to send the command."""
-        return None
+        control = None
+        if "ControlWifi" in self._data:
+            control_data = self._data["ControlWifi"].get("action", {}).get(cmd_key)
+            if control_data:
+                control = control_data.copy()  # we copy so that we can manipulate
+                if ctrl_key:
+                    control["cmd"] = ctrl_key
+        return control
 
     @property
     def binary_monitor_data(self):
@@ -500,7 +514,7 @@ class ModelInfo(object):
         for item in self._data["Monitoring"]["protocol"]:
             key = item["value"]
             value = 0
-            for v in data[item["startByte"] : item["startByte"] + item["length"]]:
+            for v in data[item["startByte"]: item["startByte"] + item["length"]]:
                 value = (value << 8) + v
             decoded[key] = str(value)
         return decoded
@@ -816,6 +830,7 @@ class Device(object):
         self._mon = None
         self._control_set = 0
         self._last_dev_query = datetime.now()
+        self._last_additional_poll = datetime.now()
         self._available_features = available_features or {}
 
         # for logging unknown states received
@@ -924,14 +939,16 @@ class Device(object):
             
         The response is parsed as base64-encoded JSON.
         """
-
+        if not self._should_poll:
+            return
         data = self._client.session.get_device_config(self._device_info.id, key,)
         return json.loads(base64.b64decode(data).decode("utf8"))
 
     def _get_control(self, key):
         """Look up a device's control value.
             """
-
+        if not self._should_poll:
+            return
         data = self._client.session.get_device_config(
             self._device_info.id, key, "Control",
         )
@@ -1029,7 +1046,25 @@ class Device(object):
             self._client.session.delete_permission(self._device_info.id)
         self._control_set -= 1
 
-    def device_poll(self, snapshot_key="", *, device_update=False):
+    def _get_device_info(self):
+        """Call additional method to get device information.
+
+        Override in specific device to call requested methods
+        """
+        return
+
+    def _additional_poll(self, poll_interval: int):
+        """Perform dedicated additional device poll with a slower rate."""
+
+        if poll_interval <= 0:
+            return
+        call_time = datetime.now()
+        difference = (call_time - self._last_additional_poll).total_seconds()
+        if difference >= poll_interval:
+            self._last_additional_poll = datetime.now()
+            self._get_device_info()
+
+    def device_poll(self, snapshot_key="", *, device_update=False, additional_poll_interval=0):
         """Poll the device's current state.
         
         Monitoring must be started first with `monitor_start`. Return
@@ -1055,6 +1090,7 @@ class Device(object):
                 return None
 
             self._delete_permission()
+            self._additional_poll(additional_poll_interval)
             data = self._mon.poll()
             if not data:
                 return None
@@ -1110,6 +1146,10 @@ class DeviceStatus(object):
     @property
     def has_data(self):
         return True if self._data else False
+
+    @property
+    def data(self):
+        return self._data
 
     @property
     def is_on(self) -> bool:
