@@ -1,5 +1,6 @@
 """------------------for Washer and Dryer"""
 import base64
+import json
 import logging
 from typing import Optional
 
@@ -81,9 +82,11 @@ class WMDevice(Device):
                 if key and key == "Start" and dt_key == "Option2":
                     dt_value = str(int(dt_value) | 1)
                 str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
+            _LOGGER.debug("Command data content: %s", str_data)
             encode = cmd.pop("encode", False)
             if encode:
-                str_data = base64.b64encode(str.encode(str_data)).decode("utf-8")
+                str_list = json.loads(str_data)
+                str_data = base64.b64encode(bytes(str_list)).decode("utf-8")
             cmd["data"] = str_data
         return cmd
 
