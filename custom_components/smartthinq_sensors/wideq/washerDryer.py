@@ -29,6 +29,7 @@ from . import (
 from .device import (
     Device,
     DeviceStatus,
+    DeviceType,
     STATE_OPTIONITEM_NONE,
     STATE_OPTIONITEM_ON,
 )
@@ -98,25 +99,25 @@ class WMDevice(Device):
 
         if key and key == "WMStart":
             status_data = self._status.data
+            n_course_key = self.model_info.config_value("courseType")
+            s_course_key = self.model_info.config_value("smartCourseType")
             cmd_data_set = {}
 
             for cmd_key, cmd_value in data_set[WM_ROOT_DATA].items():
-                if cmd_key in ["course", "Course", "ApCourse"]:
-                    course_key = self.model_info.config_value("courseType")
-                    course_type = self._status.lookup_reference(course_key, ref_key="courseType")
+                if cmd_key in ["course", "Course", "ApCourse", n_course_key]:
+                    course_type = self._status.lookup_reference(n_course_key, ref_key="courseType")
                     if course_type:
-                        cmd_data_set[course_key] = status_data.get(course_key)
+                        cmd_data_set[n_course_key] = status_data.get(n_course_key)
                         cmd_data_set["courseType"] = course_type
                     else:
-                        cmd_data_set[course_key] = "NOT_SELECTED"
-                elif cmd_key == "SmartCourse":
-                    course_key = self.model_info.config_value("smartCourseType")
-                    course_type = self._status.lookup_reference(course_key, ref_key="courseType")
+                        cmd_data_set[n_course_key] = "NOT_SELECTED"
+                elif cmd_key in ["smartCourse", "SmartCourse", s_course_key]:
+                    course_type = self._status.lookup_reference(s_course_key, ref_key="courseType")
                     if course_type:
-                        cmd_data_set[course_key] = status_data.get(course_key)
+                        cmd_data_set[s_course_key] = status_data.get(s_course_key)
                         cmd_data_set["courseType"] = course_type
                     else:
-                        cmd_data_set[course_key] = "NOT_SELECTED"
+                        cmd_data_set[s_course_key] = "NOT_SELECTED"
                 elif cmd_key == "initialBit":
                     cmd_data_set[cmd_key] = "INITIAL_BIT_ON"
                 else:
@@ -219,6 +220,12 @@ class WMStatus(DeviceStatus):
     def is_on(self):
         run_state = self._get_run_state()
         return run_state != STATE_WM_POWER_OFF
+
+    @property
+    def is_dryer(self):
+        if self._device.device_info.type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
+            return True
+        return False
 
     @property
     def is_run_completed(self):
@@ -336,6 +343,8 @@ class WMStatus(DeviceStatus):
     def water_temp_option_state(self):
         if not self.key_exist(["WTemp", "WaterTemp", "temp"]):
             return None
+        if self.key_exist("temp") and self.is_dryer:
+            return None
         water_temp = self.lookup_enum(["WTemp", "WaterTemp", "temp"])
         if not water_temp:
             water_temp = STATE_OPTIONITEM_NONE
@@ -356,9 +365,11 @@ class WMStatus(DeviceStatus):
 
     @property
     def temp_control_option_state(self):
-        if not self.key_exist(["TempControl", "tempControl"]):
+        if not self.key_exist(["TempControl", "tempControl", "temp"]):
             return None
-        temp_control = self.lookup_enum(["TempControl", "tempControl"])
+        if self.key_exist("temp") and not self.is_dryer:
+            return None
+        temp_control = self.lookup_enum(["TempControl", "tempControl", "temp"])
         if not temp_control:
             temp_control = STATE_OPTIONITEM_NONE
         return self._update_feature(

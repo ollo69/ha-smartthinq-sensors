@@ -1090,11 +1090,14 @@ class Device(object):
                 return None
 
             self._delete_permission()
-            self._additional_poll(additional_poll_interval)
             data = self._mon.poll()
             if not data:
                 return None
             res = self._model_info.decode_monitor(data)
+            try:
+                self._additional_poll(additional_poll_interval)
+            except Exception as exc:
+                _LOGGER.warning("Error calling additional poll methods. Error %s", exc)
 
         """
             with open('/config/wideq/washer_polled_data.json','w', encoding="utf-8") as dumpfile:
