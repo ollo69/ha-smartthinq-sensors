@@ -488,6 +488,12 @@ class ModelInfo(object):
             return reference[value].get("label")
         return None
 
+    @property
+    def binary_control_data(self):
+        """Check that type of control is BINARY(BYTE).
+        """
+        return self._data["ControlWifi"]["type"] == "BINARY(BYTE)"
+
     def get_control_cmd(self, cmd_key, ctrl_key=None):
         """Get the payload used to send the command."""
         control = None
@@ -503,7 +509,6 @@ class ModelInfo(object):
     def binary_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE).
         """
-
         return self._data["Monitoring"]["type"] == "BINARY(BYTE)"
 
     def decode_monitor_binary(self, data):
@@ -718,6 +723,12 @@ class ModelInfoV2(object):
 
         return data.get("targetKey", {}).get(target, {}).get(value)
 
+    @property
+    def binary_control_data(self):
+        """Check that type of control is BINARY(BYTE).
+        """
+        return False
+
     def get_control_cmd(self, cmd_key, ctrl_key=None):
         """Get the payload used to send the command."""
         control = None
@@ -733,7 +744,6 @@ class ModelInfoV2(object):
     def binary_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE).
         """
-
         return False
 
     def decode_monitor_binary(self, data):

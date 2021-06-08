@@ -1,4 +1,6 @@
 """------------------for Refrigerator"""
+import base64
+import json
 import logging
 from typing import Optional
 
@@ -46,7 +48,7 @@ REFR_ROOT_DATA = "refState"
 REFR_CTRL_BASIC = ["Control", "basicCtrl"]
 
 REFR_STATE_ECO_FRIENDLY = ["EcoFriendly", "ecoFriendly"]
-CMD_STATE_ECO_FRIENDLY = [REFR_CTRL_BASIC, ["Set", "basicCtrl"], ["REEF", "ecoFriendly"]]
+CMD_STATE_ECO_FRIENDLY = [REFR_CTRL_BASIC, ["SetControl", "basicCtrl"], REFR_STATE_ECO_FRIENDLY]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -83,15 +85,29 @@ class RefrigeratorDevice(Device):
             return def_value
         return FEATURE_DESCR.get(title_value, def_value)
 
-    def _prepare_command(self, ctrl_key, command, key, value):
-        """Prepare command for specific device."""
-        if not self.model_info.is_info_v2:
-            return None
+    def _prepare_command_v1(self, cmd, key, value):
+        """Prepare command for specific ThinQ1 device."""
+        data_key = "value"
+        if cmd.get(data_key, "") == "ControlData":
+            data_key = "data"
+        str_data = cmd.get(data_key)
 
-        cmd = self.model_info.get_control_cmd(command, ctrl_key)
-        if not cmd:
-            return None
+        if str_data:
+            status_data = self._status.data
+            for dt_key, dt_value in status_data.items():
+                if dt_key == key:
+                    dt_value = value
+                str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
+            _LOGGER.debug("Command data content: %s", str_data)
+            if self.model_info.binary_control_data:
+                cmd["format"] = "B64"
+                str_list = json.loads(str_data)
+                str_data = base64.b64encode(bytes(str_list)).decode("ascii")
+            cmd[data_key] = str_data
+        return cmd
 
+    def _prepare_command_v2(self, cmd, key, value):
+        """Prepare command for specific ThinQ2 device."""
         data_set = cmd.pop("data", None)
         if not data_set:
             return None
@@ -105,6 +121,16 @@ class RefrigeratorDevice(Device):
         cmd["dataSetList"] = data_set
 
         return cmd
+
+    def _prepare_command(self, ctrl_key, command, key, value):
+        """Prepare command for specific device."""
+        cmd = self.model_info.get_control_cmd(command, ctrl_key)
+        if not cmd:
+            return None
+
+        if self.model_info.is_info_v2:
+            return self._prepare_command_v2(cmd, key, value)
+        return self._prepare_command_v1(cmd, key, value)
 
     def set_eco_friendly(self, turn_on=False):
         """Switch the echo friendly status."""
