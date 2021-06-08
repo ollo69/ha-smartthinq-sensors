@@ -11,3 +11,17 @@ remote_start:
         entity:
           integration: smartthinq_sensors
           domain: sensor
+
+wake_up:
+  name: WakeUp
+  description: Send to ThinQ device the wakeup command.
+  fields:
+    entity_id:
+      name: Entity Name
+      description: Name of the target entity
+      required: true
+      example: "sensor.washer"
+      selector:
+        entity:
+          integration: smartthinq_sensors
+          domain: sensor

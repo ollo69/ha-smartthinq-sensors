@@ -69,6 +69,7 @@ from . import LGEDevice
 
 # service definition
 SERVICE_REMOTE_START = "remote_start"
+SERVICE_WAKE_UP = "wake_up"
 
 # sensor definition
 ATTR_MEASUREMENT_NAME = "measurement_name"
@@ -506,6 +507,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         None,
         "async_remote_start",
     )
+    platform.async_register_entity_service(
+        SERVICE_WAKE_UP,
+        None,
+        "async_wake_up",
+    )
 
 
 class LGESensor(CoordinatorEntity):
@@ -673,6 +679,12 @@ class LGESensor(CoordinatorEntity):
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
         await self.hass.async_add_executor_job(self._api.device.remote_start)
+
+    async def async_wake_up(self):
+        """Call the wakeup command for WM devices."""
+        if self._api.type not in WM_DEVICE_TYPES:
+            raise NotImplementedError()
+        await self.hass.async_add_executor_job(self._api.device.wake_up)
 
 
 class LGEWashDeviceSensor(LGESensor):

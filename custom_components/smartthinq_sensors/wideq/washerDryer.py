@@ -54,6 +54,7 @@ WM_ROOT_DATA = "washerDryer"
 POWER_STATUS_KEY = ["State", "state"]
 
 CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
+CMD_WAKE_UP = [["Control", "WMControl"], ["Operation", "WMWakeup"], ["WakeUp", None]]
 CMD_REMOTE_START = [["Control", "WMStart"], ["OperationStart", "WMStart"], ["Start", "WMStart"]]
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ class WMDevice(Device):
     """A higher-level interface for washer and dryer."""
     def __init__(self, client, device):
         super().__init__(client, device, WMStatus(self, None))
+        self._remote_start_status = None
 
     def _update_status(self, key, value):
         if self._status:
@@ -75,7 +77,7 @@ class WMDevice(Device):
         """Prepare command for specific ThinQ1 device."""
         if "data" in cmd:
             str_data = cmd["data"]
-            status_data = self._status.data
+            status_data = self._remote_start_status
             for dt_key, dt_value in status_data.items():
                 # for start command we set initial bit to 1, assuming that
                 # is the 1st bit of Option2. This probably should be reviewed
@@ -86,8 +88,9 @@ class WMDevice(Device):
             _LOGGER.debug("Command data content: %s", str_data)
             encode = cmd.pop("encode", False)
             if encode:
+                cmd["format"] = "B64"
                 str_list = json.loads(str_data)
-                str_data = base64.b64encode(bytes(str_list)).decode("utf-8")
+                str_data = base64.b64encode(bytes(str_list)).decode("ascii")
             cmd["data"] = str_data
         return cmd
 
@@ -98,23 +101,29 @@ class WMDevice(Device):
             return cmd
 
         if key and key == "WMStart":
-            status_data = self._status.data
+            status_data = self._remote_start_status
             n_course_key = self.model_info.config_value("courseType")
             s_course_key = self.model_info.config_value("smartCourseType")
             cmd_data_set = {}
 
             for cmd_key, cmd_value in data_set[WM_ROOT_DATA].items():
                 if cmd_key in ["course", "Course", "ApCourse", n_course_key]:
-                    course_type = self._status.lookup_reference(n_course_key, ref_key="courseType")
+                    course_data = status_data.get(n_course_key, "NOT_SELECTED")
+                    course_type = self.model_info.reference_name(
+                        n_course_key, course_data, ref_key="courseType"
+                    )
                     if course_type:
-                        cmd_data_set[n_course_key] = status_data.get(n_course_key)
+                        cmd_data_set[n_course_key] = course_data
                         cmd_data_set["courseType"] = course_type
                     else:
                         cmd_data_set[n_course_key] = "NOT_SELECTED"
                 elif cmd_key in ["smartCourse", "SmartCourse", s_course_key]:
-                    course_type = self._status.lookup_reference(s_course_key, ref_key="courseType")
+                    course_data = status_data.get(s_course_key, "NOT_SELECTED")
+                    course_type = self.model_info.reference_name(
+                        s_course_key, course_data, ref_key="courseType"
+                    )
                     if course_type:
-                        cmd_data_set[s_course_key] = status_data.get(s_course_key)
+                        cmd_data_set[s_course_key] = course_data
                         cmd_data_set["courseType"] = course_type
                     else:
                         cmd_data_set[s_course_key] = "NOT_SELECTED"
@@ -144,11 +153,14 @@ class WMDevice(Device):
         self.set(keys[0], keys[1], value=keys[2])
         self._update_status(POWER_STATUS_KEY, STATE_WM_POWER_OFF)
 
+    def wake_up(self):
+        """Wakeup the device."""
+        keys = self._get_cmd_keys(CMD_WAKE_UP)
+        self.set(keys[0], keys[1], value=keys[2])
+
     def remote_start(self):
         """Remote start the device."""
-        if not self._status:
-            raise InvalidDeviceStatus()
-        if self._status.remotestart_state != STATE_OPTIONITEM_ON:
+        if not self._remote_start_status:
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
@@ -158,6 +170,15 @@ class WMDevice(Device):
         self._status = WMStatus(self, None)
         return self._status
 
+    def _set_remote_start_opt(self, res):
+
+        remote_enabled = self._status.remotestart_state == STATE_OPTIONITEM_ON
+        if not self._remote_start_status:
+            if remote_enabled:
+                self._remote_start_status = res
+        elif not remote_enabled:
+            self._remote_start_status = None
+
     def poll(self) -> Optional["WMStatus"]:
         """Poll the device's current state."""
 
@@ -165,6 +186,7 @@ class WMDevice(Device):
         if not res:
             return None
 
+        self._set_remote_start_opt(res)
         self._status = WMStatus(self, res)
         return self._status
 
