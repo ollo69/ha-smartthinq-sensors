@@ -54,7 +54,7 @@ WM_ROOT_DATA = "washerDryer"
 POWER_STATUS_KEY = ["State", "state"]
 
 CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
-CMD_WAKE_UP = [["Control", "WMControl"], ["Operation", "WMWakeup"], ["WakeUp", None]]
+CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
 CMD_REMOTE_START = [["Control", "WMStart"], ["OperationStart", "WMStart"], ["Start", "WMStart"]]
 
 _LOGGER = logging.getLogger(__name__)
@@ -73,11 +73,52 @@ class WMDevice(Device):
             if status_value:
                 self._status.update_status(status_key, status_value)
 
+    def _get_course_info(self, course_key, course_id):
+        """Get definition for a specific course ID."""
+        if course_key is None:
+            return None
+        if self.model_info.is_info_v2:
+            return self.model_info.data_root(course_key).get(course_id)
+        return self.model_info.value(course_key).reference.get(course_id)
+
+    def _update_course_info(self, data, course_id=None):
+        """Save information in the data payload for a specific course
+        or default course if not already available.
+        """
+        ret_data = data.copy()
+        if self.model_info.is_info_v2:
+            n_course_key = self.model_info.config_value("courseType")
+            s_course_key = self.model_info.config_value("smartCourseType")
+            def_course_id = self.model_info.config_value("defaultCourse")
+        else:
+            n_course_key = "APCourse" if self.model_info.value_exist("APCourse") else "Course"
+            s_course_key = "SmartCourse"
+            def_course_id = str(self.model_info.config_value("defaultCourseId"))
+        if course_id is None:
+            # check if course is defined in data payload
+            for course_key in [n_course_key, s_course_key]:
+                course_id = str(data.get(course_key))
+                if self._get_course_info(course_key, course_id):
+                    return ret_data
+            course_id = def_course_id
+
+        # save information for specific or default course
+        course_info = self._get_course_info(n_course_key, course_id)
+        if course_info:
+            ret_data[n_course_key] = course_id
+            for func_key in course_info["function"]:
+                key = func_key.get("value")
+                data = func_key.get("default")
+                if key and data:
+                    ret_data[key] = data
+
+        return ret_data
+
     def _prepare_command_v1(self, cmd, key, value):
         """Prepare command for specific ThinQ1 device."""
         if "data" in cmd:
             str_data = cmd["data"]
-            status_data = self._remote_start_status
+            status_data = self._update_course_info(self._remote_start_status)
             for dt_key, dt_value in status_data.items():
                 # for start command we set initial bit to 1, assuming that
                 # is the 1st bit of Option2. This probably should be reviewed
@@ -101,7 +142,7 @@ class WMDevice(Device):
             return cmd
 
         if key and key == "WMStart":
-            status_data = self._remote_start_status
+            status_data = self._update_course_info(self._remote_start_status)
             n_course_key = self.model_info.config_value("courseType")
             s_course_key = self.model_info.config_value("smartCourseType")
             cmd_data_set = {}
@@ -186,8 +227,8 @@ class WMDevice(Device):
         if not res:
             return None
 
-        self._set_remote_start_opt(res)
         self._status = WMStatus(self, res)
+        self._set_remote_start_opt(res)
         return self._status
 
 

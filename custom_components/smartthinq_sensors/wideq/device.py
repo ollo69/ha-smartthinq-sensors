@@ -593,12 +593,11 @@ class ModelInfoV2(object):
 
     def data_root(self, name):
         if name in self._data["MonitoringValue"]:
-            if self._data["MonitoringValue"][name].get("dataType"):
+            if "dataType" in self._data["MonitoringValue"][name]:
                 return self._data["MonitoringValue"][name]
-            else:
-                ref = self._data["MonitoringValue"][name].get("ref")
-                if ref:
-                    return self._data.get(ref)
+            ref = self._data["MonitoringValue"][name].get("ref")
+            if ref:
+                return self._data.get(ref)
 
         return None
 
