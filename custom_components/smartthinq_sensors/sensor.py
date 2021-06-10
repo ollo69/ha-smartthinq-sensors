@@ -20,6 +20,7 @@ from .wideq import (
     FEAT_PROCESS_STATE,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
+    FEAT_STANDBY,
     FEAT_REMOTESTART,
     FEAT_RINSEREFILL,
     FEAT_SALTREFILL,
@@ -231,6 +232,10 @@ WASH_DEV_BINARY_SENSORS = {
         ATTR_DEVICE_CLASS: DEVICE_CLASS_PROBLEM,
         ATTR_VALUE_FN: lambda x: x._error_state,
         ATTR_ENABLED: True,
+    },
+    FEAT_STANDBY: {
+        ATTR_MEASUREMENT_NAME: "Standby",
+        ATTR_VALUE_FEAT: FEAT_STANDBY,
     },
     FEAT_CHILDLOCK: {
         ATTR_MEASUREMENT_NAME: "Child Lock",

@@ -17,6 +17,7 @@ from . import (
     FEAT_REMOTESTART,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
+    FEAT_STANDBY,
     FEAT_STEAM,
     FEAT_STEAMSOFTENER,
     FEAT_TEMPCONTROL,
@@ -31,6 +32,7 @@ from .device import (
     DeviceStatus,
     DeviceType,
     STATE_OPTIONITEM_NONE,
+    STATE_OPTIONITEM_OFF,
     STATE_OPTIONITEM_ON,
 )
 
@@ -249,7 +251,7 @@ class WMStatus(DeviceStatus):
 
     def _get_run_state(self):
         if not self._run_state:
-            state = self.lookup_enum(["State", "state"])
+            state = self.lookup_enum(POWER_STATUS_KEY)
             if not state:
                 self._run_state = STATE_WM_POWER_OFF
             else:
@@ -469,6 +471,26 @@ class WMStatus(DeviceStatus):
         )
 
     @property
+    def standby_state(self):
+        if not self.key_exist(["Standby", "standby"]):
+            return None
+        status = self.lookup_enum(["Standby", "standby"])
+        if not status:
+            status = STATE_OPTIONITEM_OFF
+        return self._update_feature(
+            FEAT_STANDBY, status
+        )
+
+    @property
+    def remotestart_state(self):
+        status = self.lookup_bit(
+            REMOTE_START_KEY[1] if self.is_info_v2 else REMOTE_START_KEY[0]
+        )
+        return self._update_feature(
+            FEAT_REMOTESTART, status, False
+        )
+
+    @property
     def doorlock_state(self):
         status = self.lookup_bit(
             "doorLock" if self.is_info_v2 else "DoorLock"
@@ -493,15 +515,6 @@ class WMStatus(DeviceStatus):
         )
         return self._update_feature(
             FEAT_CHILDLOCK, status, False
-        )
-
-    @property
-    def remotestart_state(self):
-        status = self.lookup_bit(
-            "remoteStart" if self.is_info_v2 else "RemoteStart"
-        )
-        return self._update_feature(
-            FEAT_REMOTESTART, status, False
         )
 
     @property
@@ -569,10 +582,11 @@ class WMStatus(DeviceStatus):
             self.temp_control_option_state,
             # self.time_dry_option_state,
             self.tubclean_count,
+            self.standby_state,
+            self.remotestart_state,
             self.doorlock_state,
             self.doorclose_state,
             self.childlock_state,
-            self.remotestart_state,
             self.creasecare_state,
             self.steam_state,
             self.steam_softener_state,

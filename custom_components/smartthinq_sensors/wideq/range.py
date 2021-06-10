@@ -26,6 +26,8 @@ from .device import (
 OVEN_TEMP_UNIT = {
     "0": UNITTEMPMODES.Fahrenheit,
     "1": UNITTEMPMODES.Celsius,
+    "FAHRENHEIT": UNITTEMPMODES.Fahrenheit,
+    "CELSIUS": UNITTEMPMODES.Celsius,
 }
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
@@ -178,7 +180,7 @@ class RangeStatus(DeviceStatus):
 
     @property
     def oven_lower_target_temp(self):
-        unit = self._get_oven_temp_unit()
+        unit = self.oven_temp_unit
         if unit == UNIT_TEMP_FAHRENHEIT:
             key = "LowerTargetTemp_F"
         elif unit == UNIT_TEMP_CELSIUS:
@@ -189,7 +191,7 @@ class RangeStatus(DeviceStatus):
 
     @property
     def oven_upper_target_temp(self):
-        unit = self._get_oven_temp_unit()
+        unit = self.oven_temp_unit
         if unit == UNIT_TEMP_FAHRENHEIT:
             key = "UpperTargetTemp_F"
         elif unit == UNIT_TEMP_CELSIUS:
