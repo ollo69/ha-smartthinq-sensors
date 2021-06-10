@@ -52,6 +52,7 @@ STATE_WM_ERROR_NO_ERROR = [
 WM_ROOT_DATA = "washerDryer"
 
 POWER_STATUS_KEY = ["State", "state"]
+REMOTE_START_KEY = ["RemoteStart", "remoteStart"]
 
 CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
 CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
@@ -212,8 +213,10 @@ class WMDevice(Device):
         return self._status
 
     def _set_remote_start_opt(self, res):
+        """Save the status to use for remote start."""
 
-        remote_enabled = self._status.remotestart_state == STATE_OPTIONITEM_ON
+        status_key = self._get_state_key(REMOTE_START_KEY)
+        remote_enabled = self._status.lookup_bit(status_key) == STATE_OPTIONITEM_ON
         if not self._remote_start_status:
             if remote_enabled:
                 self._remote_start_status = res
