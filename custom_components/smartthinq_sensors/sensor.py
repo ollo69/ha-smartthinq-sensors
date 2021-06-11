@@ -32,7 +32,9 @@ from .wideq import (
     FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
+    FEAT_OVEN_LOWER_CURRENT_TEMP,
     FEAT_OVEN_LOWER_STATE,
+    FEAT_OVEN_UPPER_CURRENT_TEMP,
     FEAT_OVEN_UPPER_STATE,
 )
 
@@ -147,6 +149,12 @@ WASH_DEV_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._power_state,
         ATTR_ENABLED: True,
     },
+    ATTR_CURRENT_COURSE: {
+        ATTR_MEASUREMENT_NAME: "Current Course",
+        ATTR_ICON: "mdi:pin-outline",
+        ATTR_VALUE_FN: lambda x: x._current_course,
+        ATTR_ENABLED: True,
+    },
     FEAT_RUN_STATE: {
         ATTR_MEASUREMENT_NAME: "Run State",
         ATTR_ICON: DEFAULT_ICON,
@@ -159,50 +167,50 @@ WASH_DEV_SENSORS = {
         ATTR_VALUE_FEAT: FEAT_PROCESS_STATE,
         ATTR_ENABLED: True,
     },
-    FEAT_PRE_STATE: {
-        ATTR_MEASUREMENT_NAME: "Pre State",
-        ATTR_ICON: DEFAULT_ICON,
-        ATTR_VALUE_FEAT: FEAT_PRE_STATE,
+    FEAT_SPINSPEED: {
+        ATTR_MEASUREMENT_NAME: "Spin Speed",
+        ATTR_ICON: "mdi:rotate-3d",
+        ATTR_VALUE_FEAT: FEAT_SPINSPEED,
+        ATTR_ENABLED: True,
+    },
+    FEAT_WATERTEMP: {
+        ATTR_MEASUREMENT_NAME: "Water Temp",
+        ATTR_ICON: "mdi:thermometer-lines",
+        ATTR_VALUE_FEAT: FEAT_WATERTEMP,
+        ATTR_ENABLED: True,
+    },
+    FEAT_TEMPCONTROL: {
+        ATTR_MEASUREMENT_NAME: "Temp Control",
+        ATTR_ICON: "mdi:thermometer-lines",
+        ATTR_VALUE_FEAT: FEAT_TEMPCONTROL,
+        ATTR_ENABLED: True,
+    },
+    FEAT_DRYLEVEL: {
+        ATTR_MEASUREMENT_NAME: "Dry Level",
+        ATTR_ICON: "mdi:tumble-dryer",
+        ATTR_VALUE_FEAT: FEAT_DRYLEVEL,
+        ATTR_ENABLED: True,
     },
     FEAT_ERROR_MSG: {
         ATTR_MEASUREMENT_NAME: "Error Message",
         ATTR_ICON: "mdi:alert-circle-outline",
         ATTR_VALUE_FEAT: FEAT_ERROR_MSG,
+        ATTR_ENABLED: True,
+    },
+    FEAT_PRE_STATE: {
+        ATTR_MEASUREMENT_NAME: "Pre State",
+        ATTR_ICON: DEFAULT_ICON,
+        ATTR_VALUE_FEAT: FEAT_PRE_STATE,
     },
     FEAT_TUBCLEAN_COUNT: {
         ATTR_MEASUREMENT_NAME: "Tube Clean Counter",
         ATTR_ICON: DEFAULT_ICON,
         ATTR_VALUE_FEAT: FEAT_TUBCLEAN_COUNT,
     },
-    FEAT_SPINSPEED: {
-        ATTR_MEASUREMENT_NAME: "Spin Speed",
-        ATTR_ICON: "mdi:rotate-3d",
-        ATTR_VALUE_FEAT: FEAT_SPINSPEED,
-    },
-    FEAT_WATERTEMP: {
-        ATTR_MEASUREMENT_NAME: "Water Temp",
-        ATTR_ICON: "mdi:thermometer-lines",
-        ATTR_VALUE_FEAT: FEAT_WATERTEMP,
-    },
-    FEAT_TEMPCONTROL: {
-        ATTR_MEASUREMENT_NAME: "Temp Control",
-        ATTR_ICON: "mdi:thermometer-lines",
-        ATTR_VALUE_FEAT: FEAT_TEMPCONTROL,
-    },
-    FEAT_DRYLEVEL: {
-        ATTR_MEASUREMENT_NAME: "Dry Level",
-        ATTR_ICON: "mdi:tumble-dryer",
-        ATTR_VALUE_FEAT: FEAT_DRYLEVEL,
-    },
     FEAT_HALFLOAD: {
         ATTR_MEASUREMENT_NAME: "Half Load",
         ATTR_ICON: "mdi:circle-half-full",
         ATTR_VALUE_FEAT: FEAT_HALFLOAD,
-    },
-    ATTR_CURRENT_COURSE: {
-        ATTR_MEASUREMENT_NAME: "Current Course",
-        ATTR_ICON: "mdi:pin-outline",
-        ATTR_VALUE_FN: lambda x: x._current_course,
     },
     ATTR_INITIAL_TIME: {
         ATTR_MEASUREMENT_NAME: "Initial Time",
@@ -394,11 +402,25 @@ RANGE_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._oven_lower_target_temp,
         ATTR_ENABLED: True,
     },
+    FEAT_OVEN_LOWER_CURRENT_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Oven Lower Current Temperature",
+        ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FEAT: FEAT_OVEN_LOWER_CURRENT_TEMP,
+        ATTR_ENABLED: True,
+    },
     ATTR_OVEN_UPPER_TARGET_TEMP: {
         ATTR_MEASUREMENT_NAME: "Oven Upper Target Temperature",
         ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
         ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
         ATTR_VALUE_FN: lambda x: x._oven_upper_target_temp,
+        ATTR_ENABLED: True,
+    },
+    FEAT_OVEN_UPPER_CURRENT_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Oven Upper Current Temperature",
+        ATTR_UNIT_FN: lambda x: x._oven_temp_unit,
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
+        ATTR_VALUE_FEAT: FEAT_OVEN_UPPER_CURRENT_TEMP,
         ATTR_ENABLED: True,
     },
 }

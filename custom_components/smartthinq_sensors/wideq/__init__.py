@@ -66,8 +66,11 @@ FEAT_COOKTOP_LEFT_REAR_STATE = "cooktop_left_rear_state"
 FEAT_COOKTOP_CENTER_STATE = "cooktop_center_state"
 FEAT_COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
 FEAT_COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
+FEAT_OVEN_LOWER_CURRENT_TEMP = "oven_lower_current_temp"
 FEAT_OVEN_LOWER_STATE = "oven_lower_state"
+FEAT_OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
 FEAT_OVEN_UPPER_STATE = "oven_upper_state"
+
 
 # request ciphers settings
 CIPHERS = ":HIGH:!DH:!aNULL"

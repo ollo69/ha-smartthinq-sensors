@@ -5,7 +5,7 @@
 [![](https://img.shields.io/badge/COMMUNITY-FORUM-success?style=for-the-badge)](https://community.home-assistant.io)
 
 # LG ThinQ Devices integration for HomeAssistant
-A Homeassistant custom component to monitor LG Air Conditioner, Washer, Dryer, DishWasher, Refrigerator, Styler and Range 
+A Homeassistant custom component to monitor and control LG Air Conditioner, Washer, Dryer, DishWasher, Refrigerator, Styler and Range 
 using ThinQ API based on [WideQ project][wideq].<br/>
 
 **Important Version note:** 

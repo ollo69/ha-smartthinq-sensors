@@ -367,7 +367,12 @@ class ModelInfo(object):
         elif d["type"] == "String":
             pass
         else:
-            assert False, "unsupported value type {}".format(d["type"])
+            _LOGGER.error(
+                "ModelInfo: unsupported value type (%s) - value: %s",
+                d["type"],
+                d,
+            )
+            return None
 
     def default(self, name):
         """Get the default value, if it exists, for a given value.
@@ -537,6 +542,23 @@ class ModelInfo(object):
         else:
             return self.decode_monitor_json(data)
 
+    @staticmethod
+    def _get_current_temp_key(key: str, data):
+        """Special case for oven current temperature, that in protocol
+        is represented with a suffix "F" or "C" depending from the unit
+        """
+        if key.count("CurrentTemperature") == 0:
+            return key
+        new_key = key[:-1]
+        if not new_key.endswith("CurrentTemperature"):
+            return key
+        unit_key = f"{new_key}Unit"
+        if unit_key not in data:
+            return key
+        if data[unit_key][0] == key[-1]:
+            return f"{new_key}Value"
+        return key
+
     def decode_snapshot(self, data, key):
         """Decode  status data."""
         decoded = {}
@@ -545,6 +567,7 @@ class ModelInfo(object):
         info = data.get(key)
         if not info:
             return decoded
+
         protocol = self._data["Monitoring"]["protocol"]
         if isinstance(protocol, list):
             for elem in protocol:
@@ -552,18 +575,21 @@ class ModelInfo(object):
                     key = elem["value"]
                     value = data
                     for ident in elem["superSet"].split("."):
-                        if value is not None:
-                            value = value.get(ident)
+                        if value is None:
+                            break
+                        pr_key = self._get_current_temp_key(ident, value)
+                        value = value.get(pr_key)
                     if value is not None:
                         if isinstance(value, Number):
                             value = int(value)
                         decoded[key] = str(value)
-        else:
-            for data_key, value_key in protocol.items():
-                value = info.get(data_key, "")
-                if value is not None and isinstance(value, Number):
-                    value = int(value)
-                decoded[value_key] = str(value)
+            return decoded
+
+        for data_key, value_key in protocol.items():
+            value = info.get(data_key, "")
+            if value is not None and isinstance(value, Number):
+                value = int(value)
+            decoded[value_key] = str(value)
         return decoded
 
 
@@ -628,12 +654,17 @@ class ModelInfoV2(object):
         #    return ReferenceValue(
         #            self.data[ref]
         #            )
-        # elif d['dataType'] == 'Boolean':
-        #    return EnumValue({'0': 'False', '1' : 'True'})
+        elif data_type in ("Boolean", "boolean"):
+            return {"0": {"label": LABEL_BIT_OFF}, "1": {"label": LABEL_BIT_ON}}
         # elif d['dataType'] == 'String':
         #    pass
         else:
-            assert False, "unsupported value type {}".format(data_type)
+            _LOGGER.error(
+                "ModelInfoV2: unsupported value type (%s) - value: %s",
+                data_type,
+                data,
+            )
+            return None
 
     def default(self, name):
         """Get the default value, if it exists, for a given value.

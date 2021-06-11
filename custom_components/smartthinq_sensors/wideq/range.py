@@ -9,7 +9,9 @@ from . import (
     FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
+    FEAT_OVEN_LOWER_CURRENT_TEMP,
     FEAT_OVEN_LOWER_STATE,
+    FEAT_OVEN_UPPER_CURRENT_TEMP,
     FEAT_OVEN_UPPER_STATE,
 )
 
@@ -200,6 +202,34 @@ class RangeStatus(DeviceStatus):
             return None
         return self._data.get(key)
 
+    @property
+    def oven_lower_current_temp(self):
+        unit = self.oven_temp_unit
+        if unit == UNIT_TEMP_FAHRENHEIT:
+            key = "LowerCookTemp_F"
+        elif unit == UNIT_TEMP_CELSIUS:
+            key = "LowerCookTemp_C"
+        else:
+            return None
+        status = self._data.get(key)
+        return self._update_feature(
+            FEAT_OVEN_LOWER_CURRENT_TEMP, status, False
+        )
+
+    @property
+    def oven_upper_current_temp(self):
+        unit = self.oven_temp_unit
+        if unit == UNIT_TEMP_FAHRENHEIT:
+            key = "UpperCookTemp_F"
+        elif unit == UNIT_TEMP_CELSIUS:
+            key = "UpperCookTemp_C"
+        else:
+            return None
+        status = self._data.get(key)
+        return self._update_feature(
+            FEAT_OVEN_UPPER_CURRENT_TEMP, status, False
+        )
+
     def _update_features(self):
         result = [
             self.cooktop_left_front_state,
@@ -208,6 +238,8 @@ class RangeStatus(DeviceStatus):
             self.cooktop_right_front_state,
             self.cooktop_right_rear_state,
             self.oven_lower_state,
+            self.oven_lower_current_temp,
             self.oven_upper_state,
+            self.oven_upper_current_temp,
         ]
         return
