@@ -12,6 +12,9 @@ from typing import Any, Dict, Optional
 
 from .core_exceptions import MonitorError
 
+BIT_OFF = "OFF"
+BIT_ON = "ON"
+
 LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
 
@@ -30,8 +33,8 @@ UNIT_TEMP_FAHRENHEIT = "fahrenheit"
 LOCAL_LANG_PACK = {
     LABEL_BIT_OFF: STATE_OPTIONITEM_OFF,
     LABEL_BIT_ON: STATE_OPTIONITEM_ON,
-    "OFF": STATE_OPTIONITEM_OFF,
-    "ON": STATE_OPTIONITEM_ON,
+    BIT_OFF: STATE_OPTIONITEM_OFF,
+    BIT_ON: STATE_OPTIONITEM_ON,
     "CLOSE": STATE_OPTIONITEM_OFF,
     "OPEN": STATE_OPTIONITEM_ON,
     "UNLOCK": STATE_OPTIONITEM_OFF,
@@ -363,7 +366,7 @@ class ModelInfo(object):
             ref = d["option"][0]
             return ReferenceValue(self._data[ref])
         elif d["type"] == "Boolean":
-            return EnumValue({"0": "False", "1": "True"})
+            return EnumValue({"0": BIT_OFF, "1": BIT_ON})
         elif d["type"] == "String":
             pass
         else:
@@ -699,7 +702,7 @@ class ModelInfoV2(object):
         item = options.get(value, {})
         if options.get("BOOL", False):
             index = item.get("index", 0)
-            return LABEL_BIT_ON if index == 1 else LABEL_BIT_OFF
+            return BIT_ON if index == 1 else BIT_OFF
         return item.get("label", "")
 
     def enum_index(self, key, index):
@@ -1155,13 +1158,11 @@ class Device(object):
         if not enum_name:
             return STATE_OPTIONITEM_NONE
 
-        text_value = None
-        if self._model_lang_pack:
+        text_value = LOCAL_LANG_PACK.get(enum_name)
+        if not text_value and self._model_lang_pack:
             text_value = self._model_lang_pack.get("pack", {}).get(enum_name)
         if not text_value and self._product_lang_pack:
             text_value = self._product_lang_pack.get("pack", {}).get(enum_name)
-        if not text_value:
-            text_value = LOCAL_LANG_PACK.get(enum_name)
         if not text_value:
             text_value = enum_name
 
