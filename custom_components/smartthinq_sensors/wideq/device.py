@@ -39,6 +39,8 @@ LOCAL_LANG_PACK = {
     "OPEN": STATE_OPTIONITEM_ON,
     "UNLOCK": STATE_OPTIONITEM_OFF,
     "LOCK": STATE_OPTIONITEM_ON,
+    "INITIAL_BIT_OFF": STATE_OPTIONITEM_OFF,
+    "INITIAL_BIT_ON": STATE_OPTIONITEM_ON,
     "IGNORE": STATE_OPTIONITEM_NONE,
     "NOT_USE": "Not Used",
 }
@@ -1295,7 +1297,8 @@ class DeviceStatus(object):
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
             return None
-        if enum_val == LABEL_BIT_ON or enum_val == "INITIAL_BIT_ON":
+        bit_val = LOCAL_LANG_PACK.get(enum_val, STATE_OPTIONITEM_OFF)
+        if bit_val == STATE_OPTIONITEM_ON:
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF
 

@@ -48,6 +48,7 @@ from .wideq.device import (
 )
 
 from homeassistant.components.binary_sensor import (
+    DEVICE_CLASS_HEAT,
     DEVICE_CLASS_LOCK,
     DEVICE_CLASS_OPENING,
     DEVICE_CLASS_PROBLEM,
@@ -359,39 +360,39 @@ RANGE_SENSORS = {
         ATTR_ENABLED: True,
     },
     FEAT_COOKTOP_LEFT_FRONT_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop Left Front",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Cooktop Left Front State",
+        ATTR_ICON: "mdi:arrow-left-bold-box-outline",
         ATTR_VALUE_FEAT: FEAT_COOKTOP_LEFT_FRONT_STATE,
     },
     FEAT_COOKTOP_LEFT_REAR_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop Left Rear",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Cooktop Left Rear State",
+        ATTR_ICON: "mdi:arrow-left-bold-box",
         ATTR_VALUE_FEAT: FEAT_COOKTOP_LEFT_REAR_STATE,
     },
     FEAT_COOKTOP_CENTER_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop Center",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Cooktop Center State",
+        ATTR_ICON: "mdi:minus-box-outline",
         ATTR_VALUE_FEAT: FEAT_COOKTOP_CENTER_STATE,
     },
     FEAT_COOKTOP_RIGHT_FRONT_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop Right Front",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Cooktop Right Front State",
+        ATTR_ICON: "mdi:arrow-right-bold-box-outline",
         ATTR_VALUE_FEAT: FEAT_COOKTOP_RIGHT_FRONT_STATE,
     },
     FEAT_COOKTOP_RIGHT_REAR_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop Right Rear",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Cooktop Right Rear State",
+        ATTR_ICON: "mdi:arrow-right-bold-box",
         ATTR_VALUE_FEAT: FEAT_COOKTOP_RIGHT_REAR_STATE,
     },
     FEAT_OVEN_LOWER_STATE: {
-        ATTR_MEASUREMENT_NAME: "Oven Lower",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Oven Lower State",
+        ATTR_ICON: "mdi:inbox-arrow-down",
         ATTR_VALUE_FEAT: FEAT_OVEN_LOWER_STATE,
         ATTR_ENABLED: True,
     },
     FEAT_OVEN_UPPER_STATE: {
-        ATTR_MEASUREMENT_NAME: "Oven Upper",
-        ATTR_ICON: DEFAULT_ICON,
+        ATTR_MEASUREMENT_NAME: "Oven Upper State",
+        ATTR_ICON: "mdi:inbox-arrow-up",
         ATTR_VALUE_FEAT: FEAT_OVEN_UPPER_STATE,
         ATTR_ENABLED: True,
     },
@@ -427,13 +428,16 @@ RANGE_SENSORS = {
 
 RANGE_BINARY_SENSORS = {
     ATTR_COOKTOP_STATE: {
-        ATTR_MEASUREMENT_NAME: "Cooktop",
+        ATTR_MEASUREMENT_NAME: "Cooktop State",
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_HEAT,
         ATTR_VALUE_FN: lambda x: x._cooktop_state,
         ATTR_ENABLED: True,
     },
     ATTR_OVEN_STATE: {
-        ATTR_MEASUREMENT_NAME: "Oven",
+        ATTR_MEASUREMENT_NAME: "Oven State",
+        ATTR_DEVICE_CLASS: DEVICE_CLASS_HEAT,
         ATTR_VALUE_FN: lambda x: x._oven_state,
+        ATTR_ENABLED: True,
     },
 }
 
