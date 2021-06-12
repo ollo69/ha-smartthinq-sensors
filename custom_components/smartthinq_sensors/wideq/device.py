@@ -655,7 +655,9 @@ class ModelInfoV2(object):
         #            self.data[ref]
         #            )
         elif data_type in ("Boolean", "boolean"):
-            return {"0": {"label": LABEL_BIT_OFF}, "1": {"label": LABEL_BIT_ON}}
+            ret_val = {"BOOL": True}
+            ret_val.update(data["valueMapping"])
+            return ret_val
         # elif d['dataType'] == 'String':
         #    pass
         else:
@@ -695,6 +697,9 @@ class ModelInfoV2(object):
 
         options = self.value(data)
         item = options.get(value, {})
+        if options.get("BOOL", False):
+            index = item.get("index", 0)
+            return LABEL_BIT_ON if index == 1 else LABEL_BIT_OFF
         return item.get("label", "")
 
     def enum_index(self, key, index):
