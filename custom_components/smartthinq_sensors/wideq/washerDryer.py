@@ -13,6 +13,7 @@ from . import (
     FEAT_ERROR_MSG,
     FEAT_MEDICRINSE,
     FEAT_PRE_STATE,
+    FEAT_PROCESS_STATE,
     FEAT_PREWASH,
     FEAT_REMOTESTART,
     FEAT_RUN_STATE,
@@ -247,6 +248,7 @@ class WMStatus(DeviceStatus):
         super().__init__(device, data)
         self._run_state = None
         self._pre_state = None
+        self._process_state = None
         self._error = None
 
     def _get_run_state(self):
@@ -260,12 +262,25 @@ class WMStatus(DeviceStatus):
 
     def _get_pre_state(self):
         if not self._pre_state:
+            if not self.key_exist(["PreState", "preState"]):
+                return None
             state = self.lookup_enum(["PreState", "preState"])
             if not state:
                 self._pre_state = STATE_WM_POWER_OFF
             else:
                 self._pre_state = state
         return self._pre_state
+
+    def _get_process_state(self):
+        if not self._process_state:
+            if not self.key_exist(["ProcessState", "processState"]):
+                return None
+            state = self.lookup_enum(["ProcessState", "processState"])
+            if not state:
+                self._process_state = STATE_OPTIONITEM_NONE
+            else:
+                self._process_state = state
+        return self._process_state
 
     def _get_error(self):
         if not self._error:
@@ -299,6 +314,8 @@ class WMStatus(DeviceStatus):
     def is_run_completed(self):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
+        if pre_state is None:
+            pre_state = self._process_state() or STATE_OPTIONITEM_NONE
         if run_state in STATE_WM_END or (
             run_state == STATE_WM_POWER_OFF and pre_state in STATE_WM_END
         ):
@@ -380,10 +397,21 @@ class WMStatus(DeviceStatus):
     @property
     def pre_state(self):
         pre_state = self._get_pre_state()
+        if pre_state is None:
+            return None
         if pre_state == STATE_WM_POWER_OFF:
             pre_state = STATE_OPTIONITEM_NONE
         return self._update_feature(
             FEAT_PRE_STATE, pre_state
+        )
+
+    @property
+    def process_state(self):
+        process = self._get_process_state()
+        if process is None:
+            return None
+        return self._update_feature(
+            FEAT_PROCESS_STATE, process
         )
 
     @property
@@ -575,6 +603,7 @@ class WMStatus(DeviceStatus):
         result = [
             self.run_state,
             self.pre_state,
+            self.process_state,
             self.error_msg,
             self.spin_option_state,
             self.water_temp_option_state,
