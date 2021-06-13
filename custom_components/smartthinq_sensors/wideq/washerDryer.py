@@ -315,7 +315,7 @@ class WMStatus(DeviceStatus):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
         if pre_state is None:
-            pre_state = self._process_state() or STATE_OPTIONITEM_NONE
+            pre_state = self._get_process_state() or STATE_OPTIONITEM_NONE
         if run_state in STATE_WM_END or (
             run_state == STATE_WM_POWER_OFF and pre_state in STATE_WM_END
         ):
