@@ -98,12 +98,14 @@ class RefrigeratorDevice(Device):
                 if dt_key == key:
                     dt_value = value
                 str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
-            _LOGGER.debug("Command data content: %s", str_data)
+
+            json_data = json.loads(str_data)
+            _LOGGER.debug("Command data content: %s", str(json_data))
             if self.model_info.binary_control_data:
                 cmd["format"] = "B64"
-                str_list = json.loads(str_data)
-                str_data = base64.b64encode(bytes(str_list)).decode("ascii")
-            cmd[data_key] = str_data
+                json_data = base64.b64encode(bytes(json_data)).decode("ascii")
+            cmd[data_key] = json_data
+
         return cmd
 
     def _prepare_command_v2(self, cmd, key, value):
