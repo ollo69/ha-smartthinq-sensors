@@ -338,8 +338,7 @@ class ModelInfo(object):
     def value_type(self, name):
         if name in self._data["Value"]:
             return self._data["Value"][name]["type"]
-        else:
-            return None
+        return None
 
     def value_exist(self, name):
         return name in self._data["Value"]
@@ -617,6 +616,8 @@ class ModelInfoV2(object):
         return self._data.get("Config", {}).get(key, "")
 
     def value_type(self, name):
+        if name in self._data["MonitoringValue"]:
+            return self._data["MonitoringValue"][name].get("dataType")
         return None
 
     def value_exist(self, name):
@@ -819,8 +820,7 @@ class ModelInfoV2AC(ModelInfo):
     def value_type(self, name):
         if name in self._data["Value"]:
             return self._data["Value"][name]["data_type"]
-        else:
-            return None
+        return None
 
     def value(self, name):
         """Look up information about a value.

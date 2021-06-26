@@ -94,7 +94,7 @@ ATTR_CURRENT_COURSE = "current_course"
 ATTR_ERROR_STATE = "error_state"
 
 # refrigerator sensor attributes
-ATTR_REFRIGERATOR_TEMP = "refrigerator_temp"
+ATTR_FRIDGE_TEMP = "fridge_temp"
 ATTR_FREEZER_TEMP = "freezer_temp"
 ATTR_TEMP_UNIT = "temp_unit"
 ATTR_DOOR_OPEN = "door_open"
@@ -294,11 +294,11 @@ REFRIGERATOR_SENSORS = {
         ATTR_VALUE_FN: lambda x: x._power_state,
         ATTR_ENABLED: True,
     },
-    ATTR_REFRIGERATOR_TEMP: {
-        ATTR_MEASUREMENT_NAME: "Refrigerator Temp",
+    ATTR_FRIDGE_TEMP: {
+        ATTR_MEASUREMENT_NAME: "Fridge Temp",
         ATTR_UNIT_FN: lambda x: x._temp_unit,
         ATTR_DEVICE_CLASS: DEVICE_CLASS_TEMPERATURE,
-        ATTR_VALUE_FN: lambda x: x._temp_refrigerator,
+        ATTR_VALUE_FN: lambda x: x._temp_fridge,
         ATTR_ENABLED: True,
     },
     ATTR_FREEZER_TEMP: {
@@ -812,7 +812,7 @@ class LGERefrigeratorSensor(LGESensor):
             return None
 
         data = {
-            ATTR_REFRIGERATOR_TEMP: self._temp_refrigerator,
+            ATTR_FRIDGE_TEMP: self._temp_fridge,
             ATTR_FREEZER_TEMP: self._temp_freezer,
             ATTR_TEMP_UNIT: self._temp_unit,
             ATTR_DOOR_OPEN: self._dooropen_state,
@@ -825,9 +825,9 @@ class LGERefrigeratorSensor(LGESensor):
         return data
 
     @property
-    def _temp_refrigerator(self):
+    def _temp_fridge(self):
         if self._api.state:
-            return self._api.state.temp_refrigerator
+            return self._api.state.temp_fridge
         return None
 
     @property

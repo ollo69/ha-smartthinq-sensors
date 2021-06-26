@@ -5,6 +5,7 @@ from datetime import timedelta
 from .wideq import FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
 from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
+from .wideq.refrigerator import RefrigeratorDevice
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
@@ -28,6 +29,19 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
+from .sensor import TEMP_UNIT_LOOKUP
+
+# ac attr definition
+ATTR_AC_ENTITY_NAME = "ac_entity_name"
+ATTR_ICON = "icon"
+ATTR_CURR_TEMP_FN = "curr_temp_fn"
+ATTR_RANGE_TEMP_FN = "range_temp_fn"
+ATTR_TARGET_TEMP_FN = "target_temp_fn"
+ATTR_ENABLED = "enabled"
+
+# general ac attributes
+ATTR_FRIDGE = "fridge"
+ATTR_FREEZER = "freezer"
 
 HVAC_MODE_LOOKUP = {
     ACMode.ENERGY_SAVER.name: HVAC_MODE_AUTO,
@@ -42,6 +56,25 @@ HVAC_MODE_LOOKUP = {
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
 ATTR_SWING_VERTICAL = "swing_mode_vertical"
 SWING_PREFIX = ["Vertical", "Horizontal"]
+
+REFR_AC_ENTITY = {
+    ATTR_FRIDGE: {
+        ATTR_AC_ENTITY_NAME: "Fridge",
+        ATTR_ICON: "mdi:fridge-top",
+        ATTR_CURR_TEMP_FN: lambda x: x._fridge_temperature,
+        ATTR_RANGE_TEMP_FN: lambda x: x._api.device.fridge_target_temp_range,
+        ATTR_TARGET_TEMP_FN: lambda x, y: x._api.device.set_fridge_target_temp(y),
+        ATTR_ENABLED: True,
+    },
+    ATTR_FREEZER: {
+        ATTR_AC_ENTITY_NAME: "Freezer",
+        ATTR_ICON: "mdi:fridge-bottom",
+        ATTR_CURR_TEMP_FN: lambda x: x._freezer_temperature,
+        ATTR_RANGE_TEMP_FN: lambda x: x._api.device.freezer_target_temp_range,
+        ATTR_TARGET_TEMP_FN: lambda x, y: x._api.device.set_freezer_target_temp(y),
+        ATTR_ENABLED: True,
+    },
+}
 
 SCAN_INTERVAL = timedelta(seconds=120)
 
@@ -69,6 +102,14 @@ async def async_setup_entry(
         [
             LGEACClimate(lge_device, lge_device.device)
             for lge_device in lge_devices.get(DeviceType.AC, [])
+        ]
+    )
+
+    lge_climates.extend(
+        [
+            LGERefrigeratorClimate(lge_device, lge_device.device, ent_id, definition)
+            for ent_id, definition in REFR_AC_ENTITY.items()
+            for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
         ]
     )
 
@@ -324,3 +365,107 @@ class LGEACClimate(LGEClimate):
             return max_value
 
         return self._device.conv_temp_unit(DEFAULT_MAX_TEMP)
+
+
+class LGERefrigeratorClimate(LGEClimate):
+    """Refrigerator climate device."""
+
+    def __init__(self, device: LGEDevice, ac_device: RefrigeratorDevice, ent_id, definition) -> None:
+        """Initialize the climate."""
+        super().__init__(device)
+        self._device = ac_device
+        self._ent_id = ent_id
+        self._def = definition
+
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """Return if the entity should be enabled when first added to the entity registry."""
+        return self._def.get(ATTR_ENABLED, False)
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID."""
+        return f"{self._api.unique_id}-{self._ent_id}-AC"
+
+    @property
+    def name(self):
+        """Return the display name of this entity."""
+        name = self._def[ATTR_AC_ENTITY_NAME]
+        return f"{self._name} {name}"
+
+    @property
+    def icon(self):
+        """Return the icon to use in the frontend, if any."""
+        return self._def.get(ATTR_ICON)
+
+    @property
+    def hvac_mode(self) -> str:
+        """Return hvac operation ie. heat, cool mode."""
+        return HVAC_MODE_AUTO
+
+    @property
+    def hvac_modes(self):
+        """Return the list of available hvac operation modes."""
+        return [HVAC_MODE_AUTO]
+
+    @property
+    def target_temperature_step(self) -> float:
+        """Return the supported step of target temperature."""
+        return self._device.target_temperature_step
+
+    @property
+    def temperature_unit(self) -> str:
+        """Return the unit of measurement used by the platform."""
+        if self._api.state:
+            unit = self._api.state.temp_unit
+            return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
+        return TEMP_CELSIUS
+
+    @property
+    def _fridge_temperature(self):
+        if self._api.state:
+            try:
+                return int(self._api.state.temp_fridge)
+            except ValueError:
+                return None
+        return None
+
+    @property
+    def _freezer_temperature(self):
+        if self._api.state:
+            try:
+                return int(self._api.state.temp_freezer)
+            except ValueError:
+                return None
+        return None
+
+    @property
+    def current_temperature(self) -> float:
+        """Return the current temperature."""
+        return self.target_temperature
+
+    @property
+    def target_temperature(self) -> float:
+        """Return the temperature we try to reach."""
+        return self._def[ATTR_CURR_TEMP_FN](self)
+
+    def set_temperature(self, **kwargs) -> None:
+        """Set new target temperature."""
+        new_temp = kwargs.get("temperature", self.target_temperature)
+        self._def[ATTR_TARGET_TEMP_FN](self, new_temp)
+
+    @property
+    def supported_features(self) -> int:
+        """Return the list of supported features."""
+        if not self._device.set_values_allowed:
+            return 0
+        return SUPPORT_TARGET_TEMPERATURE
+
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum temperature."""
+        return self._def[ATTR_RANGE_TEMP_FN](self)[0]
+
+    @property
+    def max_temp(self) -> float:
+        return self._def[ATTR_RANGE_TEMP_FN](self)[1]
