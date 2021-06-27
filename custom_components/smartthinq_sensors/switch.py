@@ -10,7 +10,12 @@ from .wideq.device import (
     WM_DEVICE_TYPES,
     DeviceType,
 )
-from .wideq import FEAT_ECOFRIENDLY
+from .wideq import (
+    FEAT_ECOFRIENDLY,
+    FEAT_EXPRESSFRIDGE,
+    FEAT_EXPRESSMODE,
+    FEAT_ICEPLUS,
+)
 
 from homeassistant.components.switch import (
     DOMAIN as SENSOR_DOMAIN,
@@ -34,6 +39,7 @@ ATTR_VALUE_FEAT = "value_feat"
 ATTR_VALUE_FN = "value_fn"
 ATTR_TURN_OFF_FN = "turn_off_fn"
 ATTR_TURN_ON_FN = "turn_on_fn"
+ATTR_AVAILABLE_FN = "available_fn"
 ATTR_ENABLED = "enabled"
 
 # general sensor attributes
@@ -61,7 +67,7 @@ DEVICE_ICONS = {
 
 WASH_DEV_SWITCH = {
     ATTR_POWER_OFF: {
-        ATTR_SWITCH_NAME: "Power Off",
+        ATTR_SWITCH_NAME: "Power off",
         # ATTR_ICON: DEFAULT_ICON,
         # ATTR_DEVICE_CLASS: None,
         ATTR_VALUE_FN: lambda x: x._power_on,
@@ -72,10 +78,38 @@ WASH_DEV_SWITCH = {
 
 REFR_DEV_SWITCH = {
     FEAT_ECOFRIENDLY: {
-        ATTR_SWITCH_NAME: "Eco Friendly",
+        ATTR_SWITCH_NAME: "Eco friendly",
+        ATTR_ICON: "mdi:gauge-empty",
         ATTR_VALUE_FEAT: FEAT_ECOFRIENDLY,
         ATTR_TURN_OFF_FN: lambda x: x._api.device.set_eco_friendly(False),
         ATTR_TURN_ON_FN: lambda x: x._api.device.set_eco_friendly(True),
+        ATTR_ENABLED: True,
+    },
+    FEAT_EXPRESSFRIDGE: {
+        ATTR_SWITCH_NAME: "Express fridge",
+        ATTR_ICON: "mdi:coolant-temperature",
+        ATTR_VALUE_FEAT: FEAT_EXPRESSFRIDGE,
+        ATTR_TURN_OFF_FN: lambda x: x._api.device.set_express_fridge(False),
+        ATTR_TURN_ON_FN: lambda x: x._api.device.set_express_fridge(True),
+        ATTR_AVAILABLE_FN: lambda x: x._api.device.set_values_allowed,
+        ATTR_ENABLED: True,
+    },
+    FEAT_EXPRESSMODE: {
+        ATTR_SWITCH_NAME: "Express mode",
+        ATTR_ICON: "mdi:snowflake",
+        ATTR_VALUE_FEAT: FEAT_EXPRESSMODE,
+        ATTR_TURN_OFF_FN: lambda x: x._api.device.set_express_mode(False),
+        ATTR_TURN_ON_FN: lambda x: x._api.device.set_express_mode(True),
+        ATTR_AVAILABLE_FN: lambda x: x._api.device.set_values_allowed,
+        ATTR_ENABLED: True,
+    },
+    FEAT_ICEPLUS: {
+        ATTR_SWITCH_NAME: "Ice plus",
+        ATTR_ICON: "mdi:snowflake",
+        ATTR_VALUE_FEAT: FEAT_ICEPLUS,
+        ATTR_TURN_OFF_FN: lambda x: x._api.device.set_ice_plus(False),
+        ATTR_TURN_ON_FN: lambda x: x._api.device.set_ice_plus(True),
+        ATTR_AVAILABLE_FN: lambda x: x._api.device.set_values_allowed,
         ATTR_ENABLED: True,
     },
 }
@@ -88,7 +122,7 @@ def _feature_exist(lge_device, switch_def):
 
     if ATTR_VALUE_FEAT in switch_def:
         feature = switch_def[ATTR_VALUE_FEAT]
-        for feat_name in lge_device.available_features.values():
+        for feat_name in lge_device.available_features.keys():
             if feat_name == feature:
                 return True
 
@@ -146,6 +180,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         self._name_slug = device.name
         self._def_id = def_id
         self._def = definition
+        self._name = None
 
     @property
     def should_poll(self) -> bool:
@@ -173,8 +208,17 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     @property
     def name(self) -> str:
         """Return the name of the sensor."""
-        name = self._def[ATTR_SWITCH_NAME]
-        return f"{self._name_slug} {name}"
+        if not self._name:
+            name = None
+            if ATTR_VALUE_FEAT in self._def:
+                feat_key = self._def[ATTR_VALUE_FEAT]
+                feat_name = self._api.available_features.get(feat_key)
+                if feat_name and feat_name != feat_key:
+                    name = feat_name.replace("_", " ").capitalize()
+            if not name:
+                name = self._def[ATTR_SWITCH_NAME]
+            self._name = f"{self._name_slug} {name}"
+        return self._name
 
     @property
     def unique_id(self) -> str:
@@ -212,7 +256,10 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return self._api.available and self._power_on
+        is_avail = True
+        if ATTR_AVAILABLE_FN in self._def:
+            is_avail = self._def[ATTR_AVAILABLE_FN](self)
+        return self._api.available and self._power_on and is_avail
 
     @property
     def assumed_state(self) -> bool:

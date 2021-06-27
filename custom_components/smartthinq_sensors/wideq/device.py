@@ -912,16 +912,16 @@ class Device(object):
         self._status = None
         return self._status
 
-    def _get_feature_title(self, item_key, def_value):
+    def _get_feature_title(self, feature_name, item_key):
         """Override this function to manage feature title per device type"""
-        return def_value or item_key
+        return feature_name
 
-    def feature_title(self, feature_name, def_value=None, status=None):
+    def feature_title(self, feature_name, item_key=None, status=None):
         title = self._available_features.get(feature_name)
         if title is None:
             if status is None:
                 return None
-            title = self._get_feature_title(feature_name, def_value)
+            title = self._get_feature_title(feature_name, item_key)
             if not title:
                 return None
             self._available_features[feature_name] = title
@@ -1302,9 +1302,9 @@ class DeviceStatus(object):
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF
 
-    def _update_feature(self, key, status, get_text=True, def_title=None):
+    def _update_feature(self, key, status, get_text=True, item_key=None):
         title = self._device.feature_title(
-            key, def_title, status
+            key, item_key, status
         )
         if not title:
             return None
@@ -1316,7 +1316,7 @@ class DeviceStatus(object):
         else:
             value = self._device.get_enum_text(status)
 
-        self._device_features[title] = value
+        self._device_features[key] = value
         return value
 
     def _update_features(self):
