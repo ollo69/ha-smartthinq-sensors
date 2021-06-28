@@ -991,7 +991,9 @@ class Device(object):
         """
         if not self._should_poll:
             return
-        data = self._client.session.get_device_config(self._device_info.id, key,)
+        data = self._client.session.get_device_config(self._device_info.id, key)
+        if self._control_set == 0:
+            self._control_set = 1
         return json.loads(base64.b64decode(data).decode("utf8"))
 
     def _get_control(self, key):
@@ -1002,6 +1004,8 @@ class Device(object):
         data = self._client.session.get_device_config(
             self._device_info.id, key, "Control",
         )
+        if self._control_set == 0:
+            self._control_set = 1
 
         # The response comes in a funky key/value format: "(key:value)".
         _, value = data[1:-1].split(":")
@@ -1121,6 +1125,7 @@ class Device(object):
         either a `Status` object or `None` if the status is not yet
         available.
         """
+        res = None
 
         # load device info at first call if not loaded before
         if not self.init_device_info():
@@ -1131,28 +1136,28 @@ class Device(object):
             snapshot = self._get_device_snapshot(device_update)
             if not snapshot:
                 return None
-            res = self._model_info.decode_snapshot(snapshot, snapshot_key)
+            return self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
-        else:
+        if not self._mon:
             # Abort if monitoring has not started yet.
-            if not self._mon:
-                return None
+            return None
 
-            self._delete_permission()
-            data = self._mon.poll()
-            if not data:
-                return None
+        data = self._mon.poll()
+        if data:
             res = self._model_info.decode_monitor(data)
+            """
+                with open('/config/wideq/washer_polled_data.json','w', encoding="utf-8") as dumpfile:
+                    json.dump(res, dumpfile, ensure_ascii=False, indent="\t")
+            """
             try:
                 self._additional_poll(additional_poll_interval)
             except Exception as exc:
                 _LOGGER.warning("Error calling additional poll methods. Error %s", exc)
 
-        """
-            with open('/config/wideq/washer_polled_data.json','w', encoding="utf-8") as dumpfile:
-                json.dump(res, dumpfile, ensure_ascii=False, indent="\t")
-        """
+        # remove control permission if previously set
+        self._delete_permission()
+
         return res
 
     def get_enum_text(self, enum_name):
