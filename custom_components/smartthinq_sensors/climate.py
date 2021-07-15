@@ -9,6 +9,9 @@ from .wideq.refrigerator import RefrigeratorDevice
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
+    CURRENT_HVAC_COOL,
+    CURRENT_HVAC_HEAT,
+    CURRENT_HVAC_OFF,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     HVAC_MODE_AUTO,
@@ -51,6 +54,12 @@ HVAC_MODE_LOOKUP = {
     ACMode.COOL.name: HVAC_MODE_COOL,
     ACMode.FAN.name: HVAC_MODE_FAN_ONLY,
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
+}
+
+HA_STATE_TO_CURRENT_HVAC = {
+    HVAC_MODE_COOL: CURRENT_HVAC_COOL,
+    HVAC_MODE_HEAT: CURRENT_HVAC_HEAT,
+    HVAC_MODE_OFF: CURRENT_HVAC_OFF,
 }
 
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
@@ -223,11 +232,14 @@ class LGEACClimate(LGEClimate):
     @property
     def hvac_mode(self) -> str:
         """Return hvac operation ie. heat, cool mode."""
-        mode = self._api.state.operation_mode
-        if not self._api.state.is_on or mode is None:
-            return HVAC_MODE_OFF
-        modes = self._available_hvac_modes()
-        return modes.get(mode)
+        op_mode = self._api.state.operation_mode
+        if not self._api.state.is_on or op_mode is None:
+            mode = HVAC_MODE_OFF
+        else:
+            modes = self._available_hvac_modes()
+            mode = modes.get(op_mode)
+        self._attr_hvac_action = HA_STATE_TO_CURRENT_HVAC.get(mode or "NA")
+        return mode
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
