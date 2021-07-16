@@ -554,7 +554,7 @@ class Session(object):
             {"cmd": "Mon", "cmdOpt": "Stop", "deviceId": device_id, "workId": work_id},
         )
 
-    def set_device_controls(self, device_id, ctrl_key, command, value="", data=""):
+    def set_device_controls(self, device_id, ctrl_key, command=None, value=None, data=None):
         """Control a device's settings.
 
         `values` is a key/value map containing the settings to update.
@@ -567,8 +567,8 @@ class Session(object):
             payload = {
                 "cmd": ctrl_key,
                 "cmdOpt": command,
-                "value": value,
-                "data": data,
+                "value": value or "",
+                "data": data or "",
             }
 
         if payload:
@@ -593,8 +593,8 @@ class Session(object):
             payload = {
                 "ctrlKey": ctrl_key,
                 "command": command,
-                "dataKey": key,
-                "dataValue": value,
+                "dataKey": key or "",
+                "dataValue": value or "",
             }
 
         if payload:

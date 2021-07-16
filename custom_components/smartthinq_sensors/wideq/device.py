@@ -941,24 +941,26 @@ class Device(object):
 
         return [ctrl, cmd, key]
 
-    def _set_control(self, ctrl_key, command, *, key=None, value=None, data=None):
+    def _set_control(self, ctrl_key, command=None, *, key=None, value=None, data=None):
         """Set a device's control for `key` to `value`.
         """
         if self._should_poll:
             self._client.session.set_device_controls(
                 self._device_info.id,
-                ctrl_key, command,
-                value={key: value} if key and value else value or "",
-                data={key: data} if key and data else data or "",
+                ctrl_key,
+                command,
+                {key: value} if key and value else value,
+                {key: data} if key and data else data,
             )
             self._control_set = 2
             return
 
         self._client.session.set_device_v2_controls(
             self._device_info.id,
-            ctrl_key, command,
-            key=key,
-            value=value,
+            ctrl_key,
+            command,
+            key,
+            value,
         )
 
     def _prepare_command(self, ctrl_key, command, key, value):
@@ -975,7 +977,7 @@ class Device(object):
                 "Setting new state for device %s: %s",
                 self._device_info.id, str(full_key),
             )
-            self._set_control(full_key, None)
+            self._set_control(full_key)
         else:
             _LOGGER.debug(
                 "Setting new state for device %s:  %s - %s - %s - %s",
