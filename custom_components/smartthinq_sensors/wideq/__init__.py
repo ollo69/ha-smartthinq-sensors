@@ -4,6 +4,7 @@ Support for LG Smartthinq device.
 import ssl
 import uuid
 
+from enum import Enum
 from urllib3.poolmanager import PoolManager
 from urllib3.util.ssl_ import DEFAULT_CIPHERS
 from requests.adapters import HTTPAdapter
@@ -91,6 +92,13 @@ def as_list(obj):
 
 def gen_uuid():
     return str(uuid.uuid4())
+
+
+class CoreVersion(Enum):
+    """The version of the core API."""
+
+    CoreV1 = "coreV1"
+    CoreV2 = "coreV2"
 
 
 class AuthHTTPAdapter(HTTPAdapter):

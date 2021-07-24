@@ -18,12 +18,15 @@ from . import(
     as_list,
     gen_uuid,
     AuthHTTPAdapter,
+    CoreVersion,
     DATA_ROOT,
     DEFAULT_COUNTRY,
     DEFAULT_LANGUAGE,
 )
 from . import core_exceptions as exc
 from .device import DeviceInfo, DEFAULT_TIMEOUT
+
+CORE_VERSION = CoreVersion.CoreV2
 
 # v2
 V2_API_KEY = "VGhpblEyLjAgU0VSVklDRQ=="
@@ -683,6 +686,11 @@ class ClientV2(object):
             # for debug
             # self._inject_thinq2_device()
             # for debug
+
+    @property
+    def api_version(self):
+        """Return core API version"""
+        return CORE_VERSION
 
     @property
     def gateway(self) -> Gateway:

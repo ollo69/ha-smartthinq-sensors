@@ -14,12 +14,15 @@ from . import(
     as_list,
     gen_uuid,
     AuthHTTPAdapter,
+    CoreVersion,
     DATA_ROOT,
     DEFAULT_COUNTRY,
     DEFAULT_LANGUAGE,
 )
 from . import core_exceptions as exc
 from .device import DeviceInfo, DEFAULT_TIMEOUT, DEFAULT_REFRESH_TIMEOUT
+
+CORE_VERSION = CoreVersion.CoreV1
 
 GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"
 APP_KEY = "wideq"
@@ -369,23 +372,32 @@ class Session(object):
             {"cmd": "Mon", "cmdOpt": "Stop", "deviceId": device_id, "workId": work_id},
         )
 
-    def set_device_controls(self, device_id, values):
+    def set_device_controls(self, device_id, ctrl_key, command=None, value=None, data=None):
         """Control a device's settings.
 
         `values` is a key/value map containing the settings to update.
         """
+        res = {}
+        payload = None
+        if isinstance(ctrl_key, dict):
+            payload = ctrl_key
+        elif command is not None:
+            payload = {
+                "cmd": ctrl_key,
+                "cmdOpt": command,
+                "value": value or "",
+                "data": data or "",
+            }
 
-        return self.post(
-            "rti/rtiControl",
-            {
-                "cmd": "Control",
-                "cmdOpt": "Set",
-                "value": values,
+        if payload:
+            payload.update({
                 "deviceId": device_id,
                 "workId": gen_uuid(),
-                "data": "",
-            },
-        )
+            })
+            res = self.post("rti/rtiControl", payload)
+            _LOGGER.debug("Set V1 result: %s", str(res))
+
+        return res
 
     def get_device_config(self, device_id, key, category="Config"):
         """Get a device configuration option.
@@ -441,6 +453,11 @@ class Client(object):
         # Locale information used to discover a gateway, if necessary.
         self._country = country
         self._language = language
+
+    @property
+    def api_version(self):
+        """Return core API version"""
+        return CORE_VERSION
 
     @property
     def gateway(self) -> Gateway:
