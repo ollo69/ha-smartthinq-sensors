@@ -18,7 +18,7 @@ from .wideq import (
 )
 
 from homeassistant.components.switch import (
-    DOMAIN as SENSOR_DOMAIN,
+    DEVICE_CLASS_SWITCH,
     SwitchEntity,
 )
 
@@ -29,12 +29,12 @@ from homeassistant.const import (
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, LGE_DEVICES
+from .sensor import DEVICE_ICONS
 from . import LGEDevice
 
 # switch definition
 ATTR_SWITCH_NAME = "switch_name"
 ATTR_ICON = "icon"
-ATTR_DEVICE_CLASS = "device_class"
 ATTR_VALUE_FEAT = "value_feat"
 ATTR_VALUE_FN = "value_fn"
 ATTR_TURN_OFF_FN = "turn_off_fn"
@@ -56,20 +56,10 @@ SCAN_INTERVAL = timedelta(seconds=120)
 
 _LOGGER = logging.getLogger(__name__)
 
-DEVICE_ICONS = {
-    DeviceType.WASHER: "mdi:washing-machine",
-    DeviceType.DRYER: "mdi:tumble-dryer",
-    DeviceType.STYLER: "mdi:palette-swatch-outline",
-    DeviceType.DISHWASHER: "mdi:dishwasher",
-    DeviceType.REFRIGERATOR: "mdi:fridge-outline",
-    DeviceType.RANGE: "mdi:stove",
-}
-
 WASH_DEV_SWITCH = {
     ATTR_POWER_OFF: {
         ATTR_SWITCH_NAME: "Power off",
         # ATTR_ICON: DEFAULT_ICON,
-        # ATTR_DEVICE_CLASS: None,
         ATTR_VALUE_FN: lambda x: x._power_on,
         ATTR_TURN_OFF_FN: lambda x: x._api.device.power_off(),
         ATTR_ENABLED: True,
@@ -187,7 +177,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         """Return True if entity has to be polled for state.
 
         We overwrite coordinator property default setting because we need
-        to poll to avoid the effect that after changing a climate settings
+        to poll to avoid the effect that after changing switch state
         it is immediately set to prev state. The async_update method here
         do nothing because the real update is performed by coordinator.
         """
@@ -228,7 +218,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     @property
     def device_class(self):
         """Return device class."""
-        return self._def.get(ATTR_DEVICE_CLASS)
+        return DEVICE_CLASS_SWITCH
 
     @property
     def icon(self):
@@ -262,11 +252,6 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         return self._api.available and self._power_on and is_avail
 
     @property
-    def assumed_state(self) -> bool:
-        """Return True if unable to access real state of the entity."""
-        return self._api.assumed_state
-
-    @property
     def device_state_attributes(self):
         """Return the optional state attributes."""
         return self._api.state_attributes
@@ -276,14 +261,14 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         """Return the device info."""
         return self._api.device_info
 
-    def turn_off(self):
+    def turn_off(self, **kwargs):
         """Turn the entity off."""
         if ATTR_TURN_OFF_FN not in self._def:
             raise NotImplementedError()
         if self.is_on:
             self._def[ATTR_TURN_OFF_FN](self)
 
-    def turn_on(self):
+    def turn_on(self, **kwargs):
         """Turn the entity on."""
         if ATTR_TURN_ON_FN not in self._def:
             raise NotImplementedError()

@@ -1,6 +1,7 @@
 """Platform for LGE climate integration."""
 import logging
 from datetime import timedelta
+from typing import Optional
 
 from .wideq import FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
@@ -10,6 +11,8 @@ from .wideq.refrigerator import RefrigeratorDevice
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     CURRENT_HVAC_COOL,
+    CURRENT_HVAC_DRY,
+    CURRENT_HVAC_FAN,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_OFF,
     DEFAULT_MAX_TEMP,
@@ -58,6 +61,8 @@ HVAC_MODE_LOOKUP = {
 
 HA_STATE_TO_CURRENT_HVAC = {
     HVAC_MODE_COOL: CURRENT_HVAC_COOL,
+    HVAC_MODE_DRY: CURRENT_HVAC_DRY,
+    HVAC_MODE_FAN_ONLY: CURRENT_HVAC_FAN,
     HVAC_MODE_HEAT: CURRENT_HVAC_HEAT,
     HVAC_MODE_OFF: CURRENT_HVAC_OFF,
 }
@@ -174,6 +179,7 @@ class LGEACClimate(LGEClimate):
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
         self._support_hor_swing = len(self._device.horizontal_step_modes) > 0
         self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
+        self._curr_hvac_action = None
 
     def _available_hvac_modes(self):
         """Return available hvac modes from lookup dict."""
@@ -237,9 +243,17 @@ class LGEACClimate(LGEClimate):
             mode = HVAC_MODE_OFF
         else:
             modes = self._available_hvac_modes()
-            mode = modes.get(op_mode)
-        self._attr_hvac_action = HA_STATE_TO_CURRENT_HVAC.get(mode or "NA")
+            mode = modes.get(op_mode, HVAC_MODE_AUTO)
+        self._curr_hvac_action = HA_STATE_TO_CURRENT_HVAC.get(mode)
         return mode
+
+    @property
+    def hvac_action(self) -> Optional[str]:
+        """Return the current running hvac operation if supported.
+
+        Need to be one of CURRENT_HVAC_*.
+        """
+        return self._curr_hvac_action
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
