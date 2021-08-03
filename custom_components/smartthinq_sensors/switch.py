@@ -252,11 +252,6 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         return self._api.available and self._power_on and is_avail
 
     @property
-    def device_state_attributes(self):
-        """Return the optional state attributes."""
-        return self._api.state_attributes
-
-    @property
     def device_info(self):
         """Return the device info."""
         return self._api.device_info

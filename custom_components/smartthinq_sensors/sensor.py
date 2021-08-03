@@ -109,6 +109,10 @@ ATTR_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
 ATTR_OVEN_STATE = "oven_state"
 ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 
+# supported features
+SUPPORT_REMOTE_START = 1
+SUPPORT_WAKE_UP = 2
+
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
     STATE_OPTIONITEM_ON: STATE_ON,
@@ -535,13 +539,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     platform = entity_platform.current_platform.get()
     platform.async_register_entity_service(
         SERVICE_REMOTE_START,
-        None,
+        {},
         "async_remote_start",
+        [SUPPORT_REMOTE_START],
     )
     platform.async_register_entity_service(
         SERVICE_WAKE_UP,
-        None,
+        {},
         "async_wake_up",
+        [SUPPORT_WAKE_UP],
     )
 
 
@@ -589,6 +595,12 @@ class LGESensor(CoordinatorEntity):
     def entity_registry_enabled_default(self) -> bool:
         """Return if the entity should be enabled when first added to the entity registry."""
         return self._def.get(ATTR_ENABLED, False)
+
+    @property
+    def supported_features(self):
+        if self._is_default and self._api.type in WM_DEVICE_TYPES:
+            return SUPPORT_REMOTE_START | SUPPORT_WAKE_UP
+        return None
 
     @property
     def name(self) -> str:
@@ -675,11 +687,6 @@ class LGESensor(CoordinatorEntity):
     def assumed_state(self) -> bool:
         """Return True if unable to access real state of the entity."""
         return self._api.assumed_state
-
-    @property
-    def state_attributes(self):
-        """Return the optional state attributes."""
-        return self._api.state_attributes
 
     @property
     def device_info(self):
@@ -880,10 +887,6 @@ class LGEACSensor(LGESensor):
 class LGERangeSensor(LGESensor):
     """A sensor to monitor LGE range devices"""
 
-    def __init__(self, device, measurement, definition, is_binary):
-        """Initialize the sensor."""
-        super().__init__(device, measurement, definition, is_binary)
-        
     @property
     def device_state_attributes(self):
         """Return the optional state attributes."""
