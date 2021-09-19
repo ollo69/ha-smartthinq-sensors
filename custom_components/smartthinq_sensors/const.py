@@ -19,6 +19,7 @@ CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 
 DEFAULT_ICON = "def_icon"
+DEFAULT_SENSOR = "default"
 
 SMARTTHINQ_COMPONENTS = [
     "sensor", "binary_sensor", "climate", "switch"

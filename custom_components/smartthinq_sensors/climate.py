@@ -1,13 +1,18 @@
 """Platform for LGE climate integration."""
-import logging
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import timedelta
+import logging
+from typing import Any, Callable, List, Tuple
+
 
 from .wideq import FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
 from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.refrigerator import RefrigeratorDevice
 
-from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription
 from homeassistant.components.climate.const import (
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
@@ -29,15 +34,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
-from .device_helpers import TEMP_UNIT_LOOKUP
-
-# ac attr definition
-ATTR_AC_ENTITY_NAME = "ac_entity_name"
-ATTR_ICON = "icon"
-ATTR_CURR_TEMP_FN = "curr_temp_fn"
-ATTR_RANGE_TEMP_FN = "range_temp_fn"
-ATTR_TARGET_TEMP_FN = "target_temp_fn"
-ATTR_ENABLED = "enabled"
+from .device_helpers import TEMP_UNIT_LOOKUP, get_entity_name
 
 # general ac attributes
 ATTR_FRIDGE = "fridge"
@@ -57,28 +54,44 @@ ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
 ATTR_SWING_VERTICAL = "swing_mode_vertical"
 SWING_PREFIX = ["Vertical", "Horizontal"]
 
-REFR_AC_ENTITY = {
-    ATTR_FRIDGE: {
-        ATTR_AC_ENTITY_NAME: "Fridge",
-        ATTR_ICON: "mdi:fridge-top",
-        ATTR_CURR_TEMP_FN: lambda x: x._fridge_temperature,
-        ATTR_RANGE_TEMP_FN: lambda x: x._api.device.fridge_target_temp_range,
-        ATTR_TARGET_TEMP_FN: lambda x, y: x._api.device.set_fridge_target_temp(y),
-        ATTR_ENABLED: True,
-    },
-    ATTR_FREEZER: {
-        ATTR_AC_ENTITY_NAME: "Freezer",
-        ATTR_ICON: "mdi:fridge-bottom",
-        ATTR_CURR_TEMP_FN: lambda x: x._freezer_temperature,
-        ATTR_RANGE_TEMP_FN: lambda x: x._api.device.freezer_target_temp_range,
-        ATTR_TARGET_TEMP_FN: lambda x, y: x._api.device.set_freezer_target_temp(y),
-        ATTR_ENABLED: True,
-    },
-}
-
 SCAN_INTERVAL = timedelta(seconds=120)
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class ThinQClimateRequiredKeysMixin:
+    """Mixin for required keys."""
+    curr_temp_fn: Callable[[Any], float | str]
+    range_temp_fn: Callable[[Any], List[float]]
+    target_temp_fn: Callable[[Any, float], None]
+
+
+@dataclass
+class ThinQClimateEntityDescription(
+    ClimateEntityDescription, ThinQClimateRequiredKeysMixin
+):
+    """A class that describes ThinQ climate entities."""
+
+
+REFRIGERATOR_CLIMATE: Tuple[ThinQClimateEntityDescription, ...] = (
+    ThinQClimateEntityDescription(
+        key=ATTR_FRIDGE,
+        name="Fridge",
+        icon="mdi:fridge-top",
+        curr_temp_fn=lambda x: x._fridge_temperature,
+        range_temp_fn=lambda x: x._device.fridge_target_temp_range,
+        target_temp_fn=lambda x, y: x._device.set_fridge_target_temp(y),
+    ),
+    ThinQClimateEntityDescription(
+        key=ATTR_FREEZER,
+        name="Freezer",
+        icon="mdi:fridge-bottom",
+        curr_temp_fn=lambda x: x._freezer_temperature,
+        range_temp_fn=lambda x: x._device.freezer_target_temp_range,
+        target_temp_fn=lambda x, y: x._device.set_freezer_target_temp(y),
+    ),
+)
 
 
 def remove_prefix(text: str, prefix: str) -> str:
@@ -98,17 +111,20 @@ async def async_setup_entry(
         return
 
     lge_climates = []
+
+    # AC devices
     lge_climates.extend(
         [
-            LGEACClimate(lge_device, lge_device.device)
+            LGEACClimate(lge_device)
             for lge_device in lge_devices.get(DeviceType.AC, [])
         ]
     )
 
+    # Refrigerator devices
     lge_climates.extend(
         [
-            LGERefrigeratorClimate(lge_device, lge_device.device, ent_id, definition)
-            for ent_id, definition in REFR_AC_ENTITY.items()
+            LGERefrigeratorClimate(lge_device, refrigerator_desc)
+            for refrigerator_desc in REFRIGERATOR_CLIMATE
             for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
         ]
     )
@@ -123,12 +139,7 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
         """Initialize the climate."""
         super().__init__(device.coordinator)
         self._api = device
-        self._name = device.name
-
-    @property
-    def device_info(self):
-        """Return a device description for device registry."""
-        return self._api.device_info
+        self._attr_device_info = device.device_info
 
     @property
     def should_poll(self) -> bool:
@@ -157,10 +168,13 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
 class LGEACClimate(LGEClimate):
     """Air-to-Air climate device."""
 
-    def __init__(self, device: LGEDevice, ac_device: AirConditionerDevice) -> None:
+    def __init__(self, device: LGEDevice) -> None:
         """Initialize the climate."""
         super().__init__(device)
-        self._device = ac_device
+        self._device: AirConditionerDevice = device.device
+        self._attr_name = device.name
+        self._attr_unique_id = f"{device.unique_id}-AC"
+
         self._hvac_mode_lookup = None
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
         self._support_hor_swing = len(self._device.horizontal_step_modes) > 0
@@ -186,16 +200,6 @@ class LGEACClimate(LGEClimate):
         if mode:
             return f"{SWING_PREFIX[1 if hor_mode else 0]}{mode}"
         return None
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        return f"{self._api.unique_id}-AC"
-
-    @property
-    def name(self):
-        """Return the display name of this entity."""
-        return self._name
 
     @property
     def extra_state_attributes(self):
@@ -370,43 +374,19 @@ class LGEACClimate(LGEClimate):
 class LGERefrigeratorClimate(LGEClimate):
     """Refrigerator climate device."""
 
-    def __init__(self, device: LGEDevice, ac_device: RefrigeratorDevice, ent_id, definition) -> None:
+    def __init__(
+            self,
+            device: LGEDevice,
+            description: ThinQClimateEntityDescription,
+    ) -> None:
         """Initialize the climate."""
         super().__init__(device)
-        self._device = ac_device
-        self._ent_id = ent_id
-        self._def = definition
-
-    @property
-    def entity_registry_enabled_default(self) -> bool:
-        """Return if the entity should be enabled when first added to the entity registry."""
-        return self._def.get(ATTR_ENABLED, False)
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID."""
-        return f"{self._api.unique_id}-{self._ent_id}-AC"
-
-    @property
-    def name(self):
-        """Return the display name of this entity."""
-        name = self._def[ATTR_AC_ENTITY_NAME]
-        return f"{self._name} {name}"
-
-    @property
-    def icon(self):
-        """Return the icon to use in the frontend, if any."""
-        return self._def.get(ATTR_ICON)
-
-    @property
-    def hvac_mode(self) -> str:
-        """Return hvac operation ie. heat, cool mode."""
-        return HVAC_MODE_AUTO
-
-    @property
-    def hvac_modes(self):
-        """Return the list of available hvac operation modes."""
-        return [HVAC_MODE_AUTO]
+        self._device: RefrigeratorDevice = device.device
+        self.entity_description: ThinQClimateEntityDescription = description
+        self._attr_name = get_entity_name(device, description.key, description.name)
+        self._attr_unique_id = f"{device.unique_id}-{description.key}-AC"
+        self._attr_hvac_modes = [HVAC_MODE_AUTO]
+        self._attr_hvac_mode = HVAC_MODE_AUTO
 
     @property
     def target_temperature_step(self) -> float:
@@ -447,12 +427,12 @@ class LGERefrigeratorClimate(LGEClimate):
     @property
     def target_temperature(self) -> float:
         """Return the temperature we try to reach."""
-        return self._def[ATTR_CURR_TEMP_FN](self)
+        return self.entity_description.curr_temp_fn(self)
 
     def set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         new_temp = kwargs.get("temperature", self.target_temperature)
-        self._def[ATTR_TARGET_TEMP_FN](self, new_temp)
+        self.entity_description.target_temp_fn(self, new_temp)
 
     @property
     def supported_features(self) -> int:
@@ -464,8 +444,8 @@ class LGERefrigeratorClimate(LGEClimate):
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
-        return self._def[ATTR_RANGE_TEMP_FN](self)[0]
+        return self.entity_description.range_temp_fn(self)[0]
 
     @property
     def max_temp(self) -> float:
-        return self._def[ATTR_RANGE_TEMP_FN](self)[1]
+        return self.entity_description.range_temp_fn(self)[1]

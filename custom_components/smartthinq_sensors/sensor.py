@@ -46,7 +46,7 @@ from homeassistant.helpers import entity_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
-from .const import DEFAULT_ICON, DOMAIN, LGE_DEVICES
+from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES
 from .device_helpers import (
     DEVICE_ICONS,
     WASH_DEVICE_TYPES,
@@ -54,9 +54,8 @@ from .device_helpers import (
     LGERangeDevice,
     LGERefrigeratorDevice,
     LGEWashDevice,
+    get_entity_name,
 )
-
-DEFAULT_SENSOR = "default"
 
 # service definition
 SERVICE_REMOTE_START = "remote_start"
@@ -420,24 +419,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     )
 
 
-def get_sensor_name(device, ent_key, ent_name) -> str:
-    """Get the name for the sensor"""
-    name_slug = device.name
-    if ent_key == DEFAULT_SENSOR:
-        return name_slug
-
-    name = ent_name or ent_key
-    if not ent_name:
-        feat_name = device.available_features.get(ent_key)
-        if feat_name and feat_name != ent_key:
-            name = feat_name.replace("_", " ").capitalize()
-
-    return f"{name_slug} {name}"
-
-
 class LGESensor(CoordinatorEntity, SensorEntity):
     """Class to monitor sensors for LGE device"""
-    
+
     def __init__(
             self,
             device: LGEDevice,
@@ -449,7 +433,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         self._api = device
         self.device = wrapped_device
         self.entity_description: ThinQSensorEntityDescription = description
-        self._attr_name = get_sensor_name(device, description.key, description.name)
+        self._attr_name = get_entity_name(device, description.key, description.name)
         self._attr_unique_id = device.unique_id
         if description.key != DEFAULT_SENSOR:
             self._attr_unique_id += f"-{description.key}"
@@ -472,7 +456,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit of measurement of the sensor, if any."""
-        if self.entity_description.unit_fn:
+        if self.entity_description.unit_fn is not None:
             return self.entity_description.unit_fn(self)
         return super().native_unit_of_measurement
 
@@ -496,7 +480,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
     def _get_sensor_state(self):
         """Get current sensor state"""
-        if self.entity_description.value_fn:
+        if self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self)
 
         if self._api.state:

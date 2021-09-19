@@ -8,13 +8,14 @@ from .wideq.device import (
     WM_DEVICE_TYPES,
     DeviceType,
 )
-
 from homeassistant.const import (
     STATE_ON,
     STATE_OFF,
     TEMP_CELSIUS,
     TEMP_FAHRENHEIT,
 )
+
+from .const import DEFAULT_SENSOR
 
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
@@ -41,6 +42,21 @@ WASH_DEVICE_TYPES = WM_DEVICE_TYPES + [
     DeviceType.DISHWASHER,
     DeviceType.STYLER,
 ]
+
+
+def get_entity_name(device, ent_key, ent_name) -> str:
+    """Get the name for the entity"""
+    name_slug = device.name
+    if ent_key == DEFAULT_SENSOR:
+        return name_slug
+
+    name = ent_name or ent_key
+    if not ent_name:
+        feat_name = device.available_features.get(ent_key)
+        if feat_name and feat_name != ent_key:
+            name = feat_name.replace("_", " ").capitalize()
+
+    return f"{name_slug} {name}"
 
 
 class LGEBaseDevice:

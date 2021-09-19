@@ -38,12 +38,12 @@ from .device_helpers import (
     LGERangeDevice,
     LGERefrigeratorDevice,
     LGEWashDevice,
+    get_entity_name,
 )
 from .sensor import (
     ATTR_DOOR_OPEN,
     ATTR_ERROR_STATE,
     ATTR_RUN_COMPLETED,
-    get_sensor_name,
 )
 
 # range sensor attributes
@@ -173,8 +173,8 @@ def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEn
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the LGE sensors."""
-    _LOGGER.info("Starting LGE ThinQ sensors...")
+    """Set up the LGE binary sensors."""
+    _LOGGER.info("Starting LGE ThinQ binary sensors...")
 
     lge_sensors = []
     entry_config = hass.data[DOMAIN]
@@ -222,7 +222,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 def get_binary_sensor_name(device, ent_key, ent_name) -> str:
     """Get the name for the binary sensor"""
-    name = get_sensor_name(device, ent_key, ent_name)
+    name = get_entity_name(device, ent_key, ent_name)
     if ent_key == ATTR_RUN_COMPLETED:
         name = name.replace(
             "<Run>", RUN_COMPLETED_PREFIX.get(device.type, "Run")
@@ -283,7 +283,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return self._api.assumed_state
 
     def _get_sensor_state(self):
-        if self.entity_description.value_fn:
+        if self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self)
 
         if self._api.state:
