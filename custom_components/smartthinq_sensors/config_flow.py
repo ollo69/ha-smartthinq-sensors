@@ -53,8 +53,6 @@ INIT_SCHEMA = vol.Schema(
         vol.Required(CONF_LANGUAGE): vol.In(_languages_list()),
         # vol.Optional(CONF_TOKEN): str,
         # vol.Required(CONF_USE_API_V2, default=True): bool,
-        vol.Optional(CONF_USE_TLS_V1, default=False): bool,
-        vol.Optional(CONF_EXCLUDE_DH, default=False): bool,
     }
 )
 
@@ -210,6 +208,13 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         schema = None
         if step_id == "user":
             schema = INIT_SCHEMA
+            if self.show_advanced_options:
+                schema = schema.extend(
+                    {
+                        vol.Optional(CONF_USE_TLS_V1, default=False): bool,
+                        vol.Optional(CONF_EXCLUDE_DH, default=False): bool,
+                    }
+                )
         elif step_id == "url":
             schema = vol.Schema(
                 {

@@ -2,7 +2,7 @@
 Support to interface with LGE ThinQ Devices.
 """
 
-__version__ = "0.8.20"
+__version__ = "0.9.1"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
 ISSUE_URL = "{}issues".format(PROJECT_URL)
 
@@ -17,6 +17,8 @@ CONF_EXCLUDE_DH = "exclude_dh"
 
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"
+
+DEFAULT_ICON = "def_icon"
 
 SMARTTHINQ_COMPONENTS = [
     "sensor", "binary_sensor", "climate", "switch"

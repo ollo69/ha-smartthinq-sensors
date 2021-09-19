@@ -1,7 +1,6 @@
 """Platform for LGE climate integration."""
 import logging
 from datetime import timedelta
-from typing import Optional
 
 from .wideq import FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
@@ -10,11 +9,6 @@ from .wideq.refrigerator import RefrigeratorDevice
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
-    CURRENT_HVAC_COOL,
-    CURRENT_HVAC_DRY,
-    CURRENT_HVAC_FAN,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_OFF,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     HVAC_MODE_AUTO,
@@ -35,7 +29,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
-from .sensor import TEMP_UNIT_LOOKUP
+from .device_helpers import TEMP_UNIT_LOOKUP
 
 # ac attr definition
 ATTR_AC_ENTITY_NAME = "ac_entity_name"
@@ -57,14 +51,6 @@ HVAC_MODE_LOOKUP = {
     ACMode.COOL.name: HVAC_MODE_COOL,
     ACMode.FAN.name: HVAC_MODE_FAN_ONLY,
     ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
-}
-
-HA_STATE_TO_CURRENT_HVAC = {
-    HVAC_MODE_COOL: CURRENT_HVAC_COOL,
-    HVAC_MODE_DRY: CURRENT_HVAC_DRY,
-    HVAC_MODE_FAN_ONLY: CURRENT_HVAC_FAN,
-    HVAC_MODE_HEAT: CURRENT_HVAC_HEAT,
-    HVAC_MODE_OFF: CURRENT_HVAC_OFF,
 }
 
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
@@ -179,7 +165,6 @@ class LGEACClimate(LGEClimate):
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
         self._support_hor_swing = len(self._device.horizontal_step_modes) > 0
         self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
-        self._curr_hvac_action = None
 
     def _available_hvac_modes(self):
         """Return available hvac modes from lookup dict."""
@@ -213,7 +198,7 @@ class LGEACClimate(LGEClimate):
         return self._name
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the optional state attributes with device specific additions."""
         attr = {}
         if self._support_hor_swing:
@@ -240,20 +225,9 @@ class LGEACClimate(LGEClimate):
         """Return hvac operation ie. heat, cool mode."""
         op_mode = self._api.state.operation_mode
         if not self._api.state.is_on or op_mode is None:
-            mode = HVAC_MODE_OFF
-        else:
-            modes = self._available_hvac_modes()
-            mode = modes.get(op_mode, HVAC_MODE_AUTO)
-        self._curr_hvac_action = HA_STATE_TO_CURRENT_HVAC.get(mode)
-        return mode
-
-    @property
-    def hvac_action(self) -> Optional[str]:
-        """Return the current running hvac operation if supported.
-
-        Need to be one of CURRENT_HVAC_*.
-        """
-        return self._curr_hvac_action
+            return HVAC_MODE_OFF
+        modes = self._available_hvac_modes()
+        return modes.get(op_mode, HVAC_MODE_AUTO)
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
