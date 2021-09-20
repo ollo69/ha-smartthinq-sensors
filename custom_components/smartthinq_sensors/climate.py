@@ -10,7 +10,6 @@ from typing import Any, Callable, List, Tuple
 from .wideq import FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
 from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
-from .wideq.refrigerator import RefrigeratorDevice
 
 from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription
 from homeassistant.components.climate.const import (
@@ -34,7 +33,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
-from .device_helpers import TEMP_UNIT_LOOKUP, get_entity_name
+from .device_helpers import (
+    TEMP_UNIT_LOOKUP,
+    LGERefrigeratorDevice,
+    get_entity_name,
+)
 
 # general ac attributes
 ATTR_FRIDGE = "fridge"
@@ -79,17 +82,17 @@ REFRIGERATOR_CLIMATE: Tuple[ThinQClimateEntityDescription, ...] = (
         key=ATTR_FRIDGE,
         name="Fridge",
         icon="mdi:fridge-top",
-        curr_temp_fn=lambda x: x._fridge_temperature,
-        range_temp_fn=lambda x: x._device.fridge_target_temp_range,
-        target_temp_fn=lambda x, y: x._device.set_fridge_target_temp(y),
+        curr_temp_fn=lambda x: x.temp_fridge,
+        range_temp_fn=lambda x: x.device.fridge_target_temp_range,
+        target_temp_fn=lambda x, y: x.device.set_fridge_target_temp(y),
     ),
     ThinQClimateEntityDescription(
         key=ATTR_FREEZER,
         name="Freezer",
         icon="mdi:fridge-bottom",
-        curr_temp_fn=lambda x: x._freezer_temperature,
-        range_temp_fn=lambda x: x._device.freezer_target_temp_range,
-        target_temp_fn=lambda x, y: x._device.set_freezer_target_temp(y),
+        curr_temp_fn=lambda x: x.temp_freezer,
+        range_temp_fn=lambda x: x.device.freezer_target_temp_range,
+        target_temp_fn=lambda x, y: x.device.set_freezer_target_temp(y),
     ),
 )
 
@@ -135,11 +138,11 @@ async def async_setup_entry(
 class LGEClimate(CoordinatorEntity, ClimateEntity):
     """Base climate device."""
 
-    def __init__(self, device: LGEDevice):
+    def __init__(self, api: LGEDevice):
         """Initialize the climate."""
-        super().__init__(device.coordinator)
-        self._api = device
-        self._attr_device_info = device.device_info
+        super().__init__(api.coordinator)
+        self._api = api
+        self._attr_device_info = api.device_info
 
     @property
     def should_poll(self) -> bool:
@@ -168,12 +171,12 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
 class LGEACClimate(LGEClimate):
     """Air-to-Air climate device."""
 
-    def __init__(self, device: LGEDevice) -> None:
+    def __init__(self, api: LGEDevice) -> None:
         """Initialize the climate."""
-        super().__init__(device)
-        self._device: AirConditionerDevice = device.device
-        self._attr_name = device.name
-        self._attr_unique_id = f"{device.unique_id}-AC"
+        super().__init__(api)
+        self._device: AirConditionerDevice = api.device
+        self._attr_name = api.name
+        self._attr_unique_id = f"{api.unique_id}-AC"
 
         self._hvac_mode_lookup = None
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
@@ -376,22 +379,22 @@ class LGERefrigeratorClimate(LGEClimate):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQClimateEntityDescription,
     ) -> None:
         """Initialize the climate."""
-        super().__init__(device)
-        self._device: RefrigeratorDevice = device.device
+        super().__init__(api)
+        self._wrap_device = LGERefrigeratorDevice(api)
         self.entity_description: ThinQClimateEntityDescription = description
-        self._attr_name = get_entity_name(device, description.key, description.name)
-        self._attr_unique_id = f"{device.unique_id}-{description.key}-AC"
+        self._attr_name = get_entity_name(api, description.key, description.name)
+        self._attr_unique_id = f"{api.unique_id}-{description.key}-AC"
         self._attr_hvac_modes = [HVAC_MODE_AUTO]
         self._attr_hvac_mode = HVAC_MODE_AUTO
 
     @property
     def target_temperature_step(self) -> float:
         """Return the supported step of target temperature."""
-        return self._device.target_temperature_step
+        return self._wrap_device.device.target_temperature_step
 
     @property
     def temperature_unit(self) -> str:
@@ -402,50 +405,38 @@ class LGERefrigeratorClimate(LGEClimate):
         return TEMP_CELSIUS
 
     @property
-    def _fridge_temperature(self):
-        if self._api.state:
-            try:
-                return int(self._api.state.temp_fridge)
-            except ValueError:
-                return None
-        return None
-
-    @property
-    def _freezer_temperature(self):
-        if self._api.state:
-            try:
-                return int(self._api.state.temp_freezer)
-            except ValueError:
-                return None
-        return None
-
-    @property
-    def current_temperature(self) -> float:
+    def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return self.target_temperature
+        curr_temp = self.entity_description.curr_temp_fn(self._wrap_device)
+        if curr_temp is None:
+            return None
+        try:
+            return int(curr_temp)
+        except ValueError:
+            return None
 
     @property
-    def target_temperature(self) -> float:
+    def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
-        return self.entity_description.curr_temp_fn(self)
+        return self.current_temperature
 
     def set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         new_temp = kwargs.get("temperature", self.target_temperature)
-        self.entity_description.target_temp_fn(self, new_temp)
+        self.entity_description.target_temp_fn(self._wrap_device, new_temp)
 
     @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
-        if not self._device.set_values_allowed:
+        if not self._wrap_device.device.set_values_allowed:
             return 0
         return SUPPORT_TARGET_TEMPERATURE
 
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
-        return self.entity_description.range_temp_fn(self)[0]
+        return self.entity_description.range_temp_fn(self._wrap_device)[0]
 
     @property
     def max_temp(self) -> float:
-        return self.entity_description.range_temp_fn(self)[1]
+        return self.entity_description.range_temp_fn(self._wrap_device)[1]
