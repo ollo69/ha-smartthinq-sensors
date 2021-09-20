@@ -89,6 +89,15 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on and x.device.set_values_allowed,
     ),
 )
+AIRPURIFIER_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key="power",
+        name="Power",
+        value_fn=lambda x: x.is_power_on,
+        turn_on_fn=lambda x: x.device.power(True),
+        turn_off_fn=lambda x: x.device.power(False),
+    ),
+)
 
 
 def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription):
@@ -135,6 +144,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             LGESwitch(lge_device, switch_desc)
             for switch_desc in REFRIGERATOR_SWITCH
             for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+            if _switch_exist(lge_device, switch_desc)
+        ]
+    )
+
+    # add air purifiers
+    lge_switch.extend(
+        [
+            LGESwitch(lge_device, switch_desc)
+            for switch_desc in AIRPURIFIER_SWITCH
+            for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
             if _switch_exist(lge_device, switch_desc)
         ]
     )
