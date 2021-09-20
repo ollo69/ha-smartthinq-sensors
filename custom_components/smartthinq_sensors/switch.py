@@ -26,7 +26,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
-from .device_helpers import STATE_LOOKUP, get_entity_name
+from .device_helpers import STATE_LOOKUP, LGEBaseDevice, get_entity_name
 
 # general sensor attributes
 ATTR_POWER_OFF = "power_off"
@@ -147,17 +147,18 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQSwitchEntityDescription,
     ):
         """Initialize the switch."""
-        super().__init__(device.coordinator)
-        self._api = device
+        super().__init__(api.coordinator)
+        self._api = api
+        self._wrap_device = LGEBaseDevice(api)
         self.entity_description = description
-        self._attr_name = get_entity_name(device, description.key, description.name)
-        self._attr_unique_id = f"{device.unique_id}-{description.key}-switch"
+        self._attr_name = get_entity_name(api, description.key, description.name)
+        self._attr_unique_id = f"{api.unique_id}-{description.key}-switch"
         self._attr_device_class = DEVICE_CLASS_SWITCH
-        self._attr_device_info = device.device_info
+        self._attr_device_info = api.device_info
 
     @property
     def should_poll(self) -> bool:
@@ -195,27 +196,27 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         """Return True if entity is available."""
         is_avail = True
         if self.entity_description.available_fn is not None:
-            is_avail = self.entity_description.available_fn(self._api)
-        return self._api.available and self._api.is_power_on and is_avail
+            is_avail = self.entity_description.available_fn(self._wrap_device)
+        return self._api.available and self._wrap_device.is_power_on and is_avail
 
     def turn_off(self, **kwargs):
         """Turn the entity off."""
         if self.entity_description.turn_off_fn is None:
             raise NotImplementedError()
         if self.is_on:
-            self.entity_description.turn_off_fn(self._api)
+            self.entity_description.turn_off_fn(self._wrap_device)
 
     def turn_on(self, **kwargs):
         """Turn the entity on."""
         if self.entity_description.turn_on_fn is None:
             raise NotImplementedError()
         if not self.is_on:
-            self.entity_description.turn_on_fn(self._api)
+            self.entity_description.turn_on_fn(self._wrap_device)
 
     def _get_switch_state(self):
         """Get current switch state"""
         if self.entity_description.value_fn is not None:
-            return self.entity_description.value_fn(self._api)
+            return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:
             feature = self.entity_description.key

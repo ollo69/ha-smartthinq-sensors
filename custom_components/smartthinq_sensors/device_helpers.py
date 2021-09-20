@@ -84,11 +84,23 @@ class LGEBaseDevice:
             return ":".join(remain_time)
 
     @property
-    def power_state(self):
+    def device(self):
+        """The API device"""
+        return self._api.device
+
+    @property
+    def is_power_on(self):
         """Current power state"""
         if self._api.state:
             if self._api.state.is_on:
-                return STATE_ON
+                return True
+        return False
+
+    @property
+    def power_state(self):
+        """Current power state"""
+        if self.is_power_on:
+            return STATE_ON
         return STATE_OFF
 
     def get_features_attributes(self):

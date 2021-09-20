@@ -309,13 +309,6 @@ class LGEDevice:
         return self._state
 
     @property
-    def is_power_on(self) -> bool:
-        """Current power state"""
-        if self._state:
-            return self._state.is_on
-        return False
-
-    @property
     def available_features(self) -> Dict:
         return self._device.available_features
 

@@ -423,20 +423,20 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQSensorEntityDescription,
             wrapped_device,
     ):
         """Initialize the sensor."""
-        super().__init__(device.coordinator)
-        self._api = device
+        super().__init__(api.coordinator)
+        self._api = api
         self._wrap_device = wrapped_device
         self.entity_description = description
-        self._attr_name = get_entity_name(device, description.key, description.name)
-        self._attr_unique_id = device.unique_id
+        self._attr_name = get_entity_name(api, description.key, description.name)
+        self._attr_unique_id = api.unique_id
         if description.key != DEFAULT_SENSOR:
             self._attr_unique_id += f"-{description.key}"
-        self._attr_device_info = device.device_info
+        self._attr_device_info = api.device_info
         self._is_default = description.key == DEFAULT_SENSOR
 
     @property
@@ -506,11 +506,11 @@ class LGEWashDeviceSensor(LGESensor):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
-        super().__init__(device, description, LGEWashDevice(device))
+        super().__init__(api, description, LGEWashDevice(api))
 
     @property
     def extra_state_attributes(self):
@@ -537,11 +537,11 @@ class LGERefrigeratorSensor(LGESensor):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
-        super().__init__(device, description, LGERefrigeratorDevice(device))
+        super().__init__(api, description, LGERefrigeratorDevice(api))
 
     @property
     def extra_state_attributes(self):
@@ -568,11 +568,11 @@ class LGERangeSensor(LGESensor):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
-        super().__init__(device, description, LGERangeDevice(device))
+        super().__init__(api, description, LGERangeDevice(api))
 
     @property
     def extra_state_attributes(self):

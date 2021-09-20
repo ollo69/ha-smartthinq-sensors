@@ -236,18 +236,18 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     def __init__(
             self,
-            device: LGEDevice,
+            api: LGEDevice,
             description: ThinQBinarySensorEntityDescription,
             wrapped_device,
     ):
         """Initialize the binary sensor."""
-        super().__init__(device.coordinator)
-        self._api = device
+        super().__init__(api.coordinator)
+        self._api = api
         self._wrap_device = wrapped_device
         self.entity_description = description
-        self._attr_name = get_binary_sensor_name(device, description.key, description.name)
-        self._attr_unique_id = f"{device.unique_id}-{description.key}"
-        self._attr_device_info = device.device_info
+        self._attr_name = get_binary_sensor_name(api, description.key, description.name)
+        self._attr_unique_id = f"{api.unique_id}-{description.key}"
+        self._attr_device_info = api.device_info
 
     @property
     def is_on(self):
