@@ -65,20 +65,20 @@ class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
     """A class that describes ThinQ binary sensor entities."""
 
     invert_state: bool = False
-    value_fn: Callable[[Any], float] | None = None
+    value_fn: Callable[[Any], bool | str] | None = None
 
 
 WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_RUN_COMPLETED,
         name="<Run> completed",
-        value_fn=lambda x: x.device.run_completed,
+        value_fn=lambda x: x.run_completed,
     ),
     ThinQBinarySensorEntityDescription(
         key=ATTR_ERROR_STATE,
         name="Error state",
         device_class=DEVICE_CLASS_PROBLEM,
-        value_fn=lambda x: x.device.error_state,
+        value_fn=lambda x: x.error_state,
     ),
     ThinQBinarySensorEntityDescription(
         key=FEAT_STANDBY,
@@ -133,28 +133,26 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
 )
-
 REFRIGERATOR_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_DOOR_OPEN,
         name="Door open",
         device_class=DEVICE_CLASS_OPENING,
-        value_fn=lambda x: x.device.dooropen_state,
+        value_fn=lambda x: x.dooropen_state,
     ),
 )
-
 RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_COOKTOP_STATE,
         name="Cooktop state",
         device_class=DEVICE_CLASS_HEAT,
-        value_fn=lambda x: x.device.cooktop_state,
+        value_fn=lambda x: x.cooktop_state,
     ),
     ThinQBinarySensorEntityDescription(
         key=ATTR_OVEN_STATE,
         name="Oven state",
         device_class=DEVICE_CLASS_HEAT,
-        value_fn=lambda x: x.device.oven_state,
+        value_fn=lambda x: x.oven_state,
     ),
 )
 
@@ -234,6 +232,8 @@ def get_binary_sensor_name(device, ent_key, ent_name) -> str:
 class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Class to monitor binary sensors for LGE device"""
 
+    entity_description = ThinQBinarySensorEntityDescription
+
     def __init__(
             self,
             device: LGEDevice,
@@ -243,8 +243,8 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Initialize the binary sensor."""
         super().__init__(device.coordinator)
         self._api = device
-        self.device = wrapped_device
-        self.entity_description: ThinQBinarySensorEntityDescription = description
+        self._wrap_device = wrapped_device
+        self.entity_description = description
         self._attr_name = get_binary_sensor_name(device, description.key, description.name)
         self._attr_unique_id = f"{device.unique_id}-{description.key}"
         self._attr_device_info = device.device_info
@@ -267,8 +267,8 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def icon(self):
         """Return the icon to use in the frontend, if any."""
-        icon = self.entity_description.icon
-        if icon and icon == DEFAULT_ICON:
+        ent_icon = self.entity_description.icon
+        if ent_icon and ent_icon == DEFAULT_ICON:
             return DEVICE_ICONS.get(self._api.type)
         return super().icon
 
@@ -284,7 +284,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
 
     def _get_sensor_state(self):
         if self.entity_description.value_fn is not None:
-            return self.entity_description.value_fn(self)
+            return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:
             feature = self.entity_description.key

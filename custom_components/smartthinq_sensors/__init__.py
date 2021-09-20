@@ -285,23 +285,35 @@ class LGEDevice:
 
     @property
     def device(self):
+        """The device instance"""
         return self._device
 
     @property
     def name(self) -> str:
+        """The device name"""
         return self._name
 
     @property
     def type(self) -> DeviceType:
+        """The device type"""
         return self._type
 
     @property
     def unique_id(self) -> str:
+        """Device unique ID"""
         return self._id
 
     @property
     def state(self):
+        """Current device state"""
         return self._state
+
+    @property
+    def is_power_on(self) -> bool:
+        """Current power state"""
+        if self._state:
+            return self._state.is_on
+        return False
 
     @property
     def available_features(self) -> Dict:

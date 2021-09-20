@@ -102,13 +102,13 @@ WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=DEFAULT_SENSOR,
         icon=DEFAULT_ICON,
-        value_fn=lambda x: x.device.power_state,
+        value_fn=lambda x: x.power_state,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_CURRENT_COURSE,
         name="Current course",
         icon="mdi:pin-outline",
-        value_fn=lambda x: x.device.current_course,
+        value_fn=lambda x: x.current_course,
     ),
     ThinQSensorEntityDescription(
         key=FEAT_RUN_STATE,
@@ -167,57 +167,55 @@ WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         key=ATTR_INITIAL_TIME,
         name="Initial time",
         icon="mdi:clock-outline",
-        value_fn=lambda x: x.device.initial_time,
+        value_fn=lambda x: x.initial_time,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_REMAIN_TIME,
         name="Remain time",
         icon="mdi:clock-outline",
-        value_fn=lambda x: x.device.remain_time,
+        value_fn=lambda x: x.remain_time,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_RESERVE_TIME,
         name="Reserve time",
         icon="mdi:clock-outline",
-        value_fn=lambda x: x.device.reserve_time,
+        value_fn=lambda x: x.reserve_time,
         entity_registry_enabled_default=False,
     ),
 )
-
 REFRIGERATOR_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=DEFAULT_SENSOR,
         icon=DEFAULT_ICON,
-        value_fn=lambda x: x.device.power_state,
+        value_fn=lambda x: x.power_state,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_FRIDGE_TEMP,
         name="Fridge temp",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.temp_unit,
-        value_fn=lambda x: x.device.temp_fridge,
+        unit_fn=lambda x: x.temp_unit,
+        value_fn=lambda x: x.temp_fridge,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_FREEZER_TEMP,
         name="Freezer temp",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.temp_unit,
-        value_fn=lambda x: x.device.temp_freezer,
+        unit_fn=lambda x: x.temp_unit,
+        value_fn=lambda x: x.temp_freezer,
     ),
 )
-
 AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=ATTR_ROOM_TEMP,
         name="Room temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.temp_unit,
-        value_fn=lambda x: x.device.curr_temp,
+        unit_fn=lambda x: x.temp_unit,
+        value_fn=lambda x: x.curr_temp,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
@@ -225,7 +223,7 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         name="Hot water temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.temp_unit,
+        unit_fn=lambda x: x.temp_unit,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
@@ -233,7 +231,7 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         name="In water temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.temp_unit,
+        unit_fn=lambda x: x.temp_unit,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
@@ -241,7 +239,7 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         name="Out water temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.temp_unit,
+        unit_fn=lambda x: x.temp_unit,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
@@ -253,12 +251,11 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
 )
-
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=DEFAULT_SENSOR,
         icon=DEFAULT_ICON,
-        value_fn=lambda x: x.device.power_state,
+        value_fn=lambda x: x.power_state,
     ),
     ThinQSensorEntityDescription(
         key=FEAT_COOKTOP_LEFT_FRONT_STATE,
@@ -305,30 +302,30 @@ RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         name="Oven lower target temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.oven_temp_unit,
-        value_fn=lambda x: x.device.oven_lower_target_temp,
+        unit_fn=lambda x: x.oven_temp_unit,
+        value_fn=lambda x: x.oven_lower_target_temp,
     ),
     ThinQSensorEntityDescription(
         key=FEAT_OVEN_LOWER_CURRENT_TEMP,
         name="Oven lower current temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.oven_temp_unit,
+        unit_fn=lambda x: x.oven_temp_unit,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_OVEN_UPPER_TARGET_TEMP,
         name="Oven upper target temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.oven_temp_unit,
-        value_fn=lambda x: x.device.oven_upper_target_temp,
+        unit_fn=lambda x: x.oven_temp_unit,
+        value_fn=lambda x: x.oven_upper_target_temp,
     ),
     ThinQSensorEntityDescription(
         key=FEAT_OVEN_UPPER_CURRENT_TEMP,
         name="Oven upper current temperature",
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_TEMPERATURE,
-        unit_fn=lambda x: x.device.oven_temp_unit,
+        unit_fn=lambda x: x.oven_temp_unit,
     ),
 )
 
@@ -422,6 +419,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class LGESensor(CoordinatorEntity, SensorEntity):
     """Class to monitor sensors for LGE device"""
 
+    entity_description = ThinQSensorEntityDescription
+
     def __init__(
             self,
             device: LGEDevice,
@@ -431,8 +430,8 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(device.coordinator)
         self._api = device
-        self.device = wrapped_device
-        self.entity_description: ThinQSensorEntityDescription = description
+        self._wrap_device = wrapped_device
+        self.entity_description = description
         self._attr_name = get_entity_name(device, description.key, description.name)
         self._attr_unique_id = device.unique_id
         if description.key != DEFAULT_SENSOR:
@@ -457,14 +456,14 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit of measurement of the sensor, if any."""
         if self.entity_description.unit_fn is not None:
-            return self.entity_description.unit_fn(self)
+            return self.entity_description.unit_fn(self._wrap_device)
         return super().native_unit_of_measurement
 
     @property
     def icon(self):
         """Return the icon to use in the frontend, if any."""
-        icon = self.entity_description.icon
-        if icon and icon == DEFAULT_ICON:
+        ent_icon = self.entity_description.icon
+        if ent_icon and ent_icon == DEFAULT_ICON:
             return DEVICE_ICONS.get(self._api.type)
         return super().icon
 
@@ -481,7 +480,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     def _get_sensor_state(self):
         """Get current sensor state"""
         if self.entity_description.value_fn is not None:
-            return self.entity_description.value_fn(self)
+            return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:
             feature = self.entity_description.key
@@ -520,14 +519,14 @@ class LGEWashDeviceSensor(LGESensor):
             return None
 
         data = {
-            ATTR_RUN_COMPLETED: self.device.run_completed,
-            ATTR_ERROR_STATE: self.device.error_state,
-            ATTR_INITIAL_TIME: self.device.initial_time,
-            ATTR_REMAIN_TIME: self.device.remain_time,
-            ATTR_RESERVE_TIME: self.device.reserve_time,
-            ATTR_CURRENT_COURSE: self.device.current_course,
+            ATTR_RUN_COMPLETED: self._wrap_device.run_completed,
+            ATTR_ERROR_STATE: self._wrap_device.error_state,
+            ATTR_INITIAL_TIME: self._wrap_device.initial_time,
+            ATTR_REMAIN_TIME: self._wrap_device.remain_time,
+            ATTR_RESERVE_TIME: self._wrap_device.reserve_time,
+            ATTR_CURRENT_COURSE: self._wrap_device.current_course,
         }
-        features = self.device.get_features_attributes()
+        features = self._wrap_device.get_features_attributes()
         data.update(features)
 
         return data
@@ -551,14 +550,14 @@ class LGERefrigeratorSensor(LGESensor):
             return None
 
         data = {
-            ATTR_FRIDGE_TEMP: self.device.temp_fridge,
-            ATTR_FREEZER_TEMP: self.device.temp_freezer,
-            ATTR_TEMP_UNIT: self.device.temp_unit,
-            ATTR_DOOR_OPEN: self.device.dooropen_state,
+            ATTR_FRIDGE_TEMP: self._wrap_device.temp_fridge,
+            ATTR_FREEZER_TEMP: self._wrap_device.temp_freezer,
+            ATTR_TEMP_UNIT: self._wrap_device.temp_unit,
+            ATTR_DOOR_OPEN: self._wrap_device.dooropen_state,
         }
 
         if self._api.state:
-            features = self.device.get_features_attributes()
+            features = self._wrap_device.get_features_attributes()
             data.update(features)
 
         return data
@@ -582,11 +581,11 @@ class LGERangeSensor(LGESensor):
             return None
 
         data = {
-            ATTR_OVEN_LOWER_TARGET_TEMP: self.device.oven_lower_target_temp,
-            ATTR_OVEN_UPPER_TARGET_TEMP: self.device.oven_upper_target_temp,
-            ATTR_OVEN_TEMP_UNIT: self.device.oven_temp_unit,
+            ATTR_OVEN_LOWER_TARGET_TEMP: self._wrap_device.oven_lower_target_temp,
+            ATTR_OVEN_UPPER_TARGET_TEMP: self._wrap_device.oven_upper_target_temp,
+            ATTR_OVEN_TEMP_UNIT: self._wrap_device.oven_temp_unit,
         }
-        features = self.device.get_features_attributes()
+        features = self._wrap_device.get_features_attributes()
         data.update(features)
 
         return data
