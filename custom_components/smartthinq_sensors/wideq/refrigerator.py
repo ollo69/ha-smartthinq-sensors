@@ -133,14 +133,12 @@ class RefrigeratorDevice(Device):
         """Prepare command for specific ThinQ2 device."""
         data_set = cmd.pop("data", None)
         if not data_set:
-            return None
-
-        for cmd_key, cmd_value in data_set[REFR_ROOT_DATA].items():
-            if cmd_key == key:
-                replace_item = value
-            else:
-                replace_item = "IGNORE"
-            data_set[REFR_ROOT_DATA][cmd_key] = replace_item
+            data_set = {REFR_ROOT_DATA: {key: value}}
+        else:
+            for cmd_key in data_set[REFR_ROOT_DATA].keys():
+                data_set[REFR_ROOT_DATA][cmd_key] = (
+                    value if cmd_key == key else "IGNORE"
+                )
         cmd["dataSetList"] = data_set
 
         return cmd
