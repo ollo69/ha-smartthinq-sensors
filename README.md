@@ -34,9 +34,9 @@ Prerequisite: SSH into your server. [Home Assistant Add-on: SSH server](https://
 1. Clone the git master branch.  
 `git clone https://github.com/ollo69/ha-smartthinq-sensors.git`
 2. If missing, create a `custom_components` directory where your configuration.yaml file resides. This is usually in the config directory of homeassistant.  
-`mkdir ~/.homeassistant/config/custom_components`
+`mkdir ~/.homeassistant/custom_components`
 3. Copy the smartthinq_sensors directory within the `custom_components` directory of your homeassistant installation from step 2.  
-`cp -R ha-smartthinq-sensors/custom_components/smartthinq_sensors/ ~/.homeassistant/config/custom_components`
+`cp -R ha-smartthinq-sensors/custom_components/smartthinq_sensors/ ~/.homeassistant/custom_components`
 4. (Optional) Delete the git repo.  
 `rm -R ha-smartthinq-sensors/`
 
