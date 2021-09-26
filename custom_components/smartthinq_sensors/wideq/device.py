@@ -600,6 +600,7 @@ class ModelInfo(object):
 
 class ModelInfoV2(object):
     """A description of a device model's capabilities.
+        Type V2.
         """
 
     def __init__(self, data):
@@ -813,6 +814,17 @@ class ModelInfoV2(object):
 
 
 class ModelInfoV2AC(ModelInfo):
+    """A description of a device model's capabilities.
+        Type V2AC and other models with "data_type in Value.
+        """
+
+    @staticmethod
+    def valid_value_data(value_data):
+        """Determine if valid Value data is in this model."""
+        first_value = list(value_data.values())[0]
+        if "data_type" in first_value:
+            return True
+        return False
 
     @property
     def is_info_v2(self):
@@ -1026,8 +1038,12 @@ class Device(object):
 
             model_data = self._model_data
             if "Monitoring" in model_data and "Value" in model_data:
-                # this are old V1 model
-                self._model_info = ModelInfo(model_data)
+                if ModelInfoV2AC.valid_value_data(model_data["Value"]):
+                    # this are V2 models with format similar to V1
+                    self._model_info = ModelInfoV2AC(model_data)
+                else:
+                    # this are old V1 model
+                    self._model_info = ModelInfo(model_data)
             elif "MonitoringValue" in model_data:
                 # this are new V2 devices
                 self._model_info = ModelInfoV2(model_data)
