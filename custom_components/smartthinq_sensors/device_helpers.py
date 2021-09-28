@@ -286,7 +286,12 @@ class LGEAirPurifierDevice(LGEBaseDevice):
         return None
 
     @property
-    def filterRemainingLife(self):
+    def filter_remaining_life(self):
         if self._api.state:
-            return self._api.state.filterMngUseTime/self._api.state.filterMngMaxTime*100
+            max_time = self._api.state.filter_mng_max_time
+            use_time = self._api.state.filter_mng_use_time
+            try:
+                return use_time/max_time*100
+            except ValueError:
+                return None
         return None

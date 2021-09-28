@@ -1,33 +1,31 @@
 """------------------for Air Purifier"""
 import enum
 import logging
-
 from typing import Optional
 
-from .device import (
-    Device,
-    DeviceStatus,
-)
+from .device import Device, DeviceStatus
 
-AIRPURIFIER_CTRL_BASIC = ["Control", "basicCtrl"]
+AIR_PURIFIER_CTRL_BASIC = ["Control", "basicCtrl"]
 
-AIRPURIFIER_STATE_OPERATION = ["Operation", "airState.operation"]
-AIRPURIFIER_STATE_PM1 = ["PM1", "airState.quality.PM1"]
-AIRPURIFIER_STATE_PM25 = ["PM25", "airState.quality.PM2"]
-AIRPURIFIER_STATE_PM10 = ["PM10", "airState.quality.PM10"]
-AIRPURIFIER_STATE_FILTERMNG_USE_TIME = [
-    "FilterMngMaxTime", "airState.filterMngStates.useTime"]
-AIRPURIFIER_STATE_FILTERMNG_MAX_TIME = [
-    "FilterMngMaxTime", "airState.filterMngStates.maxTime"]
+AIR_PURIFIER_STATE_OPERATION = ["Operation", "airState.operation"]
+AIR_PURIFIER_STATE_PM1 = ["PM1", "airState.quality.PM1"]
+AIR_PURIFIER_STATE_PM25 = ["PM25", "airState.quality.PM2"]
+AIR_PURIFIER_STATE_PM10 = ["PM10", "airState.quality.PM10"]
+AIR_PURIFIER_STATE_FILTERMNG_USE_TIME = [
+    "FilterMngMaxTime", "airState.filterMngStates.useTime"
+]
+AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME = [
+    "FilterMngMaxTime", "airState.filterMngStates.maxTime"
+]
 
-
-CMD_STATE_OPERATION = [AIRPURIFIER_CTRL_BASIC,
-                       "Set", AIRPURIFIER_STATE_OPERATION]
+CMD_STATE_OPERATION = [
+    AIR_PURIFIER_CTRL_BASIC, "Set", AIR_PURIFIER_STATE_OPERATION
+]
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class AirPufifierOp(enum.Enum):
+class AirPurifierOp(enum.Enum):
     """Whether a device is on or off."""
 
     OFF = "@operation_off"
@@ -44,7 +42,7 @@ class AirPurifierDevice(Device):
     def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
-        op = AirPufifierOp.ON if turn_on else AirPufifierOp.OFF
+        op = AirPurifierOp.ON if turn_on else AirPurifierOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
         op_value = self.model_info.enum_value(keys[2], op.value)
         self.set(keys[0], keys[1], key=keys[2], value=op_value)
@@ -71,7 +69,7 @@ class AirPurifierDevice(Device):
 
 
 class AirPurifierStatus(DeviceStatus):
-    """Higher-level information about a Air Pufifier's current status."""
+    """Higher-level information about a Air Purifier's current status."""
 
     def _get_state_key(self, key_name):
         if isinstance(key_name, list):
@@ -79,19 +77,18 @@ class AirPurifierStatus(DeviceStatus):
         return key_name
 
     def _get_operation(self):
-        key = self._get_state_key(AIRPURIFIER_STATE_OPERATION)
+        key = self._get_state_key(AIR_PURIFIER_STATE_OPERATION)
         try:
-            return AirPufifierOp(self.lookup_enum(key, True))
+            return AirPurifierOp(self.lookup_enum(key, True))
         except ValueError:
             return None
 
     @property
     def is_on(self):
         op = self._get_operation()
-        _LOGGER.debug(op)
         if not op:
             return False
-        return op != AirPufifierOp.OFF
+        return op != AirPurifierOp.OFF
 
     @property
     def operation(self):
@@ -102,27 +99,27 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm1(self):
-        key = self._get_state_key(AIRPURIFIER_STATE_PM1)
+        key = self._get_state_key(AIR_PURIFIER_STATE_PM1)
         return self._data.get(key)
 
     @property
     def pm25(self):
-        key = self._get_state_key(AIRPURIFIER_STATE_PM25)
+        key = self._get_state_key(AIR_PURIFIER_STATE_PM25)
         return self._data.get(key)
 
     @property
     def pm10(self):
-        key = self._get_state_key(AIRPURIFIER_STATE_PM10)
+        key = self._get_state_key(AIR_PURIFIER_STATE_PM10)
         return self._data.get(key)
 
     @property
-    def filterMngUseTime(self):
-        key = self._get_state_key(AIRPURIFIER_STATE_FILTERMNG_USE_TIME)
+    def filter_mng_use_time(self):
+        key = self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME)
         return self._data.get(key)
 
     @property
-    def filterMngMaxTime(self):
-        key = self._get_state_key(AIRPURIFIER_STATE_FILTERMNG_MAX_TIME)
+    def filter_mng_max_time(self):
+        key = self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME)
         return self._data.get(key)
 
     def _update_features(self):
