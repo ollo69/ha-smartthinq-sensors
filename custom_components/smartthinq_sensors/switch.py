@@ -70,7 +70,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         icon="mdi:coolant-temperature",
         turn_off_fn=lambda x: x.device.set_express_fridge(False),
         turn_on_fn=lambda x: x.device.set_express_fridge(True),
-        available_fn=lambda x: x.is_power_on and x.device.set_values_allowed,
+        available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
         key=FEAT_EXPRESSMODE,
@@ -78,7 +78,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         icon="mdi:snowflake",
         turn_off_fn=lambda x: x.device.set_express_mode(False),
         turn_on_fn=lambda x: x.device.set_express_mode(True),
-        available_fn=lambda x: x.is_power_on and x.device.set_values_allowed,
+        available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
         key=FEAT_ICEPLUS,
@@ -86,7 +86,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         icon="mdi:snowflake",
         turn_off_fn=lambda x: x.device.set_ice_plus(False),
         turn_on_fn=lambda x: x.device.set_ice_plus(True),
-        available_fn=lambda x: x.is_power_on and x.device.set_values_allowed,
+        available_fn=lambda x: x.device.set_values_allowed,
     ),
 )
 AIR_PURIFIER_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
