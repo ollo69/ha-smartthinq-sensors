@@ -72,6 +72,9 @@ FEAT_OVEN_LOWER_STATE = "oven_lower_state"
 FEAT_OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
 FEAT_OVEN_UPPER_STATE = "oven_upper_state"
 
+# air purifier device features
+FEAT_LOWER_FILTER_LIFE = "lower_filter_life"
+FEAT_UPPER_FILTER_LIFE = "upper_filter_life"
 
 # request ciphers settings
 CIPHERS = ":HIGH:!DH:!aNULL"
