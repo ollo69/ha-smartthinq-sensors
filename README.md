@@ -181,151 +181,91 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
     service: notify.notify
 ```
 Substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer.
-- Custom card for dryer and washer (![Screenshot of laundry card](/washerpics/cardpic.png))
+- Custom card for dryer and washer (![Screenshot of laundry card](https://user-images.githubusercontent.com/10727862/135772833-de1a555a-3a88-4319-a82c-33dbe80fa4c5.png))
 <details><summary>Hidden, click to expand</summary>
 
 Put this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
 ```js
-// card-tools for more-info. MIT license (This isn't a substantial portion)
-function lovelace_view() {
-  var root = document.querySelector("hc-main");
-  if(root) {
-    root = root && root.shadowRoot;
-    root = root && root.querySelector("hc-lovelace");
-    root = root && root.shadowRoot;
-    root = root && root.querySelector("hui-view") || root.querySelector("hui-panel-view");
-    return root;
-  }
-  root = document.querySelector("home-assistant");
-  root = root && root.shadowRoot;
-  root = root && root.querySelector("home-assistant-main");
-  root = root && root.shadowRoot;
-  root = root && root.querySelector("app-drawer-layout partial-panel-resolver");
-  root = root && root.shadowRoot || root;
-  root = root && root.querySelector("ha-panel-lovelace");
-  root = root && root.shadowRoot;
-  root = root && root.querySelector("hui-root");
-  root = root && root.shadowRoot;
-  root = root && root.querySelector("ha-app-layout #view");
-  root = root && root.firstElementChild;
-  return root;
-}
-function fireEvent(ev, detail, entity=null) {
-  ev = new Event(ev, {
-    bubbles: true,
-    cancelable: false,
-    composed: true,
-  });
-  ev.detail = detail || {};
-  if(entity) {
-    entity.dispatchEvent(ev);
-  } else {
-    var root = lovelace_view();
-    if (root) root.dispatchEvent(ev);
-  }
-}
-function moreInfo(entity, large=false) {
-  const root = document.querySelector("hc-main") || document.querySelector("home-assistant");
-  fireEvent("hass-more-info", {entityId: entity}, root);
-  const el = root._moreInfoEl;
-  el.large = large;
-  return el;
-}
-class LgLaundryCard extends HTMLElement {
+class LaundryCard extends HTMLElement {
+  // Whenever states are updated
   set hass(hass) {
     const entityId = this.config.entity;
     const state = hass.states[entityId];
-    if (!state) {
-        throw new Error('Entity not found. Maybe check to make sure it exists.');
-    }
-    const stateStr = state ? state.state : 'unavailable';
-    const friendlyName = state.attributes.friendly_name;
-    const friendlyNameStr = friendlyName ? " " + friendlyName : "";
-    const courseName = state.attributes.current_course;
-    const courseNameStr = courseName ? " " + courseName : "an unknown cycle";
-    const stageName = state.attributes.run_state;
-    const stageNameStr = stageName ? " " + stageName : "unknown";
-    const iconName = state.attributes.icon;
-    const iconNameStr = iconName ? iconName : "";
-    const remainTime = state.attributes.remain_time;
-    const remainTimeStr = remainTime ? remainTime : "unknown";
-    const totalTime = state.attributes.initial_time;
-    const totalTimeStr = totalTime ? totalTime : "unknown";
-    var worked;
-    var percentDone;
-    try {
-        const minRemain = (parseInt(remainTimeStr.split(":")[0]) * 60) + parseInt(remainTimeStr.split(":")[1]);
-        const minTotal = (parseInt(totalTimeStr.split(":")[0]) * 60) + parseInt(totalTimeStr.split(":")[1]);
-        percentDone = String(Math.round((minTotal - minRemain) / minTotal * 100)) + "%";
-        worked = !isNaN(Math.round((minTotal - minRemain) / minTotal * 100));
-    } catch(err) {
-        console.log(err);
-        worked = false;
-    }
+    // Set data definitions
+    const friendlyName = state.attributes["friendly_name"] || state.entity_id;
+    const icon = state.attributes["icon"];
     if (!this.content) {
-      this.contenta = document.createElement('a');
-      this.contenta.href = "#";
-      this.contenta.style.textDecoration = "unset";
-      this.contenta.style.color = "unset";
-      function laundryinfo() {
-          window.history.pushState({}, "", window.location.href.split("#")[0]);
-          moreInfo(this.entityId);
-      }
-      this.contenta.onclick = laundryinfo.bind({entityId: entityId});
-      this.content = document.createElement('div');
-      this.content.style.padding = '0 16px 16px';
-      this.content.style.display = 'flex';
-      const card = document.createElement('ha-card');
-      card.header = friendlyNameStr;
-      this.contenta.appendChild(card);
-      card.appendChild(this.content);
-      this.appendChild(this.contenta);
+      this.innerHTML = `
+        <ha-card header="${friendlyName}">
+          <div class="main">
+            <ha-icon icon="${icon}"></ha-icon>
+            <span></span>
+          </div>
+        </ha-card>
+      `;
+      this.querySelector(".main").style.display = "grid";
+      this.querySelector(".main").style.gridTemplateColumns = "33% 66%";
+      this.querySelector("ha-icon").style.setProperty("--mdc-icon-size", "100%");
     }
-    var conthtml = '';
-    conthtml = `
-      <ha-icon icon="${iconNameStr}" style="transform: scale(3,3); color: ${stateStr == 'on' ? "var(--sidebar-selected-icon-color)" : "var(--secondary-text-color)"}; display: block; padding: 8px 9px 12px 5px; margin: 15px;"></ha-icon>
-      <div>${friendlyNameStr} is currently ${stateStr}.
-    `;
-    if (stateStr == 'on') {
-        conthtml += `
-          <br/>The ${courseNameStr} progress is ${stageNameStr}.
-          <br/>There's ${remainTimeStr} remaining out of ${totalTimeStr} total.
-        `;
-        if (worked) {
-          conthtml += `
-            <br/>
-            <div style="width: 100%; height: 30px; background-color: #8f89; display: inline-block;">
-              <div style="max-width: 0; min-width: 0; max-width: ${percentDone} !important; min-width: ${percentDone} !important; height: 30px; background-color: #09d9; display: inline-block;">
-                <b style="line-height: 30px; margin: 0 10px; display: block;">${percentDone}</b>
-              </div>
-            </div>
-            </div>
-          `;
-          conthtml = conthtml.replace("8px 9px 12px 5px", "16px 9px 12px 5px");
-        } else {
-            conthtml += "</div>";
-        }
+    if (state.state == "on") {
+      const totalTime = state.attributes["initial_time"];
+      const remainTime = state.attributes["remain_time"];
+      const totalMinutes = (parseInt(totalTime.split(":")[0]) * 60) + parseInt(totalTime.split(":")[1]);
+      const remainMinutes = (parseInt(remainTime.split(":")[0]) * 60) + parseInt(remainTime.split(":")[1]);
+      this.querySelector("ha-icon").style.color = "var(--paper-item-icon-active-color)";
+      this.querySelector("span").innerHTML = `
+${friendlyName} is running ${state.attributes["current_course"]}<br>
+Currently ${state.attributes["run_state"]}<br>
+${state.attributes["initial_time"]} total, ${state.attributes["remain_time"]} to go
+<div class="progress-wrapper" style="height: 20px; width: 100%;">
+  <div class="progress" style="display: inline-block; height: 20px;">
+  </div>
+  <span style="color: var(--paper-item-icon-color); position: absolute; right: 33%;">50%</span>
+</div>
+`;
+      this.querySelector(".progress-wrapper").style.backgroundColor = "var(--paper-item-icon-color)";
+      this.querySelector(".progress").style.backgroundColor = "var(--paper-item-icon-active-color)";
+      this.querySelector(".progress").style.width = (totalMinutes - remainMinutes) / totalMinutes * 100 + "%";
+      this.querySelector(".progress-wrapper span").innerHTML = Math.round((totalMinutes - remainMinutes) / totalMinutes * 100) + "%";
     } else {
-        conthtml += "</div>";
+      this.querySelector("ha-icon").style.color = "var(--paper-item-icon-color)";
+      this.querySelector("span").innerHTML = `${friendlyName} is off`;
     }
-    this.content.innerHTML = conthtml;
   }
+
+  // On updated config
   setConfig(config) {
-    if (!config.entity) {
-      throw new Error('You need to define a laundry entity');
+    const states = document.querySelector("home-assistant").hass.states;
+    if (!config.entity || !states[config.entity] || !states[config.entity].state) {
+      throw new Error("You need to define an valid entity (eg sensor.my_washing_machine)");
     }
     this.config = config;
   }
+
+  // HA card size to distribute cards across columns, 50px
   getCardSize() {
     return 3;
   }
+
+  // Return default config
   static getStubConfig() {
+    for (var state of Object.values(document.querySelector("home-assistant").hass.states)) {
+      if (state.attributes["run_state"] !== undefined) {
+        return { entity: state.entity_id };
+      }
+    }
     return { entity: "sensor.my_washing_machine" };
   }
 }
 
-customElements.define('lg-laundry-card', LgLaundryCard);
-window.customCards.push({type: "lg-laundry-card", name: "LG laundry card", description: "Card for LG laundry machines."});
+customElements.define('laundry-card', LaundryCard);
+window.customCards.push(
+  {
+    type: "laundry-card",
+    name: "Laundry Card",
+    preview: true
+  }
+);
 ```
 
 Lovelace:
