@@ -168,7 +168,7 @@ WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ),
     ThinQSensorEntityDescription(
         key=FEAT_TUBCLEAN_COUNT,
-        name="Tube clean counter",
+        name="Tub clean counter",
         icon=DEFAULT_ICON,
         entity_registry_enabled_default=False,
     ),
@@ -187,14 +187,14 @@ WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ),
     ThinQSensorEntityDescription(
         key=ATTR_REMAIN_TIME,
-        name="Remain time",
+        name="Remaining time",
         icon="mdi:clock-outline",
         value_fn=lambda x: x.remain_time,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
         key=ATTR_RESERVE_TIME,
-        name="Reserve time",
+        name="Countdown time",
         icon="mdi:clock-outline",
         value_fn=lambda x: x.reserve_time,
         entity_registry_enabled_default=False,
