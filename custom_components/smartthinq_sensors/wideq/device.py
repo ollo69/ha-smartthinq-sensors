@@ -1286,6 +1286,12 @@ class DeviceStatus(object):
             curr_key, value
         )
 
+    def lookup_range(self, key):
+        curr_key = self._get_data_key(key)
+        if not curr_key:
+            return None
+        return self._data[curr_key]
+
     def lookup_reference(self, key, ref_key="_comment"):
         curr_key = self._get_data_key(key)
         if not curr_key:

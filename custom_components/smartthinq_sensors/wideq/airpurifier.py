@@ -82,15 +82,11 @@ class AirPurifierDevice(Device):
 class AirPurifierStatus(DeviceStatus):
     """Higher-level information about a Air Purifier's current status."""
 
-    def _get_state_key(self, key_name):
-        if isinstance(key_name, list):
-            return key_name[1 if self.is_info_v2 else 0]
-        return key_name
-
     def _get_operation(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_OPERATION)
         try:
-            return AirPurifierOp(self.lookup_enum(key, True))
+            return AirPurifierOp(
+                self.lookup_enum(AIR_PURIFIER_STATE_OPERATION, True)
+            )
         except ValueError:
             return None
 
@@ -110,34 +106,31 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm1(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_PM1)
-        return self._data.get(key)
+        return self.lookup_range(AIR_PURIFIER_STATE_PM1)
 
     @property
     def pm25(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_PM25)
-        return self._data.get(key)
+        return self.lookup_range(AIR_PURIFIER_STATE_PM25)
 
     @property
     def pm10(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_PM10)
-        return self._data.get(key)
+        return self.lookup_range(AIR_PURIFIER_STATE_PM10)
 
     def _get_lower_filter_life(self):
-        use_time = self._data.get(self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME))
-        if use_time is None:
+        max_time = self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME, True)
+        use_time = self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME)
+        if max_time is None or use_time is None:
             return None
-        max_time = self._data.get(self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME))
         try:
             return use_time/max_time*100
         except ValueError:
             return None
 
     def _get_upper_filter_life(self):
-        use_time = self._data.get(self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME_TOP))
-        if use_time is None:
+        max_time = self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME_TOP, True)
+        use_time = self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME_TOP)
+        if max_time is None or use_time is None:
             return None
-        max_time = self._data.get(self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME_TOP))
         try:
             return use_time/max_time*100
         except ValueError:
@@ -145,17 +138,20 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def lower_filter_life(self):
+        feat_value = self._get_lower_filter_life()
+        if feat_value is None:
+            return None
         return self._update_feature(
-            FEAT_LOWER_FILTER_LIFE, self._get_lower_filter_life()
+            FEAT_LOWER_FILTER_LIFE, feat_value, False
         )
 
     @property
     def upper_filter_life(self):
-        supp_key = self._get_state_key(SUPPORT_AIR_PURIFIER_MFILTER)
-        if self._device.model_info.enum_value(supp_key, LABEL_UPPER_FILTER_SUPPORT) is None:
+        feat_value = self._get_upper_filter_life()
+        if feat_value is None:
             return None
         return self._update_feature(
-            FEAT_UPPER_FILTER_LIFE, self._get_upper_filter_life()
+            FEAT_UPPER_FILTER_LIFE, feat_value, False
         )
 
     def _update_features(self):
