@@ -228,18 +228,3 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id=step_id, data_schema=schema, errors=errors if errors else {},
         )
-
-    async def async_step_import(self, import_config):
-        """Import a config entry from configuration.yaml."""
-        if self._async_current_entries():
-            _LOGGER.debug("SmartThinQ configuration already present / imported.")
-            return self.async_abort(reason="single_instance_allowed")
-
-        _LOGGER.warning(
-            "Integration configuration using configuration.yaml is not supported."
-            " Please configure integration from HA user interface"
-        )
-        return self.async_abort(reason="single_instance_allowed")
-
-        # self._use_api_v2 = False
-        # return await self.async_step_user(import_config)

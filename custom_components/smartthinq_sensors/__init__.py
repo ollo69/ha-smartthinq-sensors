@@ -3,7 +3,6 @@ Support for LG SmartThinQ device.
 """
 # REQUIREMENTS = ['wideq']
 
-import asyncio
 import logging
 import time
 import voluptuous as vol
@@ -27,7 +26,7 @@ from .wideq.core_exceptions import (
 
 import homeassistant.helpers.config_validation as cv
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_REGION, CONF_TOKEN, TEMP_CELSIUS
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -126,32 +125,21 @@ class LGEAuthentication:
         return client
 
 
-async def async_setup(hass, config):
-    """
-    This method gets called if HomeAssistant has a valid configuration entry within
-    configurations.yaml.
-
-    Thus, in this method we simply trigger the creation of a config entry.
-
-    :return:
-    """
-    conf = config.get(DOMAIN)
-    hass.data[DOMAIN] = {}
-
-    if conf is not None:
-        hass.async_create_task(
-            hass.config_entries.flow.async_init(
-                DOMAIN, context={"source": SOURCE_IMPORT}, data=conf
-            )
+def _notify_error(hass, notification_id, title, message):
+    """Notify user with persistent notification"""
+    hass.async_create_task(
+        hass.services.async_call(
+            domain='persistent_notification', service='create', service_data={
+                'title': title,
+                'message': message,
+                'notification_id': f"{DOMAIN}.{notification_id}"
+            }
         )
-
-    return True
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
-    """
-    This class is called by the HomeAssistant framework when a configuration entry is provided.
-    """
+    """Set up SmartThinQ integration from a config entry."""
 
     refresh_token = config_entry.data.get(CONF_TOKEN)
     region = config_entry.data.get(CONF_REGION)
@@ -169,8 +157,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         language,
     )
 
-    hass.data.setdefault(DOMAIN, {})[LGE_DEVICES] = {}
-
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
     lgeauth = LGEAuthentication(region, language, use_api_v2)
@@ -180,7 +166,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
             lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
         )
     except InvalidCredentialError:
-        _LOGGER.error("Invalid ThinQ credential error. Component setup aborted")
+        msg = "Invalid ThinQ credential error, integration setup aborted." \
+              " Please verify your credential using LG app on your mobile phone." \
+              " If your credential changed, you must reconfigure integration"
+        _notify_error(hass, "inv_credential", "SmartThinQ Sensors", msg)
+        _LOGGER.error(msg)
         return False
 
     except Exception:
@@ -214,30 +204,21 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     # remove device not available anymore
     await cleanup_orphan_lge_devices(hass, config_entry.entry_id, client)
 
-    hass.data.setdefault(DOMAIN, {}).update(
-        {CLIENT: client, LGE_DEVICES: lge_devices}
-    )
-
-    for platform in SMARTTHINQ_COMPONENTS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(config_entry, platform)
-        )
+    hass.data[DOMAIN] = {CLIENT: client, LGE_DEVICES: lge_devices}
+    hass.config_entries.async_setup_platforms(config_entry, SMARTTHINQ_COMPONENTS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    await asyncio.gather(
-        *[
-            hass.config_entries.async_forward_entry_unload(config_entry, platform)
-            for platform in SMARTTHINQ_COMPONENTS
-        ]
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry, SMARTTHINQ_COMPONENTS
     )
+    if unload_ok:
+        hass.data.pop(DOMAIN)
 
-    hass.data.pop(DOMAIN)
-
-    return True
+    return unload_ok
 
 
 class LGEDevice:
