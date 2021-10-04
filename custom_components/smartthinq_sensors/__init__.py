@@ -167,7 +167,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         )
     except InvalidCredentialError:
         msg = "Invalid ThinQ credential error, integration setup aborted." \
-              " Please verify your credential using LG app on your mobile phone." \
+              " Please use the LG App on your mobile device to ensure your" \
+              " credentials are correct, then restart HomeAssistant." \
               " If your credential changed, you must reconfigure integration"
         _notify_error(hass, "inv_credential", "SmartThinQ Sensors", msg)
         _LOGGER.error(msg)

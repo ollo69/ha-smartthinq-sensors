@@ -4,14 +4,13 @@ import logging
 from typing import Optional
 
 from . import FEAT_LOWER_FILTER_LIFE, FEAT_UPPER_FILTER_LIFE
-
 from .device import Device, DeviceStatus
 
 LABEL_UPPER_FILTER_SUPPORT = "@SUPPORT_D_PLUS_TOP"
+SUPPORT_AIR_PURIFIER_MFILTER = ["MFILTER", "support.mFilter"]
 
 AIR_PURIFIER_CTRL_BASIC = ["Control", "basicCtrl"]
 
-SUPPORT_AIR_PURIFIER_MFILTER = ["MFILTER", "support.mFilter"]
 AIR_PURIFIER_STATE_OPERATION = ["Operation", "airState.operation"]
 AIR_PURIFIER_STATE_PM1 = ["PM1", "airState.quality.PM1"]
 AIR_PURIFIER_STATE_PM25 = ["PM25", "airState.quality.PM2"]
@@ -138,24 +137,19 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def lower_filter_life(self):
-        feat_value = self._get_lower_filter_life()
-        if feat_value is None:
-            return None
         return self._update_feature(
-            FEAT_LOWER_FILTER_LIFE, feat_value, False
+            FEAT_LOWER_FILTER_LIFE, self._get_lower_filter_life(), False
         )
 
     @property
     def upper_filter_life(self):
         # Check the upper filter is exist
-        if self._device.model_info.enum_value(SUPPORT_AIR_PURIFIER_MFILTER[1], LABEL_UPPER_FILTER_SUPPORT) is None:
+        support_key = SUPPORT_AIR_PURIFIER_MFILTER[1 if self.is_info_v2 else 0]
+        if self._device.model_info.enum_value(support_key, LABEL_UPPER_FILTER_SUPPORT) is None:
             return None
-        
-        feat_value = self._get_upper_filter_life()
-        if feat_value is None:
-            return None
+
         return self._update_feature(
-            FEAT_UPPER_FILTER_LIFE, feat_value, False
+            FEAT_UPPER_FILTER_LIFE, self._get_upper_filter_life(), False
         )
 
     def _update_features(self):
