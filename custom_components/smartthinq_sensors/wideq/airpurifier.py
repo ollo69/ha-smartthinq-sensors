@@ -147,6 +147,10 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def upper_filter_life(self):
+        # Check the upper filter is exist
+        if self._device.model_info.enum_value(SUPPORT_AIR_PURIFIER_MFILTER[1], LABEL_UPPER_FILTER_SUPPORT) is None:
+            return None
+        
         feat_value = self._get_upper_filter_life()
         if feat_value is None:
             return None
