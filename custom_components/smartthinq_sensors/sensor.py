@@ -14,6 +14,7 @@ from .wideq import (
     FEAT_HALFLOAD,
     FEAT_HOT_WATER_TEMP,
     FEAT_IN_WATER_TEMP,
+    FEAT_LOWER_FILTER_LIFE,
     FEAT_OUT_WATER_TEMP,
     FEAT_PRE_STATE,
     FEAT_PROCESS_STATE,
@@ -21,6 +22,7 @@ from .wideq import (
     FEAT_SPINSPEED,
     FEAT_TUBCLEAN_COUNT,
     FEAT_TEMPCONTROL,
+    FEAT_UPPER_FILTER_LIFE,
     FEAT_WATERTEMP,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
@@ -93,7 +95,6 @@ ATTR_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
 ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 
 # air purifier sensor attributes
-ATTR_FILTER_REMAINING_LIFE = "filter_remaining_life"
 ATTR_PM1 = "pm1"
 ATTR_PM10 = "pm10"
 ATTR_PM25 = "pm25"
@@ -369,11 +370,17 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
-        key=ATTR_FILTER_REMAINING_LIFE,
-        name="Filter Remaining Life",
+        key=FEAT_LOWER_FILTER_LIFE,
+        name="Filter Remaining Life (Bottom)",
         icon="mdi:air-filter",
         state_class=STATE_CLASS_MEASUREMENT,
-        value_fn=lambda x: x.filter_remaining_life,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_UPPER_FILTER_LIFE,
+        name="Filter Remaining Life (Top)",
+        icon="mdi:air-filter",
+        state_class=STATE_CLASS_MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
     ),
 )

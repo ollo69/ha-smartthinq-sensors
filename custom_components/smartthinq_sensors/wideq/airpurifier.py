@@ -3,19 +3,30 @@ import enum
 import logging
 from typing import Optional
 
+from . import FEAT_LOWER_FILTER_LIFE, FEAT_UPPER_FILTER_LIFE
+
 from .device import Device, DeviceStatus
+
+LABEL_UPPER_FILTER_SUPPORT = "@SUPPORT_D_PLUS_TOP"
 
 AIR_PURIFIER_CTRL_BASIC = ["Control", "basicCtrl"]
 
+SUPPORT_AIR_PURIFIER_MFILTER = ["MFILTER", "support.mFilter"]
 AIR_PURIFIER_STATE_OPERATION = ["Operation", "airState.operation"]
 AIR_PURIFIER_STATE_PM1 = ["PM1", "airState.quality.PM1"]
 AIR_PURIFIER_STATE_PM25 = ["PM25", "airState.quality.PM2"]
 AIR_PURIFIER_STATE_PM10 = ["PM10", "airState.quality.PM10"]
 AIR_PURIFIER_STATE_FILTERMNG_USE_TIME = [
-    "FilterMngMaxTime", "airState.filterMngStates.useTime"
+    "FilterMngUseTime", "airState.filterMngStates.useTime"
 ]
 AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME = [
     "FilterMngMaxTime", "airState.filterMngStates.maxTime"
+]
+AIR_PURIFIER_STATE_FILTERMNG_USE_TIME_TOP = [
+    "FilterMngUseTimeTop", "airState.filterMngStates.useTimeTop"
+]
+AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME_TOP = [
+    "FilterMngMaxTimeTop", "airState.filterMngStates.maxTimeTop"
 ]
 
 CMD_STATE_OPERATION = [
@@ -71,15 +82,11 @@ class AirPurifierDevice(Device):
 class AirPurifierStatus(DeviceStatus):
     """Higher-level information about a Air Purifier's current status."""
 
-    def _get_state_key(self, key_name):
-        if isinstance(key_name, list):
-            return key_name[1 if self.is_info_v2 else 0]
-        return key_name
-
     def _get_operation(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_OPERATION)
         try:
-            return AirPurifierOp(self.lookup_enum(key, True))
+            return AirPurifierOp(
+                self.lookup_enum(AIR_PURIFIER_STATE_OPERATION, True)
+            )
         except ValueError:
             return None
 
@@ -99,28 +106,60 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm1(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_PM1)
-        return self._data.get(key)
+        return self.lookup_range(AIR_PURIFIER_STATE_PM1)
 
     @property
     def pm25(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_PM25)
-        return self._data.get(key)
+        return self.lookup_range(AIR_PURIFIER_STATE_PM25)
 
     @property
     def pm10(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_PM10)
-        return self._data.get(key)
+        return self.lookup_range(AIR_PURIFIER_STATE_PM10)
+
+    def _get_lower_filter_life(self):
+        max_time = self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME, True)
+        use_time = self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME)
+        if max_time is None or use_time is None:
+            return None
+        try:
+            return use_time/max_time*100
+        except ValueError:
+            return None
+
+    def _get_upper_filter_life(self):
+        max_time = self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME_TOP, True)
+        use_time = self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME_TOP)
+        if max_time is None or use_time is None:
+            return None
+        try:
+            return use_time/max_time*100
+        except ValueError:
+            return None
 
     @property
-    def filter_mng_use_time(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME)
-        return self._data.get(key)
+    def lower_filter_life(self):
+        feat_value = self._get_lower_filter_life()
+        if feat_value is None:
+            return None
+        return self._update_feature(
+            FEAT_LOWER_FILTER_LIFE, feat_value, False
+        )
 
     @property
-    def filter_mng_max_time(self):
-        key = self._get_state_key(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME)
-        return self._data.get(key)
+    def upper_filter_life(self):
+        # Check the upper filter is exist
+        if self._device.model_info.enum_value(SUPPORT_AIR_PURIFIER_MFILTER[1], LABEL_UPPER_FILTER_SUPPORT) is None:
+            return None
+        
+        feat_value = self._get_upper_filter_life()
+        if feat_value is None:
+            return None
+        return self._update_feature(
+            FEAT_UPPER_FILTER_LIFE, feat_value, False
+        )
 
     def _update_features(self):
-        result = []
+        result = [
+            self.lower_filter_life,
+            self.upper_filter_life,
+        ]
