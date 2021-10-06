@@ -24,12 +24,20 @@ from .wideq.core_exceptions import (
     TokenError,
 )
 
-import homeassistant.helpers.config_validation as cv
-
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_REGION, CONF_TOKEN, TEMP_CELSIUS
+from homeassistant.const import (
+    ATTR_IDENTIFIERS,
+    ATTR_MANUFACTURER,
+    ATTR_MODEL,
+    ATTR_NAME,
+    ATTR_SW_VERSION,
+    CONF_REGION,
+    CONF_TOKEN,
+    TEMP_CELSIUS,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import Throttle
@@ -44,7 +52,7 @@ from .const import (
     CONF_USE_TLS_V1,
     DOMAIN,
     LGE_DEVICES,
-    SMARTTHINQ_COMPONENTS,
+    SMARTTHINQ_PLATFORMS,
     STARTUP,
 )
 
@@ -206,7 +214,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     await cleanup_orphan_lge_devices(hass, config_entry.entry_id, client)
 
     hass.data[DOMAIN] = {CLIENT: client, LGE_DEVICES: lge_devices}
-    hass.config_entries.async_setup_platforms(config_entry, SMARTTHINQ_COMPONENTS)
+    hass.config_entries.async_setup_platforms(config_entry, SMARTTHINQ_PLATFORMS)
 
     return True
 
@@ -214,7 +222,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(
-        entry, SMARTTHINQ_COMPONENTS
+        entry, SMARTTHINQ_PLATFORMS
     )
     if unload_ok:
         hass.data.pop(DOMAIN)
@@ -297,15 +305,15 @@ class LGEDevice:
     @property
     def device_info(self):
         data = {
-            "identifiers": {(DOMAIN, self._device_id)},
-            "name": self._name,
-            "manufacturer": "LG",
-            "model": f"{self._model} ({self._type.name})",
+            ATTR_IDENTIFIERS: {(DOMAIN, self._device_id)},
+            ATTR_NAME: self._name,
+            ATTR_MANUFACTURER: "LG",
+            ATTR_MODEL: f"{self._model} ({self._type.name})",
         }
         if self._mac:
             data["connections"] = {(CONNECTION_NETWORK_MAC, self._mac)}
         if self._firmware:
-            data["sw_version"] = self._firmware
+            data[ATTR_SW_VERSION] = self._firmware
 
         return data
 
