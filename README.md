@@ -270,7 +270,7 @@ window.customCards.push(
 
 Lovelace:
 ```yaml
-type: 'custom:lg-laundry-card'
+type: 'custom:laundry-card'
 entity: 'sensor.the_dryer_dryer' # Washers work too!
 ```
 
