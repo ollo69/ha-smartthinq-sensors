@@ -4,7 +4,7 @@ SmartThinQ API for most use cases.
 import base64
 import json
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 import enum
 import logging
 from numbers import Number
@@ -893,7 +893,7 @@ class Device(object):
         self._mon = None
         self._control_set = 0
         self._last_dev_query = datetime.now()
-        self._last_additional_poll = datetime.now()
+        self._last_additional_poll: Optional[datetime] = None
         self._available_features = available_features or {}
 
         # for logging unknown states received
@@ -994,8 +994,7 @@ class Device(object):
         else:
             _LOGGER.debug(
                 "Setting new state for device %s:  %s - %s - %s - %s",
-                self._device_info.id,
-                ctrl_key, command, key, value,
+                self._device_info.id, ctrl_key, command, key, value,
             )
             self._set_control(ctrl_key, command, key=key, value=value, data=data)
 
@@ -1120,7 +1119,14 @@ class Device(object):
         self._control_set -= 1
 
     def _get_device_info(self):
-        """Call additional method to get device information.
+        """Call additional method to get device information for V1 API.
+
+        Override in specific device to call requested methods
+        """
+        return
+
+    def _get_device_info_v2(self):
+        """Call additional method to get device information for v2 API.
 
         Override in specific device to call requested methods
         """
@@ -1132,10 +1138,17 @@ class Device(object):
         if poll_interval <= 0:
             return
         call_time = datetime.now()
+        if self._last_additional_poll is None:
+            self._last_additional_poll = (
+                call_time - timedelta(seconds=max(poll_interval - 10, 1))
+            )
         difference = (call_time - self._last_additional_poll).total_seconds()
         if difference >= poll_interval:
             self._last_additional_poll = datetime.now()
-            self._get_device_info()
+            if self._should_poll:
+                self._get_device_info()
+            else:
+                self._get_device_info_v2()
 
     def device_poll(self, snapshot_key="", *, device_update=False, additional_poll_interval=0):
         """Poll the device's current state.
@@ -1155,20 +1168,19 @@ class Device(object):
             snapshot = self._get_device_snapshot(device_update)
             if not snapshot:
                 return None
-            return self._model_info.decode_snapshot(snapshot, snapshot_key)
+            res = self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
-        if not self._mon:
-            # Abort if monitoring has not started yet.
-            return None
+        else:
+            if not self._mon:
+                # Abort if monitoring has not started yet.
+                return None
+            data = self._mon.poll()
+            if data:
+                res = self._model_info.decode_monitor(data)
 
-        data = self._mon.poll()
-        if data:
-            res = self._model_info.decode_monitor(data)
-            """
-                with open('/config/wideq/washer_polled_data.json','w', encoding="utf-8") as dumpfile:
-                    json.dump(res, dumpfile, ensure_ascii=False, indent="\t")
-            """
+        # do additional poll
+        if res and additional_poll_interval > 0:
             try:
                 self._additional_poll(additional_poll_interval)
             except Exception as exc:

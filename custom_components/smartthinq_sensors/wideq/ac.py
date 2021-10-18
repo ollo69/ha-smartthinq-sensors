@@ -56,6 +56,8 @@ CMD_STATE_WDIR_VSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSTEP]
 CMD_STATE_WDIR_HSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSWING]
 
+CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
+
 AC_STATE_POWER_V1 = "InOutInstantPower"
 # AC_STATE_CURRENT_HUMIDITY_V2 = "airState.humidity.current"
 # AC_STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
@@ -529,12 +531,23 @@ class AirConditionerDevice(Device):
         return self._status
 
     def _get_device_info(self):
-        """Call additional method to get device information.
+        """Call additional method to get device information for API v1.
 
         Called by 'device_poll' method using a lower poll rate
         """
+        # this command is to get power usage on V1 device
         if not self.is_air_to_water:
             self._current_power = self.get_power()
+
+    def _get_device_info_v2(self):
+        """Call additional method to get device information for API v2.
+
+        Called by 'device_poll' method using a lower poll rate
+        """
+        # this command is to get power and temp info on V2 device
+        keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
+        mon_timeout = str(ADD_FEAT_POLL_INTERVAL + 10)
+        self.set(keys[0], keys[1], key=keys[2], value=mon_timeout)
 
     def poll(self) -> Optional["AirConditionerStatus"]:
         """Poll the device's current state."""
