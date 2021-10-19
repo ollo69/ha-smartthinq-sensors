@@ -546,7 +546,7 @@ class AirConditionerDevice(Device):
         """
         # this command is to get power and temp info on V2 device
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
-        mon_timeout = str(ADD_FEAT_POLL_INTERVAL + 10)
+        mon_timeout = str(ADD_FEAT_POLL_INTERVAL - 10)
         self.set(keys[0], keys[1], key=keys[2], value=mon_timeout)
 
     def poll(self) -> Optional["AirConditionerStatus"]:

@@ -52,7 +52,6 @@ from .const import (
     CONF_USE_TLS_V1,
     DOMAIN,
     LGE_DEVICES,
-    SMARTTHINQ_PLATFORMS,
     STARTUP,
 )
 
@@ -61,6 +60,10 @@ MAX_UPDATE_FAIL_ALLOWED = 10
 MIN_TIME_BETWEEN_CLI_REFRESH = 10
 # not stress to match cloud if multiple call
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
+
+SMARTTHINQ_PLATFORMS = [
+    "sensor", "binary_sensor", "climate", "switch"
+]
 
 SMARTTHINQ_SCHEMA = vol.Schema(
     {

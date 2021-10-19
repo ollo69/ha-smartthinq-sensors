@@ -21,10 +21,6 @@ LGE_DEVICES = "lge_devices"
 DEFAULT_ICON = "def_icon"
 DEFAULT_SENSOR = "default"
 
-SMARTTHINQ_PLATFORMS = [
-    "sensor", "binary_sensor", "climate", "switch"
-]
-
 STARTUP = """
 -------------------------------------------------------------------
 {}
