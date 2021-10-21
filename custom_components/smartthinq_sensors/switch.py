@@ -98,6 +98,15 @@ AIR_PURIFIER_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.power(False),
     ),
 )
+DEHUMIDIFIER_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key="power",
+        name="Power",
+        value_fn=lambda x: x.is_power_on,
+        turn_on_fn=lambda x: x.device.power(True),
+        turn_off_fn=lambda x: x.device.power(False),
+    ),
+)
 
 
 def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription):
@@ -154,6 +163,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             LGESwitch(lge_device, switch_desc)
             for switch_desc in AIR_PURIFIER_SWITCH
             for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
+            if _switch_exist(lge_device, switch_desc)
+        ]
+    )
+
+    # add dehumidifiers
+    lge_switch.extend(
+        [
+            LGESwitch(lge_device, switch_desc)
+            for switch_desc in DEHUMIDIFIER_SWITCH
+            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
             if _switch_exist(lge_device, switch_desc)
         ]
     )

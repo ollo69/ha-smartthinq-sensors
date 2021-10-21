@@ -1,4 +1,5 @@
 
+from custom_components.smartthinq_sensors.wideq.dehumidifier import DehumidifierDevice
 from .ac import AirConditionerDevice
 from .airpurifier import AirPurifierDevice
 from .dishwasher import DishWasherDevice
@@ -33,6 +34,8 @@ def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
         return AirConditionerDevice(client, device, temp_unit)
     if device_type == DeviceType.AIR_PURIFIER:
         return AirPurifierDevice(client, device)
+    if device_type == DeviceType.DEHUMIDIFIER:
+        return DehumidifierDevice(client, device)
     if device_type == DeviceType.DISHWASHER:
         return DishWasherDevice(client, device)
     if device_type == DeviceType.RANGE:
