@@ -26,6 +26,13 @@ from . import (
     FEAT_TUBCLEAN_COUNT,
     FEAT_TURBOWASH,
     FEAT_WATERTEMP,
+    
+    FEAT_DAMPDRYBEEP,
+    FEAT_RESERVATION,
+    FEAT_HANDIRON,
+    FEAT_SELFCLEAN,
+    FEAT_ANTICREASE,
+    FEAT_ECOHYBRID,
 )
 
 from .device import (
@@ -599,6 +606,62 @@ class WMStatus(DeviceStatus):
             FEAT_MEDICRINSE, status, False
         )
 
+    @property
+    def dampdrybeep_state(self):
+        status = self.lookup_bit(
+            "dampDryBeep" if self.is_info_v2 else "DampDryBeep"
+        )
+        return self._update_feature(
+            FEAT_DAMPDRYBEEP, status, False
+        )
+
+    @property
+    def reservation_state(self):
+        status = self.lookup_bit(
+            "reservation" if self.is_info_v2 else "Reservation"
+        )
+        return self._update_feature(
+            FEAT_RESERVATION, status, False
+        )
+
+    @property
+    def handiron_state(self):
+        status = self.lookup_bit(
+            "handIron" if self.is_info_v2 else "HandIron"
+        )
+        return self._update_feature(
+            FEAT_HANDIRON, status, False
+        )
+
+    @property
+    def selfclean_state(self):
+        status = self.lookup_bit(
+            "selfClean" if self.is_info_v2 else "SelfClean"
+        )
+        return self._update_feature(
+            FEAT_SELFCLEAN, status, False
+        )
+
+    @property
+    def anticrease_state(self):
+        status = self.lookup_bit(
+            "antiCrease" if self.is_info_v2 else "AntiCrease"
+        )
+        return self._update_feature(
+            FEAT_ANTICREASE, status, False
+        )
+
+    @property
+    def eco_hybrid_option_state(self):
+        if not self.key_exist(["EcoHybrid", "ecoHybrid"]):
+            return None
+        eco_hybrid = self.lookup_enum(["EcoHybrid", "ecoHybrid"])
+        if not eco_hybrid:
+            eco_hybrid = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_ECOHYBRID, eco_hybrid
+        )
+
     def _update_features(self):
         result = [
             self.run_state,
@@ -622,4 +685,10 @@ class WMStatus(DeviceStatus):
             self.prewash_state,
             self.turbowash_state,
             self.medicrinse_state,
-        ]
+            self.dampdrybeep_state,
+            self.reservation_state,
+            self.handiron_state,
+            self.selfclean_state,
+            self.anticrease_state,
+            self.eco_hybrid_option_state,
+            ]

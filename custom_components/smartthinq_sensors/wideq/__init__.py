@@ -51,6 +51,15 @@ FEAT_STEAM = "steam"
 FEAT_STEAMSOFTENER = "steam_softener"
 FEAT_TURBOWASH = "turbo_wash"
 
+# SPECIALS GTI
+
+FEAT_DAMPDRYBEEP = "damp_dry_beep"
+FEAT_RESERVATION = "reservation"
+FEAT_HANDIRON = "hand_iron"
+FEAT_SELFCLEAN = "self_clean"
+FEAT_ANTICREASE = "anti_crease"
+FEAT_ECOHYBRID = "eco_hybrid"
+
 # refrigerator device features
 FEAT_ECOFRIENDLY = "eco_friendly"
 FEAT_EXPRESSMODE = "express_mode"
