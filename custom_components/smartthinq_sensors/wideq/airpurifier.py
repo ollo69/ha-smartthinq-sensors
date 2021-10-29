@@ -116,8 +116,12 @@ class AirPurifierStatus(DeviceStatus):
         return self.lookup_range(AIR_PURIFIER_STATE_PM10)
 
     def _get_lower_filter_life(self):
-        max_time = self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME, True)
-        use_time = self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME)
+        max_time = self.int_or_none(
+            self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME, True)
+        )
+        use_time = self.int_or_none(
+            self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME)
+        )
         if max_time is None or use_time is None:
             return None
         try:
@@ -126,8 +130,12 @@ class AirPurifierStatus(DeviceStatus):
             return None
 
     def _get_upper_filter_life(self):
-        max_time = self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME_TOP, True)
-        use_time = self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME_TOP)
+        max_time = self.int_or_none(
+            self.lookup_enum(AIR_PURIFIER_STATE_FILTERMNG_MAX_TIME_TOP, True)
+        )
+        use_time = self.int_or_none(
+            self.lookup_range(AIR_PURIFIER_STATE_FILTERMNG_USE_TIME_TOP)
+        )
         if max_time is None or use_time is None:
             return None
         try:

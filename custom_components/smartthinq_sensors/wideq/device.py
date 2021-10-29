@@ -241,16 +241,21 @@ class DeviceInfo(object):
         return self._get_data_value("alias")
 
     @property
-    def macaddress(self) -> str:
-        return self._get_data_value("macAddress")
-
-    @property
     def model_name(self) -> str:
         return self._get_data_value(["modelName", "modelNm"])
 
     @property
-    def firmware(self) -> str:
-        return self._get_data_value("fwVer")
+    def macaddress(self) -> Optional[str]:
+        return self._data.get("macAddress")
+
+    @property
+    def firmware(self) -> Optional[str]:
+        if fw := self._data.get("fwVer"):
+            return fw
+        if "modemInfo" in self._data:
+            if fw := self._data["modemInfo"].get("appVersion"):
+                return fw
+        return None
 
     @property
     def devicestate(self) -> str:

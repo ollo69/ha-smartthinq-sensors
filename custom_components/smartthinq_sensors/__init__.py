@@ -26,6 +26,7 @@ from .wideq.core_exceptions import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    ATTR_SW_VERSION,
     CONF_REGION,
     CONF_TOKEN,
     TEMP_CELSIUS,
@@ -310,7 +311,7 @@ class LGEDevice:
             model=f"{self._model} ({self._type.name})",
         )
         if self._firmware:
-            data["sw_version"] = self._firmware
+            data[ATTR_SW_VERSION] = self._firmware
         if self._mac:
             data["connections"] = {(CONNECTION_NETWORK_MAC, self._mac)}
 
