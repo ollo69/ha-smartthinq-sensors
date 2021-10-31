@@ -959,7 +959,16 @@ class Device(object):
 
         return [ctrl, cmd, key]
 
-    def _set_control(self, ctrl_key, command=None, *, key=None, value=None, data=None):
+    def _set_control(
+            self,
+            ctrl_key,
+            command=None,
+            *,
+            key=None,
+            value=None,
+            data=None,
+            ctrl_path=None,
+    ):
         """Set a device's control for `key` to `value`.
         """
         if self._should_poll:
@@ -979,6 +988,7 @@ class Device(object):
             command,
             key,
             value,
+            ctrl_path=ctrl_path,
         )
 
     def _prepare_command(self, ctrl_key, command, key, value):
@@ -987,7 +997,7 @@ class Device(object):
         """
         return None
 
-    def set(self, ctrl_key, command, *, key=None, value=None, data=None):
+    def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
         full_key = self._prepare_command(ctrl_key, command, key, value)
         if full_key:
@@ -995,13 +1005,15 @@ class Device(object):
                 "Setting new state for device %s: %s",
                 self._device_info.id, str(full_key),
             )
-            self._set_control(full_key)
+            self._set_control(full_key, ctrl_path=ctrl_path)
         else:
             _LOGGER.debug(
                 "Setting new state for device %s:  %s - %s - %s - %s",
                 self._device_info.id, ctrl_key, command, key, value,
             )
-            self._set_control(ctrl_key, command, key=key, value=value, data=data)
+            self._set_control(
+                ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
+            )
 
     def _get_config(self, key):
         """Look up a device's configuration for a given value.

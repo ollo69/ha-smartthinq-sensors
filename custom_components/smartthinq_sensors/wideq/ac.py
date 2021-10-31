@@ -520,9 +520,11 @@ class AirConditionerDevice(Device):
             self._current_power_supported = False
             return 0
 
-    def set(self, ctrl_key, command, *, key=None, value=None, data=None):
+    def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
-        super().set(ctrl_key, command, key=key, value=value, data=data)
+        super().set(
+            ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
+        )
         if self._status:
             self._status.update_status(key, value)
 
@@ -546,8 +548,8 @@ class AirConditionerDevice(Device):
         """
         # this command is to get power and temp info on V2 device
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
-        mon_timeout = str(ADD_FEAT_POLL_INTERVAL - 10)
-        self.set(keys[0], keys[1], key=keys[2], value=mon_timeout)
+        mon_timeout = "70"  # str(ADD_FEAT_POLL_INTERVAL - 10)
+        self.set(keys[0], keys[1], key=keys[2], value=mon_timeout, ctrl_path="control")
 
     def poll(self) -> Optional["AirConditionerStatus"]:
         """Poll the device's current state."""

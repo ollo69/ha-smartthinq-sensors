@@ -557,7 +557,14 @@ class Session(object):
             {"cmd": "Mon", "cmdOpt": "Stop", "deviceId": device_id, "workId": work_id},
         )
 
-    def set_device_controls(self, device_id, ctrl_key, command=None, value=None, data=None):
+    def set_device_controls(
+            self,
+            device_id,
+            ctrl_key,
+            command=None,
+            value=None,
+            data=None,
+    ):
         """Control a device's settings.
 
         `values` is a key/value map containing the settings to update.
@@ -584,12 +591,22 @@ class Session(object):
 
         return res
 
-    def set_device_v2_controls(self, device_id, ctrl_key, command=None, key=None, value=None):
+    def set_device_v2_controls(
+            self,
+            device_id,
+            ctrl_key,
+            command=None,
+            key=None,
+            value=None,
+            *,
+            ctrl_path=None,
+    ):
         """Control a device's settings based on api V2."""
 
         res = {}
         payload = None
-        path = f"service/devices/{device_id}/control-sync"
+        path = ctrl_path or "control-sync"
+        cmd_path = f"service/devices/{device_id}/{path}"
         if isinstance(ctrl_key, dict):
             payload = ctrl_key
         elif command is not None:
@@ -601,7 +618,7 @@ class Session(object):
             }
 
         if payload:
-            res = self.post2(path, payload)
+            res = self.post2(cmd_path, payload)
             _LOGGER.debug("Set V2 result: %s", str(res))
 
         return res

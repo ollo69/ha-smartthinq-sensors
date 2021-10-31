@@ -56,12 +56,8 @@ class AirPurifierDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
         op_value = self.model_info.enum_value(keys[2], op.value)
         self.set(keys[0], keys[1], key=keys[2], value=op_value)
-
-    def set(self, ctrl_key, command, *, key=None, value=None, data=None):
-        """Set a device's control for `key` to `value`."""
-        super().set(ctrl_key, command, key=key, value=value, data=data)
         if self._status:
-            self._status.update_status(key, value)
+            self._status.update_status(keys[2], op_value)
 
     def reset_status(self):
         self._status = AirPurifierStatus(self, None)
