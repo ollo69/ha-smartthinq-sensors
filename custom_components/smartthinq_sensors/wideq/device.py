@@ -20,7 +20,6 @@ LABEL_BIT_ON = "@CP_ON_EN_W"
 
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
-DEVICE_UPDATE_INTERVAL = 600  # seconds
 
 STATE_OPTIONITEM_OFF = "off"
 STATE_OPTIONITEM_ON = "on"
@@ -897,7 +896,6 @@ class Device(object):
         self._should_poll = device.platform_type == PlatformType.THINQ1
         self._mon = None
         self._control_set = 0
-        self._last_dev_query = datetime.now()
         self._last_additional_poll: Optional[datetime] = None
         self._available_features = available_features or {}
 
@@ -1097,25 +1095,24 @@ class Device(object):
         self._mon.stop()
         self._mon = None
 
-    def _require_update(self):
-        """Check if dedicated update is required."""
+    def _pre_update_v2(self):
+        """Call additional methods before data update for v2 API.
 
-        call_time = datetime.now()
-        difference = (call_time - self._last_dev_query).total_seconds()
-        return difference >= DEVICE_UPDATE_INTERVAL
+        Override in specific device to call requested methods
+        """
+        return
 
-    def _get_device_snapshot(self, device_update=False, force_device_update=False):
+    def _get_device_snapshot(self, query_device=False):
         """Get snapshot for ThinQ2 devices.
 
-        Perform dedicated device query every DEVICE_UPDATE_INTERVAL seconds
-        if device_update is set to true, otherwise use the dashboard result
+        Perform dedicated device query if query_device is set to true,
+        otherwise use the dashboard result
         """
-
-        if device_update and not force_device_update:
-            device_update = self._require_update()
-
-        if device_update or force_device_update:
-            self._last_dev_query = datetime.now()
+        if query_device:
+            try:
+                self._pre_update_v2()
+            except Exception:
+                pass
             result = self._client.session.get_device_v2_settings(self._device_info.id)
             return result.get("snapshot")
 
@@ -1167,7 +1164,7 @@ class Device(object):
             else:
                 self._get_device_info_v2()
 
-    def device_poll(self, snapshot_key="", *, device_update=False, additional_poll_interval=0):
+    def device_poll(self, snapshot_key="", *, query_device_v2=False, additional_poll_interval=0):
         """Poll the device's current state.
         
         Monitoring must be started first with `monitor_start`. Return
@@ -1182,19 +1179,18 @@ class Device(object):
 
         # ThinQ V2 - Monitor data is with device info
         if not self._should_poll:
-            snapshot = self._get_device_snapshot(device_update)
+            snapshot = self._get_device_snapshot(query_device_v2)
             if not snapshot:
                 return None
-            res = self._model_info.decode_snapshot(snapshot, snapshot_key)
+            return self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
-        else:
-            if not self._mon:
-                # Abort if monitoring has not started yet.
-                return None
-            data = self._mon.poll()
-            if data:
-                res = self._model_info.decode_monitor(data)
+        if not self._mon:
+            # Abort if monitoring has not started yet.
+            return None
+        data = self._mon.poll()
+        if data:
+            res = self._model_info.decode_monitor(data)
 
         # do additional poll
         if res and additional_poll_interval > 0:
