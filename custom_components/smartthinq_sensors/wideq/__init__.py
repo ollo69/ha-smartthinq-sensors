@@ -53,12 +53,12 @@ FEAT_TURBOWASH = "turbo_wash"
 
 # SPECIALS GTI
 
-FEAT_DAMPDRYBEEP = "damp_dry_beep"
-FEAT_RESERVATION = "reservation"
-FEAT_HANDIRON = "hand_iron"
-FEAT_SELFCLEAN = "self_clean"
 FEAT_ANTICREASE = "anti_crease"
+FEAT_DAMPDRYBEEP = "damp_dry_beep"
 FEAT_ECOHYBRID = "eco_hybrid"
+FEAT_HANDIRON = "hand_iron"
+FEAT_RESERVATION = "reservation"
+FEAT_SELFCLEAN = "self_clean"
 
 # refrigerator device features
 FEAT_ECOFRIENDLY = "eco_friendly"
