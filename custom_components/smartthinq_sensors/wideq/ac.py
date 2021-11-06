@@ -725,7 +725,9 @@ class AirConditionerStatus(DeviceStatus):
         value = self._data.get(key)
         if value is not None and self.is_info_v2 and not self.is_on:
             # decrease power for V2 device that always return 50 when standby
-            value = 5.0
+            new_value = self.to_int_or_none(value)
+            if new_value and new_value <= 50:
+                value = 5.0
         return self._update_feature(
             FEAT_ENERGY_CURRENT, value, False
         )
