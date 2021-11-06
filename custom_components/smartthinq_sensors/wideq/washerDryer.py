@@ -5,18 +5,24 @@ import logging
 from typing import Optional
 
 from . import (
+    FEAT_ANTICREASE,
     FEAT_CHILDLOCK,
     FEAT_CREASECARE,
+    FEAT_DAMPDRYBEEP,
     FEAT_DOORCLOSE,
     FEAT_DOORLOCK,
     FEAT_DRYLEVEL,
+    FEAT_ECOHYBRID,
     FEAT_ERROR_MSG,
+    FEAT_HANDIRON,
     FEAT_MEDICRINSE,
     FEAT_PRE_STATE,
     FEAT_PROCESS_STATE,
     FEAT_PREWASH,
     FEAT_REMOTESTART,
+    FEAT_RESERVATION,
     FEAT_RUN_STATE,
+    FEAT_SELFCLEAN,
     FEAT_SPINSPEED,
     FEAT_STANDBY,
     FEAT_STEAM,
@@ -599,6 +605,62 @@ class WMStatus(DeviceStatus):
             FEAT_MEDICRINSE, status, False
         )
 
+    @property
+    def dampdrybeep_state(self):
+        status = self.lookup_bit(
+            "dampDryBeep" if self.is_info_v2 else "DampDryBeep"
+        )
+        return self._update_feature(
+            FEAT_DAMPDRYBEEP, status, False
+        )
+
+    @property
+    def reservation_state(self):
+        status = self.lookup_bit(
+            "reservation" if self.is_info_v2 else "Reservation"
+        )
+        return self._update_feature(
+            FEAT_RESERVATION, status, False
+        )
+
+    @property
+    def handiron_state(self):
+        status = self.lookup_bit(
+            "handIron" if self.is_info_v2 else "HandIron"
+        )
+        return self._update_feature(
+            FEAT_HANDIRON, status, False
+        )
+
+    @property
+    def selfclean_state(self):
+        status = self.lookup_bit(
+            "selfClean" if self.is_info_v2 else "SelfClean"
+        )
+        return self._update_feature(
+            FEAT_SELFCLEAN, status, False
+        )
+
+    @property
+    def anticrease_state(self):
+        status = self.lookup_bit(
+            "antiCrease" if self.is_info_v2 else "AntiCrease"
+        )
+        return self._update_feature(
+            FEAT_ANTICREASE, status, False
+        )
+
+    @property
+    def eco_hybrid_option_state(self):
+        if not self.key_exist(["EcoHybrid", "ecoHybrid"]):
+            return None
+        eco_hybrid = self.lookup_enum(["EcoHybrid", "ecoHybrid"])
+        if not eco_hybrid:
+            eco_hybrid = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_ECOHYBRID, eco_hybrid
+        )
+
     def _update_features(self):
         result = [
             self.run_state,
@@ -622,4 +684,10 @@ class WMStatus(DeviceStatus):
             self.prewash_state,
             self.turbowash_state,
             self.medicrinse_state,
-        ]
+            self.dampdrybeep_state,
+            self.reservation_state,
+            self.handiron_state,
+            self.selfclean_state,
+            self.anticrease_state,
+            self.eco_hybrid_option_state,
+            ]
