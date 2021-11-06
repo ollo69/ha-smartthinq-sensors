@@ -1243,6 +1243,15 @@ class DeviceStatus(object):
             return str(int(value))
         return None
 
+    @staticmethod
+    def to_int_or_none(value):
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except ValueError:
+            return None
+
     @property
     def has_data(self):
         return True if self._data else False

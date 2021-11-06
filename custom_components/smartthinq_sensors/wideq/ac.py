@@ -30,6 +30,7 @@ AC_CTRL_BASIC = ["Control", "basicCtrl"]
 AC_CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
 # AC_CTRL_SETTING = "settingInfo"
 # AC_CTRL_WIND_MODE = "wModeCtrl"
+AC_STATE_POWER_V1 = "InOutInstantPower"
 
 SUPPORT_AC_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_AC_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
@@ -46,6 +47,7 @@ AC_STATE_WDIR_HSTEP = ["WDirHStep", "airState.wDir.hStep"]
 AC_STATE_WDIR_VSTEP = ["WDirVStep", "airState.wDir.vStep"]
 AC_STATE_WDIR_HSWING = ["WDirLeftRight", "airState.wDir.leftRight"]
 AC_STATE_WDIR_VSWING = ["WDirUpDown", "airState.wDir.upDown"]
+AC_STATE_POWER = [AC_STATE_POWER_V1, "airState.energy.onCurrent"]
 
 CMD_STATE_OPERATION = [AC_CTRL_BASIC, "Set", AC_STATE_OPERATION]
 CMD_STATE_OP_MODE = [AC_CTRL_BASIC, "Set", AC_STATE_OPERATION_MODE]
@@ -58,7 +60,6 @@ CMD_STATE_WDIR_VSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSWING]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
-AC_STATE_POWER_V1 = "InOutInstantPower"
 # AC_STATE_CURRENT_HUMIDITY_V2 = "airState.humidity.current"
 # AC_STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
 # AC_STATE_AIRCLEAN_MODE_V2 = "airState.wMode.airClean"
@@ -568,6 +569,10 @@ class AirConditionerDevice(Device):
 class AirConditionerStatus(DeviceStatus):
     """Higher-level information about a AC's current status."""
 
+    def __init__(self, device, data):
+        super().__init__(device, data)
+        self._operation = None
+
     @staticmethod
     def _str_to_num(s):
         """Convert a string to either an `int` or a `float`.
@@ -597,11 +602,20 @@ class AirConditionerStatus(DeviceStatus):
         return key_name
 
     def _get_operation(self):
-        key = self._get_state_key(AC_STATE_OPERATION)
+        if self._operation is None:
+            key = self._get_state_key(AC_STATE_OPERATION)
+            self._operation = self.lookup_enum(key, True)
         try:
-            return ACOp(self.lookup_enum(key, True))
+            return ACOp(self._operation)
         except ValueError:
             return None
+
+    def update_status(self, key, value):
+        if not super().update_status(key, value):
+            return False
+        if key in AC_STATE_OPERATION:
+            self._operation = None
+        return True
 
     @property
     def is_on(self):
@@ -707,11 +721,11 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def energy_current(self):
-        if self.is_info_v2:
-            key = "airState.energy.onCurrent"
-        else:
-            key = AC_STATE_POWER_V1
+        key = self._get_state_key(AC_STATE_POWER)
         value = self._data.get(key)
+        if value is not None and self.is_info_v2 and not self.is_on:
+            # decrease power for V2 device that always return 50 when standby
+            value = 5.0
         return self._update_feature(
             FEAT_ENERGY_CURRENT, value, False
         )

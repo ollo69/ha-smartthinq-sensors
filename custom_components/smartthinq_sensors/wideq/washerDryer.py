@@ -491,6 +491,17 @@ class WMStatus(DeviceStatus):
         )
 
     @property
+    def eco_hybrid_option_state(self):
+        if not self.key_exist(["EcoHybrid", "ecoHybrid"]):
+            return None
+        eco_hybrid = self.lookup_enum(["EcoHybrid", "ecoHybrid"])
+        if not eco_hybrid:
+            eco_hybrid = STATE_OPTIONITEM_NONE
+        return self._update_feature(
+            FEAT_ECOHYBRID, eco_hybrid
+        )
+
+    @property
     def tubclean_count(self):
         if not self.key_exist("TCLCount"):
             return None
@@ -650,17 +661,6 @@ class WMStatus(DeviceStatus):
             FEAT_ANTICREASE, status, False
         )
 
-    @property
-    def eco_hybrid_option_state(self):
-        if not self.key_exist(["EcoHybrid", "ecoHybrid"]):
-            return None
-        eco_hybrid = self.lookup_enum(["EcoHybrid", "ecoHybrid"])
-        if not eco_hybrid:
-            eco_hybrid = STATE_OPTIONITEM_NONE
-        return self._update_feature(
-            FEAT_ECOHYBRID, eco_hybrid
-        )
-
     def _update_features(self):
         result = [
             self.run_state,
@@ -672,6 +672,7 @@ class WMStatus(DeviceStatus):
             self.dry_level_option_state,
             self.temp_control_option_state,
             # self.time_dry_option_state,
+            self.eco_hybrid_option_state,
             self.tubclean_count,
             self.standby_state,
             self.remotestart_state,
@@ -689,5 +690,4 @@ class WMStatus(DeviceStatus):
             self.handiron_state,
             self.selfclean_state,
             self.anticrease_state,
-            self.eco_hybrid_option_state,
-            ]
+        ]

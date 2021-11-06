@@ -52,7 +52,6 @@ FEAT_STEAMSOFTENER = "steam_softener"
 FEAT_TURBOWASH = "turbo_wash"
 
 # SPECIALS GTI
-
 FEAT_ANTICREASE = "anti_crease"
 FEAT_DAMPDRYBEEP = "damp_dry_beep"
 FEAT_ECOHYBRID = "eco_hybrid"
