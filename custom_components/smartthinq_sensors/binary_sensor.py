@@ -20,7 +20,6 @@ from .wideq.device import DeviceType
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_HEAT,
-    DEVICE_CLASS_LOCK,
     DEVICE_CLASS_OPENING,
     DEVICE_CLASS_PROBLEM,
     BinarySensorEntity,
@@ -64,7 +63,7 @@ RUN_COMPLETED_PREFIX = {
 class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
     """A class that describes ThinQ binary sensor entities."""
 
-    invert_state: bool = False
+    icon_on: str | None = None
     value_fn: Callable[[Any], bool | str] | None = None
 
 
@@ -88,22 +87,22 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=FEAT_CHILDLOCK,
         name="Child lock",
-        device_class=DEVICE_CLASS_LOCK,
-        invert_state=True,
+        icon="mdi:account-off-outline",
+        icon_on="mdi:account-lock",
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
         key=FEAT_DOORCLOSE,
         name="Door close",
-        device_class=DEVICE_CLASS_OPENING,
-        invert_state=True,
+        icon="mdi:alpha-o-box-outline",
+        icon_on="mdi:alpha-c-box",
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
         key=FEAT_DOORLOCK,
         name="Door lock",
-        device_class=DEVICE_CLASS_LOCK,
-        invert_state=True,
+        icon="mdi:lock-open-variant-outline",
+        icon_on="mdi:lock",
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
@@ -249,24 +248,19 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_unique_id = f"{api.unique_id}-{description.key}"
         self._attr_device_info = api.device_info
 
+        self._is_on = None
+
     @property
     def is_on(self):
-        """Return the state of the binary sensor."""
-        invert_state = self.entity_description.invert_state
-        ret_val = self._get_sensor_state()
-        if ret_val is None:
-            return False
-        def_on = not invert_state
-        if isinstance(ret_val, bool):
-            return ret_val if def_on else not ret_val
-        if ret_val == STATE_ON:
-            return def_on
-        state = STATE_LOOKUP.get(ret_val, STATE_OFF)
-        return def_on if state == STATE_ON else not def_on
+        """Return true if the binary sensor is on."""
+        self._is_on = self._get_on_state()
+        return self._is_on
 
     @property
     def icon(self):
         """Return the icon to use in the frontend, if any."""
+        if self.entity_description.icon_on and self._is_on:
+            return self.entity_description.icon_on
         ent_icon = self.entity_description.icon
         if ent_icon and ent_icon == DEFAULT_ICON:
             return DEVICE_ICONS.get(self._api.type)
@@ -281,6 +275,18 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def assumed_state(self) -> bool:
         """Return True if unable to access real state of the entity."""
         return self._api.assumed_state
+
+    def _get_on_state(self):
+        """Return true if the binary sensor is on."""
+        ret_val = self._get_sensor_state()
+        if ret_val is None:
+            return False
+        if isinstance(ret_val, bool):
+            return ret_val
+        if ret_val == STATE_ON:
+            return True
+        state = STATE_LOOKUP.get(ret_val, STATE_OFF)
+        return state == STATE_ON
 
     def _get_sensor_state(self):
         if self.entity_description.value_fn is not None:
