@@ -552,8 +552,8 @@ class AirConditionerDevice(Device):
         """Poll the device's current state."""
 
         res = self.device_poll(
-            query_device_v2=True,
-            additional_poll_interval=ADD_FEAT_POLL_INTERVAL
+            thinq1_additional_poll=ADD_FEAT_POLL_INTERVAL,
+            thinq2_query_device=True,
         )
         if not res:
             return None
