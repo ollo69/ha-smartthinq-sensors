@@ -430,15 +430,9 @@ class AirConditionerDevice(Device):
             _LOGGER.warning("Turn off all duct zones is not allowed")
             return
 
-        if self._should_poll:
-            zone_cmd = "/".join(
-                f"{key}_{value[ZONE_ST_CUR]}"
-                for key, value in zones.items()
-            )
-        else:
-            bits = [v[ZONE_ST_CUR] for v in zones.values()]
-            zone_cmd = str(int("".join(v for v in reversed(bits)), 2))
-
+        zone_cmd = "/".join(
+            f"{key}_{value[ZONE_ST_CUR]}" for key, value in zones.items()
+        )
         keys = self._get_cmd_keys(CMD_STATE_DUCT_ZONES)
         self.set(keys[0], keys[1], key=keys[2], value=zone_cmd)
 
