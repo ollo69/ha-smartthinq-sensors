@@ -370,9 +370,9 @@ class AirConditionerDevice(Device):
                     send_update = True
             duct_zones[zone] = {ZONE_ST_CUR: new_status or cur_status}
 
+        self._duct_zones = duct_zones
         if send_update:
             self._set_duct_zones(duct_zones)
-        self._duct_zones = duct_zones
 
     def _get_duct_zones(self) -> dict:
         """Get the status of the zones (for ThinQ1 only zone configured).
@@ -427,6 +427,7 @@ class AirConditionerDevice(Device):
         # off simultaneously.
         on_count = sum(int(zone[ZONE_ST_CUR]) for zone in zones.values())
         if on_count == 0:
+            _LOGGER.warning("Turn off all duct zones is not allowed")
             return
 
         if self._should_poll:
@@ -436,7 +437,7 @@ class AirConditionerDevice(Device):
             )
         else:
             bits = [v[ZONE_ST_CUR] for v in zones.values()]
-            zone_cmd = int("".join(v for v in reversed(bits)), 2)
+            zone_cmd = str(int("".join(v for v in reversed(bits)), 2))
 
         keys = self._get_cmd_keys(CMD_STATE_DUCT_ZONES)
         self.set(keys[0], keys[1], key=keys[2], value=zone_cmd)
