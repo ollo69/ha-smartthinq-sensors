@@ -10,6 +10,7 @@ import logging
 from numbers import Number
 from typing import Any, Dict, Optional
 
+from . import EMULATION, wideq_log_level
 from .core_exceptions import MonitorError
 
 BIT_OFF = "OFF"
@@ -969,6 +970,9 @@ class Device(object):
     ):
         """Set a device's control for `key` to `value`.
         """
+        if EMULATION:
+            return
+
         if self._should_poll:
             self._client.session.set_device_controls(
                 self._device_info.id,
@@ -997,15 +1001,18 @@ class Device(object):
 
     def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
+        log_level = wideq_log_level()
         full_key = self._prepare_command(ctrl_key, command, key, value)
         if full_key:
-            _LOGGER.debug(
+            _LOGGER.log(
+                log_level,
                 "Setting new state for device %s: %s",
                 self._device_info.id, str(full_key),
             )
             self._set_control(full_key, ctrl_path=ctrl_path)
         else:
-            _LOGGER.debug(
+            _LOGGER.log(
+                log_level,
                 "Setting new state for device %s:  %s - %s - %s - %s",
                 self._device_info.id, ctrl_key, command, key, value,
             )
@@ -1108,6 +1115,9 @@ class Device(object):
         Perform dedicated device query if query_device is set to true,
         otherwise use the dashboard result
         """
+        if EMULATION:
+            query_device = False
+
         if query_device:
             try:
                 self._pre_update_v2()

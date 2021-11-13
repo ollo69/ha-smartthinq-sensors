@@ -1,6 +1,7 @@
 """
 Support for LG Smartthinq device.
 """
+from logging import DEBUG, INFO
 import ssl
 import uuid
 
@@ -87,6 +88,9 @@ FEAT_UPPER_FILTER_LIFE = "upper_filter_life"
 # request ciphers settings
 CIPHERS = ":HIGH:!DH:!aNULL"
 
+# enable emulation mode for debug / test
+EMULATION = False
+
 
 def as_list(obj):
     """Wrap non-lists in lists.
@@ -103,6 +107,10 @@ def as_list(obj):
 
 def gen_uuid():
     return str(uuid.uuid4())
+
+
+def wideq_log_level():
+    return INFO if EMULATION else DEBUG
 
 
 class CoreVersion(Enum):

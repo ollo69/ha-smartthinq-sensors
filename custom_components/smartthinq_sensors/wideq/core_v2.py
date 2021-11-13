@@ -23,7 +23,7 @@ from . import(
     DEFAULT_COUNTRY,
     DEFAULT_LANGUAGE,
 )
-from . import core_exceptions as exc
+from . import EMULATION, core_exceptions as exc
 from .device import DeviceInfo, DEFAULT_TIMEOUT
 
 CORE_VERSION = CoreVersion.CoreV2
@@ -60,6 +60,7 @@ API2_ERRORS = {
 
 LOG_AUTH_INFO = False
 MIN_TIME_BETWEEN_UPDATE = 25  # seconds
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -699,9 +700,9 @@ class ClientV2(object):
     def _load_devices(self, force_update: bool = False):
         if self._session and (self._devices is None or force_update):
             self._devices = self._session.get_devices()
-            # for debug
-            # self._inject_thinq2_device()
-            # for debug
+            if EMULATION:
+                # for debug
+                self._inject_thinq2_device()
 
     @property
     def api_version(self):
