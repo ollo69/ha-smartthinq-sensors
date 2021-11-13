@@ -12,6 +12,7 @@ from .device import (
 )
 from . import (
     FEAT_ENERGY_CURRENT,
+    FEAT_HUMIDITY,
     FEAT_HOT_WATER_TEMP,
     FEAT_IN_WATER_TEMP,
     FEAT_OUT_WATER_TEMP,
@@ -28,8 +29,10 @@ LABEL_VANE_SWIRL = "@AC_MAIN_WIND_DIRECTION_SWIRL_W"
 
 AC_CTRL_BASIC = ["Control", "basicCtrl"]
 AC_CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
+AC_CTRL_MISC = ["Control", "miscCtrl"]
 # AC_CTRL_SETTING = "settingInfo"
 # AC_CTRL_WIND_MODE = "wModeCtrl"
+AC_DUCT_ZONE_V1 = "DuctZone"
 AC_STATE_POWER_V1 = "InOutInstantPower"
 
 SUPPORT_AC_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
@@ -48,6 +51,8 @@ AC_STATE_WDIR_VSTEP = ["WDirVStep", "airState.wDir.vStep"]
 AC_STATE_WDIR_HSWING = ["WDirLeftRight", "airState.wDir.leftRight"]
 AC_STATE_WDIR_VSWING = ["WDirUpDown", "airState.wDir.upDown"]
 AC_STATE_POWER = [AC_STATE_POWER_V1, "airState.energy.onCurrent"]
+AC_STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
+AC_STATE_DUCT_ZONE = ["DuctZoneType", "airState.ductZone.state"]
 
 CMD_STATE_OPERATION = [AC_CTRL_BASIC, "Set", AC_STATE_OPERATION]
 CMD_STATE_OP_MODE = [AC_CTRL_BASIC, "Set", AC_STATE_OPERATION_MODE]
@@ -57,6 +62,9 @@ CMD_STATE_WDIR_HSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_HSTEP]
 CMD_STATE_WDIR_VSTEP = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSTEP]
 CMD_STATE_WDIR_HSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [AC_CTRL_WIND_DIRECTION, "Set", AC_STATE_WDIR_VSWING]
+CMD_STATE_DUCT_ZONES = [
+    AC_CTRL_MISC, "Set", [AC_DUCT_ZONE_V1, "airState.ductZone.control"]
+]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
@@ -75,6 +83,11 @@ TEMP_STEP_WHOLE = 1.0
 TEMP_STEP_HALF = 0.5
 
 ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
+
+ZONE_OFF = "0"
+ZONE_ON = "1"
+ZONE_ST_CUR = "current"
+ZONE_ST_NEW = "new"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -189,6 +202,7 @@ class AirConditionerDevice(Device):
         self._supported_vertical_swings = None
         self._temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
+        self._duct_zones = {}
 
         self._current_power = 0
         self._current_power_supported = True
@@ -314,6 +328,118 @@ class AirConditionerDevice(Device):
         if not self.model_info.enum_value(supp_key, mode):
             return False
         return True
+
+    def is_duct_zone_enabled(self, zone: str) -> bool:
+        """Get if a specific zone is enabled"""
+        return zone in self._duct_zones
+
+    def get_duct_zone(self, zone: str) -> bool:
+        """Get the status for a specific zone"""
+        if zone not in self._duct_zones:
+            return False
+        cur_zone = self._duct_zones[zone]
+        if ZONE_ST_NEW in cur_zone:
+            return cur_zone[ZONE_ST_NEW] == ZONE_ON
+        return cur_zone[ZONE_ST_CUR] == ZONE_ON
+
+    def set_duct_zone(self, zone: str, status: bool):
+        """Set the status for a specific zone"""
+        if zone not in self._duct_zones:
+            return
+        self._duct_zones[zone][ZONE_ST_NEW] = ZONE_ON if status else ZONE_OFF
+
+    @property
+    def duct_zones(self) -> list:
+        """Return a list of available duct zones"""
+        return [key for key in self._duct_zones]
+
+    def update_duct_zones(self):
+        """Update the current duct zones status."""
+        states = self._get_duct_zones()
+        if not states:
+            return
+
+        duct_zones = {}
+        send_update = False
+        for zone, state in states.items():
+            cur_status = state[ZONE_ST_CUR]
+            new_status = None
+            if zone in self._duct_zones:
+                new_status = self._duct_zones[zone].get(ZONE_ST_NEW)
+                if new_status and new_status != cur_status:
+                    send_update = True
+            duct_zones[zone] = {ZONE_ST_CUR: new_status or cur_status}
+
+        if send_update:
+            self._set_duct_zones(duct_zones)
+        self._duct_zones = duct_zones
+
+    def _get_duct_zones(self) -> dict:
+        """Get the status of the zones (for ThinQ1 only zone configured).
+
+        return value is a dict with this format:
+        - key: The zone index. A string containing a number
+        - value: another dict with:
+            - key: "current"
+            - value: "1" if zone is ON else "0"
+        """
+
+        # first check if duct is supported
+        if not self._status:
+            return {}
+        duct_state = self._status.duct_zones_state
+        if not duct_state:
+            return {}
+
+        # get real duct zones states
+        """
+        For ThinQ2 we transform the value in the status in binary
+        and than we create the result. We always have 8 duct zone.
+        """
+        if not self._should_poll:
+            bin_arr = [x for x in reversed(f"{duct_state:08b}")]
+            return {
+                str(v+1): {ZONE_ST_CUR: k} for v, k in enumerate(bin_arr)
+            }
+
+        """
+        For ThinQ1 devices result is a list of dicts with these keys:
+        - "No": The zone index. A string containing a number,
+          starting from 1.
+        - "Cfg": Whether the zone is enabled. A string, either "1" or
+          "0".
+        - "State": Whether the zone is open. Also "1" or "0".
+        """
+        zones = self._get_config(AC_DUCT_ZONE_V1)
+        return {
+            zone["No"]: {ZONE_ST_CUR: zone["State"]}
+            for zone in zones
+            if zone["Cfg"] == "1"
+        }
+
+    def _set_duct_zones(self, zones: dict):
+        """Turn off or on the device's zones.
+
+        The `zones` parameter is the same returned by _get_duct_zones()
+        """
+
+        # Ensure at least one zone is enabled: we can't turn all zones
+        # off simultaneously.
+        on_count = sum(int(zone[ZONE_ST_CUR]) for zone in zones.values())
+        if on_count == 0:
+            return
+
+        if self._should_poll:
+            zone_cmd = "/".join(
+                f"{key}_{value[ZONE_ST_CUR]}"
+                for key, value in zones.items()
+            )
+        else:
+            bits = [v[ZONE_ST_CUR] for v in zones.values()]
+            zone_cmd = int("".join(v for v in reversed(bits)), 2)
+
+        keys = self._get_cmd_keys(CMD_STATE_DUCT_ZONES)
+        self.set(keys[0], keys[1], key=keys[2], value=zone_cmd)
 
     @property
     def is_air_to_water(self):
@@ -563,6 +689,13 @@ class AirConditionerDevice(Device):
         self._status = AirConditionerStatus(self, res)
         if self._temperature_step == TEMP_STEP_WHOLE:
             self._adjust_temperature_step(self._status.target_temp)
+
+        # manage duct devices, if not ducted do nothing
+        try:
+            self.update_duct_zones()
+        except Exception as ex:
+            _LOGGER.exception("Duct zone control failed", exc_info=ex)
+
         return self._status
 
 
@@ -732,10 +865,27 @@ class AirConditionerStatus(DeviceStatus):
             FEAT_ENERGY_CURRENT, value, False
         )
 
+    @property
+    def humidity(self):
+        value = self.to_int_or_none(
+            self.lookup_range(AC_STATE_HUMIDITY)
+        )
+        if value is None:
+            return None
+        return self._update_feature(
+            FEAT_HUMIDITY, value/10, False
+        )
+
+    @property
+    def duct_zones_state(self):
+        key = self._get_state_key(AC_STATE_DUCT_ZONE)
+        return self.to_int_or_none(self._data.get(key))
+
     def _update_features(self):
         result = [
             self.hot_water_current_temp,
             self.in_water_current_temp,
             self.out_water_current_temp,
             self.energy_current,
+            self.humidity,
         ]

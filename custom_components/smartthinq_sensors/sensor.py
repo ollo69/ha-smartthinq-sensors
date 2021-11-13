@@ -13,6 +13,7 @@ from .wideq import (
     FEAT_ERROR_MSG,
     FEAT_HALFLOAD,
     FEAT_HOT_WATER_TEMP,
+    FEAT_HUMIDITY,
     FEAT_IN_WATER_TEMP,
     FEAT_LOWER_FILTER_LIFE,
     FEAT_OUT_WATER_TEMP,
@@ -37,6 +38,7 @@ from .wideq import (
 from .wideq.device import WM_DEVICE_TYPES, DeviceType
 
 from homeassistant.components.sensor import (
+    DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_PM1,
     DEVICE_CLASS_PM10,
     DEVICE_CLASS_PM25,
@@ -264,6 +266,14 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         state_class=STATE_CLASS_MEASUREMENT,
         device_class=DEVICE_CLASS_POWER,
         native_unit_of_measurement=POWER_WATT,
+        entity_registry_enabled_default=False,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_HUMIDITY,
+        name="Humidity",
+        state_class=STATE_CLASS_MEASUREMENT,
+        device_class=DEVICE_CLASS_HUMIDITY,
+        native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
 )

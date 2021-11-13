@@ -99,6 +99,11 @@ AIR_PURIFIER_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ),
 )
 
+AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
+    key="duct-zone",
+    name="Zone",
+)
+
 
 def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription):
     """Check if a switch exist for device."""
@@ -155,6 +160,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             for switch_desc in AIR_PURIFIER_SWITCH
             for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
             if _switch_exist(lge_device, switch_desc)
+        ]
+    )
+
+    # add AC duct zone switch
+    lge_switch.extend(
+        [
+            LGEDuctSwitch(lge_device, duct_zone)
+            for lge_device in lge_devices.get(DeviceType.AC, [])
+            for duct_zone in lge_device.device.duct_zones
         ]
     )
 
@@ -244,3 +258,39 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
             return self._api.state.device_features.get(feature)
 
         return None
+
+
+class LGEDuctSwitch(LGESwitch):
+    """Class to control switches for LGE AC duct device"""
+
+    def __init__(
+            self,
+            api: LGEDevice,
+            duct_zone: str
+    ):
+        """Initialize the switch."""
+        super().__init__(api, AC_DUCT_SWITCH)
+        self._attr_name += f" {duct_zone}"
+        self._attr_unique_id += f"-{duct_zone}"
+        self._zone = duct_zone
+
+    @property
+    def is_on(self):
+        """Return the state of the switch."""
+        return self._wrap_device.device.get_duct_zone(self._zone)
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return (
+            self._wrap_device.device.is_duct_zone_enabled(self._zone)
+            and self._wrap_device.is_power_on
+        )
+
+    def turn_off(self, **kwargs):
+        """Turn the entity off."""
+        self._wrap_device.device.set_duct_zone(self._zone, False)
+
+    def turn_on(self, **kwargs):
+        """Turn the entity on."""
+        self._wrap_device.device.set_duct_zone(self._zone, True)

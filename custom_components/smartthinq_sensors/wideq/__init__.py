@@ -16,6 +16,7 @@ DEFAULT_LANGUAGE = "en-US"
 
 # ac devices features
 FEAT_ENERGY_CURRENT = "energy_current"
+FEAT_HUMIDITY = "humidity"
 FEAT_HOT_WATER_TEMP = "hot_water_temperature"
 FEAT_IN_WATER_TEMP = "in_water_temperature"
 FEAT_OUT_WATER_TEMP = "out_water_temperature"
