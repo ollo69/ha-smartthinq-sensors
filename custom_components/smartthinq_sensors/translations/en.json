@@ -2,7 +2,8 @@
     "config": {
         "abort": {
             "single_instance_allowed": "Only a single configuration of SmartThinQ LGE Sensors is allowed.",
-            "no_smartthinq_devices": "No SmartThinQ devices found. Component setup aborted."
+            "no_smartthinq_devices": "No SmartThinQ devices found. Component setup aborted.",
+            "unsupported_version": "This integration require at least HomeAssistant version {req_ver}, you are running version {run_ver}."
         },
         "error": {
             "error_url": "Error retrieving login URL from ThinQ.",

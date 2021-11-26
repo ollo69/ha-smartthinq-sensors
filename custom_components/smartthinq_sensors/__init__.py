@@ -29,7 +29,10 @@ from homeassistant.const import (
     ATTR_SW_VERSION,
     CONF_REGION,
     CONF_TOKEN,
+    MAJOR_VERSION,
+    MINOR_VERSION,
     TEMP_CELSIUS,
+    __version__,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -48,8 +51,11 @@ from .const import (
     CONF_USE_API_V2,
     CONF_USE_TLS_V1,
     DOMAIN,
+    MIN_HA_MAJ_VER,
+    MIN_HA_MIN_VER,
     LGE_DEVICES,
     STARTUP,
+    __min_ha_version__,
 )
 
 MAX_RETRIES = 3
@@ -133,6 +139,13 @@ class LGEAuthentication:
         return client
 
 
+def is_valid_ha_version():
+    return (
+        MAJOR_VERSION > MIN_HA_MAJ_VER or
+        (MAJOR_VERSION == MIN_HA_MAJ_VER and MINOR_VERSION >= MIN_HA_MIN_VER)
+    )
+
+
 def _notify_error(hass, notification_id, title, message):
     """Notify user with persistent notification"""
     hass.async_create_task(
@@ -148,6 +161,14 @@ def _notify_error(hass, notification_id, title, message):
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     """Set up SmartThinQ integration from a config entry."""
+
+    if not is_valid_ha_version():
+        msg = "This integration require at least HomeAssistant version " \
+              f" {__min_ha_version__}, you are running version {__version__}." \
+              " Please upgrade HomeAssistant to continue use this integration."
+        _notify_error(hass, "inv_ha_version", "SmartThinQ Sensors", msg)
+        _LOGGER.warning(msg)
+        return False
 
     refresh_token = config_entry.data.get(CONF_TOKEN)
     region = config_entry.data.get(CONF_REGION)

@@ -7,7 +7,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.const import CONF_REGION, CONF_TOKEN
+from homeassistant.const import CONF_REGION, CONF_TOKEN, __version__
 
 from .const import (
     DOMAIN,
@@ -17,8 +17,9 @@ from .const import (
     CONF_OAUTH_USER_NUM,
     CONF_USE_API_V2,
     CONF_USE_TLS_V1,
+    __min_ha_version__,
 )
-from . import LGEAuthentication
+from . import LGEAuthentication, is_valid_ha_version
 
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
@@ -76,16 +77,19 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._loginurl = None
 
-    @property
-    def logger(self) -> logging.Logger:
-        """Return logger."""
-        return logging.getLogger(__name__)
-
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user interface"""
 
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
+
+        if not is_valid_ha_version():
+            return self.async_abort(
+                reason="unsupported_version",
+                description_placeholders={
+                    "req_ver": __min_ha_version__, "run_ver": __version__
+                },
+            )
 
         if not user_input:
             return self._show_form()

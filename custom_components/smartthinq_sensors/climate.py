@@ -7,7 +7,7 @@ import logging
 from typing import Any, Callable, List, Tuple
 
 
-from .wideq import FEAT_OUT_WATER_TEMP
+from .wideq import FEAT_HUMIDITY, FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
 from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
 
@@ -63,36 +63,36 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
-class ThinQClimateRequiredKeysMixin:
+class ThinQRefClimateRequiredKeysMixin:
     """Mixin for required keys."""
-    curr_temp_fn: Callable[[Any], float | str]
     range_temp_fn: Callable[[Any], List[float]]
-    target_temp_fn: Callable[[Any, float], None]
+    set_temp_fn: Callable[[Any, float], None]
+    temp_fn: Callable[[Any], float | str]
 
 
 @dataclass
-class ThinQClimateEntityDescription(
-    ClimateEntityDescription, ThinQClimateRequiredKeysMixin
+class ThinQRefClimateEntityDescription(
+    ClimateEntityDescription, ThinQRefClimateRequiredKeysMixin
 ):
     """A class that describes ThinQ climate entities."""
 
 
-REFRIGERATOR_CLIMATE: Tuple[ThinQClimateEntityDescription, ...] = (
-    ThinQClimateEntityDescription(
+REFRIGERATOR_CLIMATE: Tuple[ThinQRefClimateEntityDescription, ...] = (
+    ThinQRefClimateEntityDescription(
         key=ATTR_FRIDGE,
         name="Fridge",
         icon="mdi:fridge-top",
-        curr_temp_fn=lambda x: x.temp_fridge,
         range_temp_fn=lambda x: x.device.fridge_target_temp_range,
-        target_temp_fn=lambda x, y: x.device.set_fridge_target_temp(y),
+        set_temp_fn=lambda x, y: x.device.set_fridge_target_temp(y),
+        temp_fn=lambda x: x.temp_fridge,
     ),
-    ThinQClimateEntityDescription(
+    ThinQRefClimateEntityDescription(
         key=ATTR_FREEZER,
         name="Freezer",
         icon="mdi:fridge-bottom",
-        curr_temp_fn=lambda x: x.temp_freezer,
         range_temp_fn=lambda x: x.device.freezer_target_temp_range,
-        target_temp_fn=lambda x, y: x.device.set_freezer_target_temp(y),
+        set_temp_fn=lambda x, y: x.device.set_freezer_target_temp(y),
+        temp_fn=lambda x: x.temp_freezer,
     ),
 )
 
@@ -269,6 +269,10 @@ class LGEACClimate(LGEClimate):
         return curr_temp
 
     @property
+    def current_humidity(self) -> int | None:
+        return self._api.state.device_features.get(FEAT_HUMIDITY)
+
+    @property
     def target_temperature(self) -> float:
         """Return the temperature we try to reach."""
         return self._api.state.target_temp
@@ -377,15 +381,17 @@ class LGEACClimate(LGEClimate):
 class LGERefrigeratorClimate(LGEClimate):
     """Refrigerator climate device."""
 
+    entity_description = ThinQRefClimateEntityDescription
+
     def __init__(
             self,
             api: LGEDevice,
-            description: ThinQClimateEntityDescription,
+            description: ThinQRefClimateEntityDescription,
     ) -> None:
         """Initialize the climate."""
         super().__init__(api)
         self._wrap_device = LGERefrigeratorDevice(api)
-        self.entity_description: ThinQClimateEntityDescription = description
+        self.entity_description = description
         self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}-AC"
         self._attr_hvac_modes = [HVAC_MODE_AUTO]
@@ -407,7 +413,7 @@ class LGERefrigeratorClimate(LGEClimate):
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        curr_temp = self.entity_description.curr_temp_fn(self._wrap_device)
+        curr_temp = self.entity_description.temp_fn(self._wrap_device)
         if curr_temp is None:
             return None
         try:
@@ -423,7 +429,7 @@ class LGERefrigeratorClimate(LGEClimate):
     def set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         new_temp = kwargs.get("temperature", self.target_temperature)
-        self.entity_description.target_temp_fn(self._wrap_device, new_temp)
+        self.entity_description.set_temp_fn(self._wrap_device, new_temp)
 
     @property
     def supported_features(self) -> int:
