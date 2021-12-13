@@ -1,6 +1,12 @@
 {
   "name": "SmartThinQ LGE Sensors",
   "content_in_root": false,
-  "domains": ["sensor"],
-  "iot_class": "cloud_poll"
+  "domains": [
+	"sensor",
+	"binary_sensor",
+	"switch",
+	"climate"
+  ],
+  "iot_class": "cloud_poll",
+  "homeassistant": "2021.9.0"
 }

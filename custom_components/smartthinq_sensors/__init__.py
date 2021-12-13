@@ -203,11 +203,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         _LOGGER.error(msg)
         return False
 
-    except Exception:
+    except Exception as exc:
         _LOGGER.warning(
             "Connection not available. ThinQ platform not ready", exc_info=True
         )
-        raise ConfigEntryNotReady()
+        raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     if not client.hasdevices:
         _LOGGER.error("No ThinQ devices found. Component setup aborted")
@@ -217,11 +217,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 
     try:
         lge_devices = await lge_devices_setup(hass, client)
-    except Exception:
+    except Exception as exc:
         _LOGGER.warning(
             "Connection not available. ThinQ platform not ready", exc_info=True
         )
-        raise ConfigEntryNotReady()
+        raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     if not use_api_v2:
         _LOGGER.warning(
@@ -242,10 +242,9 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(
+    if unload_ok := await hass.config_entries.async_unload_platforms(
         entry, SMARTTHINQ_PLATFORMS
-    )
-    if unload_ok:
+    ):
         hass.data.pop(DOMAIN)
 
     return unload_ok
