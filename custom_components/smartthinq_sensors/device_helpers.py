@@ -118,18 +118,10 @@ class LGEBaseDevice:
 class LGEWashDevice(LGEBaseDevice):
     """A wrapper to monitor LGE Wash devices"""
 
-    def __init__(self, api_device):
-        """Initialize the device."""
-        super().__init__(api_device)
-        self._forced_run_completed = False
-
     @property
     def run_completed(self):
         if self._api.state:
-            run_completed = self._api.state.is_run_completed
-            if self._api.was_unavailable or self._forced_run_completed:
-                self._forced_run_completed = run_completed
-            if run_completed and not self._forced_run_completed:
+            if self._api.state.is_run_completed:
                 return STATE_ON
         return STATE_OFF
 

@@ -3,15 +3,24 @@ SmartThinQ API for most use cases.
 """
 import base64
 import json
+import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 import enum
 import logging
 from numbers import Number
+from requests import exceptions as req_exc
 from typing import Any, Dict, Optional
+from threading import Lock
 
 from . import EMULATION, wideq_log_level
-from .core_exceptions import MonitorError
+from .core_exceptions import (
+    InvalidCredentialError,
+    MonitorError,
+    NotConnectedError,
+    NotLoggedInError,
+)
+
 
 BIT_OFF = "OFF"
 BIT_ON = "ON"
@@ -21,6 +30,9 @@ LABEL_BIT_ON = "@CP_ON_EN_W"
 
 DEFAULT_TIMEOUT = 10  # seconds
 DEFAULT_REFRESH_TIMEOUT = 20  # seconds
+MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
+MAX_RETRIES = 3
+MAX_UPDATE_FAIL_ALLOWED = 10
 
 STATE_OPTIONITEM_OFF = "off"
 STATE_OPTIONITEM_ON = "on"
@@ -135,29 +147,185 @@ class Monitor(object):
         task expires, it attempts to start a new one automatically. This
         makes one `Monitor` object suitable for long-term monitoring.
         """
+    _client_lock = Lock()
+    _client_connected = True
+    _last_client_refresh = datetime.min
+    _not_logged_count = 0
+    _critical_error_logged = False
 
-    def __init__(self, session, device_id: str) -> None:
-        self.session = session
-        self.device_id = device_id
+    def __init__(self, client, device_id: str, device_type=PlatformType.THINQ1) -> None:
+        self._client = client
+        self._device_id = device_id
+        self._device_type = device_type
+        self._work_id: Optional[str] = None
+        self._disconnected = True
+        self._not_logged = False
+
+    def _log_error(self, msg, *args, **kwargs):
+        if not self._critical_error_logged and self._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
+            self._critical_error_logged = True
+            level = logging.ERROR
+        else:
+            level = logging.DEBUG
+        _LOGGER.log(level, msg, *args, **kwargs)
+
+    def _refresh_client(self):
+        """Refresh the devices shared client"""
+        with self._client_lock:
+            if self._client_connected:
+                return True
+            call_time = datetime.now()
+            difference = (call_time - self._last_client_refresh).total_seconds()
+            if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
+                return False
+
+            self._last_client_refresh = datetime.now()
+            refresh_gateway = False
+            if self._not_logged_count >= 30:
+                self._not_logged_count = 0
+                refresh_gateway = True
+            self._not_logged_count += 1
+            _LOGGER.debug("ThinQ session not connected. Trying to reconnect....")
+            self._client.refresh(refresh_gateway)
+            level = logging.INFO if self._critical_error_logged else logging.DEBUG
+            _LOGGER.log(level, "ThinQ session reconnected")
+            self._client_connected = True
+            self._not_logged_count = 0
+            self._critical_error_logged = False
+            return True
+
+    def refresh(self, query_device=False) -> Optional[any]:
+        """Update device state"""
+        _LOGGER.debug("Updating ThinQ device %s", self._device_id)
+
+        for iteration in range(MAX_RETRIES):
+            _LOGGER.debug("Polling...")
+            # Wait one second between iteration
+            if iteration > 0:
+                if self._not_logged or self._disconnected:
+                    break
+                time.sleep(1)
+
+            try:
+                if not self._restart_monitor():
+                    break
+                state = self.poll(query_device)
+
+            except NotLoggedInError:
+                self._log_error("Connection to ThinQ not available, will be retried")
+                self._not_logged = True
+
+            except NotConnectedError:
+                _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
+                self._disconnected = True
+
+            except InvalidCredentialError:
+                self._log_error(
+                    "Invalid credential connecting to ThinQ. Reconfigure integration with valid login credential"
+                )
+                self._not_logged = True
+
+            except (
+                req_exc.ConnectionError,
+                req_exc.ConnectTimeout,
+                req_exc.ReadTimeout,
+            ):
+                self._log_error(
+                    "Connection to ThinQ failed. Network connection error"
+                )
+                self._not_logged = True
+
+            except Exception:
+                self._log_error(
+                    "ThinQ error while updating device status", exc_info=True
+                )
+                self._not_logged = True
+
+            else:
+                if state:
+                    _LOGGER.debug("ThinQ status updated")
+                    # l = dir(state)
+                    # _LOGGER.debug('Status attributes: %s', l)
+
+                    return state
+
+                else:
+                    _LOGGER.debug("No status available yet")
+                    continue
+
+        if self._not_logged:
+            self._client_connected = False
+            if self._critical_error_logged:
+                raise MonitorError(self._device_id, "-1")
+
+        return None
+
+    def _restart_monitor(self) -> bool:
+        """Restart the device monitor"""
+        if not (self._disconnected or self._not_logged):
+            return True
+
+        if self._not_logged:
+            if not self._refresh_client():
+                return False
+
+            self._not_logged = False
+            self._disconnected = True
+
+        self.start()
+        self._disconnected = False
+        return True
 
     def start(self) -> None:
-        self.work_id = self.session.monitor_start(self.device_id)
+        if self._device_type != PlatformType.THINQ1:
+            return
+        self._work_id = self._client.session.monitor_start(self._device_id)
 
     def stop(self) -> None:
-        self.session.monitor_stop(self.device_id, self.work_id)
+        if not self._work_id:
+            return
+        work_id = self._work_id
+        self._work_id = None
+        self._client.session.monitor_stop(self._device_id, work_id)
 
-    def poll(self) -> Optional[bytes]:
+    def poll(self, query_device=False) -> Optional[any]:
         """Get the current status data (a bytestring) or None if the
             device is not yet ready.
             """
-        self.work_id = self.session.monitor_start(self.device_id)
+        if self._device_type == PlatformType.THINQ1:
+            return self._poll_v1()
+        return self._poll_v2(query_device)
+
+    def _poll_v1(self) -> Optional[bytes]:
+        """Get the current status data (a bytestring) or None if the
+            device is not yet ready.
+            """
+        if not self._work_id:
+            self.start()
+            if not self._work_id:
+                return None
         try:
-            return self.session.monitor_poll(self.device_id, self.work_id)
+            return self._client.session.monitor_poll(self._device_id, self._work_id)
         except MonitorError:
             # Try to restart the task.
             self.stop()
-            self.start()
             return None
+
+    def _poll_v2(self, query_device=False) -> Optional[any]:
+        """Get the current status data (a json str) or None if the
+            device is not yet ready.
+            """
+        if self._device_type != PlatformType.THINQ2:
+            return None
+        if query_device:
+            result = self._client.session.get_device_v2_settings(self._device_id)
+            return result.get("snapshot")
+
+        self._client.refresh_devices()
+        device_data = self._client.get_device(self._device_id)
+        if device_data:
+            return device_data.snapshot
+        return None
 
     @staticmethod
     def decode_json(data: bytes) -> Dict[str, Any]:
@@ -895,7 +1063,7 @@ class Device(object):
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
-        self._mon = None
+        self._mon = Monitor(client, device.id, device.platform_type)
         self._control_set = 0
         self._last_additional_poll: Optional[datetime] = None
         self._available_features = available_features or {}
@@ -1087,21 +1255,6 @@ class Device(object):
 
         return self._model_info is not None
 
-    def monitor_start(self):
-        """Start monitoring the device's status."""
-        if not self._should_poll:
-            return
-        mon = Monitor(self._client.session, self._device_info.id)
-        mon.start()
-        self._mon = mon
-
-    def monitor_stop(self):
-        """Stop monitoring the device's status."""
-        if not self._mon:
-            return
-        self._mon.stop()
-        self._mon = None
-
     def _pre_update_v2(self):
         """Call additional methods before data update for v2 API.
 
@@ -1123,14 +1276,8 @@ class Device(object):
                 self._pre_update_v2()
             except Exception:
                 pass
-            result = self._client.session.get_device_v2_settings(self._device_info.id)
-            return result.get("snapshot")
 
-        self._client.refresh_devices()
-        device_data = self._client.get_device(self._device_info.id)
-        if device_data:
-            return device_data.snapshot
-        return None
+        return self._mon.refresh(query_device)
 
     def _delete_permission(self):
         """Remove permission acquired in set command."""
@@ -1197,10 +1344,7 @@ class Device(object):
             return self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
-        if not self._mon:
-            # Abort if monitoring has not started yet.
-            return None
-        data = self._mon.poll()
+        data = self._mon.refresh()
         if data:
             res = self._model_info.decode_monitor(data)
 
