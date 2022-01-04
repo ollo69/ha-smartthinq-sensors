@@ -218,7 +218,10 @@ class WMDevice(Device):
         self.set(keys[0], keys[1], key=keys[2])
 
     def reset_status(self):
-        self._status = WMStatus(self, None)
+        tcl_count = None
+        if self._status:
+            tcl_count = self._status.tubclean_count
+        self._status = WMStatus(self, None, tcl_count)
         return self._status
 
     def _set_remote_start_opt(self, res):
@@ -250,12 +253,13 @@ class WMStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
-    def __init__(self, device, data):
+    def __init__(self, device, data, tcl_count: str = None):
         super().__init__(device, data)
         self._run_state = None
         self._pre_state = None
         self._process_state = None
         self._error = None
+        self._tcl_count = tcl_count
 
     def _get_run_state(self):
         if not self._run_state:
@@ -506,11 +510,11 @@ class WMStatus(DeviceStatus):
         if not self.key_exist("TCLCount"):
             return None
         if self.is_info_v2:
-            result = DeviceStatus.int_or_none(self._data.get("TCLCount"))
+            result = self.int_or_none(self._data.get("TCLCount"))
         else:
             result = self._data.get("TCLCount")
         if result is None:
-            result = "N/A"
+            result = self._tcl_count or "N/A"
         return self._update_feature(
             FEAT_TUBCLEAN_COUNT, result, False
         )
