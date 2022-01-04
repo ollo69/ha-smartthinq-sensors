@@ -211,13 +211,14 @@ class Monitor(object):
                     break
                 state = self.poll(query_device)
 
-            except NotLoggedInError:
-                self._log_error("Connection to ThinQ not available, will be retried")
-                self._not_logged = True
-
             except NotConnectedError:
                 _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
                 self._disconnected = True
+                raise
+
+            except NotLoggedInError:
+                self._log_error("Connection to ThinQ not available, will be retried")
+                self._not_logged = True
 
             except InvalidCredentialError:
                 self._log_error(
@@ -1330,7 +1331,6 @@ class Device(object):
         :param thinq2_query_device: if True query thinq2 devices with dedicated command
             instead using dashboard.
         """
-        res = None
 
         # load device info at first call if not loaded before
         if not self.init_device_info():
@@ -1345,9 +1345,10 @@ class Device(object):
 
         # ThinQ V1 - Monitor data must be polled """
         data = self._mon.refresh()
-        if data:
-            res = self._model_info.decode_monitor(data)
+        if not data:
+            return None
 
+        res = self._model_info.decode_monitor(data)
         # do additional poll
         if res and thinq1_additional_poll > 0:
             try:

@@ -13,7 +13,11 @@ from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
 from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.factory import get_lge_device
-from .wideq.core_exceptions import InvalidCredentialError, MonitorError
+from .wideq.core_exceptions import(
+    InvalidCredentialError,
+    MonitorError,
+    NotConnectedError,
+)
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -353,14 +357,33 @@ class LGEDevice:
         """Update device state"""
         _LOGGER.debug("Updating ThinQ device %s", self._name)
         self._disconnected = True
+
         try:
+            # method poll should return None if status is not yet available
+            # or due to temporary connection failure that will be restored
             state = self._device.poll()
+
+        except NotConnectedError:
+            # This exception is raised when device is not connected (turned off)
+            # If device status is "on" we reset the status, otherwise we just
+            # ignore and use previous known state
+            state = None
+            if self._state.is_on:
+                _LOGGER.warning(
+                    "Status for device %s was reset because disconnected",
+                    self._name,
+                )
+                self._state = self._device.reset_status()
+
         except MonitorError:
+            # This exception is raised when issue with ThinQ persist
+            # In this case available is set to false and device status
+            # is reset to avoid confusion when connection is restored
             if not self._available:
                 return
             _LOGGER.warning(
                 "Status for device %s was reset because ThinQ connection not available",
-                self._name
+                self._name,
             )
             self._available = False
             self._state = self._device.reset_status()
