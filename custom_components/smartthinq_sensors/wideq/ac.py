@@ -10,6 +10,7 @@ from .const import (
     FEAT_IN_WATER_TEMP,
     FEAT_LIGHTING_DISPLAY,
     FEAT_MODE_JET,
+    FEAT_MODE_SILENT,
     FEAT_OUT_WATER_TEMP,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
@@ -54,6 +55,7 @@ STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
+STATE_MODE_SILENT = ["SilentMode", "airState.miscFuncState.silentAWHP"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 
 CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
@@ -66,6 +68,7 @@ CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
+CMD_STATE_MODE_SILENT = [CTRL_BASIC, "Set", STATE_MODE_SILENT]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
@@ -89,7 +92,10 @@ ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 LIGHTING_DISPLAY_OFF = "0"
 LIGHTING_DISPLAY_ON = "1"
 
-MODE_JET_OFF = "@OFF"
+MODE_OFF = "@OFF"
+MODE_ON = "@ON"
+
+MODE_JET_OFF = MODE_OFF
 MODE_JET_COOL = "@COOL_JET"
 MODE_JET_HEAT = "@HEAT_JET"
 
@@ -685,6 +691,13 @@ class AirConditionerDevice(Device):
         lighting = LIGHTING_DISPLAY_ON if status else LIGHTING_DISPLAY_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=lighting)
 
+    async def set_mode_silent(self, value: bool):
+        """Set the silent mode to a value from the `AWHPSilentMode` enum."""
+        mode = MODE_ON if value else MODE_OFF
+        keys = self._get_cmd_keys(CMD_STATE_MODE_SILENT)
+        silent_mode = self.model_info.enum_value(keys[2], mode)
+        await self.set(keys[0], keys[1], key=keys[2], value=silent_mode)
+
     async def get_power(self):
         """Get the instant power usage in watts of the whole unit."""
         if not self._current_power_supported:
@@ -961,6 +974,16 @@ class AirConditionerStatus(DeviceStatus):
             FEAT_LIGHTING_DISPLAY, str(value) == LIGHTING_DISPLAY_ON, False
         )
 
+    @property
+    def mode_silent(self):
+        if not self.is_info_v2:
+            return None
+        key = self._get_state_key(STATE_MODE_SILENT)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == MODE_ON
+        return self._update_feature(FEAT_MODE_SILENT, status, False)
+
     def _update_features(self):
         _ = [
             self.hot_water_current_temp,
@@ -969,5 +992,6 @@ class AirConditionerStatus(DeviceStatus):
             self.energy_current,
             self.humidity,
             self.mode_jet,
+            self.mode_silent,
             self.lighting_display,
         ]

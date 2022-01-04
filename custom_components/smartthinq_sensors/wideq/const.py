@@ -22,6 +22,7 @@ FEAT_HOT_WATER_TEMP = "hot_water_temperature"
 FEAT_IN_WATER_TEMP = "in_water_temperature"
 FEAT_LIGHTING_DISPLAY = "lighting_display"
 FEAT_MODE_JET = "mode_jet"
+FEAT_MODE_SILENT = "mode_silent"
 FEAT_OUT_WATER_TEMP = "out_water_temperature"
 
 # wash devices features
