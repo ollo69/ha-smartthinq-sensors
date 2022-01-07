@@ -294,8 +294,8 @@ def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, count
     res = wideq_post(url, data=pre_login_data, headers=headers, timeout=DEFAULT_TIMEOUT)
     pre_login = res.json()
 
-    headers['X-Signature'] = pre_login["signature"]
-    headers['X-Timestamp'] = pre_login["tStamp"]
+    headers["X-Signature"] = pre_login["signature"]
+    headers["X-Timestamp"] = pre_login["tStamp"]
 
     data = {
       "user_auth2": pre_login["encrypted_pw"],
@@ -506,7 +506,7 @@ class Gateway(object):
                 "division": "ha",
                 "redirect_uri": redirect_uri or OAUTH_REDIRECT_URI,
                 "state": state or uuid.uuid1().hex,
-                "show_thirdparty_login": "GGL,AMZ,FBK,APPL",
+                "show_thirdparty_login": "LGE,MYLG,GGL,AMZ,FBK,APPL",
             }
         )
         return f"{url}?{query}"
