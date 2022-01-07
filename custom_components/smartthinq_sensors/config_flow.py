@@ -7,15 +7,22 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.const import CONF_REGION, CONF_TOKEN, __version__
+from homeassistant.const import (
+    CONF_PASSWORD,
+    CONF_REGION,
+    CONF_TOKEN,
+    CONF_USERNAME,
+    __version__,
+)
 
 from .const import (
     DOMAIN,
     CONF_EXCLUDE_DH,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
-    CONF_OAUTH_USER_NUM,
+    # CONF_OAUTH_USER_NUM,
     CONF_USE_API_V2,
+    CONF_USE_REDIRECT,
     CONF_USE_TLS_V1,
     __min_ha_version__,
 )
@@ -50,8 +57,11 @@ def _languages_list():
 
 INIT_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_REGION): vol.In(_countries_list()),
-        vol.Required(CONF_LANGUAGE): vol.In(_languages_list()),
+        vol.Optional(CONF_USERNAME, default=""): str,
+        vol.Optional(CONF_PASSWORD, default=""): str,
+        vol.Required(CONF_REGION, default=""): vol.In(_countries_list()),
+        vol.Required(CONF_LANGUAGE, default=""): vol.In(_languages_list()),
+        vol.Required(CONF_USE_REDIRECT, default=False): bool,
         # vol.Optional(CONF_TOKEN): str,
         # vol.Required(CONF_USE_API_V2, default=True): bool,
     }
@@ -70,7 +80,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._language = None
         self._token = None
         self._oauth_url = None
-        self._oauth_user_num = None
+        # self._oauth_user_num = None
         self._use_api_v2 = True
         self._use_tls_v1 = False
         self._exclude_dh = False
@@ -94,10 +104,16 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not user_input:
             return self._show_form()
 
+        username = user_input.get(CONF_USERNAME)
+        password = user_input.get(CONF_PASSWORD)
         region = user_input[CONF_REGION]
         language = user_input[CONF_LANGUAGE]
+        use_redirect = user_input[CONF_USE_REDIRECT]
         self._use_tls_v1 = user_input.get(CONF_USE_TLS_V1, False)
         self._exclude_dh = user_input.get(CONF_EXCLUDE_DH, False)
+
+        if not use_redirect and not (username and password):
+            return self._show_form(errors={"base": "no_user_info"})
 
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
@@ -115,9 +131,18 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if len(language) == 2:
             self._language += "-" + region
 
-        lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
-        lgauth.initHttpAdapter(self._use_tls_v1, self._exclude_dh)
-        self._loginurl = await self.hass.async_add_executor_job(lgauth.getLoginUrl)
+        lg_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lg_auth.initHttpAdapter(self._use_tls_v1, self._exclude_dh)
+        if not use_redirect:
+            client, result = await self._check_connection(username, password)
+            if result != RESULT_SUCCESS:
+                return self._manage_error(result)
+            auth_info = client.oauthinfo
+            self._token = auth_info["refresh_token"]
+            self._oauth_url = auth_info["oauth_url"]
+            return self._save_config_entry()
+
+        self._loginurl = await self.hass.async_add_executor_job(lg_auth.getLoginUrl)
         if not self._loginurl:
             return self._show_form(errors={"base": "error_url"})
         return self._show_form(errors=None, step_id="url")
@@ -135,10 +160,10 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._token = oauth_info["refresh_token"]
         self._oauth_url = oauth_info.get("oauth_url")
-        self._oauth_user_num = oauth_info.get("user_number")
+        # self._oauth_user_num = oauth_info.get("user_number")
 
         if self._use_api_v2:
-            result = await self._check_connection()
+            _, result = await self._check_connection()
             if result != RESULT_SUCCESS:
                 return self._manage_error(result)
             return self._save_config_entry()
@@ -148,30 +173,40 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_token(self, user_input=None):
         """Show result token and submit for save."""
         self._token = user_input[CONF_TOKEN]
-        result = await self._check_connection()
+        _, result = await self._check_connection()
         if result != RESULT_SUCCESS:
             return self._manage_error(result)
         return self._save_config_entry()
 
-    async def _check_connection(self):
+    async def _check_connection(self, username=None, password=None):
         """Test the connection to ThinQ."""
 
-        lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lg_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         try:
-            client = await self.hass.async_add_executor_job(
-                lgauth.createClientFromToken,
-                self._token,
-                self._oauth_url,
-                self._oauth_user_num,
-            )
+            if username and password:
+                client = await self.hass.async_add_executor_job(
+                    lg_auth.create_client_from_login,
+                    username,
+                    password,
+                )
+            else:
+                client = await self.hass.async_add_executor_job(
+                    lg_auth.create_client_from_token,
+                    self._token,
+                    self._oauth_url,
+                    # self._oauth_user_num,
+                )
         except Exception as ex:
             _LOGGER.error("Error connecting to ThinQ: %s", ex)
-            return RESULT_FAIL
+            return None, RESULT_FAIL
+
+        if not client:
+            return None, RESULT_NO_DEV
 
         if not client.hasdevices:
-            return RESULT_NO_DEV
+            return None, RESULT_NO_DEV
 
-        return RESULT_SUCCESS
+        return client, RESULT_SUCCESS
 
     @callback
     def _manage_error(self, error_code):
@@ -197,12 +232,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_EXCLUDE_DH: self._exclude_dh,
         }
         if self._use_api_v2:
-            data.update(
-                {
-                    CONF_OAUTH_URL: self._oauth_url,
-                    CONF_OAUTH_USER_NUM: self._oauth_user_num,
-                }
-            )
+            data[CONF_OAUTH_URL] = self._oauth_url
+            # data[CONF_OAUTH_USER_NUM] = self._oauth_user_num
 
         return self.async_create_entry(title="LGE Devices", data=data,)
 

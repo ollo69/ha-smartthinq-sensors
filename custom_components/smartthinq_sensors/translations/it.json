@@ -10,13 +10,17 @@
             "invalid_region": "Formato Paese non valido.",
             "invalid_language": "Formato lingua non valido.",
             "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone. Puoi richiedere supporto [qui](https://git.io/JTjid).",
-            "invalid_credentials": "Credenziali SmartThinQ non valide. Riprova, assicurandoti prima di poter accedere dall'applicazione ThinQ sul telefono"
+            "invalid_credentials": "Credenziali SmartThinQ non valide. Riprova, assicurandoti prima di poter accedere dall'applicazione ThinQ sul telefono",
+            "no_user_info": "Nome utente e Password sono campi obbligatori."
         },
         "step": {
             "user": {
                 "data": {
+                    "username": "Nome utente account LG",
+                    "password": "Password",
                     "region": "Codice Paese",
                     "language": "Codice Lingua",
+                    "use_redirect": "Usa l'autenticazione basata su URL redirect",
                     "use_tls_v1": "Forza l'utilizzo del protocollo TLSv1 (richiesto in alcuni casi)",
                     "exclude_dh": "Non utilizzare il cypher DH (in caso di errore 'dh key too small')"
                 },

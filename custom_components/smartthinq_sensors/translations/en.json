@@ -10,13 +10,17 @@
             "invalid_region": "Invalid region format.",
             "invalid_language": "Invalid language format.",
             "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone. You can get support [over here](https://git.io/JTjid).",
-            "invalid_credentials": "Invalid SmartThinQ credentials. Try again, and make sure you can access the ThinQ app on your phone."
+            "invalid_credentials": "Invalid SmartThinQ credentials. Try again, and make sure you can access the ThinQ app on your phone.",
+            "no_user_info": "User Name and Password are required."
         },
         "step": {
             "user": {
                 "data": {
+                    "username": "LG account user name",
+                    "password": "Password",
                     "region": "Country Code",
                     "language": "Language Code",
+                    "use_redirect": "Use URL redirect authentication method",
                     "use_tls_v1": "Force use of protocol TLSv1 (sometimes required)",
                     "exclude_dh": "Do not use DH cypher (in case 'dh key too small' error)"
                 },

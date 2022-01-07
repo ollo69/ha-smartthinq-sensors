@@ -69,3 +69,7 @@ class MonitorError(APIError):
 
 class InvalidDeviceStatus(Exception):
     """Device exception occurred when status of device is not valid."""
+
+
+class AuthenticationError(Exception):
+    """API exception occurred when fail to authenticate."""

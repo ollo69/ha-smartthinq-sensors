@@ -12,18 +12,20 @@ import uuid
 from datetime import datetime
 from threading import Lock
 from typing import Any, Dict, Generator, Optional
-from urllib.parse import urljoin, urlencode, urlparse, parse_qs
+from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
 
-from . import(
-    as_list,
-    gen_uuid,
-    AuthHTTPAdapter,
-    CoreVersion,
+from . import (
     DATA_ROOT,
     DEFAULT_COUNTRY,
     DEFAULT_LANGUAGE,
+    EMULATION,
+    AuthHTTPAdapter,
+    CoreVersion,
+    add_end_slash,
+    as_list,
+    gen_uuid,
 )
-from . import EMULATION, core_exceptions as exc
+from . import core_exceptions as exc
 from .device import DeviceInfo, DEFAULT_TIMEOUT
 
 CORE_VERSION = CoreVersion.CoreV2
@@ -40,9 +42,14 @@ V2_APP_VER = "3.0.1700"
 # new
 V2_GATEWAY_URL = "https://route.lgthinq.com:46030/v1/service/application/gateway-uri"
 V2_AUTH_PATH = "/oauth/1.0/oauth2/token"
+V2_USER_INFO = "/users/profile"
+V2_EMP_SESS_URL = "https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession"
 OAUTH_REDIRECT_URI = "https://kr.m.lgaccount.com/login/iabClose"
+APPLICATION_KEY = "6V1V8H2BN5P9ZQGOI5DAQ92YZBDO3EK9"  # for spx login
+OAUTH_CLIENT_KEY = 'LGAO722A02'
 
 # orig
+GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"
 SECURITY_KEY = "nuts_securitykey"
 SVC_CODE = "SVC202"
 CLIENT_ID = "LGAO221A02"
@@ -76,6 +83,24 @@ class CoreV2HttpAdapter:
         CoreV2HttpAdapter.http_adapter = AuthHTTPAdapter(
             use_tls_v1=use_tls_v1, exclude_dh=exclude_dh
         )
+
+
+def wideq_post(url, **kwargs):
+    """Perform a requests post eventually using CoreV2HttpAdapter."""
+    s = requests.Session()
+    if CoreV2HttpAdapter.http_adapter:
+        s.mount(url, CoreV2HttpAdapter.http_adapter)
+
+    return s.post(url, **kwargs)
+
+
+def wideq_get(url, **kwargs):
+    """Perform a requests get eventually using CoreV2HttpAdapter."""
+    s = requests.Session()
+    if CoreV2HttpAdapter.http_adapter:
+        s.mount(url, CoreV2HttpAdapter.http_adapter)
+
+    return s.get(url, **kwargs)
 
 
 def oauth2_signature(message, secret):
@@ -139,11 +164,7 @@ def thinq2_get(
 
     _LOGGER.debug("thinq2_get before: %s", url)
 
-    s = requests.Session()
-    if CoreV2HttpAdapter.http_adapter:
-        s.mount(url, CoreV2HttpAdapter.http_adapter)
-
-    res = s.get(
+    res = wideq_get(
         url,
         headers=thinq2_headers(
             access_token=access_token,
@@ -179,11 +200,7 @@ def lgedm2_post(
 
     _LOGGER.debug("lgedm2_post before: %s", url)
 
-    s = requests.Session()
-    if CoreV2HttpAdapter.http_adapter:
-        s.mount(url, CoreV2HttpAdapter.http_adapter)
-
-    res = s.post(
+    res = wideq_post(
         url,
         json=data if is_api_v2 else {DATA_ROOT: data},
         headers=thinq2_headers(
@@ -232,8 +249,7 @@ def manage_lge_result(result, is_api_v2=False):
 
 
 def gateway_info(country, language):
-    """ TODO
-    """
+    """Return ThinQ gateway information."""
     return thinq2_get(V2_GATEWAY_URL, country=country, language=language)
 
 
@@ -247,14 +263,163 @@ def parse_oauth_callback(url):
     return params["oauth2_backend_url"][0], params["code"][0], params["user_number"][0]
 
 
+def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, country, language):
+    """Perform a login with username and password.
+       password must be encrypted using hashlib with hash512 algorythm.
+    """
+
+    headers = {
+        "Accept": "application/json",
+        "X-Application-Key": APPLICATION_KEY,
+        "X-Client-App-Key": CLIENT_ID,
+        "X-Lge-Svccode": "SVC709",
+        "X-Device-Type": "M01",
+        "X-Device-Platform": "ADR",
+        "X-Device-Language-Type": "IETF",
+        "X-Device-Publish-Flag": "Y",
+        "X-Device-Country": country,
+        "X-Device-Language": language,
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "Access-Control-Allow-Origin": "*",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+
+    url = urljoin(login_base_url, "preLogin")
+    pre_login_data = {
+      "user_auth2": encrypted_pwd,
+      "log_param": f"login request / user_id : {username} / third_party : null / svc_list : SVC202,SVC710 / 3rd_service : ",
+    }
+
+    res = wideq_post(url, data=pre_login_data, headers=headers, timeout=DEFAULT_TIMEOUT)
+    pre_login = res.json()
+
+    headers['X-Signature'] = pre_login["signature"]
+    headers['X-Timestamp'] = pre_login["tStamp"]
+
+    data = {
+      "user_auth2": pre_login["encrypted_pw"],
+      "password_hash_prameter_flag": "Y",
+      "svc_list": "SVC202,SVC710",  # SVC202=LG SmartHome, SVC710=EMP OAuth
+    }
+
+    # try login with username and hashed password
+    emp_login_url = urljoin(emp_base_url, 'emp/v2.0/account/session/' + quote(username))
+    res = wideq_post(emp_login_url, data=data, headers=headers, timeout=DEFAULT_TIMEOUT)
+    account_data = res.json()
+    account = account_data["account"]
+
+    #  const {code, message} = err.response.data.error;
+    #  if (code === 'MS.001.03') {
+    #    throw new AuthenticationError('Your account was already used to registered in '+ message +'.');
+    #  }
+
+    # dynamic get secret key for emp signature
+    emp_search_key_url = urljoin(login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP")
+    res = wideq_get(emp_search_key_url, timeout=DEFAULT_TIMEOUT)
+    secret_data = res.json()
+    secret_key = secret_data["returnData"]
+
+    emp_data = {
+      "account_type": account["userIDType"],
+      "client_id": CLIENT_ID,
+      "country_code": account["country"],
+      "username": account["userID"],
+    }
+
+    parse_url = urlparse(V2_EMP_SESS_URL)
+    timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+    req_url = f"{parse_url.path}?{urlencode(emp_data)}"
+    signature = oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
+
+    emp_headers = {
+      "lgemp-x-app-key": OAUTH_CLIENT_KEY,
+      "lgemp-x-date": timestamp,
+      "lgemp-x-session-key": account["loginSessionID"],
+      "lgemp-x-signature": signature,
+      "Accept": "application/json",
+      "X-Device-Type": "M01",
+      "X-Device-Platform": "ADR",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Access-Control-Allow-Origin": "*",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.44",
+    }
+
+    res = wideq_post(V2_EMP_SESS_URL, headers=emp_headers, data=emp_data, timeout=DEFAULT_TIMEOUT)
+    token_data = res.json()
+    if LOG_AUTH_INFO:
+        _LOGGER.debug(token_data)
+
+    if token_data["status"] != 1:
+        raise exc.TokenError()
+
+    return token_data
+
+
+def get_oauth_url(country, language):
+    """Return url used for oauth2 authentication."""
+
+    headers = {
+      "Accept": "application/json",
+      "x-thinq-application-key": "wideq",
+      "x-thinq-security-key": SECURITY_KEY,
+    },
+
+    res = wideq_post(
+        GATEWAY_URL,
+        json={DATA_ROOT: {"countryCode": country, "langCode": language}},
+        headers=headers,
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    out = res.json()
+    gateway = manage_lge_result(out)
+    return gateway["oauthUri"]
+
+
+def get_user_number(oauth_url, access_token):
+    """Get the user number used by API requests based on access token."""
+
+    url = urljoin(oauth_url, V2_USER_INFO)
+    timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+    sig = oauth2_signature(f"{V2_USER_INFO}\n{timestamp}", OAUTH_SECRET_KEY)
+
+    headers = {
+      "Accept": "application/json",
+      "Authorization": f"Bearer {access_token}",
+      "X-Lge-Svccode": SVC_CODE,
+      "X-Application-Key": APPLICATION_KEY,
+      "lgemp-x-app-key": CLIENT_ID,
+      "X-Device-Type": "M01",
+      "X-Device-Platform": "ADR",
+      "x-lge-oauth-date": timestamp,
+      "x-lge-oauth-signature": sig,
+    }
+
+    try:
+        res = wideq_get(url, headers=headers, timeout=DEFAULT_TIMEOUT)
+    except Exception as ex:
+        raise exc.AuthenticationError() from ex
+
+    res_data = res.json()
+    if res_data["status"] != 1:
+        raise exc.AuthenticationError("Failed to retrieve User Number")
+    if LOG_AUTH_INFO:
+        _LOGGER.debug(res_data)
+
+    return res_data["account"]["userNo"]
+
+
 def auth_request(oauth_url, data, *, log_auth_info=False):
     """Use an auth code to log into the v2 API and obtain an access token 
     and refresh token.
     """
     url = urljoin(oauth_url, V2_AUTH_PATH)
     timestamp = datetime.utcnow().strftime(DATE_FORMAT)
-    req_url = "{}?{}".format(V2_AUTH_PATH, urlencode(data))
-    sig = oauth2_signature("{}\n{}".format(req_url, timestamp), OAUTH_SECRET_KEY)
+    req_url = f"{V2_AUTH_PATH}?{urlencode(data)}"
+    sig = oauth2_signature(f"{req_url}\n{timestamp}", OAUTH_SECRET_KEY)
 
     headers = {
         "x-lge-appkey": CLIENT_ID,
@@ -263,11 +428,7 @@ def auth_request(oauth_url, data, *, log_auth_info=False):
         "Accept": "application/json",
     }
 
-    s = requests.Session()
-    if CoreV2HttpAdapter.http_adapter:
-        s.mount(url, CoreV2HttpAdapter.http_adapter)
-
-    res = s.post(url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT)
+    res = wideq_post(url, headers=headers, data=data, timeout=DEFAULT_TIMEOUT)
 
     if res.status_code != 200:
         raise exc.TokenError()
@@ -281,7 +442,7 @@ def auth_request(oauth_url, data, *, log_auth_info=False):
     return res_data
 
 
-def login(oauth_url, auth_code):
+def auth_code_login(oauth_url, auth_code):
     """Get a new access_token using an authorization_code
     
     May raise a `tokenError`.
@@ -315,24 +476,27 @@ def refresh_auth(oauth_root, refresh_token):
 
 
 class Gateway(object):
-    def __init__(self, auth_base, api_root, api2_root, country, language):
-        self.auth_base = auth_base
-        self.api_root = api_root
-        self.api2_root = api2_root
+    def __init__(self, gw_info, country, language):
+        self.auth_base = add_end_slash(gw_info["empUri"])
+        self.emp_base_uri = add_end_slash(gw_info["empTermsUri"])
+        self.login_base_uri = add_end_slash(gw_info["empSpxUri"])
+        self.thinq1_uri = add_end_slash(gw_info["thinq1Uri"])
+        self.thinq2_uri = add_end_slash(gw_info["thinq2Uri"])
         self.country = country
         self.language = language
 
     @classmethod
     def discover(cls, country, language):
-        gw = gateway_info(country, language)
-        return cls(gw["empUri"], gw["thinq1Uri"], gw["thinq2Uri"], country, language)
+        """Return an instance of gateway class."""
+        gw_info = gateway_info(country, language)
+        return cls(gw_info, country, language)
 
     def oauth_url(self, *, redirect_uri=None, state=None):
         """Construct the URL for users to log in (in a browser) to start an
         authenticated session.
         """
 
-        url = urljoin(self.auth_base, "spx/login/signIn")
+        url = urljoin(self.login_base_uri, "login/signIn")
         query = urlencode(
             {
                 "country": self.country,
@@ -342,27 +506,29 @@ class Gateway(object):
                 "division": "ha",
                 "redirect_uri": redirect_uri or OAUTH_REDIRECT_URI,
                 "state": state or uuid.uuid1().hex,
-                "show_thirdparty_login": "GGL,AMZ,FBK",
+                "show_thirdparty_login": "GGL,AMZ,FBK,APPL",
             }
         )
-        return "{}?{}".format(url, query)
+        return f"{url}?{query}"
 
     def dump(self):
         return {
-            "auth_base": self.auth_base,
-            "api_root": self.api_root,
-            "api2_root": self.api2_root,
+            "empUri": self.auth_base,
+            "empTermsUri": self.emp_base_uri,
+            "empSpxUri": self.login_base_uri,
+            "thinq1Uri": self.thinq1_uri,
+            "thinq2Uri": self.thinq2_uri,
             "country": self.country,
             "language": self.language,
         }
 
 
 class Auth(object):
-    def __init__(self, gateway, oauth_url, access_token, refresh_token, user_number):
-        self.gateway = gateway
+    def __init__(self, gateway, refresh_token, oauth_url, access_token, user_number):
+        self.gateway: Gateway = gateway
+        self.refresh_token = refresh_token
         self.oauth_url = oauth_url
         self.access_token = access_token
-        self.refresh_token = refresh_token
         self.user_number = user_number
 
     @classmethod
@@ -370,9 +536,34 @@ class Auth(object):
         """Create an authentication using an OAuth callback URL.
         """
         oauth_url, auth_code, user_number = parse_oauth_callback(url)
-        access_token, refresh_token = login(oauth_url, auth_code)
+        access_token, refresh_token = auth_code_login(oauth_url, auth_code)
 
-        return cls(gateway, oauth_url, access_token, refresh_token, user_number)
+        return cls(gateway, refresh_token, oauth_url, access_token, user_number)
+
+    @classmethod
+    def from_user_login(cls, gateway, username, password):
+        """Perform authentication, returning a new Auth object.
+        """
+        hash_pwd = hashlib.sha512()
+        hash_pwd.update(password.encode("utf8"))
+        try:
+            token_info = auth_user_login(
+                gateway.login_base_uri,
+                gateway.emp_base_uri,
+                username,
+                hash_pwd.hexdigest(),
+                gateway.country,
+                gateway.language,
+            )
+        except Exception as ex:
+            raise exc.AuthenticationError() from ex
+
+        refresh_token = token_info["refresh_token"]
+        oauth_url = token_info["oauth2_backend_url"]
+        access_token = token_info["access_token"]
+        user_number = get_user_number(oauth_url, access_token)
+
+        return cls(gateway, refresh_token, oauth_url, access_token, user_number)
 
     def start_session(self):
         """Start an API session for the logged-in user. Return the
@@ -384,12 +575,17 @@ class Auth(object):
         """Refresh the authentication, returning a new Auth object.
         """
 
+        if not self.oauth_url:
+            self.oauth_url = get_oauth_url(self.gateway.country, self.gateway.language)
         new_access_token = refresh_auth(self.oauth_url, self.refresh_token)
+        if not self.user_number:
+            self.user_number = get_user_number(self.oauth_url, new_access_token)
+
         return Auth(
             self.gateway,
+            self.refresh_token,
             self.oauth_url,
             new_access_token,
-            self.refresh_token,
             self.user_number,
         )
 
@@ -400,9 +596,9 @@ class Auth(object):
 
     def dump(self):
         return {
-            "access_token": self.access_token,
             "refresh_token": self.refresh_token,
             "oauth_url": self.oauth_url,
+            "access_token": self.access_token,
             "user_number": self.user_number,
         }
 
@@ -410,9 +606,9 @@ class Auth(object):
     def load(cls, gateway, data):
         return cls(
             gateway,
+            data["refresh_token"],
             data["oauth_url"],
             data["access_token"],
-            data["refresh_token"],
             data["user_number"],
         )
 
@@ -434,7 +630,7 @@ class Session(object):
         request from an active Session.
         """
 
-        url = urljoin(self.auth.gateway.api_root + "/", path)
+        url = urljoin(self.auth.gateway.thinq1_uri, path)
         return lgedm2_post(
             url,
             data,
@@ -451,7 +647,7 @@ class Session(object):
         This is like `lgedm_post`, but it pulls the context for the
         request from an active Session.
         """
-        url = urljoin(self.auth.gateway.api2_root + "/", path)
+        url = urljoin(self.auth.gateway.thinq2_uri, path)
         return lgedm2_post(
             url,
             data,
@@ -465,7 +661,7 @@ class Session(object):
     def get(self, path):
         """Make a GET request to the APIv1 server."""
 
-        url = urljoin(self.auth.gateway.api_root + "/", path)
+        url = urljoin(self.auth.gateway.thinq1_uri, path)
         return thinq2_get(
             url,
             self.auth.access_token,
@@ -477,7 +673,7 @@ class Session(object):
     def get2(self, path):
         """Make a GET request to the APIv2 server."""
 
-        url = urljoin(self.auth.gateway.api2_root + "/", path)
+        url = urljoin(self.auth.gateway.thinq2_uri, path)
         return thinq2_get(
             url,
             self.auth.access_token,
@@ -770,9 +966,7 @@ class ClientV2(object):
         if "gateway" in state:
             data = state["gateway"]
             client._gateway = Gateway(
-                data["auth_base"],
-                data["api_root"],
-                data["api2_root"],
+                data,
                 data.get("country", DEFAULT_COUNTRY),
                 data.get("language", DEFAULT_LANGUAGE),
             )
@@ -803,19 +997,10 @@ class ClientV2(object):
         }
 
         if self._gateway:
-            out["gateway"] = {
-                "auth_base": self._gateway.auth_base,
-                "api_root": self._gateway.api_root,
-                "api2_root": self._gateway.api2_root,
-                "country": self._gateway.country,
-                "language": self._gateway.language,
-            }
+            out["gateway"] = self._gateway.dump()
 
         if self._auth:
-            out["auth"] = {
-                "access_token": self._auth.access_token,
-                "refresh_token": self._auth.refresh_token,
-            }
+            out["auth"] = self._auth.dump()
 
         if self._session:
             out["session"] = self._session.session_id
@@ -832,12 +1017,32 @@ class ClientV2(object):
             self._auth.refresh_gateway(self.gateway)
         self._auth = self.auth.refresh()
         self._session = self.auth.start_session()
-        # self._device = None
         self._load_devices()
 
     @classmethod
+    def from_login(
+            cls, username, password, country=None, language=None
+    ) -> "ClientV2":
+        """Construct a client using username and password.
+
+            This allows simpler state storage (e.g., for human-written
+            configuration) but it is a little less efficient because we need
+            to reload the gateway servers and restart the session.
+            """
+
+        client = cls(
+            country=country or DEFAULT_COUNTRY,
+            language=language or DEFAULT_LANGUAGE,
+        )
+        auth = Auth.from_user_login(client.gateway, username, password)
+        client._auth = auth
+        client._session = auth.start_session()
+        client._load_devices()
+        return client
+
+    @classmethod
     def from_token(
-        cls, oauth_url, refresh_token, user_number, country=None, language=None
+        cls, refresh_token, oauth_url, user_number, country=None, language=None
     ) -> "ClientV2":
         """Construct a client using just a refresh token.
             
@@ -850,22 +1055,33 @@ class ClientV2(object):
             country=country or DEFAULT_COUNTRY,
             language=language or DEFAULT_LANGUAGE,
         )
-        client._auth = Auth(client.gateway, oauth_url, None, refresh_token, user_number)
+        client._auth = Auth(client.gateway, refresh_token, oauth_url, None, user_number)
         client.refresh()
         return client
+
+    @property
+    def oauthinfo(self):
+        """Return current auth info."""
+
+        return {
+            "refresh_token": self._auth.refresh_token,
+            "oauth_url": self._auth.oauth_url,
+            "access_token": self._auth.access_token,
+            "user_number": self._auth.user_number,
+        }
 
     @classmethod
     def oauthinfo_from_url(cls, url):
         """Create an authentication using an OAuth callback URL.
         """
         oauth_url, auth_code, user_number = parse_oauth_callback(url)
-        access_token, refresh_token = login(oauth_url, auth_code)
+        access_token, refresh_token = auth_code_login(oauth_url, auth_code)
 
         return {
-            "oauth_url": oauth_url,
-            "user_number": user_number,
-            "access_token": access_token,
             "refresh_token": refresh_token,
+            "oauth_url": oauth_url,
+            "access_token": access_token,
+            "user_number": user_number,
         }
 
     @staticmethod

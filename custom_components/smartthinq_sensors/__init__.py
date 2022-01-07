@@ -13,7 +13,7 @@ from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
 from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.factory import get_lge_device
-from .wideq.core_exceptions import(
+from .wideq.core_exceptions import (
     InvalidCredentialError,
     MonitorError,
     NotConnectedError,
@@ -116,11 +116,17 @@ class LGEAuthentication:
 
         return oauth_info
 
-    def createClientFromToken(self, token, oauth_url=None, oauth_user_num=None):
+    def create_client_from_login(self, username, password):
+        """Create a new client using username and password."""
+        if not self._use_api_v2:
+            return None
+        return ClientV2.from_login(username, password, self._region, self._language)
 
+    def create_client_from_token(self, token, oauth_url=None, oauth_user_num=None):
+        """Create a new client using refresh token."""
         if self._use_api_v2:
             client = ClientV2.from_token(
-                oauth_url, token, oauth_user_num, self._region, self._language
+                token, oauth_url, oauth_user_num, self._region, self._language
             )
         else:
             client = Client.from_token(token, self._region, self._language)
@@ -164,7 +170,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     language = config_entry.data.get(CONF_LANGUAGE)
     use_api_v2 = config_entry.data.get(CONF_USE_API_V2, False)
     oauth_url = config_entry.data.get(CONF_OAUTH_URL)
-    oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
+    # oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
     use_tls_v1 = config_entry.data.get(CONF_USE_TLS_V1, False)
     exclude_dh = config_entry.data.get(CONF_EXCLUDE_DH, False)
 
@@ -181,7 +187,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     lgeauth.initHttpAdapter(use_tls_v1, exclude_dh)
     try:
         client = await hass.async_add_executor_job(
-            lgeauth.createClientFromToken, refresh_token, oauth_url, oauth_user_num
+            lgeauth.create_client_from_token, refresh_token, oauth_url
         )
     except InvalidCredentialError:
         msg = "Invalid ThinQ credential error, integration setup aborted." \
@@ -331,7 +337,7 @@ class LGEDevice:
         await self._create_coordinator()
 
         # Initialize device features
-        features = self._state.device_features
+        _ = self._state.device_features
 
         return True
 

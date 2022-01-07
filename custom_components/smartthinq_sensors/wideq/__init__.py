@@ -106,6 +106,13 @@ def as_list(obj):
         return [obj]
 
 
+def add_end_slash(url: str):
+    """Add final slash to url."""
+    if not url.endswith("/"):
+        return url + "/"
+    return url
+
+
 def gen_uuid():
     return str(uuid.uuid4())
 
