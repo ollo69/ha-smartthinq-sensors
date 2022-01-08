@@ -85,7 +85,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._use_tls_v1 = False
         self._exclude_dh = False
 
-        self._loginurl = None
+        self._login_url = None
 
     async def async_step_user(self, user_input=None):
         """Handle a flow initialized by the user interface"""
@@ -131,8 +131,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if len(language) == 2:
             self._language += "-" + region
 
-        lg_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
-        lg_auth.initHttpAdapter(self._use_tls_v1, self._exclude_dh)
+        lge_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lge_auth.init_http_adapter(self._use_tls_v1, self._exclude_dh)
         if not use_redirect:
             client, result = await self._check_connection(username, password)
             if result != RESULT_SUCCESS:
@@ -142,18 +142,18 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._oauth_url = auth_info["oauth_url"]
             return self._save_config_entry()
 
-        self._loginurl = await self.hass.async_add_executor_job(lg_auth.getLoginUrl)
-        if not self._loginurl:
+        self._login_url = await self.hass.async_add_executor_job(lge_auth.get_login_url)
+        if not self._login_url:
             return self._show_form(errors={"base": "error_url"})
         return self._show_form(errors=None, step_id="url")
 
     async def async_step_url(self, user_input=None):
         """Parse the response url for oauth data and submit for save."""
 
-        lgauth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lge_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         url = user_input[CONF_URL]
         oauth_info = await self.hass.async_add_executor_job(
-            lgauth.getOAuthInfoFromUrl, url
+            lge_auth.get_auth_info_from_url, url
         )
         if not oauth_info:
             return self._show_form(errors={"base": "invalid_url"}, step_id="url")
@@ -181,17 +181,17 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     async def _check_connection(self, username=None, password=None):
         """Test the connection to ThinQ."""
 
-        lg_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lge_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         try:
             if username and password:
                 client = await self.hass.async_add_executor_job(
-                    lg_auth.create_client_from_login,
+                    lge_auth.create_client_from_login,
                     username,
                     password,
                 )
             else:
                 client = await self.hass.async_add_executor_job(
-                    lg_auth.create_client_from_token,
+                    lge_auth.create_client_from_token,
                     self._token,
                     self._oauth_url,
                     # self._oauth_user_num,
@@ -253,7 +253,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         elif step_id == "url":
             schema = vol.Schema(
                 {
-                    vol.Required(CONF_LOGIN, default=self._loginurl): str,
+                    vol.Required(CONF_LOGIN, default=self._login_url): str,
                     vol.Required(CONF_URL): str,
                 }
             )
