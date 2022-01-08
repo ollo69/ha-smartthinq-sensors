@@ -151,6 +151,7 @@ class Monitor(object):
     _client_connected = True
     _last_client_refresh = datetime.min
     _not_logged_count = 0
+    _warning_error_logged = False
     _critical_error_logged = False
 
     def __init__(self, client, device_id: str, device_type=PlatformType.THINQ1) -> None:
@@ -162,12 +163,20 @@ class Monitor(object):
         self._not_logged = False
 
     def _log_error(self, msg, *args, **kwargs):
-        if not self._critical_error_logged and self._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
+        if not self._warning_error_logged:
+            self._warning_error_logged = True
+            level = logging.WARNING
+        elif not self._critical_error_logged and self._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
             self._critical_error_logged = True
             level = logging.ERROR
         else:
             level = logging.DEBUG
         _LOGGER.log(level, msg, *args, **kwargs)
+
+    def _refresh_token(self):
+        """Refresh the devices shared client auth token"""
+        with self._client_lock:
+            self._client.session.refresh_auth()
 
     def _refresh_client(self):
         """Refresh the devices shared client"""
@@ -185,12 +194,13 @@ class Monitor(object):
                 self._not_logged_count = 0
                 refresh_gateway = True
             self._not_logged_count += 1
-            _LOGGER.debug("ThinQ session not connected. Trying to reconnect....")
+            _LOGGER.debug("ThinQ client not connected. Trying to reconnect...")
             self._client.refresh(refresh_gateway)
-            level = logging.INFO if self._critical_error_logged else logging.DEBUG
-            _LOGGER.log(level, "ThinQ session reconnected")
+            level = logging.INFO if self._warning_error_logged else logging.DEBUG
+            _LOGGER.log(level, "ThinQ client successfully reconnected")
             self._client_connected = True
             self._not_logged_count = 0
+            self._warning_error_logged = False
             self._critical_error_logged = False
             return True
 
@@ -202,8 +212,6 @@ class Monitor(object):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration
             if iteration > 0:
-                if self._not_logged or self._disconnected:
-                    break
                 time.sleep(1)
 
             try:
@@ -212,35 +220,40 @@ class Monitor(object):
                 state = self.poll(query_device)
 
             except NotConnectedError:
-                _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
                 self._disconnected = True
+                _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
                 raise
 
             except NotLoggedInError:
-                self._log_error("Connection to ThinQ not available, will be retried")
+                # This could be raised by an expired token
                 self._not_logged = True
+                self._log_error("Connection to ThinQ not available, will be retried on next refresh")
+                break
 
             except InvalidCredentialError:
+                self._not_logged = True
                 self._log_error(
                     "Invalid credential connecting to ThinQ. Reconfigure integration with valid login credential"
                 )
-                self._not_logged = True
+                break
 
             except (
                 req_exc.ConnectionError,
                 req_exc.ConnectTimeout,
                 req_exc.ReadTimeout,
             ):
+                self._not_logged = True
                 self._log_error(
                     "Connection to ThinQ failed. Network connection error"
                 )
-                self._not_logged = True
+                break
 
             except Exception:
+                self._not_logged = True
                 self._log_error(
                     "ThinQ error while updating device status", exc_info=True
                 )
-                self._not_logged = True
+                break
 
             else:
                 if state:
@@ -263,6 +276,11 @@ class Monitor(object):
 
     def _restart_monitor(self) -> bool:
         """Restart the device monitor"""
+
+        if not self._not_logged:
+            # try to refresh auth token before it expires
+            self._refresh_token()
+
         if not (self._disconnected or self._not_logged):
             return True
 

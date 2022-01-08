@@ -286,6 +286,10 @@ class Session(object):
         self.session_id = session_id
         self._common_lang_pack_url = None
 
+    def refresh_auth(self):
+        """Refresh associated authentication"""
+        return
+
     @property
     def common_lang_pack_url(self):
         return self._common_lang_pack_url

@@ -69,7 +69,7 @@ CONFIG_SCHEMA = vol.Schema(
     vol.All(cv.deprecated(DOMAIN), {DOMAIN: SMARTTHINQ_SCHEMA},), extra=vol.ALLOW_EXTRA,
 )
 
-MAX_DISC_COUNT = 5
+MAX_DISC_COUNT = 4
 
 SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
