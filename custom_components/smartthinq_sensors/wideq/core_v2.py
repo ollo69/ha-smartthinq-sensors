@@ -65,9 +65,11 @@ API2_ERRORS = {
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
 }
 
-LOG_AUTH_INFO = False
+DEFAULT_TOKEN_VALIDITY = 3600  # seconds
+TOKEN_EXP_LIMIT = 60  # will expire within 60 seconds
+
 MIN_TIME_BETWEEN_UPDATE = 25  # seconds
-TOKEN_EXP_LIMIT = 60  # expire within 60 seconds
+LOG_AUTH_INFO = False
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -119,7 +121,7 @@ def oauth2_signature(message, secret):
 
 
 def thinq2_headers(
-    extra_headers={},
+    extra_headers=None,
     access_token=None,
     user_number=None,
     country=DEFAULT_COUNTRY,
@@ -150,14 +152,15 @@ def thinq2_headers(
     if user_number:
         headers["x-user-no"] = user_number
 
-    return {**headers, **extra_headers}
+    add_headers = extra_headers or {}
+    return {**headers, **add_headers}
 
 
 def thinq2_get(
     url,
     access_token=None,
     user_number=None,
-    headers={},
+    headers=None,
     country=DEFAULT_COUNTRY,
     language=DEFAULT_LANGUAGE,
 ):
@@ -170,7 +173,7 @@ def thinq2_get(
         headers=thinq2_headers(
             access_token=access_token,
             user_number=user_number,
-            extra_headers=headers,
+            extra_headers=headers or {},
             country=country,
             language=language,
         ),
@@ -192,7 +195,7 @@ def lgedm2_post(
     data=None,
     access_token=None,
     user_number=None,
-    headers={},
+    headers=None,
     country=DEFAULT_COUNTRY,
     language=DEFAULT_LANGUAGE,
     is_api_v2=False,
@@ -207,7 +210,7 @@ def lgedm2_post(
         headers=thinq2_headers(
             access_token=access_token,
             user_number=user_number,
-            extra_headers=headers,
+            extra_headers=headers or {},
             country=country,
             language=language,
         ),
@@ -438,7 +441,7 @@ def auth_request(oauth_url, data, *, log_auth_info=False):
     if log_auth_info:
         _LOGGER.debug("Auth request result: %s", res_data)
     else:
-        _LOGGER.debug("Authorization request completed successful")
+        _LOGGER.debug("Authorization request completed successfully")
 
     return res_data
 
@@ -530,7 +533,7 @@ class Auth(object):
         self.refresh_token = refresh_token
         self.oauth_url = oauth_url
         self.access_token = access_token
-        self.token_validity = int(token_validity) if token_validity else 0
+        self.token_validity = int(token_validity) if token_validity else DEFAULT_TOKEN_VALIDITY
         self.user_number = user_number
         self._token_created_on = datetime.utcnow() if access_token else datetime.min
 
