@@ -162,12 +162,13 @@ class Monitor(object):
         self._disconnected = True
         self._not_logged = False
 
-    def _log_error(self, msg, *args, **kwargs):
-        if not self._warning_error_logged:
-            self._warning_error_logged = True
+    @staticmethod
+    def _log_error(msg, *args, **kwargs):
+        if not Monitor._warning_error_logged:
+            Monitor._warning_error_logged = True
             level = logging.WARNING
-        elif not self._critical_error_logged and self._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
-            self._critical_error_logged = True
+        elif not Monitor._critical_error_logged and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
+            Monitor._critical_error_logged = True
             level = logging.ERROR
         else:
             level = logging.DEBUG
@@ -175,33 +176,33 @@ class Monitor(object):
 
     def _refresh_token(self):
         """Refresh the devices shared client auth token"""
-        with self._client_lock:
+        with Monitor._client_lock:
             self._client.session.refresh_auth()
 
     def _refresh_client(self):
         """Refresh the devices shared client"""
-        with self._client_lock:
-            if self._client_connected:
+        with Monitor._client_lock:
+            if Monitor._client_connected:
                 return True
             call_time = datetime.now()
-            difference = (call_time - self._last_client_refresh).total_seconds()
+            difference = (call_time - Monitor._last_client_refresh).total_seconds()
             if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
                 return False
 
-            self._last_client_refresh = datetime.now()
+            Monitor._last_client_refresh = datetime.now()
             refresh_gateway = False
-            if self._not_logged_count >= 30:
-                self._not_logged_count = 0
+            if Monitor._not_logged_count >= 30:
+                Monitor._not_logged_count = 0
                 refresh_gateway = True
-            self._not_logged_count += 1
+            Monitor._not_logged_count += 1
             _LOGGER.debug("ThinQ client not connected. Trying to reconnect...")
             self._client.refresh(refresh_gateway)
-            level = logging.WARNING if self._warning_error_logged else logging.DEBUG
+            level = logging.WARNING if Monitor._warning_error_logged else logging.DEBUG
             _LOGGER.log(level, "ThinQ client successfully reconnected")
-            self._client_connected = True
-            self._not_logged_count = 0
-            self._warning_error_logged = False
-            self._critical_error_logged = False
+            Monitor._client_connected = True
+            Monitor._not_logged_count = 0
+            Monitor._warning_error_logged = False
+            Monitor._critical_error_logged = False
             return True
 
     def refresh(self, query_device=False) -> Optional[any]:
@@ -268,8 +269,8 @@ class Monitor(object):
                     continue
 
         if self._not_logged:
-            self._client_connected = False
-            if self._critical_error_logged:
+            Monitor._client_connected = False
+            if Monitor._critical_error_logged:
                 raise MonitorError(self._device_id, "-1")
 
         return None
