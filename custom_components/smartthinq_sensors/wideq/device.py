@@ -196,7 +196,7 @@ class Monitor(object):
             self._not_logged_count += 1
             _LOGGER.debug("ThinQ client not connected. Trying to reconnect...")
             self._client.refresh(refresh_gateway)
-            level = logging.INFO if self._warning_error_logged else logging.DEBUG
+            level = logging.WARNING if self._warning_error_logged else logging.DEBUG
             _LOGGER.log(level, "ThinQ client successfully reconnected")
             self._client_connected = True
             self._not_logged_count = 0
