@@ -149,10 +149,9 @@ class Monitor(object):
         """
     _client_lock = Lock()
     _client_connected = True
+    _critical_error = False
     _last_client_refresh = datetime.min
     _not_logged_count = 0
-    _warning_error_logged = False
-    _critical_error_logged = False
 
     def __init__(self, client, device_id: str, device_type=PlatformType.THINQ1) -> None:
         """Initialize monitor class."""
@@ -163,18 +162,22 @@ class Monitor(object):
         self._disconnected = True
         self._not_logged = False
 
-    @staticmethod
-    def _log_error(msg, *args, **kwargs):
-        """Log error with different level depending on condition."""
-        if not Monitor._warning_error_logged:
-            Monitor._warning_error_logged = True
-            level = logging.WARNING
-        elif not Monitor._critical_error_logged and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
-            Monitor._critical_error_logged = True
-            level = logging.ERROR
-        else:
-            level = logging.DEBUG
-        _LOGGER.log(level, msg, *args, **kwargs)
+    def _set_not_logged(self, msg, *, exc: Exception = None, exc_info=False):
+        """Log and raise error with different level depending on condition."""
+        _LOGGER.debug("DeviceID %s: %s", self._device_id, msg, exc_info=exc_info)
+        self._not_logged = True
+
+        if Monitor._client_connected:
+            Monitor._client_connected = False
+            _LOGGER.warning(msg, exc_info=exc_info)
+            return
+
+        if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
+            Monitor._critical_error = True
+            _LOGGER.error(msg, exc_info=exc_info)
+
+        if Monitor._critical_error:
+            raise MonitorError(self._device_id, msg) from exc
 
     def _refresh_token(self):
         """Refresh the devices shared client auth token"""
@@ -199,12 +202,10 @@ class Monitor(object):
             Monitor._not_logged_count += 1
             _LOGGER.debug("ThinQ client not connected. Trying to reconnect...")
             self._client.refresh(refresh_gateway)
-            level = logging.WARNING if Monitor._warning_error_logged else logging.DEBUG
-            _LOGGER.log(level, "ThinQ client successfully reconnected")
+            _LOGGER.warning("ThinQ client successfully reconnected")
             Monitor._client_connected = True
+            Monitor._critical_error = False
             Monitor._not_logged_count = 0
-            Monitor._warning_error_logged = False
-            Monitor._critical_error_logged = False
             return True
 
     def refresh(self, query_device=False) -> Optional[any]:
@@ -227,16 +228,18 @@ class Monitor(object):
                 _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
                 raise
 
-            except NotLoggedInError:
+            except NotLoggedInError as exc:
                 # This could be raised by an expired token
-                self._not_logged = True
-                self._log_error("Connection to ThinQ not available, will be retried on next refresh")
+                self._set_not_logged(
+                    "Connection to ThinQ not available. ThinQ API error",
+                    exc=exc,
+                )
                 break
 
-            except InvalidCredentialError:
-                self._not_logged = True
-                self._log_error(
-                    "Invalid credential connecting to ThinQ. Reconfigure integration with valid login credential"
+            except InvalidCredentialError as exc:
+                self._set_not_logged(
+                    "Invalid credential connecting to ThinQ",
+                    exc=exc,
                 )
                 break
 
@@ -244,17 +247,18 @@ class Monitor(object):
                 req_exc.ConnectionError,
                 req_exc.ConnectTimeout,
                 req_exc.ReadTimeout,
-            ):
-                self._not_logged = True
-                self._log_error(
-                    "Connection to ThinQ failed. Network connection error"
+            ) as exc:
+                self._set_not_logged(
+                    "Connection to ThinQ failed. Network connection error",
+                    exc=exc,
                 )
                 break
 
-            except Exception:
-                self._not_logged = True
-                self._log_error(
-                    "ThinQ error while updating device status", exc_info=True
+            except Exception as exc:
+                self._set_not_logged(
+                    "ThinQ error while updating device status",
+                    exc=exc,
+                    exc_info=True,
                 )
                 break
 
@@ -269,11 +273,6 @@ class Monitor(object):
                 else:
                     _LOGGER.debug("No status available yet")
                     continue
-
-        if self._not_logged:
-            Monitor._client_connected = False
-            if Monitor._critical_error_logged:
-                raise MonitorError(self._device_id, "-1")
 
         return None
 
