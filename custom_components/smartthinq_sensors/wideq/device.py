@@ -155,6 +155,7 @@ class Monitor(object):
     _critical_error_logged = False
 
     def __init__(self, client, device_id: str, device_type=PlatformType.THINQ1) -> None:
+        """Initialize monitor class."""
         self._client = client
         self._device_id = device_id
         self._device_type = device_type
@@ -164,6 +165,7 @@ class Monitor(object):
 
     @staticmethod
     def _log_error(msg, *args, **kwargs):
+        """Log error with different level depending on condition."""
         if not Monitor._warning_error_logged:
             Monitor._warning_error_logged = True
             level = logging.WARNING
@@ -184,12 +186,12 @@ class Monitor(object):
         with Monitor._client_lock:
             if Monitor._client_connected:
                 return True
-            call_time = datetime.now()
+            call_time = datetime.utcnow()
             difference = (call_time - Monitor._last_client_refresh).total_seconds()
             if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
                 return False
 
-            Monitor._last_client_refresh = datetime.now()
+            Monitor._last_client_refresh = call_time
             refresh_gateway = False
             if Monitor._not_logged_count >= 30:
                 Monitor._not_logged_count = 0
@@ -297,11 +299,13 @@ class Monitor(object):
         return True
 
     def start(self) -> None:
+        """Start monitor for ThinQ1 device."""
         if self._device_type != PlatformType.THINQ1:
             return
         self._work_id = self._client.session.monitor_start(self._device_id)
 
     def stop(self) -> None:
+        """Stop monitor for ThinQ1 device."""
         if not self._work_id:
             return
         work_id = self._work_id
@@ -365,7 +369,7 @@ class Monitor(object):
         self.start()
         return self
 
-    def __exit__(self, type, value, tb) -> None:
+    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         self.stop()
 
 
@@ -1322,14 +1326,14 @@ class Device(object):
             return
         if poll_interval <= 0:
             return
-        call_time = datetime.now()
+        call_time = datetime.utcnow()
         if self._last_additional_poll is None:
             self._last_additional_poll = (
                 call_time - timedelta(seconds=max(poll_interval - 10, 1))
             )
         difference = (call_time - self._last_additional_poll).total_seconds()
         if difference >= poll_interval:
-            self._last_additional_poll = datetime.now()
+            self._last_additional_poll = call_time
             self._get_device_info()
 
     def device_poll(

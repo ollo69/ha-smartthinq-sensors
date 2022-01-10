@@ -900,7 +900,7 @@ class ClientV2(object):
         self._gateway: Optional[Gateway] = gateway
         self._auth: Optional[Auth] = auth
         self._session: Optional[Session] = session
-        self._last_device_update = datetime.now()
+        self._last_device_update = datetime.utcnow()
         self._lock = Lock()
 
         # The last list of devices we got from the server. This is the
@@ -974,7 +974,7 @@ class ClientV2(object):
     def refresh_devices(self):
         """Refresh the devices information for this client"""
         with self._lock:
-            call_time = datetime.now()
+            call_time = datetime.utcnow()
             difference = (call_time - self._last_device_update).total_seconds()
             if difference <= MIN_TIME_BETWEEN_UPDATE:
                 return
