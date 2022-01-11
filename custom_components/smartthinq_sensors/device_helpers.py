@@ -67,21 +67,23 @@ class LGEBaseDevice:
 
     @staticmethod
     def format_time(hours, minutes):
+        """Return a time in format hh:mm:ss based on input hours and minutes."""
         if not minutes:
-            return "0:00"
+            return "0:00:00"
+
         if not hours:
-            if int(minutes) >= 60:
-                int_minutes = int(minutes)
+            int_minutes = int(minutes)
+            if int_minutes >= 60:
                 int_hours = int(int_minutes / 60)
                 minutes = str(int_minutes - (int_hours * 60))
                 hours = str(int_hours)
             else:
                 hours = "0"
-        remain_time = [hours, minutes]
+
         if int(minutes) < 10:
-            return ":0".join(remain_time)
-        else:
-            return ":".join(remain_time)
+            minutes = f"0{int(minutes)}"
+        remain_time = [hours, minutes, "00"]
+        return ":".join(remain_time)
 
     @property
     def device(self):
@@ -136,28 +138,28 @@ class LGEWashDevice(LGEBaseDevice):
     def initial_time(self):
         if self._api.state:
             if self._api.state.is_on:
-                return LGEBaseDevice.format_time(
+                return self.format_time(
                     self._api.state.initialtime_hour, self._api.state.initialtime_min
                 )
-        return "0:00"
+        return self.format_time(None, None)
 
     @property
     def remain_time(self):
         if self._api.state:
             if self._api.state.is_on:
-                return LGEBaseDevice.format_time(
+                return self.format_time(
                     self._api.state.remaintime_hour, self._api.state.remaintime_min
                 )
-        return "0:00"
+        return self.format_time(None, None)
 
     @property
     def reserve_time(self):
         if self._api.state:
             if self._api.state.is_on:
-                return LGEBaseDevice.format_time(
+                return self.format_time(
                     self._api.state.reservetime_hour, self._api.state.reservetime_min
                 )
-        return "0:00"
+        return self.format_time(None, None)
 
     @property
     def current_course(self):
