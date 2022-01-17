@@ -160,17 +160,21 @@ class Monitor(object):
         self._device_type = device_type
         self._work_id: Optional[str] = None
         self._disconnected = True
-        self._not_logged = False
+        self._has_error = False
 
-    def _set_not_logged(self, msg, *, exc: Exception = None, exc_info=False):
+    def _set_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False):
         """Log and raise error with different level depending on condition."""
-        _LOGGER.debug("DeviceID %s: %s", self._device_id, msg, exc_info=exc_info)
-        self._not_logged = True
-
-        if Monitor._client_connected:
+        if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
+            self._has_error = True
             _LOGGER.warning(msg, exc_info=exc_info)
-            return
+
+        log_lev = logging.DEBUG
+        if not self._has_error:
+            self._has_error = True
+            if Monitor._client_connected:
+                log_lev = logging.WARNING
+        _LOGGER.log(log_lev, "DeviceID %s: %s", self._device_id, msg, exc_info=exc_info)
 
         if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
             Monitor._critical_error = True
@@ -220,47 +224,52 @@ class Monitor(object):
 
             try:
                 if not self._restart_monitor():
-                    break
+                    return None
                 state = self.poll(query_device)
 
             except NotConnectedError:
                 self._disconnected = True
+                self._has_error = False
                 _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
                 raise
 
             except NotLoggedInError as exc:
                 # This could be raised by an expired token
-                self._set_not_logged(
+                self._set_error(
                     "Connection to ThinQ not available. ThinQ API error",
+                    not_logged=True,
                     exc=exc,
                 )
-                break
+                return None
 
             except InvalidCredentialError as exc:
-                self._set_not_logged(
+                self._set_error(
                     "Invalid credential connecting to ThinQ",
+                    not_logged=True,
                     exc=exc,
                 )
-                break
+                return None
 
             except (
                 req_exc.ConnectionError,
                 req_exc.ConnectTimeout,
                 req_exc.ReadTimeout,
             ) as exc:
-                self._set_not_logged(
+                self._set_error(
                     "Connection to ThinQ failed. Network connection error",
+                    not_logged=False,
                     exc=exc,
                 )
-                break
+                return None
 
             except Exception as exc:
-                self._set_not_logged(
+                self._set_error(
                     "ThinQ error while updating device status",
+                    not_logged=True,
                     exc=exc,
                     exc_info=True,
                 )
-                break
+                return None
 
             else:
                 if state:
@@ -274,24 +283,22 @@ class Monitor(object):
                     _LOGGER.debug("No status available yet")
                     continue
 
+        self._has_error = False
         return None
 
     def _restart_monitor(self) -> bool:
         """Restart the device monitor"""
 
-        if not self._not_logged:
+        if Monitor._client_connected:
             # try to refresh auth token before it expires
             self._refresh_token()
-
-        if not (self._disconnected or self._not_logged):
-            return True
-
-        if self._not_logged:
+        else:
+            self._disconnected = True
             if not self._refresh_client():
                 return False
 
-            self._not_logged = False
-            self._disconnected = True
+        if not self._disconnected:
+            return True
 
         self.start()
         self._disconnected = False
