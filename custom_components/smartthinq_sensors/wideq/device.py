@@ -745,7 +745,7 @@ class ModelInfo(object):
         """Decode binary hex encoded status data."""
 
         decoded = {}
-        hex_list = data.split(",")
+        hex_list = data.decode("utf8").split(",")
         total_bytes = len(hex_list)
         for item in self._data["Monitoring"]["protocol"]:
             key = item["value"]
