@@ -18,6 +18,7 @@ from . import (
     DATA_ROOT,
     DEFAULT_COUNTRY,
     DEFAULT_LANGUAGE,
+    DEFAULT_TIMEOUT,
     EMULATION,
     AuthHTTPAdapter,
     CoreVersion,
@@ -26,7 +27,7 @@ from . import (
     gen_uuid,
 )
 from . import core_exceptions as exc
-from .device import DeviceInfo, DEFAULT_TIMEOUT
+from .device import DeviceInfo
 
 CORE_VERSION = CoreVersion.CoreV2
 
@@ -766,7 +767,7 @@ class Session(object):
             return None
 
         # Check for errors.
-        code = res.get("returnCode")  # returnCode can be missing.
+        code = res["returnCode"]
         if code != "0000":
             raise exc.MonitorError(device_id, code)
 

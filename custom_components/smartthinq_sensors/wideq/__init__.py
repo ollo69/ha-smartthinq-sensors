@@ -13,6 +13,7 @@ from requests.adapters import HTTPAdapter
 DATA_ROOT = "lgedmRoot"
 DEFAULT_COUNTRY = "US"
 DEFAULT_LANGUAGE = "en-US"
+DEFAULT_TIMEOUT = 10  # seconds
 
 # ac devices features
 FEAT_ENERGY_CURRENT = "energy_current"

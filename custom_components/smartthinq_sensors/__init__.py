@@ -15,7 +15,8 @@ from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.factory import get_lge_device
 from .wideq.core_exceptions import (
     InvalidCredentialError,
-    MonitorError,
+    MonitorRefreshError,
+    MonitorUnavailableError,
     NotConnectedError,
 )
 
@@ -372,19 +373,20 @@ class LGEDevice:
             # or due to temporary connection failure that will be restored
             state = self._device.poll()
 
-        except NotConnectedError:
-            # This exception is raised when device is not connected (turned off)
+        except (MonitorRefreshError, NotConnectedError):
+            # These exceptions are raised when device is not connected (turned off)
+            # or unreachable due to network or API errors
             # If device status is "on" we reset the status, otherwise we just
             # ignore and use previous known state
             state = None
             if self._state.is_on and self._disc_count >= MAX_DISC_COUNT:
                 _LOGGER.warning(
-                    "Status for device %s was reset because disconnected",
+                    "Status for device %s was reset because disconnected or unreachable",
                     self._name,
                 )
                 self._state = self._device.reset_status()
 
-        except MonitorError:
+        except MonitorUnavailableError:
             # This exception is raised when issue with ThinQ persist
             # In this case available is set to false and device status
             # is reset to avoid confusion when connection is restored

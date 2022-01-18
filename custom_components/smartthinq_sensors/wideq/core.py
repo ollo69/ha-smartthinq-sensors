@@ -10,19 +10,21 @@ from datetime import datetime
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from typing import Any, Dict, Generator, Optional
 
-from . import(
-    as_list,
-    gen_uuid,
-    AuthHTTPAdapter,
-    CoreVersion,
+from . import (
     DATA_ROOT,
     DEFAULT_COUNTRY,
     DEFAULT_LANGUAGE,
+    DEFAULT_TIMEOUT,
+    AuthHTTPAdapter,
+    CoreVersion,
+    as_list,
+    gen_uuid,
 )
 from . import core_exceptions as exc
-from .device import DeviceInfo, DEFAULT_TIMEOUT, DEFAULT_REFRESH_TIMEOUT
+from .device import DeviceInfo
 
 CORE_VERSION = CoreVersion.CoreV1
+DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
 GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"
 APP_KEY = "wideq"
@@ -216,7 +218,8 @@ class Gateway(object):
         gw = gateway_info(country, language)
         return cls(gw["empUri"], gw["thinqUri"], gw["oauthUri"], country, language)
 
-    def get_tokens(self, url):
+    @staticmethod
+    def get_tokens(url):
         """Create an authentication using an OAuth callback URL.
         """
         access_token, refresh_token = parse_oauth_callback(url)

@@ -2,24 +2,19 @@
 SmartThinQ API for most use cases.
 """
 import base64
-import json
-import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 import enum
+import json
 import logging
 from numbers import Number
 from requests import exceptions as req_exc
+import time
 from typing import Any, Dict, Optional
 from threading import Lock
 
 from . import EMULATION, wideq_log_level
-from .core_exceptions import (
-    InvalidCredentialError,
-    MonitorError,
-    NotConnectedError,
-    NotLoggedInError,
-)
+from . import core_exceptions as core_exc
 
 
 BIT_OFF = "OFF"
@@ -28,8 +23,6 @@ BIT_ON = "ON"
 LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
 
-DEFAULT_TIMEOUT = 10  # seconds
-DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
 MAX_RETRIES = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
@@ -162,7 +155,7 @@ class Monitor(object):
         self._disconnected = True
         self._has_error = False
 
-    def _set_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False):
+    def _raise_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False):
         """Log and raise error with different level depending on condition."""
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
@@ -181,7 +174,8 @@ class Monitor(object):
             _LOGGER.error(msg, exc_info=exc_info)
 
         if Monitor._critical_error:
-            raise MonitorError(self._device_id, msg) from exc
+            raise core_exc.MonitorUnavailableError(self._device_id, msg) from exc
+        raise core_exc.MonitorRefreshError(self._device_id, msg) from exc
 
     def _refresh_token(self):
         """Refresh the devices shared client auth token"""
@@ -216,6 +210,7 @@ class Monitor(object):
         """Update device state"""
         _LOGGER.debug("Updating ThinQ device %s", self._device_id)
 
+        state = None
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration
@@ -224,67 +219,69 @@ class Monitor(object):
 
             try:
                 if not self._restart_monitor():
-                    return None
+                    self._raise_error(
+                        "Connection to ThinQ not available. Client refresh error",
+                        not_logged=True,
+                    )
                 state = self.poll(query_device)
 
-            except NotConnectedError:
+            except core_exc.NotConnectedError:
                 self._disconnected = True
                 self._has_error = False
                 _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
                 raise
 
-            except NotLoggedInError as exc:
-                # This could be raised by an expired token
-                self._set_error(
-                    "Connection to ThinQ not available. ThinQ API error",
-                    not_logged=True,
-                    exc=exc,
-                )
-                return None
+            except core_exc.DeviceNotFound:
+                self._raise_error("Device ID is invalid, status update failed")
 
-            except InvalidCredentialError as exc:
-                self._set_error(
-                    "Invalid credential connecting to ThinQ",
+            except core_exc.NotLoggedInError as exc:
+                # This could be raised by an expired token
+                self._raise_error(
+                    "Connection to ThinQ failed. ThinQ API error",
                     not_logged=True,
                     exc=exc,
                 )
-                return None
+
+            except (core_exc.InvalidCredentialError, core_exc.TokenError) as exc:
+                self._raise_error(
+                    "Connection to ThinQ failed. Invalid Credential or Invalid Token",
+                    not_logged=True,
+                    exc=exc,
+                )
 
             except (
                 req_exc.ConnectionError,
                 req_exc.ConnectTimeout,
                 req_exc.ReadTimeout,
             ) as exc:
-                self._set_error(
+                # These are network errors, refresh client is not required
+                self._raise_error(
                     "Connection to ThinQ failed. Network connection error",
                     not_logged=False,
                     exc=exc,
                 )
-                return None
 
             except Exception as exc:
-                self._set_error(
-                    "ThinQ error while updating device status",
+                self._raise_error(
+                    "Unexpected error while updating device status",
                     not_logged=True,
                     exc=exc,
                     exc_info=True,
                 )
-                return None
 
             else:
                 if state:
                     _LOGGER.debug("ThinQ status updated")
                     # l = dir(state)
                     # _LOGGER.debug('Status attributes: %s', l)
-
-                    return state
+                    break
 
                 else:
                     _LOGGER.debug("No status available yet")
                     continue
 
         self._has_error = False
-        return None
+        return state
 
     def _restart_monitor(self) -> bool:
         """Restart the device monitor"""
@@ -336,7 +333,7 @@ class Monitor(object):
                 return None
         try:
             return self._client.session.monitor_poll(self._device_id, self._work_id)
-        except MonitorError:
+        except core_exc.MonitorError:
             # Try to restart the task.
             self.stop()
             return None
@@ -1304,8 +1301,8 @@ class Device(object):
         if query_device:
             try:
                 self._pre_update_v2()
-            except Exception:
-                pass
+            except Exception as exc:
+                _LOGGER.debug("Error %s calling pre_update function", exc)
 
         return self._mon.refresh(query_device)
 
@@ -1383,7 +1380,7 @@ class Device(object):
             try:
                 self._additional_poll(thinq1_additional_poll)
             except Exception as exc:
-                _LOGGER.warning("Error calling additional poll methods. Error %s", exc)
+                _LOGGER.debug("Error %s calling additional poll methods", exc)
 
         # remove control permission if previously set
         self._delete_permission()
