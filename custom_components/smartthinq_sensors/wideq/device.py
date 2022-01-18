@@ -716,36 +716,61 @@ class ModelInfo(object):
         return control
 
     @property
-    def binary_monitor_data(self):
-        """Check that type of monitoring is BINARY(BYTE).
-        """
+    def byte_monitor_data(self):
+        """Check that type of monitoring is BINARY(BYTE)."""
         return self._data["Monitoring"]["type"] == "BINARY(BYTE)"
 
-    def decode_monitor_binary(self, data):
-        """Decode binary encoded status data.
-        """
+    @property
+    def hex_monitor_data(self):
+        """Check that type of monitoring is BINARY(HEX)."""
+        return self._data["Monitoring"]["type"] == "BINARY(HEX)"
+
+    def decode_monitor_byte(self, data):
+        """Decode binary byte encoded status data."""
 
         decoded = {}
+        total_bytes = len(data)
         for item in self._data["Monitoring"]["protocol"]:
             key = item["value"]
             value = 0
-            for v in data[item["startByte"]: item["startByte"] + item["length"]]:
-                value = (value << 8) + v
+            start_byte: int = item["startByte"]
+            end_byte: int = start_byte + item["length"]
+            if total_bytes >= end_byte:
+                for v in data[start_byte: end_byte]:
+                    value = (value << 8) + v
             decoded[key] = str(value)
         return decoded
 
-    def decode_monitor_json(self, data):
-        """Decode a bytestring that encodes JSON status data."""
+    def decode_monitor_hex(self, data):
+        """Decode binary hex encoded status data."""
 
+        decoded = {}
+        hex_list = data.split(",")
+        total_bytes = len(hex_list)
+        for item in self._data["Monitoring"]["protocol"]:
+            key = item["value"]
+            value = 0
+            start_byte: int = item["startByte"]
+            end_byte: int = start_byte + item["length"]
+            if total_bytes >= end_byte:
+                for i in range(start_byte, end_byte):
+                    value = (value << 8) + int(hex_list[i], 16)
+            decoded[key] = str(value)
+        return decoded
+
+    @staticmethod
+    def decode_monitor_json(data):
+        """Decode a bytestring that encodes JSON status data."""
         return json.loads(data.decode("utf8"))
 
     def decode_monitor(self, data):
         """Decode  status data."""
 
-        if self.binary_monitor_data:
-            return self.decode_monitor_binary(data)
-        else:
-            return self.decode_monitor_json(data)
+        if self.byte_monitor_data:
+            return self.decode_monitor_byte(data)
+        if self.hex_monitor_data:
+            return self.decode_monitor_hex(data)
+        return self.decode_monitor_json(data)
 
     @staticmethod
     def _get_current_temp_key(key: str, data):
