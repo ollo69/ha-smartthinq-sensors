@@ -3,13 +3,17 @@ import logging
 from typing import Optional
 
 from . import (
+    FEAT_AUTODOOR,
     FEAT_CHILDLOCK,
     FEAT_DELAYSTART,
     FEAT_DOOROPEN,
     FEAT_DUALZONE,
     FEAT_ENERGYSAVER,
     FEAT_ERROR_MSG,
+    FEAT_EXTRADRY,
     FEAT_HALFLOAD,
+    FEAT_HIGHTEMP,
+    FEAT_NIGHTDRY,
     FEAT_PROCESS_STATE,
     FEAT_RINSEREFILL,
     FEAT_RUN_STATE,
@@ -293,8 +297,44 @@ class DishWasherStatus(DeviceStatus):
             FEAT_ENERGYSAVER, status, False
         )
 
+    @property
+    def autodoor_state(self):
+        status = self.lookup_bit(
+            "autoDoor" if self.is_info_v2 else "AutoDoor"
+        )
+        return self._update_feature(
+            FEAT_AUTODOOR, status, False
+        )
+
+    @property
+    def hightemp_state(self):
+        status = self.lookup_bit(
+            "highTemp" if self.is_info_v2 else "HighTemp"
+        )
+        return self._update_feature(
+            FEAT_HIGHTEMP, status, False
+        )
+
+    @property
+    def extradry_state(self):
+        status = self.lookup_bit(
+            "extraDry" if self.is_info_v2 else "ExtraDry"
+        )
+        return self._update_feature(
+            FEAT_EXTRADRY, status, False
+        )
+
+    @property
+    def nightdry_state(self):
+        status = self.lookup_bit(
+            "nightDry" if self.is_info_v2 else "NightDry"
+        )
+        return self._update_feature(
+            FEAT_NIGHTDRY, status, False
+        )
+
     def _update_features(self):
-        result = [
+        _ = [
             self.run_state,
             self.process_state,
             self.halfload_state,
@@ -302,9 +342,13 @@ class DishWasherStatus(DeviceStatus):
             self.tubclean_count,
             self.door_opened_state,
             self.childlock_state,
+            self.autodoor_state,
             self.rinserefill_state,
             self.saltrefill_state,
             self.dualzone_state,
             self.delaystart_state,
             self.energysaver_state,
+            self.hightemp_state,
+            self.extradry_state,
+            self.nightdry_state,
         ]

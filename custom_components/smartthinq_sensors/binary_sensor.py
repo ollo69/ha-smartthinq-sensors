@@ -6,11 +6,15 @@ import logging
 from typing import Any, Callable, Tuple
 
 from .wideq import (
+    FEAT_AUTODOOR,
     FEAT_CHILDLOCK,
     FEAT_DOORCLOSE,
     FEAT_DOORLOCK,
     FEAT_DOOROPEN,
     FEAT_DUALZONE,
+    FEAT_EXTRADRY,
+    FEAT_HIGHTEMP,
+    FEAT_NIGHTDRY,
     FEAT_STANDBY,
     FEAT_REMOTESTART,
     FEAT_RINSEREFILL,
@@ -112,6 +116,12 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
+        key=FEAT_AUTODOOR,
+        name="Auto door",
+        icon="mdi:auto-upload",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
         key=FEAT_REMOTESTART,
         name="Remote start",
         entity_registry_enabled_default=False,
@@ -129,6 +139,22 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=FEAT_SALTREFILL,
         name="Salt refill",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=FEAT_HIGHTEMP,
+        name="High temp",
+        device_class=DEVICE_CLASS_HEAT,
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=FEAT_EXTRADRY,
+        name="Extra dry",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=FEAT_NIGHTDRY,
+        name="Night dry",
         entity_registry_enabled_default=False,
     ),
 )

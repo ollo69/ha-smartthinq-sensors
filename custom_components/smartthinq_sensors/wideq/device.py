@@ -815,10 +815,18 @@ class ModelInfo(object):
                         decoded[key] = str(value)
             return decoded
 
+        convert_rule = self._data.get("ConvertingRule", {})
         for data_key, value_key in protocol.items():
-            value = info.get(data_key, "")
-            if value is not None and isinstance(value, Number):
-                value = int(value)
+            value = ""
+            raw_value = info.get(data_key)
+            if raw_value is not None:
+                value = str(raw_value)
+                if isinstance(raw_value, Number):
+                    value = str(int(raw_value))
+                elif value_key in convert_rule:
+                    value_rules = convert_rule[value_key].get("MonitoringConvertingRule", {})
+                    if raw_value in value_rules:
+                        value = value_rules[raw_value]
             decoded[value_key] = str(value)
         return decoded
 
