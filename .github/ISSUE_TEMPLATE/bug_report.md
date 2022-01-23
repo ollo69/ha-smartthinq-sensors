@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-title: "[BUG]"
+title: ''
 labels: ''
 assignees: ''
 
@@ -9,6 +9,7 @@ assignees: ''
 
 **Describe the bug**
 A clear and concise description of what the bug is.
+If possible attach the JSON info file for your devices.
 
 **Expected behavior**
 If applicable, a clear and concise description of what you expected to happen.
