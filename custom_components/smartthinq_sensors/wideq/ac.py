@@ -867,8 +867,10 @@ class AirConditionerStatus(DeviceStatus):
         )
         if value is None:
             return None
+        if value >= 100:
+        	value = value / 10
         return self._update_feature(
-            FEAT_HUMIDITY, value/10, False
+            FEAT_HUMIDITY, value, False
         )
 
     @property
