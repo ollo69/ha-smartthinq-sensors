@@ -137,7 +137,7 @@ def oauth_url(auth_base, country, language):
     return "{}?{}".format(url, query)
 
 
-def parse_oauth_callback(url):
+def parse_oauth_callback(url: str):
     """Parse the URL to which an OAuth login redirected to obtain two
     tokens: an access token for API credentials, and a refresh token for
     getting updated access tokens.
@@ -601,8 +601,8 @@ class Client(object):
         client.refresh()
         return client
 
-    @classmethod
-    def oauthinfo_from_url(cls, url):
+    @staticmethod
+    def oauthinfo_from_url(url):
         """Create an authentication using an OAuth callback URL.
         """
         access_token, refresh_token = parse_oauth_callback(url)

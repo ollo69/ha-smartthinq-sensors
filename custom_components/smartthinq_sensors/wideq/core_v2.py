@@ -258,14 +258,14 @@ def gateway_info(country, language):
     return thinq2_get(V2_GATEWAY_URL, country=country, language=language)
 
 
-def parse_oauth_callback(url):
+def parse_oauth_callback(url: str):
     """Parse the URL to which an OAuth login redirected to obtain two
     tokens: an access token for API credentials, and a refresh token for
     getting updated access tokens.
     """
 
     params = parse_qs(urlparse(url).query)
-    return params["oauth2_backend_url"][0], params["code"][0], params["user_number"][0]
+    return {k: v[0] for k, v in params.items()}
 
 
 def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, country, language):
@@ -463,7 +463,7 @@ def auth_code_login(oauth_url, auth_code):
         log_auth_info=LOG_AUTH_INFO,
     )
 
-    return out["access_token"], out["expires_in"], out["refresh_token"]
+    return out["access_token"], out.get("expires_in"), out["refresh_token"]
 
 
 def refresh_auth(oauth_root, refresh_token):
@@ -496,25 +496,30 @@ class Gateway(object):
         gw_info = gateway_info(country, language)
         return cls(gw_info, country, language)
 
-    def oauth_url(self, *, redirect_uri=None, state=None):
+    def oauth_url(self, *, redirect_uri=None, state=None, use_oauth2=True):
         """Construct the URL for users to log in (in a browser) to start an
         authenticated session.
         """
 
         url = urljoin(self.login_base_uri, "login/signIn")
-        query = urlencode(
-            {
-                "country": self.country,
-                "language": self.language,
-                "svc_list": SVC_CODE,
-                "client_id": CLIENT_ID,
-                "division": "ha",
-                "redirect_uri": redirect_uri or OAUTH_REDIRECT_URI,
-                "state": state or uuid.uuid1().hex,
-                "show_thirdparty_login": "LGE,MYLG,GGL,AMZ,FBK,APPL",
-            }
-        )
-        return f"{url}?{query}"
+
+        state_param = "oauth2State" if use_oauth2 else "state"
+        query = {
+            "country": self.country,
+            "language": self.language,
+            "client_id": CLIENT_ID,
+            "svc_list": SVC_CODE,
+            "svc_integrated": "Y",
+            "show_thirdparty_login": "LGE,MYLG,GGL,AMZ,FBK,APPL",
+            "division": "ha:T20",
+            state_param: state or uuid.uuid1().hex,
+            "show_select_country": "N",
+        }
+        if redirect_uri or not use_oauth2:
+            query["redirect_uri"] = redirect_uri or OAUTH_REDIRECT_URI
+
+        url_query = urlencode(query)
+        return f"{url}?{url_query}"
 
     def dump(self):
         return {
@@ -538,15 +543,48 @@ class Auth(object):
         self.user_number = user_number
         self._token_created_on = datetime.utcnow() if access_token else datetime.min
 
+    @staticmethod
+    def oauth_info_from_url(url):
+        """Return authentication info using an OAuth callback URL.
+        """
+        parsed_info = parse_oauth_callback(url)
+
+        oauth_url = parsed_info["oauth2_backend_url"]
+        token_validity = str(DEFAULT_TOKEN_VALIDITY)
+        user_number = None
+        if "refresh_token" in parsed_info:
+            refresh_token = parsed_info["refresh_token"]
+            access_token = parsed_info.get("access_token")
+        elif "code" in parsed_info:
+            auth_code = parsed_info["code"]
+            user_number = parsed_info.get("user_number")
+            access_token, token_validity, refresh_token = auth_code_login(oauth_url, auth_code)
+        else:
+            return {}
+
+        return {
+            "refresh_token": refresh_token,
+            "oauth_url": oauth_url,
+            "access_token": access_token,
+            "token_validity": token_validity,
+            "user_number": user_number,
+        }
+
     @classmethod
     def from_url(cls, gateway, url):
         """Create an authentication using an OAuth callback URL.
         """
-        oauth_url, auth_code, user_number = parse_oauth_callback(url)
-        access_token, token_validity, refresh_token = auth_code_login(oauth_url, auth_code)
+        oauth_info = cls.oauth_info_from_url(url)
+        if not oauth_info:
+            return None
 
         return cls(
-            gateway, refresh_token, oauth_url, access_token, token_validity, user_number
+            gateway,
+            oauth_info["refresh_token"],
+            oauth_info["oauth_url"],
+            oauth_info["access_token"],
+            oauth_info["token_validity"],
+            oauth_info["user_number"],
         )
 
     @classmethod
@@ -1106,19 +1144,11 @@ class ClientV2(object):
             "user_number": self._auth.user_number,
         }
 
-    @classmethod
-    def oauthinfo_from_url(cls, url):
-        """Create an authentication using an OAuth callback URL.
+    @staticmethod
+    def oauthinfo_from_url(url):
+        """Return authentication info from an OAuth callback URL.
         """
-        oauth_url, auth_code, user_number = parse_oauth_callback(url)
-        access_token, _, refresh_token = auth_code_login(oauth_url, auth_code)
-
-        return {
-            "refresh_token": refresh_token,
-            "oauth_url": oauth_url,
-            "access_token": access_token,
-            "user_number": user_number,
-        }
+        return Auth.oauth_info_from_url(url)
 
     @staticmethod
     def _load_json_info(info_url):

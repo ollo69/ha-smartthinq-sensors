@@ -160,7 +160,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._token = oauth_info["refresh_token"]
         self._oauth_url = oauth_info.get("oauth_url")
-        # self._oauth_user_num = oauth_info.get("user_number")
 
         if self._use_api_v2:
             _, result = await self._check_connection()
@@ -194,7 +193,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     lge_auth.create_client_from_token,
                     self._token,
                     self._oauth_url,
-                    # self._oauth_user_num,
                 )
         except Exception as ex:
             _LOGGER.error("Error connecting to ThinQ: %s", ex)
@@ -233,7 +231,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         }
         if self._use_api_v2:
             data[CONF_OAUTH_URL] = self._oauth_url
-            # data[CONF_OAUTH_USER_NUM] = self._oauth_user_num
 
         return self.async_create_entry(title="LGE Devices", data=data,)
 
