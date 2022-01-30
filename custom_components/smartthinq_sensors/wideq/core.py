@@ -586,7 +586,7 @@ class Client(object):
         self._auth = self.auth.refresh()
         self._session, self._devices = self.auth.start_session()
 
-    def refresh_session(self) -> None:
+    def refresh_auth(self) -> None:
         """Refresh auth token if requested."""
         if not self._session:
             self.refresh()

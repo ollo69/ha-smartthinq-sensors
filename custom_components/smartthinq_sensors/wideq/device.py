@@ -177,10 +177,10 @@ class Monitor(object):
             raise core_exc.MonitorUnavailableError(self._device_id, msg) from exc
         raise core_exc.MonitorRefreshError(self._device_id, msg) from exc
 
-    def _refresh_session(self):
+    def _refresh_auth(self):
         """Refresh the devices shared client auth token"""
         with Monitor._client_lock:
-            self._client.refresh_session()
+            self._client.refresh_auth()
 
     def _refresh_client(self):
         """Refresh the devices shared client"""
@@ -288,7 +288,7 @@ class Monitor(object):
 
         if Monitor._client_connected:
             # try to refresh auth token before it expires
-            self._refresh_session()
+            self._refresh_auth()
         else:
             self._disconnected = True
             if not self._refresh_client():
