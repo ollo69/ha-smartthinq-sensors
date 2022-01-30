@@ -684,7 +684,7 @@ class Auth(object):
 
 
 class Session(object):
-    def __init__(self, auth, session_id=None):
+    def __init__(self, auth, session_id=0):
         self.auth = auth
         self.session_id = session_id
         self._common_lang_pack_url = None
@@ -696,6 +696,7 @@ class Session(object):
     def refresh_auth(self):
         """Refresh associated authentication"""
         self.auth = self.auth.refresh()
+        return self.auth
 
     def post(self, path, data=None):
         """Make a POST request to the APIv1 server.
@@ -957,7 +958,9 @@ class ClientV2(object):
 
     def _inject_thinq2_device(self):
         """This is used only for debug"""
-        data_file = os.path.dirname(os.path.realpath(__file__)) + "/deviceV2.txt"
+        data_file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
+        )
         try:
             with open(data_file, "r") as f:
                 device_v2 = json.load(f)
@@ -1085,6 +1088,7 @@ class ClientV2(object):
         return out
 
     def refresh(self, refresh_gateway=False) -> None:
+        """Refresh client connection."""
         if refresh_gateway:
             self._gateway = None
         if not self._gateway:
@@ -1092,6 +1096,13 @@ class ClientV2(object):
         self._auth = self.auth.refresh(True)
         self._session = self.auth.start_session()
         self._load_devices()
+
+    def refresh_session(self) -> None:
+        """Refresh auth token if requested."""
+        if self._session:
+            self._auth = self._session.refresh_auth()
+        else:
+            self.refresh()
 
     @classmethod
     def from_login(

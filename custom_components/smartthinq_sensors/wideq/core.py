@@ -291,7 +291,8 @@ class Session(object):
 
     def refresh_auth(self):
         """Refresh associated authentication"""
-        return
+        self.auth = self.auth.refresh()
+        return self.auth
 
     @property
     def common_lang_pack_url(self):
@@ -584,6 +585,11 @@ class Client(object):
             self._auth.refresh_gateway(self.gateway)
         self._auth = self.auth.refresh()
         self._session, self._devices = self.auth.start_session()
+
+    def refresh_session(self) -> None:
+        """Refresh auth token if requested."""
+        if not self._session:
+            self.refresh()
 
     @classmethod
     def from_token(cls, refresh_token, country=None, language=None) -> "Client":
