@@ -71,6 +71,7 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 MAX_DISC_COUNT = 4
+UNSUPPORTED_DEVICES = "unsupported_devices"
 
 SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ def _notify_error(hass, notification_id, title, message):
     )
 
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SmartThinQ integration from a config entry."""
 
     if not is_valid_ha_version():
@@ -168,14 +169,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         _LOGGER.warning(msg)
         return False
 
-    refresh_token = config_entry.data.get(CONF_TOKEN)
-    region = config_entry.data.get(CONF_REGION)
-    language = config_entry.data.get(CONF_LANGUAGE)
-    use_api_v2 = config_entry.data.get(CONF_USE_API_V2, False)
-    oauth_url = config_entry.data.get(CONF_OAUTH_URL)
-    # oauth_user_num = config_entry.data.get(CONF_OAUTH_USER_NUM)
-    use_tls_v1 = config_entry.data.get(CONF_USE_TLS_V1, False)
-    exclude_dh = config_entry.data.get(CONF_EXCLUDE_DH, False)
+    refresh_token = entry.data.get(CONF_TOKEN)
+    region = entry.data.get(CONF_REGION)
+    language = entry.data.get(CONF_LANGUAGE)
+    use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
+    oauth_url = entry.data.get(CONF_OAUTH_URL)
+    # oauth_user_num = entry.data.get(CONF_OAUTH_USER_NUM)
+    use_tls_v1 = entry.data.get(CONF_USE_TLS_V1, False)
+    exclude_dh = entry.data.get(CONF_EXCLUDE_DH, False)
 
     _LOGGER.info(STARTUP)
     _LOGGER.info(
@@ -214,7 +215,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
     _LOGGER.info("ThinQ client connected")
 
     try:
-        lge_devices = await lge_devices_setup(hass, client)
+        lge_devices, unsupported_devices = await lge_devices_setup(hass, client)
     except Exception as exc:
         _LOGGER.warning(
             "Connection not available. ThinQ platform not ready", exc_info=True
@@ -230,15 +231,19 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
         )
 
     # remove device not available anymore
-    await cleanup_orphan_lge_devices(hass, config_entry.entry_id, client)
+    await cleanup_orphan_lge_devices(hass, entry.entry_id, client)
 
-    hass.data[DOMAIN] = {CLIENT: client, LGE_DEVICES: lge_devices}
-    hass.config_entries.async_setup_platforms(config_entry, SMARTTHINQ_PLATFORMS)
+    hass.data[DOMAIN] = {
+        CLIENT: client,
+        LGE_DEVICES: lge_devices,
+        UNSUPPORTED_DEVICES: unsupported_devices,
+    }
+    hass.config_entries.async_setup_platforms(entry, SMARTTHINQ_PLATFORMS)
 
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(
         entry, SMARTTHINQ_PLATFORMS
@@ -409,11 +414,12 @@ class LGEDevice:
             self._state = state
 
 
-async def lge_devices_setup(hass, client) -> dict:
+async def lge_devices_setup(hass, client):
     """Query connected devices from LG ThinQ."""
     _LOGGER.info("Starting LGE ThinQ devices...")
 
     wrapped_devices = {}
+    unsupported_devices = {}
     device_count = 0
     temp_unit = UNIT_TEMP_CELSIUS
     if hass.config.units.temperature_unit != TEMP_CELSIUS:
@@ -436,6 +442,7 @@ async def lge_devices_setup(hass, client) -> dict:
                 network_type.name,
                 device.model_info_url,
             )
+            unsupported_devices.setdefault(device_type, []).append(device)
             continue
 
         dev = LGEDevice(lge_dev, hass)
@@ -458,7 +465,7 @@ async def lge_devices_setup(hass, client) -> dict:
         )
 
     _LOGGER.info("Founds %s LGE device(s)", str(device_count))
-    return wrapped_devices
+    return wrapped_devices, unsupported_devices
 
 
 async def cleanup_orphan_lge_devices(hass, entry_id, client):
