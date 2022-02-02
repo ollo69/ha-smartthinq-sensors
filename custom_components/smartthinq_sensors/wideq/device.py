@@ -389,6 +389,12 @@ class DeviceInfo(object):
         self._platform_type = None
         self._network_type = None
 
+    def as_dict(self):
+        """Return the data dictionary"""
+        if not self._data:
+            return {}
+        return self._data.copy()
+
     def _get_data_key(self, keys):
         for key in keys:
             if key in self._data:
@@ -528,6 +534,12 @@ class ModelInfo(object):
     @property
     def is_info_v2(self):
         return False
+
+    def as_dict(self):
+        """Return the data dictionary"""
+        if not self._data:
+            return {}
+        return self._data.copy()
 
     @property
     def model_type(self):
@@ -842,6 +854,12 @@ class ModelInfoV2(object):
     @property
     def is_info_v2(self):
         return True
+
+    def as_dict(self):
+        """Return the data dictionary"""
+        if not self._data:
+            return {}
+        return self._data.copy()
 
     @property
     def model_type(self):
