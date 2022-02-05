@@ -128,6 +128,8 @@ def _async_device_ha_info(
     )
 
     for entity_entry in hass_entities:
+        if entity_entry.platform != DOMAIN:
+            continue
         state = hass.states.get(entity_entry.entity_id)
         state_dict = None
         if state:
