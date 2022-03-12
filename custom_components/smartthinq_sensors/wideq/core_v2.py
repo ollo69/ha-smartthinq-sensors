@@ -8,6 +8,7 @@ import logging
 import os
 import requests
 import uuid
+import xmltodict
 
 from datetime import datetime
 from threading import Lock
@@ -63,6 +64,7 @@ API2_ERRORS = {
     "0106": exc.NotConnectedError,
     "0100": exc.FailedRequestError,
     "0110": exc.InvalidCredentialError,
+    "9999": exc.NotConnectedError,  # This come as "other errors", we manage as not connected.
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
 }
 
@@ -105,6 +107,22 @@ def wideq_get(url, **kwargs):
         s.mount(url, CoreV2HttpAdapter.http_adapter)
 
     return s.get(url, **kwargs)
+
+
+def _get_json_resp(response: requests.Response):
+    """Try to get the json content from request response."""
+
+    # first, we try to get the response json content
+    try:
+        return response.json()
+    except json.JSONDecodeError:
+        resp_text = response.text
+
+    # if fails, we try to convert text from xml to json
+    try:
+        return xmltodict.parse(resp_text)
+    except Exception:
+        raise exc.InvalidResponseError(resp_text) from None
 
 
 def oauth2_signature(message, secret):
@@ -181,7 +199,7 @@ def thinq2_get(
         timeout=DEFAULT_TIMEOUT,
     )
 
-    out = res.json()
+    out = _get_json_resp(res)
     _LOGGER.debug("thinq2_get after: %s", out)
 
     if "resultCode" not in out:
@@ -218,7 +236,7 @@ def lgedm2_post(
         timeout=DEFAULT_TIMEOUT,
     )
 
-    out = res.json()
+    out = _get_json_resp(res)
     _LOGGER.debug("lgedm2_post after: %s", out)
 
     return manage_lge_result(out, is_api_v2)

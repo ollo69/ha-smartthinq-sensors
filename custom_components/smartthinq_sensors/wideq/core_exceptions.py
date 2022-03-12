@@ -33,6 +33,12 @@ class InvalidRequestError(APIError):
         pass
 
 
+class InvalidResponseError(APIError):
+    """The server provide an invalid response."""
+    def __init__(self, resp_msg):
+        super().__init__("", resp_msg)
+
+
 class InvalidCredentialError(APIError):
     """The server rejected connection."""
     def __init__(self):

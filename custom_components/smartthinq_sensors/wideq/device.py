@@ -146,11 +146,14 @@ class Monitor(object):
     _last_client_refresh = datetime.min
     _not_logged_count = 0
 
-    def __init__(self, client, device_id: str, device_type=PlatformType.THINQ1) -> None:
+    def __init__(self, client, device_id: str, platform_type=PlatformType.THINQ1, device_type: str = None) -> None:
         """Initialize monitor class."""
         self._client = client
         self._device_id = device_id
-        self._device_type = device_type
+        self._platform_type = platform_type
+        self._device_descr = device_id
+        if device_type:
+            self._device_descr += f" ({device_type})"
         self._work_id: Optional[str] = None
         self._disconnected = True
         self._has_error = False
@@ -160,14 +163,14 @@ class Monitor(object):
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
             self._has_error = True
-            _LOGGER.warning(msg, exc_info=exc_info)
+            _LOGGER.warning("%s (device: %s)", msg, self._device_descr, exc_info=exc_info)
 
         log_lev = logging.DEBUG
         if not self._has_error:
             self._has_error = True
             if Monitor._client_connected:
                 log_lev = logging.WARNING
-        _LOGGER.log(log_lev, "DeviceID %s: %s", self._device_id, msg, exc_info=exc_info)
+        _LOGGER.log(log_lev, "Device %s: %s", self._device_descr, msg, exc_info=exc_info)
 
         if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
             Monitor._critical_error = True
@@ -208,7 +211,7 @@ class Monitor(object):
 
     def refresh(self, query_device=False) -> Optional[any]:
         """Update device state"""
-        _LOGGER.debug("Updating ThinQ device %s", self._device_id)
+        _LOGGER.debug("Updating ThinQ device %s", self._device_descr)
 
         state = None
         for iteration in range(MAX_RETRIES):
@@ -228,11 +231,14 @@ class Monitor(object):
             except core_exc.NotConnectedError:
                 self._disconnected = True
                 self._has_error = False
-                _LOGGER.debug("Device %s not connected. Status not available", self._device_id)
+                _LOGGER.debug("Device %s not connected. Status not available", self._device_descr)
                 raise
 
             except core_exc.DeviceNotFound:
                 self._raise_error("Device ID is invalid, status update failed")
+
+            except core_exc.InvalidResponseError as exc:
+                self._raise_error("Received invalid response, status update failed", exc=exc, exc_info=True)
 
             except core_exc.NotLoggedInError as exc:
                 # This could be raised by an expired token
@@ -255,11 +261,7 @@ class Monitor(object):
                 req_exc.ReadTimeout,
             ) as exc:
                 # These are network errors, refresh client is not required
-                self._raise_error(
-                    "Connection to ThinQ failed. Network connection error",
-                    not_logged=False,
-                    exc=exc,
-                )
+                self._raise_error("Connection to ThinQ failed. Network connection error", exc=exc)
 
             except Exception as exc:
                 self._raise_error(
@@ -303,7 +305,7 @@ class Monitor(object):
 
     def start(self) -> None:
         """Start monitor for ThinQ1 device."""
-        if self._device_type != PlatformType.THINQ1:
+        if self._platform_type != PlatformType.THINQ1:
             return
         self._work_id = self._client.session.monitor_start(self._device_id)
 
@@ -319,7 +321,7 @@ class Monitor(object):
         """Get the current status data (a bytestring) or None if the
             device is not yet ready.
             """
-        if self._device_type == PlatformType.THINQ1:
+        if self._platform_type == PlatformType.THINQ1:
             return self._poll_v1()
         return self._poll_v2(query_device)
 
@@ -342,7 +344,7 @@ class Monitor(object):
         """Get the current status data (a json str) or None if the
             device is not yet ready.
             """
-        if self._device_type != PlatformType.THINQ2:
+        if self._platform_type != PlatformType.THINQ2:
             return None
         if query_device:
             result = self._client.session.get_device_v2_settings(self._device_id)
@@ -1141,7 +1143,7 @@ class Device(object):
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
-        self._mon = Monitor(client, device.id, device.platform_type)
+        self._mon = Monitor(client, device.id, device.platform_type, device.type.name)
         self._control_set = 0
         self._last_additional_poll: Optional[datetime] = None
         self._available_features = available_features or {}
