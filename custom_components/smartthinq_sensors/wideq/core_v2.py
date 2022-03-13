@@ -115,8 +115,9 @@ def _get_json_resp(response: requests.Response):
     # first, we try to get the response json content
     try:
         return response.json()
-    except json.JSONDecodeError:
+    except ValueError as ex:
         resp_text = response.text
+        _LOGGER.debug("Error decoding json response %s: %s", resp_text, ex)
 
     # if fails, we try to convert text from xml to json
     try:
