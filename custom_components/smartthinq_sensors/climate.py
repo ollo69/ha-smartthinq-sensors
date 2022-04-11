@@ -22,7 +22,10 @@ from homeassistant.components.climate.const import (
     HVAC_MODE_HEAT,
     HVAC_MODE_HEAT_COOL,
     HVAC_MODE_OFF,
+    PRESET_ECO,
+    PRESET_NONE,
     SUPPORT_FAN_MODE,
+    SUPPORT_PRESET_MODE,
     SUPPORT_SWING_MODE,
     SUPPORT_TARGET_TEMPERATURE,
 )
@@ -44,7 +47,7 @@ ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
 
 HVAC_MODE_LOOKUP = {
-    ACMode.ENERGY_SAVER.name: HVAC_MODE_AUTO,
+    ACMode.ENERGY_SAVER.name: HVAC_MODE_COOL,
     ACMode.AI.name: HVAC_MODE_AUTO,
     ACMode.HEAT.name: HVAC_MODE_HEAT,
     ACMode.DRY.name: HVAC_MODE_DRY,
@@ -186,12 +189,13 @@ class LGEACClimate(LGEClimate):
     def _available_hvac_modes(self):
         """Return available hvac modes from lookup dict."""
         if self._hvac_mode_lookup is None:
-            modes = {}
-            for key, mode in HVAC_MODE_LOOKUP.items():
-                if key in self._device.op_modes:
-                    # invert key and mode to avoid duplicated HVAC modes
-                    modes[mode] = key
-            self._hvac_mode_lookup = {v: k for k, v in modes.items()}
+            deduplicated_hvac_modes = {}
+            for lg_mode, ha_mode in HVAC_MODE_LOOKUP.items():
+                if lg_mode in self._device.op_modes:
+                    # invert lg_mode and ha_mode to avoid duplicated ha modes
+                    # in case of duplicate ha modes, the last lg mapping in HVAC_MODE_LOOKUP is selected
+                    deduplicated_hvac_modes[ha_mode] = lg_mode
+            self._hvac_mode_lookup = {lg_mode: ha_mode for ha_mode, lg_mode in deduplicated_hvac_modes.items()}
         return self._hvac_mode_lookup
 
     def _get_swing_mode(self, hor_mode=False):
@@ -233,8 +237,7 @@ class LGEACClimate(LGEClimate):
         op_mode = self._api.state.operation_mode
         if not self._api.state.is_on or op_mode is None:
             return HVAC_MODE_OFF
-        modes = self._available_hvac_modes()
-        return modes.get(op_mode, HVAC_MODE_AUTO)
+        return HVAC_MODE_LOOKUP.get(op_mode, HVAC_MODE_AUTO)
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
@@ -251,12 +254,38 @@ class LGEACClimate(LGEClimate):
         if self.hvac_mode == HVAC_MODE_OFF:
             self._device.power(True)
         self._device.set_op_mode(operation_mode)
-
+    
     @property
     def hvac_modes(self):
         """Return the list of available hvac operation modes."""
         modes = self._available_hvac_modes()
         return [HVAC_MODE_OFF] + list(modes.values())
+
+    @property
+    def preset_modes(self):
+        if ACMode.ENERGY_SAVER.name in self._device.op_modes:
+            return [PRESET_NONE, PRESET_ECO]
+        else:
+            return []
+    
+    @property
+    def preset_mode(self) -> str:
+        op_mode = self._api.state.operation_mode
+        if not self._api.state.is_on or op_mode is None:
+            return PRESET_NONE
+        if op_mode == ACMode.ENERGY_SAVER.name:
+            return PRESET_ECO
+        else:
+            return PRESET_NONE
+    
+    def set_preset_mode(self, preset_mode: str) -> None:
+        if preset_mode == PRESET_ECO:
+            if self.hvac_mode == HVAC_MODE_OFF:
+                self._device.power(True)
+            self._device.set_op_mode(ACMode.ENERGY_SAVER.name)
+        elif preset_mode == PRESET_NONE:
+            if self._api.state.operation_mode == ACMode.ENERGY_SAVER.name:
+                self._device.set_op_mode(ACMode.COOL.name)
 
     @property
     def current_temperature(self) -> float:
@@ -349,6 +378,8 @@ class LGEACClimate(LGEClimate):
             features |= SUPPORT_FAN_MODE
         if self._support_ver_swing or self._support_hor_swing:
             features |= SUPPORT_SWING_MODE
+        if self.preset_modes:
+            features |= SUPPORT_PRESET_MODE
         return features
 
     def turn_on(self) -> None:
