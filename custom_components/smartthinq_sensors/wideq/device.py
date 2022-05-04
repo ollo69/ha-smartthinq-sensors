@@ -815,7 +815,7 @@ class ModelInfo(object):
         protocol = self._data["Monitoring"]["protocol"]
         if isinstance(protocol, list):
             for elem in protocol:
-                if "superSet" in elem: 
+                if elem.get("superSet"):
                     key = elem["value"]
                     value = data
                     for ident in elem["superSet"].split("."):
