@@ -23,9 +23,7 @@ from .wideq import (
 from .wideq.device import DeviceType
 
 from homeassistant.components.binary_sensor import (
-    DEVICE_CLASS_HEAT,
-    DEVICE_CLASS_OPENING,
-    DEVICE_CLASS_PROBLEM,
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
@@ -80,7 +78,7 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_ERROR_STATE,
         name="Error state",
-        device_class=DEVICE_CLASS_PROBLEM,
+        device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda x: x.error_state,
     ),
     ThinQBinarySensorEntityDescription(
@@ -112,7 +110,7 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=FEAT_DOOROPEN,
         name="Door open",
-        device_class=DEVICE_CLASS_OPENING,
+        device_class=BinarySensorDeviceClass.OPENING,
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
@@ -144,7 +142,7 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=FEAT_HIGHTEMP,
         name="High temp",
-        device_class=DEVICE_CLASS_HEAT,
+        device_class=BinarySensorDeviceClass.HEAT,
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
@@ -162,7 +160,7 @@ REFRIGERATOR_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_DOOR_OPEN,
         name="Door open",
-        device_class=DEVICE_CLASS_OPENING,
+        device_class=BinarySensorDeviceClass.OPENING,
         value_fn=lambda x: x.dooropen_state,
     ),
 )
@@ -170,13 +168,13 @@ RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_COOKTOP_STATE,
         name="Cooktop state",
-        device_class=DEVICE_CLASS_HEAT,
+        device_class=BinarySensorDeviceClass.HEAT,
         value_fn=lambda x: x.cooktop_state,
     ),
     ThinQBinarySensorEntityDescription(
         key=ATTR_OVEN_STATE,
         name="Oven state",
-        device_class=DEVICE_CLASS_HEAT,
+        device_class=BinarySensorDeviceClass.HEAT,
         value_fn=lambda x: x.oven_state,
     ),
 )
