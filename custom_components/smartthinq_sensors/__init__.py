@@ -28,6 +28,7 @@ from homeassistant.const import (
     MAJOR_VERSION,
     MINOR_VERSION,
     TEMP_CELSIUS,
+    Platform,
     __version__,
 )
 from homeassistant.core import HomeAssistant
@@ -55,7 +56,7 @@ from .const import (
 
 
 SMARTTHINQ_PLATFORMS = [
-    "sensor", "binary_sensor", "climate", "switch"
+    Platform.SENSOR, Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.SWITCH
 ]
 
 SMARTTHINQ_SCHEMA = vol.Schema(
