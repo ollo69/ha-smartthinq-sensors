@@ -8,5 +8,5 @@
 	"climate"
   ],
   "iot_class": "cloud_poll",
-  "homeassistant": "2021.9.0"
+  "homeassistant": "2022.5.0"
 }

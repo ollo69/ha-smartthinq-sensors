@@ -11,21 +11,13 @@ from .wideq import FEAT_HUMIDITY, FEAT_OUT_WATER_TEMP
 from .wideq.ac import AirConditionerDevice, ACMode
 from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
 
-from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription
-from homeassistant.components.climate.const import (
-    DEFAULT_MAX_TEMP,
-    DEFAULT_MIN_TEMP,
-    HVAC_MODE_AUTO,
-    HVAC_MODE_COOL,
-    HVAC_MODE_DRY,
-    HVAC_MODE_FAN_ONLY,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_HEAT_COOL,
-    HVAC_MODE_OFF,
-    SUPPORT_FAN_MODE,
-    SUPPORT_SWING_MODE,
-    SUPPORT_TARGET_TEMPERATURE,
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityDescription,
+    ClimateEntityFeature,
+    HVACMode,
 )
+from homeassistant.components.climate.const import DEFAULT_MAX_TEMP, DEFAULT_MIN_TEMP
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
@@ -44,13 +36,13 @@ ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
 
 HVAC_MODE_LOOKUP = {
-    ACMode.ENERGY_SAVER.name: HVAC_MODE_AUTO,
-    ACMode.AI.name: HVAC_MODE_AUTO,
-    ACMode.HEAT.name: HVAC_MODE_HEAT,
-    ACMode.DRY.name: HVAC_MODE_DRY,
-    ACMode.COOL.name: HVAC_MODE_COOL,
-    ACMode.FAN.name: HVAC_MODE_FAN_ONLY,
-    ACMode.ACO.name: HVAC_MODE_HEAT_COOL,
+    ACMode.ENERGY_SAVER.name: HVACMode.AUTO,
+    ACMode.AI.name: HVACMode.AUTO,
+    ACMode.HEAT.name: HVACMode.HEAT,
+    ACMode.DRY.name: HVACMode.DRY,
+    ACMode.COOL.name: HVACMode.COOL,
+    ACMode.FAN.name: HVACMode.FAN_ONLY,
+    ACMode.ACO.name: HVACMode.HEAT_COOL,
 }
 
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
@@ -232,13 +224,13 @@ class LGEACClimate(LGEClimate):
         """Return hvac operation ie. heat, cool mode."""
         op_mode = self._api.state.operation_mode
         if not self._api.state.is_on or op_mode is None:
-            return HVAC_MODE_OFF
+            return HVACMode.OFF
         modes = self._available_hvac_modes()
-        return modes.get(op_mode, HVAC_MODE_AUTO)
+        return modes.get(op_mode, HVACMode.AUTO)
 
     def set_hvac_mode(self, hvac_mode: str) -> None:
         """Set new target hvac mode."""
-        if hvac_mode == HVAC_MODE_OFF:
+        if hvac_mode == HVACMode.OFF:
             self._device.power(False)
             return
 
@@ -248,7 +240,7 @@ class LGEACClimate(LGEClimate):
         if operation_mode is None:
             raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
 
-        if self.hvac_mode == HVAC_MODE_OFF:
+        if self.hvac_mode == HVACMode.OFF:
             self._device.power(True)
         self._device.set_op_mode(operation_mode)
 
@@ -256,7 +248,7 @@ class LGEACClimate(LGEClimate):
     def hvac_modes(self):
         """Return the list of available hvac operation modes."""
         modes = self._available_hvac_modes()
-        return [HVAC_MODE_OFF] + list(modes.values())
+        return [HVACMode.OFF] + list(modes.values())
 
     @property
     def current_temperature(self) -> float:
@@ -344,11 +336,11 @@ class LGEACClimate(LGEClimate):
     @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
-        features = SUPPORT_TARGET_TEMPERATURE
+        features = ClimateEntityFeature.TARGET_TEMPERATURE
         if len(self._device.fan_speeds) > 0:
-            features |= SUPPORT_FAN_MODE
+            features |= ClimateEntityFeature.FAN_MODE
         if self._support_ver_swing or self._support_hor_swing:
-            features |= SUPPORT_SWING_MODE
+            features |= ClimateEntityFeature.SWING_MODE
         return features
 
     def turn_on(self) -> None:
@@ -394,8 +386,8 @@ class LGERefrigeratorClimate(LGEClimate):
         self.entity_description = description
         self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}-AC"
-        self._attr_hvac_modes = [HVAC_MODE_AUTO]
-        self._attr_hvac_mode = HVAC_MODE_AUTO
+        self._attr_hvac_modes = [HVACMode.AUTO]
+        self._attr_hvac_mode = HVACMode.AUTO
 
     @property
     def target_temperature_step(self) -> float:
@@ -436,7 +428,7 @@ class LGERefrigeratorClimate(LGEClimate):
         """Return the list of supported features."""
         if not self._wrap_device.device.set_values_allowed:
             return 0
-        return SUPPORT_TARGET_TEMPERATURE
+        return ClimateEntityFeature.TARGET_TEMPERATURE
 
     @property
     def min_temp(self) -> float:
