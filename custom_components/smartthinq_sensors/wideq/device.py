@@ -815,10 +815,10 @@ class ModelInfo(object):
         protocol = self._data["Monitoring"]["protocol"]
         if isinstance(protocol, list):
             for elem in protocol:
-                if elem.get("superSet"):
+                if super_set := elem.get("superSet"):
                     key = elem["value"]
                     value = data
-                    for ident in elem["superSet"].split("."):
+                    for ident in super_set.split("."):
                         if value is None:
                             break
                         pr_key = self._get_current_temp_key(ident, value)
