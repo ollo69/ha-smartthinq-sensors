@@ -6,10 +6,13 @@ from datetime import timedelta
 import logging
 from typing import Any, Callable, List, Tuple
 
-
-from .wideq import FEAT_HUMIDITY, FEAT_OUT_WATER_TEMP
+from .wideq import (
+    FEAT_HUMIDITY,
+    FEAT_OUT_WATER_TEMP,
+    UNIT_TEMP_FAHRENHEIT,
+)
 from .wideq.ac import AirConditionerDevice, ACMode
-from .wideq.device import UNIT_TEMP_FAHRENHEIT, DeviceType
+from .wideq.device import DeviceType
 
 from homeassistant.components.climate import (
     ClimateEntity,

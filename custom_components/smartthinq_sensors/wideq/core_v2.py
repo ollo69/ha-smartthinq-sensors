@@ -15,22 +15,16 @@ from threading import Lock
 from typing import Any, Dict, Generator, Optional
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
 
-from . import (
-    DATA_ROOT,
-    DEFAULT_COUNTRY,
-    DEFAULT_LANGUAGE,
-    DEFAULT_TIMEOUT,
-    EMULATION,
-    AuthHTTPAdapter,
-    CoreVersion,
-    add_end_slash,
-    as_list,
-    gen_uuid,
-)
+from . import EMULATION, CoreVersion
 from . import core_exceptions as exc
+from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
+from .core_util import AuthHTTPAdapter, add_end_slash, as_list, gen_uuid
 from .device import DeviceInfo
 
 CORE_VERSION = CoreVersion.CoreV2
+
+# enable logging of auth information
+LOG_AUTH_INFO = False
 
 # v2
 V2_API_KEY = "VGhpblEyLjAgU0VSVklDRQ=="
@@ -51,6 +45,7 @@ APPLICATION_KEY = "6V1V8H2BN5P9ZQGOI5DAQ92YZBDO3EK9"  # for spx login
 OAUTH_CLIENT_KEY = 'LGAO722A02'
 
 # orig
+DATA_ROOT = "lgedmRoot"
 GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"
 SECURITY_KEY = "nuts_securitykey"
 SVC_CODE = "SVC202"
@@ -71,8 +66,8 @@ API2_ERRORS = {
 DEFAULT_TOKEN_VALIDITY = 3600  # seconds
 TOKEN_EXP_LIMIT = 60  # will expire within 60 seconds
 
-MIN_TIME_BETWEEN_UPDATE = 25  # seconds
-LOG_AUTH_INFO = False
+# minimum time between 2 consecutive call for device snapshot updates (in seconds)
+MIN_TIME_BETWEEN_UPDATE = 25
 
 _LOGGER = logging.getLogger(__name__)
 

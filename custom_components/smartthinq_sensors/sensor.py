@@ -1,5 +1,4 @@
-# REQUIREMENTS = ['wideq']
-# DEPENDENCIES = ['smartthinq']
+"""Support for ThinQ device sensors."""
 
 from __future__ import annotations
 

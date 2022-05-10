@@ -13,8 +13,16 @@ import time
 from typing import Any, Dict, Optional
 from threading import Lock
 
-from . import EMULATION, wideq_log_level
+from . import EMULATION
 from . import core_exceptions as core_exc
+from .const import (
+    STATE_OPTIONITEM_NONE,
+    STATE_OPTIONITEM_OFF,
+    STATE_OPTIONITEM_ON,
+    STATE_OPTIONITEM_UNKNOWN,
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
+)
 
 
 BIT_OFF = "OFF"
@@ -22,18 +30,6 @@ BIT_ON = "ON"
 
 LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
-
-MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
-MAX_RETRIES = 3
-MAX_UPDATE_FAIL_ALLOWED = 10
-
-STATE_OPTIONITEM_OFF = "off"
-STATE_OPTIONITEM_ON = "on"
-STATE_OPTIONITEM_NONE = "-"
-STATE_OPTIONITEM_UNKNOWN = "unknown"
-
-UNIT_TEMP_CELSIUS = "celsius"
-UNIT_TEMP_FAHRENHEIT = "fahrenheit"
 
 LOCAL_LANG_PACK = {
     LABEL_BIT_OFF: STATE_OPTIONITEM_OFF,
@@ -50,19 +46,16 @@ LOCAL_LANG_PACK = {
     "NOT_USE": "Not Used",
 }
 
+MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
+MAX_RETRIES = 3
+MAX_UPDATE_FAIL_ALLOWED = 10
 
-class OPTIONITEMMODES(enum.Enum):
-    ON = STATE_OPTIONITEM_ON
-    OFF = STATE_OPTIONITEM_OFF
+_LOGGER = logging.getLogger(__name__)
 
 
-class UNITTEMPMODES(enum.Enum):
+class UnitTempModes(enum.Enum):
     Celsius = UNIT_TEMP_CELSIUS
     Fahrenheit = UNIT_TEMP_FAHRENHEIT
-
-
-class STATE_UNKNOWN(enum.Enum):
-    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
 class DeviceType(enum.Enum):
@@ -106,6 +99,14 @@ class DeviceType(enum.Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
+WM_DEVICE_TYPES = [
+    DeviceType.DRYER,
+    DeviceType.TOWER_DRYER,
+    DeviceType.TOWER_WASHER,
+    DeviceType.WASHER,
+]
+
+
 class PlatformType(enum.Enum):
     """The category of device."""
 
@@ -121,16 +122,6 @@ class NetworkType(enum.Enum):
     NFC3 = "03"
     NFC4 = "04"
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
-
-
-WM_DEVICE_TYPES = [
-    DeviceType.DRYER,
-    DeviceType.TOWER_DRYER,
-    DeviceType.TOWER_WASHER,
-    DeviceType.WASHER,
-]
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class Monitor(object):
@@ -1249,7 +1240,7 @@ class Device(object):
 
     def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
-        log_level = wideq_log_level()
+        log_level = logging.INFO if EMULATION else logging.DEBUG
         full_key = self._prepare_command(ctrl_key, command, key, value)
         if full_key:
             _LOGGER.log(
@@ -1516,19 +1507,19 @@ class DeviceStatus(object):
 
         return ""
 
-    def _set_unknown(self, state, key, type):
-        if state:
-            return state
+    def _set_unknown(self, status, key, status_type):
+        if status:
+            return status
 
         if self._device.is_unknown_status(key):
             _LOGGER.warning(
                 "ThinQ: received unknown %s status '%s' of type '%s'",
                 self._device.device_info.type.name,
                 key,
-                type,
+                status_type,
             )
 
-        return STATE_UNKNOWN.UNKNOWN
+        return STATE_OPTIONITEM_UNKNOWN
 
     def update_status(self, key, value):
         if key in self._data:

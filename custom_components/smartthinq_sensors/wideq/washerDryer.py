@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Optional
 
-from . import (
+from .const import (
     FEAT_ANTICREASE,
     FEAT_CHILDLOCK,
     FEAT_CREASECARE,
@@ -32,18 +32,13 @@ from . import (
     FEAT_TUBCLEAN_COUNT,
     FEAT_TURBOWASH,
     FEAT_WATERTEMP,
-)
-
-from .device import (
-    Device,
-    DeviceStatus,
-    DeviceType,
     STATE_OPTIONITEM_NONE,
     STATE_OPTIONITEM_OFF,
     STATE_OPTIONITEM_ON,
 )
-
 from .core_exceptions import InvalidDeviceStatus
+from .device import Device, DeviceStatus, DeviceType
+
 
 STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
 STATE_WM_END = [
@@ -124,7 +119,7 @@ class WMDevice(Device):
 
         return ret_data
 
-    def _prepare_command_v1(self, cmd, key, value):
+    def _prepare_command_v1(self, cmd, key):
         """Prepare command for specific ThinQ1 device."""
         if "data" in cmd:
             str_data = cmd["data"]
@@ -145,7 +140,7 @@ class WMDevice(Device):
             cmd["data"] = str_data
         return cmd
 
-    def _prepare_command_v2(self, cmd, key, value):
+    def _prepare_command_v2(self, cmd, key):
         """Prepare command for specific ThinQ2 device."""
         data_set = cmd.pop("data", None)
         if not data_set:
@@ -195,8 +190,8 @@ class WMDevice(Device):
             return None
 
         if self.model_info.is_info_v2:
-            return self._prepare_command_v2(cmd, key, value)
-        return self._prepare_command_v1(cmd, key, value)
+            return self._prepare_command_v2(cmd, key)
+        return self._prepare_command_v1(cmd, key)
 
     def power_off(self):
         """Power off the device."""
@@ -666,7 +661,7 @@ class WMStatus(DeviceStatus):
         )
 
     def _update_features(self):
-        result = [
+        _ = [
             self.run_state,
             self.pre_state,
             self.process_state,

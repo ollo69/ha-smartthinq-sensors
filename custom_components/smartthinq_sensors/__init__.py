@@ -1,24 +1,23 @@
 """
 Support for LG SmartThinQ device.
 """
-# REQUIREMENTS = ['wideq']
-
-import logging
-import voluptuous as vol
 
 from datetime import timedelta
+import logging
 from typing import Dict
+import voluptuous as vol
 
+from .wideq import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
-from .wideq.device import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
-from .wideq.factory import get_lge_device
 from .wideq.core_exceptions import (
     InvalidCredentialError,
     MonitorRefreshError,
     MonitorUnavailableError,
     NotConnectedError,
 )
+from .wideq.device import DeviceType
+from .wideq.factory import get_lge_device
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -79,12 +78,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class LGEAuthentication:
+    """Class to authenticate connection with LG ThinQ."""
+
     def __init__(self, region, language, use_api_v2=True):
+        """Initialize the class."""
         self._region = region
         self._language = language
         self._use_api_v2 = use_api_v2
 
     def _create_client(self):
+        """Create an empty client instance."""
         if self._use_api_v2:
             client = ClientV2(country=self._region, language=self._language)
         else:
@@ -93,11 +96,12 @@ class LGEAuthentication:
         return client
 
     def init_http_adapter(self, use_tls_v1, exclude_dh):
+        """Initialize a request http adapter."""
         if self._use_api_v2:
             CoreV2HttpAdapter.init_http_adapter(use_tls_v1, exclude_dh)
 
     def get_login_url(self) -> str:
-
+        """Get an url to login in browser."""
         login_url = None
         client = self._create_client()
 
@@ -109,7 +113,7 @@ class LGEAuthentication:
         return login_url
 
     def get_auth_info_from_url(self, callback_url) -> Dict[str, str]:
-
+        """Retrieve auth info from redirect url."""
         oauth_info = None
         try:
             if self._use_api_v2:
@@ -140,6 +144,7 @@ class LGEAuthentication:
 
 
 def is_valid_ha_version():
+    """Check if HA version is valid for this integration."""
     return (
         MAJOR_VERSION > MIN_HA_MAJ_VER or
         (MAJOR_VERSION == MIN_HA_MAJ_VER and MINOR_VERSION >= MIN_HA_MIN_VER)

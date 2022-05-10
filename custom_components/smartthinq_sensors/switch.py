@@ -1,5 +1,4 @@
-# REQUIREMENTS = ['wideq']
-# DEPENDENCIES = ['smartthinq']
+"""Support for ThinQ device switches."""
 
 from __future__ import annotations
 
@@ -8,13 +7,13 @@ from datetime import timedelta
 import logging
 from typing import Any, Callable, Tuple
 
-from .wideq.device import WM_DEVICE_TYPES, DeviceType
 from .wideq import (
     FEAT_ECOFRIENDLY,
     FEAT_EXPRESSFRIDGE,
     FEAT_EXPRESSMODE,
     FEAT_ICEPLUS,
 )
+from .wideq.device import WM_DEVICE_TYPES, DeviceType
 
 from homeassistant.components.switch import (
     DEVICE_CLASS_SWITCH,

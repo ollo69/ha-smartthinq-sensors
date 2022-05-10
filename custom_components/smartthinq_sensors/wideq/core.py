@@ -10,22 +10,15 @@ from datetime import datetime
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from typing import Any, Dict, Generator, Optional
 
-from . import (
-    DATA_ROOT,
-    DEFAULT_COUNTRY,
-    DEFAULT_LANGUAGE,
-    DEFAULT_TIMEOUT,
-    AuthHTTPAdapter,
-    CoreVersion,
-    as_list,
-    gen_uuid,
-)
+from . import CoreVersion
 from . import core_exceptions as exc
+from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
+from .core_util import AuthHTTPAdapter, as_list, gen_uuid
 from .device import DeviceInfo
 
 CORE_VERSION = CoreVersion.CoreV1
-DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
+DATA_ROOT = "lgedmRoot"
 GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"
 APP_KEY = "wideq"
 SECURITY_KEY = "nuts_securitykey"
@@ -42,6 +35,8 @@ API_ERRORS = {
     "0110": exc.InvalidCredentialError,
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
 }
+
+DEFAULT_REFRESH_TIMEOUT = 20  # seconds
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -1,9 +1,8 @@
 """------------------for Oven"""
 import logging
-
 from typing import Optional
 
-from . import (
+from .const import (
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
     FEAT_COOKTOP_CENTER_STATE,
@@ -13,24 +12,23 @@ from . import (
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_CURRENT_TEMP,
     FEAT_OVEN_UPPER_STATE,
-)
-
-from .device import (
-    Device,
-    DeviceStatus,
-    BIT_OFF,
-    UNITTEMPMODES,
-    UNIT_TEMP_FAHRENHEIT,
-    UNIT_TEMP_CELSIUS,
     STATE_OPTIONITEM_NONE,
     STATE_OPTIONITEM_OFF,
+    UNIT_TEMP_FAHRENHEIT,
+    UNIT_TEMP_CELSIUS,
+)
+from .device import (
+    BIT_OFF,
+    Device,
+    DeviceStatus,
+    UnitTempModes,
 )
 
 OVEN_TEMP_UNIT = {
-    "0": UNITTEMPMODES.Fahrenheit,
-    "1": UNITTEMPMODES.Celsius,
-    "FAHRENHEIT": UNITTEMPMODES.Fahrenheit,
-    "CELSIUS": UNITTEMPMODES.Celsius,
+    "0": UnitTempModes.Fahrenheit,
+    "1": UnitTempModes.Celsius,
+    "FAHRENHEIT": UnitTempModes.Fahrenheit,
+    "CELSIUS": UnitTempModes.Celsius,
 }
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
@@ -77,7 +75,7 @@ class RangeStatus(DeviceStatus):
                 self._oven_temp_unit = STATE_OPTIONITEM_NONE
             else:
                 self._oven_temp_unit = (
-                    OVEN_TEMP_UNIT.get(oven_temp_unit, UNITTEMPMODES.Celsius)
+                    OVEN_TEMP_UNIT.get(oven_temp_unit, UnitTempModes.Celsius)
                 ).value
         return self._oven_temp_unit
 
@@ -232,7 +230,7 @@ class RangeStatus(DeviceStatus):
         )
 
     def _update_features(self):
-        result = [
+        _ = [
             self.cooktop_left_front_state,
             self.cooktop_left_rear_state,
             self.cooktop_center_state,

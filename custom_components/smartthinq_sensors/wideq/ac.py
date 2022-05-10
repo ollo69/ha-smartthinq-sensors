@@ -1,24 +1,19 @@
 """------------------for AC"""
 import enum
 import logging
-
 from typing import Optional
 
-from .device import (
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-    Device,
-    DeviceStatus,
-)
-from . import (
+from .const import (
     FEAT_ENERGY_CURRENT,
     FEAT_HUMIDITY,
     FEAT_HOT_WATER_TEMP,
     FEAT_IN_WATER_TEMP,
     FEAT_OUT_WATER_TEMP,
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
 )
-
 from .core_exceptions import InvalidRequestError
+from .device import Device, DeviceStatus
 
 
 LABEL_VANE_HSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_LEFT_RIGHT_W"
@@ -879,7 +874,7 @@ class AirConditionerStatus(DeviceStatus):
         return self.to_int_or_none(self._data.get(key))
 
     def _update_features(self):
-        result = [
+        _ = [
             self.hot_water_current_temp,
             self.in_water_current_temp,
             self.out_water_current_temp,

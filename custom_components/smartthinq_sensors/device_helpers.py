@@ -1,13 +1,15 @@
+"""Helper class for ThinQ devices"""
+
 import logging
 
-from .wideq.device import (
+from .wideq import (
     STATE_OPTIONITEM_OFF,
     STATE_OPTIONITEM_ON,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
-    WM_DEVICE_TYPES,
-    DeviceType,
 )
+from .wideq.device import WM_DEVICE_TYPES, DeviceType
+
 from homeassistant.const import (
     STATE_ON,
     STATE_OFF,

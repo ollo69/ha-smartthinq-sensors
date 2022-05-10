@@ -3,7 +3,7 @@ import enum
 import logging
 from typing import Optional
 
-from . import FEAT_LOWER_FILTER_LIFE, FEAT_UPPER_FILTER_LIFE
+from .const import FEAT_LOWER_FILTER_LIFE, FEAT_UPPER_FILTER_LIFE
 from .device import Device, DeviceStatus
 
 LABEL_UPPER_FILTER_SUPPORT = "@SUPPORT_D_PLUS_TOP"
@@ -157,7 +157,7 @@ class AirPurifierStatus(DeviceStatus):
         )
 
     def _update_features(self):
-        result = [
+        _ = [
             self.lower_filter_life,
             self.upper_filter_life,
         ]

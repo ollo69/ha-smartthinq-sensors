@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Optional
 
-from . import (
+from .const import (
     FEAT_ECOFRIENDLY,
     FEAT_EXPRESSMODE,
     FEAT_EXPRESSFRIDGE,
@@ -12,16 +12,15 @@ from . import (
     FEAT_ICEPLUS,
     FEAT_SMARTSAVINGMODE,
     FEAT_WATERFILTERUSED_MONTH,
+    STATE_OPTIONITEM_NONE,
+    UNIT_TEMP_FAHRENHEIT,
 )
-
 from .device import (
     LABEL_BIT_OFF,
     LABEL_BIT_ON,
-    STATE_OPTIONITEM_NONE,
-    UNIT_TEMP_FAHRENHEIT,
-    UNITTEMPMODES,
     Device,
     DeviceStatus,
+    UnitTempModes,
 )
 
 FEATURE_DESCR = {
@@ -31,17 +30,17 @@ FEATURE_DESCR = {
 }
 
 REFRTEMPUNIT = {
-    "Ｆ": UNITTEMPMODES.Fahrenheit,
-    "℃": UNITTEMPMODES.Celsius,
-    "˚F": UNITTEMPMODES.Fahrenheit,
-    "˚C": UNITTEMPMODES.Celsius,
+    "Ｆ": UnitTempModes.Fahrenheit,
+    "℃": UnitTempModes.Celsius,
+    "˚F": UnitTempModes.Fahrenheit,
+    "˚C": UnitTempModes.Celsius,
 }
 
 # REFRTEMPUNIT = {
-#     "\uff26": UNITTEMPMODES.Fahrenheit,
-#     "\u2103": UNITTEMPMODES.Celsius,
-#     "\u02daF": UNITTEMPMODES.Fahrenheit,
-#     "\u02daC": UNITTEMPMODES.Celsius,
+#     "\uff26": UnitTempModes.Fahrenheit,
+#     "\u2103": UnitTempModes.Celsius,
+#     "\u02daF": UnitTempModes.Fahrenheit,
+#     "\u02daC": UnitTempModes.Celsius,
 # }
 
 DEFAULT_FRIDGE_RANGE_C = [1, 10]
@@ -435,7 +434,7 @@ class RefrigeratorStatus(DeviceStatus):
             if not temp_unit:
                 return None
             self._temp_unit = (
-                REFRTEMPUNIT.get(temp_unit, UNITTEMPMODES.Celsius)
+                REFRTEMPUNIT.get(temp_unit, UnitTempModes.Celsius)
             ).value
         return self._temp_unit
 
@@ -611,7 +610,7 @@ class RefrigeratorStatus(DeviceStatus):
         return self._data.get("ActiveSavingStatus", "N/A")
 
     def _update_features(self):
-        result = [
+        _ = [
             self.eco_friendly_state,
             self.ice_plus_status,
             self.express_fridge_status,
