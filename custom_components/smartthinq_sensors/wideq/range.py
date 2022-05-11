@@ -14,8 +14,8 @@ from .const import (
     FEAT_OVEN_UPPER_STATE,
     STATE_OPTIONITEM_NONE,
     STATE_OPTIONITEM_OFF,
-    UNIT_TEMP_FAHRENHEIT,
     UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
 )
 from .device import (
     BIT_OFF,

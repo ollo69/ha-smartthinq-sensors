@@ -23,7 +23,6 @@ from .const import (
 )
 from .device import Device, DeviceStatus
 
-
 STATE_DISHWASHER_POWER_OFF = "@DW_STATE_POWER_OFF_W"
 STATE_DISHWASHER_END = [
     "@DW_STATE_END_W",

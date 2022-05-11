@@ -25,7 +25,6 @@ from .const import (
 from .core_v2 import EMULATION
 from .device_info import DeviceInfo, PlatformType
 
-
 BIT_OFF = "OFF"
 BIT_ON = "ON"
 

@@ -13,7 +13,6 @@ from .const import (
 )
 from .device import Device, DeviceStatus
 
-
 STATE_STYLER_POWER_OFF = "@ST_STATE_POWER_OFF_W"
 STATE_STYLER_END = [
     "@ST_STATE_END_W",

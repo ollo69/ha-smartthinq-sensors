@@ -40,7 +40,6 @@ from .core_exceptions import InvalidDeviceStatus
 from .device import Device, DeviceStatus
 from .device_info import DeviceType
 
-
 STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
 STATE_WM_END = [
     "@WM_STATE_END_W",

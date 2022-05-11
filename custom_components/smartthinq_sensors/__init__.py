@@ -51,7 +51,6 @@ from .const import (
     __min_ha_version__,
 )
 
-
 SMARTTHINQ_PLATFORMS = [
     Platform.SENSOR, Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.SWITCH
 ]
