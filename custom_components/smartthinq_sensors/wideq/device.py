@@ -13,7 +13,6 @@ import time
 from typing import Any, Dict, Optional
 from threading import Lock
 
-from . import EMULATION
 from . import core_exceptions as core_exc
 from .const import (
     STATE_OPTIONITEM_NONE,
@@ -23,6 +22,7 @@ from .const import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
+from .core_v2 import EMULATION
 from .device_info import DeviceInfo, PlatformType
 
 

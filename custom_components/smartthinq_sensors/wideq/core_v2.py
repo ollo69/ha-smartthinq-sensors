@@ -15,13 +15,16 @@ from threading import Lock
 from typing import Any, Dict, Generator, Optional
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
 
-from . import EMULATION, CoreVersion
 from . import core_exceptions as exc
 from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
 from .core_util import AuthHTTPAdapter, add_end_slash, as_list, gen_uuid
 from .device_info import DeviceInfo
 
-CORE_VERSION = CoreVersion.CoreV2
+# The core version
+CORE_VERSION = "coreV2"
+
+# enable emulation mode for debug / test
+EMULATION = False
 
 # enable logging of auth information
 LOG_AUTH_INFO = False

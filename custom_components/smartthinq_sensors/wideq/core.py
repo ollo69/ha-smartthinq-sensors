@@ -10,13 +10,13 @@ from datetime import datetime
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 from typing import Any, Dict, Generator, Optional
 
-from . import CoreVersion
 from . import core_exceptions as exc
 from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
 from .core_util import AuthHTTPAdapter, as_list, gen_uuid
 from .device_info import DeviceInfo
 
-CORE_VERSION = CoreVersion.CoreV1
+# The core version
+CORE_VERSION = "coreV1"
 
 DATA_ROOT = "lgedmRoot"
 GATEWAY_URL = "https://kic.lgthinq.com:46030/api/common/gatewayUriList"

@@ -7,7 +7,7 @@ import logging
 from typing import Dict
 import voluptuous as vol
 
-from .wideq import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType
+from .wideq import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType, get_lge_device
 from .wideq.core import Client
 from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
 from .wideq.core_exceptions import (
@@ -16,7 +16,6 @@ from .wideq.core_exceptions import (
     MonitorUnavailableError,
     NotConnectedError,
 )
-from .wideq.factory import get_lge_device
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
