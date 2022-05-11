@@ -10,9 +10,9 @@ from .wideq import (
     FEAT_HUMIDITY,
     FEAT_OUT_WATER_TEMP,
     UNIT_TEMP_FAHRENHEIT,
+    DeviceType,
 )
 from .wideq.ac import AirConditionerDevice, ACMode
-from .wideq.device import DeviceType
 
 from homeassistant.components.climate import (
     ClimateEntity,

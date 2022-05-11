@@ -19,8 +19,8 @@ from .wideq import (
     FEAT_REMOTESTART,
     FEAT_RINSEREFILL,
     FEAT_SALTREFILL,
+    DeviceType,
 )
-from .wideq.device import DeviceType
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,

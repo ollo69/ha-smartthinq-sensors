@@ -12,8 +12,9 @@ from .wideq import (
     FEAT_EXPRESSFRIDGE,
     FEAT_EXPRESSMODE,
     FEAT_ICEPLUS,
+    WM_DEVICE_TYPES,
+    DeviceType,
 )
-from .wideq.device import WM_DEVICE_TYPES, DeviceType
 
 from homeassistant.components.switch import (
     DEVICE_CLASS_SWITCH,

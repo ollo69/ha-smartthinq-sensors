@@ -19,7 +19,7 @@ from . import EMULATION, CoreVersion
 from . import core_exceptions as exc
 from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
 from .core_util import AuthHTTPAdapter, add_end_slash, as_list, gen_uuid
-from .device import DeviceInfo
+from .device_info import DeviceInfo
 
 CORE_VERSION = CoreVersion.CoreV2
 

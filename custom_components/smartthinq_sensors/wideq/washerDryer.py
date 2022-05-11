@@ -37,7 +37,8 @@ from .const import (
     STATE_OPTIONITEM_ON,
 )
 from .core_exceptions import InvalidDeviceStatus
-from .device import Device, DeviceStatus, DeviceType
+from .device import Device, DeviceStatus
+from .device_info import DeviceType
 
 
 STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"

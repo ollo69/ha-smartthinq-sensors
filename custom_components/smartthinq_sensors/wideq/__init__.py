@@ -4,6 +4,7 @@ Support for LG SmartThinQ device.
 from enum import Enum
 
 from .const import *
+from .device_info import *
 
 # enable emulation mode for debug / test
 EMULATION = False

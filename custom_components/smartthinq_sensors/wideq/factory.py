@@ -7,8 +7,8 @@ from .refrigerator import RefrigeratorDevice
 from .styler import StylerDevice
 from .washerDryer import WMDevice
 
-from .device import(
-    UNIT_TEMP_CELSIUS,
+from .const import UNIT_TEMP_CELSIUS
+from .device_info import (
     WM_DEVICE_TYPES,
     DeviceInfo,
     DeviceType,
