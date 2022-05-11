@@ -107,6 +107,37 @@ def wideq_get(url, **kwargs):
     return s.get(url, **kwargs)
 
 
+def parse_oauth_callback(url: str):
+    """Parse the URL to which an OAuth login redirected to obtain two
+    tokens: an access token for API credentials, and a refresh token for
+    getting updated access tokens.
+    """
+
+    params = parse_qs(urlparse(url).query)
+    return {k: v[0] for k, v in params.items()}
+
+
+def oauth_info_from_url(url: str) -> dict:
+    """Return authentication info using an OAuth callback URL."""
+    parsed_info = parse_oauth_callback(url)
+
+    result = {
+        "oauth_url": parsed_info["oauth2_backend_url"],
+        "user_number": None,
+    }
+    if "refresh_token" in parsed_info:
+        result["access_token"] = parsed_info.get("access_token")
+        result["token_validity"] = str(DEFAULT_TOKEN_VALIDITY)
+        result["refresh_token"] = parsed_info["refresh_token"]
+    elif "code" in parsed_info:
+        result["user_number"] = parsed_info.get("user_number")
+        result["auth_code"] = parsed_info["code"]
+    else:
+        return {}
+
+    return result
+
+
 def _get_json_resp(response: requests.Response):
     """Try to get the json content from request response."""
 
@@ -273,16 +304,6 @@ def manage_lge_result(result, is_api_v2=False):
 def gateway_info(country, language):
     """Return ThinQ gateway information."""
     return thinq2_get(V2_GATEWAY_URL, country=country, language=language)
-
-
-def parse_oauth_callback(url: str):
-    """Parse the URL to which an OAuth login redirected to obtain two
-    tokens: an access token for API credentials, and a refresh token for
-    getting updated access tokens.
-    """
-
-    params = parse_qs(urlparse(url).query)
-    return {k: v[0] for k, v in params.items()}
 
 
 def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, country, language):
@@ -551,7 +572,15 @@ class Gateway(object):
 
 
 class Auth(object):
-    def __init__(self, gateway, refresh_token, oauth_url, access_token, token_validity, user_number):
+    def __init__(
+        self,
+        gateway: Gateway,
+        refresh_token: str,
+        oauth_url: Optional[str] = None,
+        access_token: Optional[str] = None,
+        token_validity: Optional[str] = None,
+        user_number: Optional[str] = None,
+    ):
         self.gateway: Gateway = gateway
         self.refresh_token = refresh_token
         self.oauth_url = oauth_url
@@ -564,28 +593,20 @@ class Auth(object):
     def oauth_info_from_url(url):
         """Return authentication info using an OAuth callback URL.
         """
-        parsed_info = parse_oauth_callback(url)
+        result = oauth_info_from_url(url)
 
-        oauth_url = parsed_info["oauth2_backend_url"]
-        token_validity = str(DEFAULT_TOKEN_VALIDITY)
-        user_number = None
-        if "refresh_token" in parsed_info:
-            refresh_token = parsed_info["refresh_token"]
-            access_token = parsed_info.get("access_token")
-        elif "code" in parsed_info:
-            auth_code = parsed_info["code"]
-            user_number = parsed_info.get("user_number")
-            access_token, token_validity, refresh_token = auth_code_login(oauth_url, auth_code)
-        else:
-            return {}
+        if auth_code := result.pop("auth_code", None):
+            access_token, token_validity, refresh_token = auth_code_login(
+                result["oauth_url"], auth_code
+            )
+            return {
+                **result,
+                "access_token": access_token,
+                "token_validity": token_validity,
+                "refresh_token": refresh_token,
+            }
 
-        return {
-            "refresh_token": refresh_token,
-            "oauth_url": oauth_url,
-            "access_token": access_token,
-            "token_validity": token_validity,
-            "user_number": user_number,
-        }
+        return result
 
     @classmethod
     def from_url(cls, gateway, url):
@@ -605,7 +626,7 @@ class Auth(object):
         )
 
     @classmethod
-    def from_user_login(cls, gateway, username, password):
+    def from_user_login(cls, gateway: Gateway, username: str, password: str):
         """Perform authentication, returning a new Auth object.
         """
         hash_pwd = hashlib.sha512()
@@ -675,8 +696,7 @@ class Auth(object):
         )
 
     def refresh_gateway(self, gateway):
-        """Refresh the gateway.
-        """
+        """Refresh the gateway."""
         self.gateway = gateway
 
     def dump(self):
@@ -701,7 +721,7 @@ class Auth(object):
 
 
 class Session(object):
-    def __init__(self, auth, session_id=0):
+    def __init__(self, auth: Auth, session_id=0):
         self.auth = auth
         self.session_id = session_id
         self._common_lang_pack_url = None
@@ -947,15 +967,14 @@ class ClientV2(object):
 
     def __init__(
         self,
-        gateway: Optional[Gateway] = None,
-        auth: Optional[Auth] = None,
+        auth: Auth,
         session: Optional[Session] = None,
         country: str = DEFAULT_COUNTRY,
         language: str = DEFAULT_LANGUAGE,
     ) -> None:
+        """Initialize the client."""
         # The three steps required to get access to call the API.
-        self._gateway: Optional[Gateway] = gateway
-        self._auth: Optional[Auth] = auth
+        self._auth: Auth = auth
         self._session: Optional[Session] = session
         self._last_device_update = datetime.utcnow()
         self._lock = Lock()
@@ -988,6 +1007,7 @@ class ClientV2(object):
             _LOGGER.debug("Injected debug device: %s", d)
 
     def _load_devices(self, force_update: bool = False):
+        """Load dict with available devices."""
         if self._session and (self._devices is None or force_update):
             self._devices = self._session.get_devices()
             if EMULATION:
@@ -996,39 +1016,44 @@ class ClientV2(object):
 
     @property
     def api_version(self):
-        """Return core API version"""
+        """Return core API version."""
         return CORE_VERSION
 
     @property
-    def gateway(self) -> Gateway:
-        if not self._gateway:
-            self._gateway = Gateway.discover(self._country, self._language)
-        return self._gateway
-
-    @property
     def auth(self) -> Auth:
+        """Return the Auth object associated to this client."""
         if not self._auth:
             assert False, "unauthenticated"
         return self._auth
 
     @property
     def session(self) -> Session:
+        """Return the Session object associated to this client."""
         if not self._session:
             self._session = self.auth.start_session()
-            self._load_devices()
         return self._session
 
     @property
-    def hasdevices(self) -> bool:
+    def has_devices(self) -> bool:
+        """Return True if there are devices associated."""
         return True if self._devices else False
 
     @property
-    def devices(self) -> Generator["DeviceInfo", None, None]:
-        """DeviceInfo objects describing the user's devices.
-            """
+    def devices(self) -> Optional[Generator["DeviceInfo", None, None]]:
+        """DeviceInfo objects describing the user's devices."""
         if self._devices is None:
-            self._load_devices()
+            return None
         return (DeviceInfo(d) for d in self._devices)
+
+    @property
+    def oauth_info(self):
+        """Return current auth info."""
+        return {
+            "refresh_token": self._auth.refresh_token,
+            "oauth_url": self._auth.oauth_url,
+            "access_token": self._auth.access_token,
+            "user_number": self._auth.user_number,
+        }
 
     def refresh_devices(self):
         """Refresh the devices information for this client"""
@@ -1050,66 +1075,11 @@ class ClientV2(object):
                 return device
         return None
 
-    @classmethod
-    def load(cls, state: Dict[str, Any]) -> "ClientV2":
-        """Load a client from serialized state.
-            """
-
-        client = cls()
-
-        if "gateway" in state:
-            data = state["gateway"]
-            client._gateway = Gateway(
-                data,
-                data.get("country", DEFAULT_COUNTRY),
-                data.get("language", DEFAULT_LANGUAGE),
-            )
-
-        if "auth" in state:
-            data = state["auth"]
-            client._auth = Auth.load(client._gateway, data)
-
-        if "session" in state:
-            client._session = Session(client.auth, state["session"])
-
-        if "model_info" in state:
-            client._model_info = state["model_info"]
-
-        if "country" in state:
-            client._country = state["country"]
-
-        if "language" in state:
-            client._language = state["language"]
-
-        return client
-
-    def dump(self) -> Dict[str, Any]:
-        """Serialize the client state."""
-
-        out = {
-            "model_url_info": self._model_url_info,
-        }
-
-        if self._gateway:
-            out["gateway"] = self._gateway.dump()
-
-        if self._auth:
-            out["auth"] = self._auth.dump()
-
-        if self._session:
-            out["session"] = self._session.session_id
-
-        out["country"] = self._country
-        out["language"] = self._language
-
-        return out
-
     def refresh(self, refresh_gateway=False) -> None:
         """Refresh client connection."""
         if refresh_gateway:
-            self._gateway = None
-        if not self._gateway:
-            self._auth.refresh_gateway(self.gateway)
+            gateway = Gateway.discover(self._country, self._language)
+            self.auth.refresh_gateway(gateway)
         self._auth = self.auth.refresh(True)
         self._session = self.auth.start_session()
         self._load_devices()
@@ -1123,7 +1093,11 @@ class ClientV2(object):
 
     @classmethod
     def from_login(
-            cls, username, password, country=None, language=None
+        cls,
+        username: str,
+        password: str,
+        country=DEFAULT_COUNTRY,
+        language=DEFAULT_LANGUAGE,
     ) -> "ClientV2":
         """Construct a client using username and password.
 
@@ -1132,19 +1106,20 @@ class ClientV2(object):
             to reload the gateway servers and restart the session.
             """
 
-        client = cls(
-            country=country or DEFAULT_COUNTRY,
-            language=language or DEFAULT_LANGUAGE,
-        )
-        auth = Auth.from_user_login(client.gateway, username, password)
-        client._auth = auth
+        gateway = Gateway.discover(country, language)
+        auth = Auth.from_user_login(gateway, username, password)
+        client = cls(auth=auth, country=country, language=language)
         client._session = auth.start_session()
         client._load_devices()
         return client
 
     @classmethod
     def from_token(
-        cls, refresh_token, oauth_url, user_number, country=None, language=None
+        cls,
+        refresh_token: str,
+        oauth_url: Optional[str] = None,
+        country=DEFAULT_COUNTRY,
+        language=DEFAULT_LANGUAGE
     ) -> "ClientV2":
         """Construct a client using just a refresh token.
             
@@ -1153,29 +1128,21 @@ class ClientV2(object):
             to reload the gateway servers and restart the session.
             """
 
-        client = cls(
-            country=country or DEFAULT_COUNTRY,
-            language=language or DEFAULT_LANGUAGE,
-        )
-        client._auth = Auth(client.gateway, refresh_token, oauth_url, None, None, user_number)
+        gateway = Gateway.discover(country, language)
+        auth = Auth(gateway, refresh_token, oauth_url)
+        client = cls(auth=auth, country=country, language=language)
         client.refresh()
         return client
 
-    @property
-    def oauthinfo(self):
-        """Return current auth info."""
-
-        return {
-            "refresh_token": self._auth.refresh_token,
-            "oauth_url": self._auth.oauth_url,
-            "access_token": self._auth.access_token,
-            "user_number": self._auth.user_number,
-        }
+    @staticmethod
+    def get_oauth_url(country=DEFAULT_COUNTRY, language=DEFAULT_LANGUAGE) -> str:
+        """Return an url to use to login in a browser."""
+        gateway = Gateway.discover(country, language)
+        return gateway.oauth_url()
 
     @staticmethod
-    def oauthinfo_from_url(url):
-        """Return authentication info from an OAuth callback URL.
-        """
+    def oauth_info_from_url(url):
+        """Return authentication info from an OAuth callback URL."""
         return Auth.oauth_info_from_url(url)
 
     @staticmethod
@@ -1215,3 +1182,59 @@ class ClientV2(object):
                 )
             self._model_url_info[url] = self._load_json_info(url)
         return self._model_url_info[url]
+
+    def dump(self) -> Dict[str, Any]:
+        """Serialize the client state."""
+
+        out = {
+            "model_url_info": self._model_url_info,
+        }
+
+        if self._auth:
+            out["auth"] = self._auth.dump()
+            out["gateway"] = self._auth.gateway.dump()
+
+        if self._session:
+            out["session"] = self._session.session_id
+
+        out["country"] = self._country
+        out["language"] = self._language
+
+        return out
+
+    @classmethod
+    def load(cls, state: Dict[str, Any]) -> Optional["ClientV2"]:
+        """Load a client from serialized state."""
+
+        auth = None
+        gateway = None
+        if "gateway" in state:
+            data = state["gateway"]
+            gateway = Gateway(
+                data,
+                data.get("country", DEFAULT_COUNTRY),
+                data.get("language", DEFAULT_LANGUAGE),
+            )
+
+        if "auth" in state and gateway:
+            data = state["auth"]
+            auth = Auth.load(gateway, data)
+
+        if not auth:
+            return None
+
+        client = cls(auth)
+
+        if "session" in state:
+            client._session = Session(client.auth, state["session"])
+
+        if "model_info" in state:
+            client._model_info = state["model_info"]
+
+        if "country" in state:
+            client._country = state["country"]
+
+        if "language" in state:
+            client._language = state["language"]
+
+        return client

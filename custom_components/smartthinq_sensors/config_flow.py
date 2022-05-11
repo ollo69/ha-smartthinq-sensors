@@ -137,7 +137,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             client, result = await self._check_connection(username, password)
             if result != RESULT_SUCCESS:
                 return self._manage_error(result)
-            auth_info = client.oauthinfo
+            auth_info = client.oauth_info
             self._token = auth_info["refresh_token"]
             self._oauth_url = auth_info["oauth_url"]
             return self._save_config_entry()
@@ -201,7 +201,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not client:
             return None, RESULT_NO_DEV
 
-        if not client.hasdevices:
+        if not client.has_devices:
             return None, RESULT_NO_DEV
 
         return client, RESULT_SUCCESS
