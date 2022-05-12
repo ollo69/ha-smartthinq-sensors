@@ -11,7 +11,8 @@
             "invalid_language": "Formato lingua non valido.",
             "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone. Puoi richiedere supporto [qui](https://git.io/JTjid).",
             "invalid_credentials": "Credenziali SmartThinQ non valide. Riprova, assicurandoti prima di poter accedere dall'applicazione ThinQ sul telefono",
-            "no_user_info": "Nome utente e Password sono campi obbligatori."
+            "no_user_info": "Nome utente e Password sono campi obbligatori.",
+            "unknown": "Errore sconosciuto."
         },
         "step": {
             "user": {

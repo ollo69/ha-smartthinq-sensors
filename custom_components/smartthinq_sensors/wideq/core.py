@@ -457,6 +457,9 @@ class Client(object):
         self._country = country
         self._language = language
 
+        # enable emulation mode for debug / test
+        self.emulation: bool = False
+
     @property
     def api_version(self):
         """Return core API version"""

@@ -22,7 +22,6 @@ from .const import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
-from .core_v2 import EMULATION
 from .device_info import DeviceInfo, PlatformType
 
 BIT_OFF = "OFF"
@@ -1002,7 +1001,7 @@ class Device(object):
     ):
         """Set a device's control for `key` to `value`.
         """
-        if EMULATION:
+        if self._client.emulation:
             return
 
         if self._should_poll:
@@ -1033,7 +1032,7 @@ class Device(object):
 
     def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
-        log_level = logging.INFO if EMULATION else logging.DEBUG
+        log_level = logging.INFO if self._client.emulation else logging.DEBUG
         full_key = self._prepare_command(ctrl_key, command, key, value)
         if full_key:
             _LOGGER.log(
@@ -1132,7 +1131,7 @@ class Device(object):
         Perform dedicated device query if query_device is set to true,
         otherwise use the dashboard result
         """
-        if EMULATION:
+        if self._client.emulation:
             query_device = False
 
         if query_device:

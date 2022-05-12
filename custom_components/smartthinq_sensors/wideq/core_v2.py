@@ -23,9 +23,6 @@ from .device_info import DeviceInfo
 # The core version
 CORE_VERSION = "coreV2"
 
-# enable emulation mode for debug / test
-EMULATION = False
-
 # enable logging of auth information
 LOG_AUTH_INFO = False
 
@@ -992,6 +989,9 @@ class ClientV2(object):
         self._country = country
         self._language = language
 
+        # enable emulation mode for debug / test
+        self.emulation: bool = False
+
     def _inject_thinq2_device(self):
         """This is used only for debug"""
         data_file = os.path.join(
@@ -1010,7 +1010,7 @@ class ClientV2(object):
         """Load dict with available devices."""
         if self._session and (self._devices is None or force_update):
             self._devices = self._session.get_devices()
-            if EMULATION:
+            if self.emulation:
                 # for debug
                 self._inject_thinq2_device()
 

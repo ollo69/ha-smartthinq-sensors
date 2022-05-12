@@ -5,7 +5,6 @@ Support for LG SmartThinQ device.
 from datetime import timedelta
 import logging
 from typing import Dict, Optional
-import voluptuous as vol
 
 from .wideq import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType, get_lge_device
 from .wideq.core import Client
@@ -30,7 +29,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -40,7 +38,6 @@ from .const import (
     CONF_EXCLUDE_DH,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
-    CONF_OAUTH_USER_NUM,
     CONF_USE_API_V2,
     CONF_USE_TLS_V1,
     DOMAIN,
@@ -54,18 +51,6 @@ from .const import (
 SMARTTHINQ_PLATFORMS = [
     Platform.SENSOR, Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.SWITCH
 ]
-
-SMARTTHINQ_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_TOKEN): str,
-        vol.Required(CONF_REGION): str,
-        vol.Required(CONF_LANGUAGE): str,
-    }
-)
-
-CONFIG_SCHEMA = vol.Schema(
-    vol.All(cv.deprecated(DOMAIN), {DOMAIN: SMARTTHINQ_SCHEMA},), extra=vol.ALLOW_EXTRA,
-)
 
 MAX_DISC_COUNT = 4
 UNSUPPORTED_DEVICES = "unsupported_devices"
