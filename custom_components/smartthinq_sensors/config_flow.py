@@ -159,22 +159,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._token = oauth_info["refresh_token"]
         self._oauth_url = oauth_info.get("oauth_url")
 
-        if not self._use_api_v2:
-            return await self.async_step_token()
-
-        if not self._oauth_url:
+        if not self._oauth_url and self._use_api_v2:
             return self._show_form(errors="invalid_url", step_id="url")
-        _, result = await self._check_connection()
-        if result != RESULT_SUCCESS:
-            return await self._manage_error(result)
-        return self._save_config_entry()
-
-    async def async_step_token(self, user_input=None):
-        """Show result token and submit for save."""
-        if not user_input:
-            return self._show_form(step_id="token")
-
-        self._token = user_input[CONF_TOKEN]
         _, result = await self._check_connection()
         if result != RESULT_SUCCESS:
             return await self._manage_error(result)
@@ -250,9 +236,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             )
 
-        if step_id == "token":
-            return vol.Schema({vol.Required(CONF_TOKEN, default=self._token): str})
-
         schema = vol.Schema(
             {
                 vol.Optional(CONF_USERNAME, default=""): str,
@@ -276,11 +259,10 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def _show_form(self, errors: str | None = None, step_id="user"):
         """Show the form to the user."""
-        if not errors and self._error:
-            errors = self._error
+        base_err = errors or self._error
         self._error = None
-
         schema = self._prepare_form_schema(step_id)
+
         return self.async_show_form(
-            step_id=step_id, data_schema=schema, errors={CONF_BASE: errors} if errors else None,
+            step_id=step_id, data_schema=schema, errors={CONF_BASE: base_err} if base_err else None
         )

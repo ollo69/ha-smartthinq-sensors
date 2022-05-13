@@ -18,7 +18,6 @@ from .wideq.core_exceptions import (
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    ATTR_SW_VERSION,
     CONF_REGION,
     CONF_TOKEN,
     MAJOR_VERSION,
@@ -186,6 +185,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.info("ThinQ client connected")
 
+    # eventually enable emulation
+    # client.emulation = True
+
     try:
         lge_devices, unsupported_devices = await lge_devices_setup(hass, client)
     except Exception as exc:
@@ -293,7 +295,7 @@ class LGEDevice:
             model=f"{self._model} ({self._type.name})",
         )
         if self._firmware:
-            data[ATTR_SW_VERSION] = self._firmware
+            data["sw_version"] = self._firmware
         if self._mac:
             data["connections"] = {(CONNECTION_NETWORK_MAC, self._mac)}
 
@@ -327,20 +329,20 @@ class LGEDevice:
             self._hass,
             _LOGGER,
             name=f"{DOMAIN}-{self._name}",
-            update_method=self.async_device_update,
+            update_method=self._async_update,
             # Polling interval. Will only be polled if there are subscribers.
             update_interval=SCAN_INTERVAL
         )
         await coordinator.async_refresh()
         self._coordinator = coordinator
 
-    async def async_device_update(self):
-        """Async Update device state"""
-        await self._hass.async_add_executor_job(self._device_update)
+    async def _async_update(self):
+        """Async update used by coordinator."""
+        await self._hass.async_add_executor_job(self._state_update)
         return self._state
 
-    def _device_update(self):
-        """Update device state"""
+    def _state_update(self):
+        """Update device state."""
         _LOGGER.debug("Updating ThinQ device %s", self._name)
         if self._disc_count < MAX_DISC_COUNT:
             self._disc_count += 1
