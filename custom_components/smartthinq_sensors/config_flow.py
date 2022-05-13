@@ -278,13 +278,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Show the form to the user."""
         if not errors and self._error:
             errors = self._error
-
         self._error = None
-        base_error = None
-        if errors:
-            base_error = {CONF_BASE: errors}
 
         schema = self._prepare_form_schema(step_id)
         return self.async_show_form(
-            step_id=step_id, data_schema=schema, errors=base_error,
+            step_id=step_id, data_schema=schema, errors={CONF_BASE: errors} if errors else None,
         )
