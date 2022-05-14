@@ -185,9 +185,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.info("ThinQ client connected")
 
-    # eventually enable emulation
-    # client.emulation = True
-
     try:
         lge_devices, unsupported_devices = await lge_devices_setup(hass, client)
     except Exception as exc:

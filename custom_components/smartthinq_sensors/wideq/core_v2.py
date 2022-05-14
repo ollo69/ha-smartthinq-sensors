@@ -983,6 +983,8 @@ class ClientV2(object):
         session: Optional[Session] = None,
         country: str = DEFAULT_COUNTRY,
         language: str = DEFAULT_LANGUAGE,
+        *,
+        enable_emulation: bool = False,
     ) -> None:
         """Initialize the client."""
         # The three steps required to get access to call the API.
@@ -1005,7 +1007,7 @@ class ClientV2(object):
         self._language = language
 
         # enable emulation mode for debug / test
-        self.emulation: bool = False
+        self._emulation = enable_emulation
 
     def _inject_thinq2_device(self):
         """This is used only for debug"""
@@ -1061,6 +1063,11 @@ class ClientV2(object):
         return (DeviceInfo(d) for d in self._devices)
 
     @property
+    def emulation(self) -> bool:
+        """Return if emulation is enabled."""
+        return self._emulation
+
+    @property
     def oauth_info(self):
         """Return current auth info."""
         return {
@@ -1113,6 +1120,8 @@ class ClientV2(object):
         password: str,
         country=DEFAULT_COUNTRY,
         language=DEFAULT_LANGUAGE,
+        *,
+        enable_emulation=False,
     ) -> "ClientV2":
         """Construct a client using username and password.
 
@@ -1123,7 +1132,7 @@ class ClientV2(object):
 
         gateway = Gateway.discover(country, language)
         auth = Auth.from_user_login(gateway, username, password)
-        client = cls(auth=auth, country=country, language=language)
+        client = cls(auth=auth, country=country, language=language, enable_emulation=enable_emulation)
         client._session = auth.start_session()
         client._load_devices()
         return client
@@ -1134,7 +1143,9 @@ class ClientV2(object):
         refresh_token: str,
         oauth_url: Optional[str] = None,
         country=DEFAULT_COUNTRY,
-        language=DEFAULT_LANGUAGE
+        language=DEFAULT_LANGUAGE,
+        *,
+        enable_emulation=False,
     ) -> "ClientV2":
         """Construct a client using just a refresh token.
             
@@ -1145,7 +1156,7 @@ class ClientV2(object):
 
         gateway = Gateway.discover(country, language)
         auth = Auth(gateway, refresh_token, oauth_url)
-        client = cls(auth=auth, country=country, language=language)
+        client = cls(auth=auth, country=country, language=language, enable_emulation=enable_emulation)
         client.refresh()
         return client
 

@@ -457,9 +457,6 @@ class Client(object):
         self._country = country
         self._language = language
 
-        # enable emulation mode for debug / test
-        self.emulation: bool = False
-
     @property
     def api_version(self):
         """Return core API version"""
@@ -495,6 +492,11 @@ class Client(object):
         if self._devices is None:
             self._devices = self.session.get_devices()
         return (DeviceInfo(d) for d in self._devices)
+
+    @property
+    def emulation(self) -> bool:
+        """Return if emulation is enabled."""
+        return False
 
     def refresh_devices(self):
         return
