@@ -287,10 +287,10 @@ class LGEDuctSwitch(LGESwitch):
             and self._wrap_device.is_power_on
         )
 
-    def turn_off(self, **kwargs):
+    async def async_turn_off(self, **kwargs):
         """Turn the entity off."""
         self._wrap_device.device.set_duct_zone(self._zone, False)
 
-    def turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
         self._wrap_device.device.set_duct_zone(self._zone, True)

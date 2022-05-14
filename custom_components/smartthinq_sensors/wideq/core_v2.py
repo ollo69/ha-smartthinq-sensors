@@ -152,7 +152,7 @@ def _get_json_resp(response: requests.Response):
         raise exc.InvalidResponseError(resp_text) from None
 
 
-def oauth2_signature(message, secret):
+def oauth2_signature(message, secret) -> str:
     """Get the base64-encoded SHA-1 HMAC digest of a string, as used in
     OAauth2 request signatures.
 
@@ -163,7 +163,7 @@ def oauth2_signature(message, secret):
     secret_bytes = secret.encode("utf8")
     hashed = hmac.new(secret_bytes, message.encode("utf8"), hashlib.sha1)
     digest = hashed.digest()
-    return base64.b64encode(digest)
+    return base64.b64encode(digest).decode("utf8")
 
 
 def thinq2_headers(
@@ -308,6 +308,8 @@ def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, count
        password must be encrypted using hashlib with hash512 algorythm.
     """
 
+    _LOGGER.debug("auth_user_login - Enter")
+
     headers = {
         "Accept": "application/json",
         "X-Application-Key": APPLICATION_KEY,
@@ -334,19 +336,23 @@ def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, count
     res = wideq_post(url, data=pre_login_data, headers=headers, timeout=DEFAULT_TIMEOUT)
     pre_login = res.json()
 
+    _LOGGER.debug("auth_user_login - preLogin data: %s", pre_login)
     headers["X-Signature"] = pre_login["signature"]
     headers["X-Timestamp"] = pre_login["tStamp"]
 
+    # try login with username and hashed password
+    _LOGGER.debug("auth_user_login - getting account_data")
     data = {
       "user_auth2": pre_login["encrypted_pw"],
       "password_hash_prameter_flag": "Y",
       "svc_list": "SVC202,SVC710",  # SVC202=LG SmartHome, SVC710=EMP OAuth
     }
-
-    # try login with username and hashed password
     emp_login_url = urljoin(emp_base_url, 'emp/v2.0/account/session/' + quote(username))
+
     res = wideq_post(emp_login_url, data=data, headers=headers, timeout=DEFAULT_TIMEOUT)
     account_data = res.json()
+
+    _LOGGER.debug("auth_user_login - account_data: %s", account_data)
     account = account_data["account"]
 
     #  const {code, message} = err.response.data.error;
@@ -355,11 +361,17 @@ def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, count
     #  }
 
     # dynamic get secret key for emp signature
+    _LOGGER.debug("auth_user_login - getting secret_data")
     emp_search_key_url = urljoin(login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP")
+
     res = wideq_get(emp_search_key_url, timeout=DEFAULT_TIMEOUT)
     secret_data = res.json()
+
+    _LOGGER.debug("auth_user_login - secret_data: %s", secret_data)
     secret_key = secret_data["returnData"]
 
+    # get token data
+    _LOGGER.debug("auth_user_login - getting token_data")
     emp_data = {
       "account_type": account["userIDType"],
       "client_id": CLIENT_ID,
@@ -389,12 +401,15 @@ def auth_user_login(login_base_url, emp_base_url, username, encrypted_pwd, count
 
     res = wideq_post(V2_EMP_SESS_URL, headers=emp_headers, data=emp_data, timeout=DEFAULT_TIMEOUT)
     token_data = res.json()
+
     if LOG_AUTH_INFO:
-        _LOGGER.debug(token_data)
+        _LOGGER.debug("auth_user_login - token_data: %s", token_data)
+    _LOGGER.debug("auth_user_login - token_data retrieved")
 
     if token_data["status"] != 1:
         raise exc.TokenError()
 
+    _LOGGER.debug("auth_user_login - Exit")
     return token_data
 
 

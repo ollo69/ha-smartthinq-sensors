@@ -38,7 +38,7 @@ from .device_helpers import (
 ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
 
-HVAC_MODE_LOOKUP = {
+HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
     ACMode.ENERGY_SAVER.name: HVACMode.AUTO,
     ACMode.AI.name: HVACMode.AUTO,
     ACMode.HEAT.name: HVACMode.HEAT,
@@ -173,12 +173,12 @@ class LGEACClimate(LGEClimate):
         self._attr_name = api.name
         self._attr_unique_id = f"{api.unique_id}-AC"
 
-        self._hvac_mode_lookup = None
+        self._hvac_mode_lookup: dict[str, HVACMode] | None = None
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
         self._support_hor_swing = len(self._device.horizontal_step_modes) > 0
         self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
 
-    def _available_hvac_modes(self):
+    def _available_hvac_modes(self) -> dict[str, HVACMode]:
         """Return available hvac modes from lookup dict."""
         if self._hvac_mode_lookup is None:
             modes = {}
@@ -189,7 +189,7 @@ class LGEACClimate(LGEClimate):
             self._hvac_mode_lookup = {v: k for k, v in modes.items()}
         return self._hvac_mode_lookup
 
-    def _get_swing_mode(self, hor_mode=False):
+    def _get_swing_mode(self, hor_mode=False) -> str | None:
         """Return the current swing mode for vert of hor mode."""
         if hor_mode:
             mode = self._api.state.horizontal_step_mode
@@ -223,15 +223,15 @@ class LGEACClimate(LGEClimate):
         return TEMP_CELSIUS
 
     @property
-    def hvac_mode(self) -> str:
+    def hvac_mode(self) -> HVACMode:
         """Return hvac operation ie. heat, cool mode."""
-        op_mode = self._api.state.operation_mode
+        op_mode: str | None = self._api.state.operation_mode
         if not self._api.state.is_on or op_mode is None:
             return HVACMode.OFF
         modes = self._available_hvac_modes()
         return modes.get(op_mode, HVACMode.AUTO)
 
-    def set_hvac_mode(self, hvac_mode: str) -> None:
+    def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.OFF:
             self._device.power(False)
@@ -248,7 +248,7 @@ class LGEACClimate(LGEClimate):
         self._device.set_op_mode(operation_mode)
 
     @property
-    def hvac_modes(self):
+    def hvac_modes(self) -> list[HVACMode]:
         """Return the list of available hvac operation modes."""
         modes = self._available_hvac_modes()
         return [HVACMode.OFF] + list(modes.values())
@@ -279,7 +279,7 @@ class LGEACClimate(LGEClimate):
         )
 
     @property
-    def fan_mode(self) -> str:
+    def fan_mode(self) -> str | None:
         """Return the fan setting."""
         return self._api.state.fan_speed
 
@@ -288,12 +288,12 @@ class LGEACClimate(LGEClimate):
         self._device.set_fan_speed(fan_mode)
 
     @property
-    def fan_modes(self):
+    def fan_modes(self) -> list[str] | None:
         """Return the list of available fan modes."""
         return self._device.fan_speeds
 
     @property
-    def swing_mode(self) -> str:
+    def swing_mode(self) -> str | None:
         """Return the swing mode setting."""
         if self._set_hor_swing and self._support_hor_swing:
             return self._get_swing_mode(True)
@@ -327,7 +327,7 @@ class LGEACClimate(LGEClimate):
         self._set_hor_swing = set_hor_swing
 
     @property
-    def swing_modes(self):
+    def swing_modes(self) -> list[str] | None:
         """Return the list of available swing modes."""
         list_modes = list()
         for mode in self._device.vertical_step_modes:

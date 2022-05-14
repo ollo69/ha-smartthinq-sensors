@@ -80,8 +80,8 @@ class LGEAuthentication:
 
             client = Client(country=self._region, language=self._language)
             return client.gateway.oauth_url()
-        except Exception:
-            _LOGGER.exception("Error retrieving login URL from ThinQ")
+        except Exception as exc:
+            _LOGGER.exception("Error retrieving login URL from ThinQ", exc_info=exc)
 
         return None
 
@@ -91,8 +91,8 @@ class LGEAuthentication:
             if self._use_api_v2:
                 return ClientV2.oauth_info_from_url(callback_url)
             return Client.oauth_info_from_url(callback_url)
-        except Exception:
-            _LOGGER.exception("Error retrieving OAuth info from ThinQ")
+        except Exception as exc:
+            _LOGGER.exception("Error retrieving OAuth info from ThinQ", exc_info=exc)
 
         return None
 

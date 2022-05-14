@@ -183,8 +183,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     self._token,
                     self._oauth_url,
                 )
-        except Exception as ex:
-            _LOGGER.error("Error connecting to ThinQ: %s", ex)
+        except Exception as exc:
+            _LOGGER.exception("Error connecting to ThinQ", exc_info=exc)
             return None, RESULT_FAIL
 
         if not client:
@@ -264,5 +264,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         schema = self._prepare_form_schema(step_id)
 
         return self.async_show_form(
-            step_id=step_id, data_schema=schema, errors={CONF_BASE: base_err} if base_err else None
+            step_id=step_id,
+            data_schema=schema,
+            errors={CONF_BASE: base_err} if base_err else None,
         )

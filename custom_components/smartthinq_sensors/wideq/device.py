@@ -48,6 +48,7 @@ LOCAL_LANG_PACK = {
 MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
 MAX_RETRIES = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
+SLEEP_BETWEEN_RETRIES = 1  # seconds
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -142,7 +143,7 @@ class Monitor(object):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration
             if iteration > 0:
-                time.sleep(1)
+                time.sleep(SLEEP_BETWEEN_RETRIES)
 
             try:
                 if not self._restart_monitor():
