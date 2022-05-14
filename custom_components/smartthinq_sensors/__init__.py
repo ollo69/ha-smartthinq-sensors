@@ -2,13 +2,14 @@
 Support for LG SmartThinQ device.
 """
 
+from __future__ import annotations
+
 from datetime import timedelta
 import logging
-from typing import Dict, Optional
+from typing import Dict
 
 from .wideq import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType, get_lge_device
-from .wideq.core import Client
-from .wideq.core_v2 import ClientV2, CoreV2HttpAdapter
+from .wideq.core_async import ClientAsync
 from .wideq.core_exceptions import (
     InvalidCredentialError,
     MonitorRefreshError,
@@ -16,7 +17,7 @@ from .wideq.core_exceptions import (
     NotConnectedError,
 )
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_REGION,
     CONF_TOKEN,
@@ -28,17 +29,16 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CLIENT,
-    CONF_EXCLUDE_DH,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_USE_API_V2,
-    CONF_USE_TLS_V1,
     DOMAIN,
     MIN_HA_MAJ_VER,
     MIN_HA_MIN_VER,
@@ -61,52 +61,58 @@ _LOGGER = logging.getLogger(__name__)
 class LGEAuthentication:
     """Class to authenticate connection with LG ThinQ."""
 
-    def __init__(self, region, language, use_api_v2=True):
+    def __init__(self, region: str, language: str) -> None:
         """Initialize the class."""
         self._region = region
         self._language = language
-        self._use_api_v2 = use_api_v2
 
-    def init_http_adapter(self, use_tls_v1, exclude_dh):
-        """Initialize a request http adapter."""
-        if self._use_api_v2:
-            CoreV2HttpAdapter.init_http_adapter(use_tls_v1, exclude_dh)
-
-    def get_login_url(self) -> Optional[str]:
+    async def get_login_url(self, hass: HomeAssistant) -> str | None:
         """Get an url to login in browser."""
+        session = async_get_clientsession(hass)
         try:
-            if self._use_api_v2:
-                return ClientV2.get_oauth_url(self._region, self._language)
-
-            client = Client(country=self._region, language=self._language)
-            return client.gateway.oauth_url()
+            return await ClientAsync.get_oauth_url(
+                self._region, self._language, aiohttp_session=session
+            )
         except Exception as exc:
             _LOGGER.exception("Error retrieving login URL from ThinQ", exc_info=exc)
 
         return None
 
-    def get_auth_info_from_url(self, callback_url) -> Optional[Dict[str, str]]:
+    @staticmethod
+    async def get_auth_info_from_url(hass: HomeAssistant, callback_url: str) -> Dict[str, str] | None:
         """Retrieve auth info from redirect url."""
+        session = async_get_clientsession(hass)
         try:
-            if self._use_api_v2:
-                return ClientV2.oauth_info_from_url(callback_url)
-            return Client.oauth_info_from_url(callback_url)
+            return await ClientAsync.oauth_info_from_url(callback_url, aiohttp_session=session)
         except Exception as exc:
             _LOGGER.exception("Error retrieving OAuth info from ThinQ", exc_info=exc)
 
         return None
 
-    def create_client_from_login(self, username, password):
+    async def create_client_from_login(self, hass: HomeAssistant, username: str, password: str) -> ClientAsync:
         """Create a new client using username and password."""
-        if not self._use_api_v2:
-            return None
-        return ClientV2.from_login(username, password, self._region, self._language)
+        session = async_get_clientsession(hass)
+        return await ClientAsync.from_login(
+            username,
+            password,
+            country=self._region,
+            language=self._language,
+            aiohttp_session=session,
+        )
 
-    def create_client_from_token(self, token, oauth_url=None):
+    async def create_client_from_token(
+            self, hass: HomeAssistant, token: str, oauth_url: str | None = None
+    ) -> ClientAsync:
         """Create a new client using refresh token."""
-        if self._use_api_v2:
-            return ClientV2.from_token(token, oauth_url, self._region, self._language)
-        return Client.from_token(token, self._region, self._language)
+        session = async_get_clientsession(hass)
+        return await ClientAsync.from_token(
+            token,
+            oauth_url,
+            country=self._region,
+            language=self._language,
+            aiohttp_session=session,
+            # enable_emulation=True,
+        )
 
 
 def is_valid_ha_version():
@@ -144,10 +150,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     refresh_token = entry.data[CONF_TOKEN]
     region = entry.data[CONF_REGION]
     language = entry.data[CONF_LANGUAGE]
-    use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
     oauth_url = entry.data.get(CONF_OAUTH_URL)
-    use_tls_v1 = entry.data.get(CONF_USE_TLS_V1, False)
-    exclude_dh = entry.data.get(CONF_EXCLUDE_DH, False)
+    use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
+
+    if not use_api_v2:
+        _LOGGER.warning(
+            "Integration configuration is using ThinQ APIv1 that is unsupported. Please reconfigure"
+        )
+        # Launch config entries setup
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": SOURCE_IMPORT}, data=entry.data
+            )
+        )
+        return False
 
     _LOGGER.info(STARTUP)
     _LOGGER.info(
@@ -158,12 +174,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
-    lge_auth = LGEAuthentication(region, language, use_api_v2)
-    lge_auth.init_http_adapter(use_tls_v1, exclude_dh)
+    lge_auth = LGEAuthentication(region, language)
     try:
-        client = await hass.async_add_executor_job(
-            lge_auth.create_client_from_token, refresh_token, oauth_url
-        )
+        client = await lge_auth.create_client_from_token(hass, refresh_token, oauth_url)
+
     except InvalidCredentialError:
         msg = "Invalid ThinQ credential error, integration setup aborted." \
               " Please use the LG App on your mobile device to ensure your" \
@@ -192,14 +206,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "Connection not available. ThinQ platform not ready", exc_info=True
         )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
-
-    if not use_api_v2:
-        _LOGGER.warning(
-            "Integration configuration is using ThinQ APIv1 that is obsolete"
-            " and not able to manage all ThinQ devices."
-            " Please remove and re-add integration from HA user interface to"
-            " enable the use of ThinQ APIv2"
-        )
 
     # remove device not available anymore
     await cleanup_orphan_lge_devices(hass, entry.entry_id, client)
@@ -304,10 +310,7 @@ class LGEDevice:
 
     async def init_device(self):
         """Init the device status and start coordinator."""
-        result = await self._hass.async_add_executor_job(
-            self._device.init_device_info
-        )
-        if not result:
+        if not await self._device.init_device_info():
             return False
         self._state = self._device.status
         self._model = f"{self._model}-{self._device.model_info.model_type}"
@@ -335,10 +338,10 @@ class LGEDevice:
 
     async def _async_update(self):
         """Async update used by coordinator."""
-        await self._hass.async_add_executor_job(self._state_update)
+        await self._async_state_update()
         return self._state
 
-    def _state_update(self):
+    async def _async_state_update(self):
         """Update device state."""
         _LOGGER.debug("Updating ThinQ device %s", self._name)
         if self._disc_count < MAX_DISC_COUNT:
@@ -347,7 +350,7 @@ class LGEDevice:
         try:
             # method poll should return None if status is not yet available
             # or due to temporary connection failure that will be restored
-            state = self._device.poll()
+            state = await self._device.poll()
 
         except (MonitorRefreshError, NotConnectedError):
             # These exceptions are raised when device is not connected (turned off)

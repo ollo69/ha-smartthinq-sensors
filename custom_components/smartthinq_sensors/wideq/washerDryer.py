@@ -100,7 +100,7 @@ class WMDevice(Device):
             s_course_key = "SmartCourse"
             def_course_id = str(self.model_info.config_value("defaultCourseId"))
         if course_id is None:
-            # check if course is defined in data payload
+            # check if this course is defined in data payload
             for course_key in [n_course_key, s_course_key]:
                 course_id = str(data.get(course_key))
                 if self._get_course_info(course_key, course_id):
@@ -193,24 +193,24 @@ class WMDevice(Device):
             return self._prepare_command_v2(cmd, key)
         return self._prepare_command_v1(cmd, key)
 
-    def power_off(self):
+    async def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
-        self.set(keys[0], keys[1], value=keys[2])
+        await self.set(keys[0], keys[1], value=keys[2])
         self._update_status(POWER_STATUS_KEY, STATE_WM_POWER_OFF)
 
-    def wake_up(self):
+    async def wake_up(self):
         """Wakeup the device."""
         keys = self._get_cmd_keys(CMD_WAKE_UP)
-        self.set(keys[0], keys[1], value=keys[2])
+        await self.set(keys[0], keys[1], value=keys[2])
 
-    def remote_start(self):
+    async def remote_start(self):
         """Remote start the device."""
         if not self._remote_start_status:
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
-        self.set(keys[0], keys[1], key=keys[2])
+        await self.set(keys[0], keys[1], key=keys[2])
 
     def reset_status(self):
         tcl_count = None
@@ -230,10 +230,10 @@ class WMDevice(Device):
         elif not remote_enabled:
             self._remote_start_status = None
 
-    def poll(self) -> Optional["WMStatus"]:
+    async def poll(self) -> Optional["WMStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll(WM_ROOT_DATA)
+        res = await self.device_poll(WM_ROOT_DATA)
         if not res:
             return None
 

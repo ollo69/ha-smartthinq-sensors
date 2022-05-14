@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 import logging
-from typing import Any, Callable, List, Tuple
+from typing import Any, Awaitable, Callable, List, Tuple
 
 from .wideq import (
     FEAT_HUMIDITY,
@@ -61,7 +61,7 @@ _LOGGER = logging.getLogger(__name__)
 class ThinQRefClimateRequiredKeysMixin:
     """Mixin for required keys."""
     range_temp_fn: Callable[[Any], List[float]]
-    set_temp_fn: Callable[[Any, float], None]
+    set_temp_fn: Callable[[Any, float], Awaitable[None]]
     temp_fn: Callable[[Any], float | str]
 
 
@@ -231,10 +231,10 @@ class LGEACClimate(LGEClimate):
         modes = self._available_hvac_modes()
         return modes.get(op_mode, HVACMode.AUTO)
 
-    def set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.OFF:
-            self._device.power(False)
+            await self._device.power(False)
             return
 
         modes = self._available_hvac_modes()
@@ -244,8 +244,8 @@ class LGEACClimate(LGEClimate):
             raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
 
         if self.hvac_mode == HVACMode.OFF:
-            self._device.power(True)
-        self._device.set_op_mode(operation_mode)
+            await self._device.power(True)
+        await self._device.set_op_mode(operation_mode)
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
@@ -272,9 +272,9 @@ class LGEACClimate(LGEClimate):
         """Return the temperature we try to reach."""
         return self._api.state.target_temp
 
-    def set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        self._device.set_target_temp(
+        await self._device.set_target_temp(
             kwargs.get("temperature", self.target_temperature)
         )
 
@@ -283,9 +283,9 @@ class LGEACClimate(LGEClimate):
         """Return the fan setting."""
         return self._api.state.fan_speed
 
-    def set_fan_mode(self, fan_mode: str) -> None:
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
-        self._device.set_fan_speed(fan_mode)
+        await self._device.set_fan_speed(fan_mode)
 
     @property
     def fan_modes(self) -> list[str] | None:
@@ -299,7 +299,7 @@ class LGEACClimate(LGEClimate):
             return self._get_swing_mode(True)
         return self._get_swing_mode(False)
 
-    def set_swing_mode(self, swing_mode: str) -> None:
+    async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing mode."""
         avl_mode = False
         curr_mode = None
@@ -321,9 +321,9 @@ class LGEACClimate(LGEClimate):
 
         if curr_mode != dev_mode:
             if set_hor_swing:
-                self._device.set_horizontal_step_mode(dev_mode)
+                await self._device.set_horizontal_step_mode(dev_mode)
             else:
-                self._device.set_vertical_step_mode(dev_mode)
+                await self._device.set_vertical_step_mode(dev_mode)
         self._set_hor_swing = set_hor_swing
 
     @property
@@ -346,13 +346,13 @@ class LGEACClimate(LGEClimate):
             features |= ClimateEntityFeature.SWING_MODE
         return features
 
-    def turn_on(self) -> None:
+    async def async_turn_on(self) -> None:
         """Turn the entity on."""
-        self._device.power(True)
+        await self._device.power(True)
 
-    def turn_off(self) -> None:
+    async def async_turn_off(self) -> None:
         """Turn the entity off."""
-        self._device.power(False)
+        await self._device.power(False)
 
     @property
     def min_temp(self) -> float:
@@ -421,10 +421,10 @@ class LGERefrigeratorClimate(LGEClimate):
         """Return the temperature we try to reach."""
         return self.current_temperature
 
-    def set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         new_temp = kwargs.get("temperature", self.target_temperature)
-        self.entity_description.set_temp_fn(self._wrap_device, new_temp)
+        await self.entity_description.set_temp_fn(self._wrap_device, new_temp)
 
     @property
     def supported_features(self) -> int:

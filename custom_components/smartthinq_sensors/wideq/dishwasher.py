@@ -48,10 +48,10 @@ class DishWasherDevice(Device):
         self._status = DishWasherStatus(self, None)
         return self._status
 
-    def poll(self) -> Optional["DishWasherStatus"]:
+    async def poll(self) -> Optional["DishWasherStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("dishwasher")
+        res = await self.device_poll("dishwasher")
         if not res:
             return None
 

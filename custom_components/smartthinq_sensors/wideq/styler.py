@@ -38,10 +38,10 @@ class StylerDevice(Device):
         self._status = StylerStatus(self, None)
         return self._status
 
-    def poll(self) -> Optional["StylerStatus"]:
+    async def poll(self) -> Optional["StylerStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("styler")
+        res = await self.device_poll("styler")
         if not res:
             return None
 

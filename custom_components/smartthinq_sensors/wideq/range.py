@@ -46,10 +46,10 @@ class RangeDevice(Device):
         self._status = RangeStatus(self, None)
         return self._status
 
-    def poll(self) -> Optional["RangeStatus"]:
+    async def poll(self) -> Optional["RangeStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll("ovenState")
+        res = await self.device_poll("ovenState")
         if not res:
             return None
 

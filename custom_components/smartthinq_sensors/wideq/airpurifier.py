@@ -49,13 +49,13 @@ class AirPurifierDevice(Device):
         super().__init__(client, device, AirPurifierStatus(self, None))
         self._supported_operation = None
 
-    def power(self, turn_on):
+    async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
         op = AirPurifierOp.ON if turn_on else AirPurifierOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
         op_value = self.model_info.enum_value(keys[2], op.value)
-        self.set(keys[0], keys[1], key=keys[2], value=op_value)
+        await self.set(keys[0], keys[1], key=keys[2], value=op_value)
         if self._status:
             self._status.update_status(keys[2], op_value)
 
@@ -63,10 +63,10 @@ class AirPurifierDevice(Device):
         self._status = AirPurifierStatus(self, None)
         return self._status
 
-    def poll(self) -> Optional["AirPurifierStatus"]:
+    async def poll(self) -> Optional["AirPurifierStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll()
+        res = await self.device_poll()
         if not res:
             return None
 
@@ -147,7 +147,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def upper_filter_life(self):
-        # Check the upper filter is exist
+        # Check the upper filter is exists
         support_key = SUPPORT_AIR_PURIFIER_MFILTER[1 if self.is_info_v2 else 0]
         if self._device.model_info.enum_value(support_key, LABEL_UPPER_FILTER_SUPPORT) is None:
             return None
