@@ -34,7 +34,7 @@ There are two ways of doing so:
 
 ### Option A: Configuration using the web UI [recommended]
 Simply add a new "integration" and look for "SmartThinQ LGE Sensors" among the proposed ones and
-**follow setup worflow**.<br/>
+**follow setup worflow**.  (To do this:  1.  Go to "Settings->Devices & Services".  2.  Hit shift-reload in your browser (this is important!).  3. Click "+ Add Integration".  4.  Search for "SmartThinQ LGE Sensors".)<br/>
 
 **Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale, 
 so be sure to use the country and language you originally created your account with. 
