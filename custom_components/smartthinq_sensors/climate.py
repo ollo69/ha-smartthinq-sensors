@@ -14,15 +14,16 @@ from .wideq import (
 )
 from .wideq.ac import AirConditionerDevice, ACMode
 
-from homeassistant.components.climate import (
-    ClimateEntity,
-    ClimateEntityDescription,
+from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription
+from homeassistant.components.climate.const import (
+    ATTR_HVAC_MODE,
+    DEFAULT_MAX_TEMP,
+    DEFAULT_MIN_TEMP,
     ClimateEntityFeature,
     HVACMode,
 )
-from homeassistant.components.climate.const import DEFAULT_MAX_TEMP, DEFAULT_MIN_TEMP
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -274,9 +275,11 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        await self._device.set_target_temp(
-            kwargs.get("temperature", self.target_temperature)
-        )
+        if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
+            await self.async_set_hvac_mode(HVACMode(hvac_mode))
+
+        if new_temp := kwargs.get(ATTR_TEMPERATURE):
+            await self._device.set_target_temp(new_temp)
 
     @property
     def fan_mode(self) -> str | None:
@@ -423,8 +426,8 @@ class LGERefrigeratorClimate(LGEClimate):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        new_temp = kwargs.get("temperature", self.target_temperature)
-        await self.entity_description.set_temp_fn(self._wrap_device, new_temp)
+        if new_temp := kwargs.get(ATTR_TEMPERATURE):
+            await self.entity_description.set_temp_fn(self._wrap_device, new_temp)
 
     @property
     def supported_features(self) -> int:
