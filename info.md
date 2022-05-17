@@ -27,14 +27,14 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 **Note**: some device status may not be correctly detected, this depend on Washer model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
 
 ## Component configuration    
-Once the component has been installed, you need to configure it in order to make it work.
-There are two ways of doing so:
-- Using the web interface (Lovelace) [**recommended**]
-- Manually editing the configuration.yaml file
+Once the component has been installed, you need to configure it using the web interface in order to make it work.
 
-### Option A: Configuration using the web UI [recommended]
-Simply add a new "integration" and look for "SmartThinQ LGE Sensors" among the proposed ones and
-**follow setup worflow**.  (To do this:  1.  Go to "Settings->Devices & Services".  2.  Hit shift-reload in your browser (this is important!).  3. Click "+ Add Integration".  4.  Search for "SmartThinQ LGE Sensors".)<br/>
+1. Go to "Settings->Devices & Services".  
+2. Hit shift-reload in your browser (this is important!).  
+3. Click "+ Add Integration".  
+4. Search for "SmartThinQ LGE Sensors"
+5. Select the integration and **Follow setup worflow** 
+
 
 **Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale, 
 so be sure to use the country and language you originally created your account with. 
@@ -43,21 +43,6 @@ Reference for valid code:<br/>
 - Country code: [ISO 3166-1 alpha-2 code][ISO-3166-1-alpha-2]<br/>
 - Language code: [ISO 639-1 code][ISO-639-1]<br/>
 
-### Option B: Configuration via editing configuration.yaml [deprecated - not possible from v0.5.4]
-Follow these steps only if the previous configuration method did not work for you.<br/>
-**Note**: with this configuration the integration will use APIv1 that cannot connect to new LG devices.
-This configuration option is deprecated and is not possible starting from version 0.5.4<br/>
-
-1. Enable the component by editing the configuration.yaml file (within the config directory as well).
-Edit it by adding the following lines:
-    ```
-    smartthinq_sensors:
-      token: my_smartthinq_token
-      region: my_smartthinq_region #(ISO 3166-1 alpha-2, e.g. US)
-      language: my_smartthinq_language #(ISO-639-1, e.g. en)
-    ```
-
-2. Reboot HomeAssistant
 
 ## Be nice!
 If you like the component, why don't you support me by buying me a coffe?
