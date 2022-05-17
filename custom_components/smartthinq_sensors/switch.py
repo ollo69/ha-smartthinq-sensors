@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 import logging
-from typing import Any, Callable, Tuple
+from typing import Any, Awaitable, Callable, Tuple
 
 from .wideq import (
     FEAT_ECOFRIENDLY,
@@ -41,8 +41,8 @@ class ThinQSwitchEntityDescription(SwitchEntityDescription):
     """A class that describes ThinQ switch entities."""
 
     available_fn: Callable[[Any], bool] | None = None
-    turn_off_fn: Callable[[Any], None] | None = None
-    turn_on_fn: Callable[[Any], None] | None = None
+    turn_off_fn: Callable[[Any], Awaitable[None]] | None = None
+    turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
     value_fn: Callable[[Any], bool] | None = None
 
 
@@ -234,19 +234,19 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
             is_avail = self.entity_description.available_fn(self._wrap_device)
         return self._api.available and is_avail
 
-    def turn_off(self, **kwargs):
+    async def async_turn_off(self, **kwargs):
         """Turn the entity off."""
         if self.entity_description.turn_off_fn is None:
             raise NotImplementedError()
         if self.is_on:
-            self.entity_description.turn_off_fn(self._wrap_device)
+            await self.entity_description.turn_off_fn(self._wrap_device)
 
-    def turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
         if self.entity_description.turn_on_fn is None:
             raise NotImplementedError()
         if not self.is_on:
-            self.entity_description.turn_on_fn(self._wrap_device)
+            await self.entity_description.turn_on_fn(self._wrap_device)
 
     def _get_switch_state(self):
         """Get current switch state"""

@@ -563,13 +563,13 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         """Call the remote start command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
-        await self.hass.async_add_executor_job(self._api.device.remote_start)
+        await self._api.device.remote_start()
 
     async def async_wake_up(self):
         """Call the wakeup command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
-        await self.hass.async_add_executor_job(self._api.device.wake_up)
+        await self._api.device.wake_up()
 
 
 class LGEWashDeviceSensor(LGESensor):

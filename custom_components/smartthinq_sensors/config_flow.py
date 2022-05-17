@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import re
 from pycountry import countries as py_countries, languages as py_languages
+from typing import Any
 
 import voluptuous as vol
 
@@ -20,11 +21,9 @@ from homeassistant.const import (
 
 from .const import (
     DOMAIN,
-    CONF_EXCLUDE_DH,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_USE_API_V2,
-    CONF_USE_TLS_V1,
     __min_ha_version__,
 )
 from . import LGEAuthentication, is_valid_ha_version
@@ -63,16 +62,14 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._language: str | None = None
         self._token: str | None = None
         self._oauth_url: str | None = None
-        self._use_api_v2 = True
-        self._use_tls_v1 = False
-        self._exclude_dh = False
 
         self._user_lang: str | None = None
         self._login_url: str | None = None
         self._error: str | None = None
+        self._is_import = False
 
     @staticmethod
-    def _validate_region_language(region, language):
+    def _validate_region_language(region: str, language: str):
         """Validate format of region and language."""
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
@@ -87,7 +84,16 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return None
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_import(self, import_config: dict[str, Any] | None = None):
+        """Import a config entry."""
+        self._is_import = True
+        self._region = import_config.get(CONF_REGION)
+        language: str | None = import_config.get(CONF_LANGUAGE)
+        if language:
+            self._user_lang = language[0:2]
+        return await self.async_step_user()
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Handle a flow initialized by the user interface"""
 
         if not is_valid_ha_version():
@@ -98,7 +104,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 },
             )
 
-        if self._async_current_entries():
+        if self._is_import:
+            self._error = "invalid_config"
+        elif self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
         if not user_input:
@@ -109,12 +117,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         region = user_input[CONF_REGION]
         language = user_input[CONF_LANGUAGE]
         use_redirect = user_input[CONF_USE_REDIRECT]
-        self._use_api_v2 = user_input.get(CONF_USE_API_V2, True)
-        self._use_tls_v1 = user_input.get(CONF_USE_TLS_V1, False)
-        self._exclude_dh = user_input.get(CONF_EXCLUDE_DH, False)
-
-        if not self._use_api_v2:
-            use_redirect = True
 
         if error := self._validate_region_language(region, language):
             return self._show_form(errors=error)
@@ -127,8 +129,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not use_redirect and not (username and password):
             return self._show_form(errors="no_user_info")
 
-        lge_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
-        lge_auth.init_http_adapter(self._use_tls_v1, self._exclude_dh)
         if not use_redirect:
             client, result = await self._check_connection(username, password)
             if result != RESULT_SUCCESS:
@@ -138,50 +138,44 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._oauth_url = auth_info["oauth_url"]
             return self._save_config_entry()
 
-        self._login_url = await self.hass.async_add_executor_job(lge_auth.get_login_url)
+        lge_auth = LGEAuthentication(self._region, self._language)
+        self._login_url = await lge_auth.get_login_url(self.hass)
         if not self._login_url:
-            return self._show_form(errors="error_url")
+            return self._show_form("error_url")
+
         return await self.async_step_url()
 
-    async def async_step_url(self, user_input=None):
+    async def async_step_url(self, user_input: dict[str, Any] | None = None):
         """Parse the response url for oauth data and submit for save."""
         if not user_input:
             return self._show_form(step_id="url")
 
-        lge_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
         url = user_input[CONF_URL]
-        oauth_info = await self.hass.async_add_executor_job(
-            lge_auth.get_auth_info_from_url, url
-        )
+        lge_auth = LGEAuthentication(self._region, self._language)
+        oauth_info = await lge_auth.get_auth_info_from_url(self.hass, url)
         if not oauth_info:
             return self._show_form(errors="invalid_url", step_id="url")
 
         self._token = oauth_info["refresh_token"]
-        self._oauth_url = oauth_info.get("oauth_url")
+        self._oauth_url = oauth_info["oauth_url"]
 
-        if not self._oauth_url and self._use_api_v2:
-            return self._show_form(errors="invalid_url", step_id="url")
         _, result = await self._check_connection()
         if result != RESULT_SUCCESS:
             return await self._manage_error(result)
         return self._save_config_entry()
 
-    async def _check_connection(self, username=None, password=None):
+    async def _check_connection(self, username: str | None = None, password: str | None = None):
         """Test the connection to ThinQ."""
 
-        lge_auth = LGEAuthentication(self._region, self._language, self._use_api_v2)
+        lge_auth = LGEAuthentication(self._region, self._language)
         try:
             if username and password:
-                client = await self.hass.async_add_executor_job(
-                    lge_auth.create_client_from_login,
-                    username,
-                    password,
+                client = await lge_auth.create_client_from_login(
+                    self.hass, username, password
                 )
             else:
-                client = await self.hass.async_add_executor_job(
-                    lge_auth.create_client_from_token,
-                    self._token,
-                    self._oauth_url,
+                client = await lge_auth.create_client_from_token(
+                    self.hass, self._token, self._oauth_url
                 )
         except Exception as exc:
             _LOGGER.exception("Error connecting to ThinQ", exc_info=exc)
@@ -216,12 +210,20 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_REGION: self._region,
             CONF_LANGUAGE: self._language,
             CONF_TOKEN: self._token,
-            CONF_USE_API_V2: self._use_api_v2,
-            CONF_USE_TLS_V1: self._use_tls_v1,
-            CONF_EXCLUDE_DH: self._exclude_dh,
+            CONF_OAUTH_URL: self._oauth_url,
+            CONF_USE_API_V2: True,
         }
-        if self._use_api_v2:
-            data[CONF_OAUTH_URL] = self._oauth_url
+
+        # if an entry exists, we are reconfiguring
+        if entries := self._async_current_entries():
+            entry = entries[0]
+            self.hass.config_entries.async_update_entry(
+                entry=entry, data=data,
+            )
+            self.hass.async_create_task(
+                self.hass.config_entries.async_reload(entry.entry_id)
+            )
+            return self.async_abort(reason="reconfigured")
 
         return self.async_create_entry(title="LGE Devices", data=data)
 
@@ -236,25 +238,15 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             )
 
-        schema = vol.Schema(
+        return vol.Schema(
             {
                 vol.Optional(CONF_USERNAME, default=""): str,
                 vol.Optional(CONF_PASSWORD, default=""): str,
                 vol.Required(CONF_REGION, default=self._region or ""): vol.In(COUNTRIES),
                 vol.Required(CONF_LANGUAGE, default=self._user_lang or ""): vol.In(LANGUAGES),
                 vol.Required(CONF_USE_REDIRECT, default=False): bool,
-                # vol.Required(CONF_USE_API_V2, default=self._use_api_v2): bool,
             }
         )
-        if self.show_advanced_options:
-            schema = schema.extend(
-                {
-                    vol.Optional(CONF_USE_TLS_V1, default=False): bool,
-                    vol.Optional(CONF_EXCLUDE_DH, default=False): bool,
-                }
-            )
-
-        return schema
 
     @callback
     def _show_form(self, errors: str | None = None, step_id="user"):

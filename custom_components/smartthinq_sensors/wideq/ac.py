@@ -347,9 +347,9 @@ class AirConditionerDevice(Device):
         """Return a list of available duct zones"""
         return [key for key in self._duct_zones]
 
-    def update_duct_zones(self):
+    async def update_duct_zones(self):
         """Update the current duct zones status."""
-        states = self._get_duct_zones()
+        states = await self._get_duct_zones()
         if not states:
             return
 
@@ -366,9 +366,9 @@ class AirConditionerDevice(Device):
 
         self._duct_zones = duct_zones
         if send_update:
-            self._set_duct_zones(duct_zones)
+            await self._set_duct_zones(duct_zones)
 
-    def _get_duct_zones(self) -> dict:
+    async def _get_duct_zones(self) -> dict:
         """Get the status of the zones (for ThinQ1 only zone configured).
 
         return value is a dict with this format:
@@ -404,14 +404,14 @@ class AirConditionerDevice(Device):
           "0".
         - "State": Whether the zone is open. Also "1" or "0".
         """
-        zones = self._get_config(AC_DUCT_ZONE_V1)
+        zones = await self._get_config(AC_DUCT_ZONE_V1)
         return {
             zone["No"]: {ZONE_ST_CUR: zone["State"]}
             for zone in zones
             if zone["Cfg"] == "1"
         }
 
-    def _set_duct_zones(self, zones: dict):
+    async def _set_duct_zones(self, zones: dict):
         """Turn off or on the device's zones.
 
         The `zones` parameter is the same returned by _get_duct_zones()
@@ -428,7 +428,7 @@ class AirConditionerDevice(Device):
             f"{key}_{value[ZONE_ST_CUR]}" for key, value in zones.items()
         )
         keys = self._get_cmd_keys(CMD_STATE_DUCT_ZONES)
-        self.set(keys[0], keys[1], key=keys[2], value=zone_cmd)
+        await self.set(keys[0], keys[1], key=keys[2], value=zone_cmd)
 
     @property
     def is_air_to_water(self):
@@ -551,69 +551,69 @@ class AirConditionerDevice(Device):
             return None
         return self.conv_temp_unit(temp_range[1])
 
-    def power(self, turn_on):
+    async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
         op = self._supported_on_operation() if turn_on else ACOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
         op_value = self.model_info.enum_value(keys[2], op.value)
-        self.set(keys[0], keys[1], key=keys[2], value=op_value)
+        await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
-    def set_op_mode(self, mode):
+    async def set_op_mode(self, mode):
         """Set the device's operating mode to an `OpMode` value."""
 
         if mode not in self.op_modes:
             raise ValueError(f"Invalid operating mode: {mode}")
         keys = self._get_cmd_keys(CMD_STATE_OP_MODE)
         mode_value = self.model_info.enum_value(keys[2], ACMode[mode].value)
-        self.set(keys[0], keys[1], key=keys[2], value=mode_value)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode_value)
 
-    def set_fan_speed(self, speed):
+    async def set_fan_speed(self, speed):
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
 
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
         speed_value = self.model_info.enum_value(keys[2], ACFanSpeed[speed].value)
-        self.set(keys[0], keys[1], key=keys[2], value=speed_value)
+        await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
-    def set_horizontal_step_mode(self, mode):
+    async def set_horizontal_step_mode(self, mode):
         """Set the horizontal step to a value from the `ACHStepMode` enum."""
 
         if mode not in self.horizontal_step_modes:
             raise ValueError(f"Invalid horizontal step mode: {mode}")
         keys = self._get_cmd_keys(CMD_STATE_WDIR_HSTEP)
         step_mode = self.model_info.enum_value(keys[2], ACHStepMode[mode].value)
-        self.set(keys[0], keys[1], key=keys[2], value=step_mode)
+        await self.set(keys[0], keys[1], key=keys[2], value=step_mode)
 
-    def set_horizontal_swing_mode(self, mode):
+    async def set_horizontal_swing_mode(self, mode):
         """Set the horizontal swing to a value from the `ACSwingMode` enum."""
 
         if mode not in self.horizontal_swing_modes:
             raise ValueError(f"Invalid horizontal swing mode: {mode}")
         keys = self._get_cmd_keys(CMD_STATE_WDIR_HSWING)
         swing_mode = self.model_info.enum_value(keys[2], ACSwingMode[mode].value)
-        self.set(keys[0], keys[1], key=keys[2], value=swing_mode)
+        await self.set(keys[0], keys[1], key=keys[2], value=swing_mode)
 
-    def set_vertical_step_mode(self, mode):
+    async def set_vertical_step_mode(self, mode):
         """Set the vertical step to a value from the `ACVStepMode` enum."""
 
         if mode not in self.vertical_step_modes:
             raise ValueError(f"Invalid vertical step mode: {mode}")
         keys = self._get_cmd_keys(CMD_STATE_WDIR_VSTEP)
         step_mode = self.model_info.enum_value(keys[2], ACVStepMode[mode].value)
-        self.set(keys[0], keys[1], key=keys[2], value=step_mode)
+        await self.set(keys[0], keys[1], key=keys[2], value=step_mode)
 
-    def set_vertical_swing_mode(self, mode):
+    async def set_vertical_swing_mode(self, mode):
         """Set the vertical swing to a value from the `ACSwingMode` enum."""
 
         if mode not in self.vertical_swing_modes:
             raise ValueError(f"Invalid vertical swing mode: {mode}")
         keys = self._get_cmd_keys(CMD_STATE_WDIR_VSWING)
         swing_mode = self.model_info.enum_value(keys[2], ACSwingMode[mode].value)
-        self.set(keys[0], keys[1], key=keys[2], value=swing_mode)
+        await self.set(keys[0], keys[1], key=keys[2], value=swing_mode)
 
-    def set_target_temp(self, temp):
+    async def set_target_temp(self, temp):
         """Set the device's target temperature in Celsius degrees."""
 
         range_info = self._get_temperature_range()
@@ -621,24 +621,24 @@ class AirConditionerDevice(Device):
         if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
-        self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
+        await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
 
-    def get_power(self):
+    async def get_power(self):
         """Get the instant power usage in watts of the whole unit"""
         if not self._current_power_supported:
             return 0
 
         try:
-            value = self._get_config(AC_STATE_POWER_V1)
+            value = await self._get_config(AC_STATE_POWER_V1)
             return value[AC_STATE_POWER_V1]
         except (ValueError, InvalidRequestError):
             # Device does not support whole unit instant power usage
             self._current_power_supported = False
             return 0
 
-    def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
+    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
-        super().set(
+        await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
         )
         if self._status:
@@ -648,25 +648,25 @@ class AirConditionerDevice(Device):
         self._status = AirConditionerStatus(self, None)
         return self._status
 
-    def _get_device_info(self):
+    async def _get_device_info(self):
         """Call additional method to get device information for API v1.
 
         Called by 'device_poll' method using a lower poll rate
         """
         # this command is to get power usage on V1 device
         if not self.is_air_to_water:
-            self._current_power = self.get_power()
+            self._current_power = await self.get_power()
 
-    def _pre_update_v2(self):
+    async def _pre_update_v2(self):
         """Call additional methods before data update for v2 API."""
         # this command is to get power and temp info on V2 device
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
-        self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
+        await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
 
-    def poll(self) -> Optional["AirConditionerStatus"]:
+    async def poll(self) -> Optional["AirConditionerStatus"]:
         """Poll the device's current state."""
 
-        res = self.device_poll(
+        res = await self.device_poll(
             thinq1_additional_poll=ADD_FEAT_POLL_INTERVAL,
             thinq2_query_device=True,
         )
@@ -679,9 +679,9 @@ class AirConditionerDevice(Device):
         if self._temperature_step == TEMP_STEP_WHOLE:
             self._adjust_temperature_step(self._status.target_temp)
 
-        # manage duct devices, if not ducted do nothing
+        # manage duct devices, does nothing if not ducted
         try:
-            self.update_duct_zones()
+            await self.update_duct_zones()
         except Exception as ex:
             _LOGGER.exception("Duct zone control failed", exc_info=ex)
 
