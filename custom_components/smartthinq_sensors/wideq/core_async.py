@@ -219,15 +219,15 @@ class CoreAsync:
         add_headers = extra_headers or {}
         return {**headers, **add_headers}
 
-    async def http_get(
+    async def http_get_bytes(
         self,
         url: str,
-    ) -> str:
+    ) -> bytes:
         """Make a generic HTTP request."""
         async with self._session.get(
             url=url,
         ) as resp:
-            result = await resp.text()
+            result = await resp.content.read()
 
         return result
 
@@ -1254,8 +1254,7 @@ class ClientAsync(object):
         """Load JSON data from specific url."""
         if not info_url:
             return {}
-        resp = await self._auth.gateway.core.http_get(info_url)
-        enc_resp = resp.encode()
+        enc_resp = await self._auth.gateway.core.http_get_bytes(info_url)
         return json.loads(enc_resp)
 
     async def common_lang_pack(self):
