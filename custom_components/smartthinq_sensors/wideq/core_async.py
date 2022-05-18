@@ -5,6 +5,7 @@ from __future__ import annotations
 import aiohttp
 import asyncio
 import base64
+import chardet
 import hashlib
 import hmac
 import json
@@ -160,7 +161,7 @@ class CoreAsync:
         try:
             return await response.json()
         except ValueError as ex:
-            resp_text = await response.text()
+            resp_text = await response.text(errors='replace')
             _LOGGER.debug("Error decoding json response %s: %s", resp_text, ex)
 
         # if fails, we try to convert text from xml to json
@@ -1254,7 +1255,23 @@ class ClientAsync(object):
         """Load JSON data from specific url."""
         if not info_url:
             return {}
-        enc_resp = await self._auth.gateway.core.http_get_bytes(info_url)
+
+        content = await self._auth.gateway.core.http_get_bytes(info_url)
+
+        # we use chardet to detect correct encoding and convert to unicode string
+        encoding = chardet.detect(content)['encoding']
+        try:
+            str_content = str(content, encoding, errors='replace')
+        except (LookupError, TypeError):
+            # A LookupError is raised if the encoding was not found which could
+            # indicate a misspelling or similar mistake.
+            #
+            # A TypeError can be raised if encoding is None
+            #
+            # So we try blindly encoding.
+            str_content = str(content, errors='replace')
+
+        enc_resp = str_content.encode()
         return json.loads(enc_resp)
 
     async def common_lang_pack(self):

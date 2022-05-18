@@ -5,8 +5,12 @@
   "issue_tracker": "https://github.com/ollo69/ha-smartthinq-sensors/issues",
   "dependencies": [],
   "codeowners": ["@ollo69"],
-  "requirements": ["pycountry>=20.7.3", "xmltodict>=0.12.0"],
+  "requirements": [
+    "pycountry>=20.7.3",
+    "xmltodict>=0.12.0",
+    "chardet>=4.0.0"
+  ],
   "config_flow": true,
   "iot_class": "cloud_polling",
-  "version": "0.20.1"
+  "version": "0.20.2"
 }
