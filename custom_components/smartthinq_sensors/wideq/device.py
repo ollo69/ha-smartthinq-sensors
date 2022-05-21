@@ -10,7 +10,7 @@ import enum
 import json
 import logging
 from numbers import Number
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from . import core_exceptions as core_exc
 from .const import (
@@ -282,12 +282,12 @@ class Monitor(object):
         return None
 
     @staticmethod
-    def decode_json(data: bytes) -> Dict[str, Any]:
+    def decode_json(data: bytes) -> dict[str, Any]:
         """Decode a bytestring that encodes JSON status data."""
 
         return json.loads(data.decode("utf8"))
 
-    async def poll_json(self) -> Optional[Dict[str, Any]]:
+    async def poll_json(self) -> Optional[dict[str, Any]]:
         """For devices where status is reported via JSON data, get the
             decoded status result (or None if status is not available).
             """
@@ -948,7 +948,7 @@ class Device(object):
         return self._model_info
 
     @property
-    def available_features(self) -> Dict:
+    def available_features(self) -> dict:
         return self._available_features
 
     @property
@@ -1257,7 +1257,7 @@ class DeviceStatus(object):
     def __init__(self, device, data):
         self._device = device
         self._data = {} if data is None else data
-        self._device_features = {}
+        self._device_features: dict[str, Any] = {}
         self._features_updated = False
 
     @staticmethod
@@ -1411,7 +1411,7 @@ class DeviceStatus(object):
         raise NotImplementedError()
 
     @property
-    def device_features(self):
+    def device_features(self) -> dict[str, Any]:
         if not self._features_updated:
             self._update_features()
             self._features_updated = True

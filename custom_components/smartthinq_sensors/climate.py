@@ -25,6 +25,7 @@ from homeassistant.components.climate.const import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -101,14 +102,15 @@ def remove_prefix(text: str, prefix: str) -> str:
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up LGE device climate based on config_entry."""
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES)
     if not lge_devices:
         return
 
+    _LOGGER.debug("Starting LGE ThinQ climate setup...")
     lge_climates = []
 
     # AC devices

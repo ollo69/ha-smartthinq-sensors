@@ -610,7 +610,7 @@ class RefrigeratorStatus(DeviceStatus):
         return self._data.get("ActiveSavingStatus", "N/A")
 
     def _update_features(self):
-        result = [
+        _ = [
             self.eco_friendly_state,
             self.ice_plus_status,
             self.express_fridge_status,

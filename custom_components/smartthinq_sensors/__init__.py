@@ -6,9 +6,14 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from typing import Dict
 
-from .wideq import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, DeviceType, get_lge_device
+from .wideq import (
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
+    DeviceInfo as LGDeviceInfo,
+    DeviceType,
+    get_lge_device,
+)
 from .wideq.core_async import ClientAsync
 from .wideq.core_exceptions import (
     InvalidCredentialError,
@@ -27,10 +32,10 @@ from homeassistant.const import (
     Platform,
     __version__,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -79,7 +84,7 @@ class LGEAuthentication:
         return None
 
     @staticmethod
-    async def get_auth_info_from_url(hass: HomeAssistant, callback_url: str) -> Dict[str, str] | None:
+    async def get_auth_info_from_url(hass: HomeAssistant, callback_url: str) -> dict[str, str] | None:
         """Retrieve auth info from redirect url."""
         session = async_get_clientsession(hass)
         try:
@@ -115,7 +120,7 @@ class LGEAuthentication:
         )
 
 
-def is_valid_ha_version():
+def is_valid_ha_version() -> bool:
     """Check if HA version is valid for this integration."""
     return (
         MAJOR_VERSION > MIN_HA_MAJ_VER or
@@ -123,7 +128,7 @@ def is_valid_ha_version():
     )
 
 
-def _notify_error(hass, notification_id, title, message):
+def _notify_error(hass, notification_id, title, message) -> None:
     """Notify user with persistent notification"""
     hass.async_create_task(
         hass.services.async_call(
@@ -208,7 +213,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     # remove device not available anymore
-    await cleanup_orphan_lge_devices(hass, entry.entry_id, client)
+    cleanup_orphan_lge_devices(hass, entry.entry_id, client)
 
     hass.data[DOMAIN] = {
         CLIENT: client,
@@ -286,7 +291,7 @@ class LGEDevice:
         return self._state
 
     @property
-    def available_features(self) -> Dict:
+    def available_features(self) -> dict:
         return self._device.available_features
 
     @property
@@ -300,15 +305,15 @@ class LGEDevice:
         if self._firmware:
             data["sw_version"] = self._firmware
         if self._mac:
-            data["connections"] = {(CONNECTION_NETWORK_MAC, self._mac)}
+            data["connections"] = {(dr.CONNECTION_NETWORK_MAC, self._mac)}
 
         return data
 
     @property
-    def coordinator(self):
+    def coordinator(self) -> DataUpdateCoordinator | None:
         return self._coordinator
 
-    async def init_device(self):
+    async def init_device(self) -> bool:
         """Init the device status and start coordinator."""
         if not await self._device.init_device_info():
             return False
@@ -323,7 +328,7 @@ class LGEDevice:
 
         return True
 
-    async def _create_coordinator(self):
+    async def _create_coordinator(self) -> None:
         """Get the coordinator for a specific device."""
         coordinator = DataUpdateCoordinator(
             self._hass,
@@ -388,12 +393,14 @@ class LGEDevice:
             self._state = state
 
 
-async def lge_devices_setup(hass, client):
+async def lge_devices_setup(
+    hass: HomeAssistant, client: ClientAsync
+) -> tuple[dict[DeviceType, list[LGEDevice]], dict[DeviceType, list[LGDeviceInfo]]]:
     """Query connected devices from LG ThinQ."""
     _LOGGER.info("Starting LGE ThinQ devices...")
 
-    wrapped_devices = {}
-    unsupported_devices = {}
+    wrapped_devices: dict[DeviceType, list[LGEDevice]] = {}
+    unsupported_devices: dict[DeviceType, list[LGDeviceInfo]] = {}
     device_count = 0
     temp_unit = UNIT_TEMP_CELSIUS
     if hass.config.units.temperature_unit != TEMP_CELSIUS:
@@ -442,15 +449,16 @@ async def lge_devices_setup(hass, client):
     return wrapped_devices, unsupported_devices
 
 
-async def cleanup_orphan_lge_devices(hass, entry_id, client):
+@callback
+def cleanup_orphan_lge_devices(
+    hass: HomeAssistant, entry_id: str, client: ClientAsync
+) -> None:
     """Delete devices that are not registered in LG client app"""
 
     # Load lg devices from registry
-    device_registry = await hass.helpers.device_registry.async_get_registry()
-    all_lg_dev_entries = (
-        hass.helpers.device_registry.async_entries_for_config_entry(
-            device_registry, entry_id
-        )
+    device_registry = dr.async_get(hass)
+    all_lg_dev_entries = dr.async_entries_for_config_entry(
+        device_registry, entry_id
     )
 
     # get list of valid devices

@@ -43,13 +43,15 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
     POWER_WATT,
     STATE_UNAVAILABLE,
 )
-from homeassistant.helpers import entity_platform
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -63,6 +65,7 @@ from .device_helpers import (
     LGERefrigeratorDevice,
     LGEWashDevice,
     get_entity_name,
+    get_multiple_devices_types,
 )
 
 # service definition
@@ -391,7 +394,7 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 
 
-def _sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription):
+def _sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription) -> bool:
     """Check if a sensor exist for device."""
     if sensor_desc.value_fn is not None:
         return True
@@ -404,27 +407,24 @@ def _sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescripti
     return False
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the LGE sensors."""
-    _LOGGER.info("Starting LGE ThinQ sensors...")
-
-    lge_sensors = []
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES)
     if not lge_devices:
         return
 
-    # add wash devices
-    wash_devices = []
-    for dev_type, devices in lge_devices.items():
-        if dev_type in WASH_DEVICE_TYPES:
-            wash_devices.extend(devices)
+    _LOGGER.debug("Starting LGE ThinQ sensors setup...")
+    lge_sensors = []
 
+    # add WASH devices
     lge_sensors.extend(
         [
             LGEWashDeviceSensor(lge_device, sensor_desc)
             for sensor_desc in WASH_DEV_SENSORS
-            for lge_device in wash_devices
+            for lge_device in get_multiple_devices_types(lge_devices, WASH_DEVICE_TYPES)
             if _sensor_exist(lge_device, sensor_desc)
         ]
     )
@@ -472,7 +472,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities(lge_sensors)
 
     # register services
-    platform = entity_platform.current_platform.get()
+    platform = current_platform.get()
     platform.async_register_entity_service(
         SERVICE_REMOTE_START,
         {},

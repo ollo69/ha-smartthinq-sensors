@@ -41,10 +41,21 @@ DEVICE_ICONS = {
     DeviceType.RANGE: "mdi:stove",
 }
 
-WASH_DEVICE_TYPES = WM_DEVICE_TYPES + [
+WASH_DEVICE_TYPES = [
+    *WM_DEVICE_TYPES,
     DeviceType.DISHWASHER,
     DeviceType.STYLER,
 ]
+
+
+def get_multiple_devices_types(lge_devices: dict, dev_types: list) -> list:
+    """Return a list of devices of multiple types."""
+    return [
+        dev
+        for dev_type, devices in lge_devices.items()
+        for dev in devices
+        if dev_type in dev_types
+    ]
 
 
 def get_entity_name(device, ent_key, ent_name) -> str:

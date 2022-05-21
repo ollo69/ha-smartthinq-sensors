@@ -27,7 +27,10 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -40,6 +43,7 @@ from .device_helpers import (
     LGERefrigeratorDevice,
     LGEWashDevice,
     get_entity_name,
+    get_multiple_devices_types,
 )
 from .sensor import (
     ATTR_DOOR_OPEN,
@@ -180,7 +184,7 @@ RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
 )
 
 
-def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription):
+def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription) -> bool:
     """Check if a sensor exist for device."""
     if sensor_desc.value_fn is not None:
         return True
@@ -193,27 +197,24 @@ def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEn
     return False
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the LGE binary sensors."""
-    _LOGGER.info("Starting LGE ThinQ binary sensors...")
-
-    lge_sensors = []
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES)
     if not lge_devices:
         return
 
-    # add wash devices
-    wash_devices = []
-    for dev_type, devices in lge_devices.items():
-        if dev_type in WASH_DEVICE_TYPES:
-            wash_devices.extend(devices)
+    _LOGGER.debug("Starting LGE ThinQ binary sensors setup...")
+    lge_sensors = []
 
+    # add WASH devices
     lge_sensors.extend(
         [
             LGEBinarySensor(lge_device, sensor_desc, LGEWashDevice(lge_device))
             for sensor_desc in WASH_DEV_BINARY_SENSORS
-            for lge_device in wash_devices
+            for lge_device in get_multiple_devices_types(lge_devices, WASH_DEVICE_TYPES)
             if _binary_sensor_exist(lge_device, sensor_desc)
         ]
     )

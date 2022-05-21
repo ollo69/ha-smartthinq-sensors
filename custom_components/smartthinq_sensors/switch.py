@@ -21,12 +21,20 @@ from homeassistant.components.switch import (
     SwitchEntity,
     SwitchEntityDescription,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
-from .device_helpers import STATE_LOOKUP, LGEBaseDevice, get_entity_name
+from .device_helpers import (
+    STATE_LOOKUP,
+    LGEBaseDevice,
+    get_entity_name,
+    get_multiple_devices_types,
+)
 
 # general sensor attributes
 ATTR_POWER_OFF = "power_off"
@@ -105,7 +113,7 @@ AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
 )
 
 
-def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription):
+def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription) -> bool:
     """Check if a switch exist for device."""
     if switch_desc.value_fn is not None:
         return True
@@ -118,27 +126,24 @@ def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescripti
     return False
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the LGE switch."""
-    _LOGGER.info("Starting LGE ThinQ switch...")
-
-    lge_switch = []
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES)
     if not lge_devices:
         return
 
-    # add wash devices
-    wash_devices = []
-    for dev_type, devices in lge_devices.items():
-        if dev_type in WM_DEVICE_TYPES:
-            wash_devices.extend(devices)
+    _LOGGER.debug("Starting LGE ThinQ switch setup...")
+    lge_switch = []
 
+    # add WM devices
     lge_switch.extend(
         [
             LGESwitch(lge_device, switch_desc)
             for switch_desc in WASH_DEV_SWITCH
-            for lge_device in wash_devices
+            for lge_device in get_multiple_devices_types(lge_devices, WM_DEVICE_TYPES)
             if _switch_exist(lge_device, switch_desc)
         ]
     )
