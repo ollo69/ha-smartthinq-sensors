@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import logging
-import re
 from pycountry import countries as py_countries, languages as py_languages
+import re
 from typing import Any
 
 import voluptuous as vol
+
+from .wideq.core_async import ClientAsync
 
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -18,6 +20,7 @@ from homeassistant.const import (
     CONF_USERNAME,
     __version__,
 )
+from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     DOMAIN,
@@ -56,7 +59,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize flow."""
         self._region: str | None = None
         self._language: str | None = None
@@ -69,7 +72,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._is_import = False
 
     @staticmethod
-    def _validate_region_language(region: str, language: str):
+    def _validate_region_language(region: str, language: str) -> str | None:
         """Validate format of region and language."""
         region_regex = re.compile(r"^[A-Z]{2,3}$")
         if not region_regex.match(region):
@@ -84,7 +87,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return None
 
-    async def async_step_import(self, import_config: dict[str, Any] | None = None):
+    async def async_step_import(
+        self, import_config: dict[str, Any] | None = None
+    ) -> FlowResult:
         """Import a config entry."""
         self._is_import = True
         self._region = import_config.get(CONF_REGION)
@@ -93,7 +98,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._user_lang = language[0:2]
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None):
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
         """Handle a flow initialized by the user interface"""
 
         if not is_valid_ha_version():
@@ -145,7 +152,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return await self.async_step_url()
 
-    async def async_step_url(self, user_input: dict[str, Any] | None = None):
+    async def async_step_url(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
         """Parse the response url for oauth data and submit for save."""
         if not user_input:
             return self._show_form(step_id="url")
@@ -164,7 +173,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return await self._manage_error(result)
         return self._save_config_entry()
 
-    async def _check_connection(self, username: str | None = None, password: str | None = None):
+    async def _check_connection(
+        self, username: str | None = None, password: str | None = None
+    ) -> tuple[ClientAsync | None, int]:
         """Test the connection to ThinQ."""
 
         lge_auth = LGEAuthentication(self._region, self._language)
@@ -189,7 +200,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return client, RESULT_SUCCESS
 
-    async def _manage_error(self, error_code, is_user_step=False):
+    async def _manage_error(self, error_code: int, is_user_step=False) -> FlowResult:
         """Manage the error result."""
         if error_code == RESULT_NO_DEV:
             return self.async_abort(reason="no_smartthinq_devices")
@@ -203,7 +214,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return await self.async_step_user()
 
     @callback
-    def _save_config_entry(self):
+    def _save_config_entry(self) -> FlowResult:
         """Save the entry."""
 
         data = {
@@ -228,7 +239,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_create_entry(title="LGE Devices", data=data)
 
     @callback
-    def _prepare_form_schema(self, step_id="user"):
+    def _prepare_form_schema(self, step_id="user") -> vol.Schema:
         """Prepare the user forms schema."""
         if step_id == "url":
             return vol.Schema(
@@ -249,7 +260,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     @callback
-    def _show_form(self, errors: str | None = None, step_id="user"):
+    def _show_form(self, errors: str | None = None, step_id="user") -> FlowResult:
         """Show the form to the user."""
         base_err = errors or self._error
         self._error = None
