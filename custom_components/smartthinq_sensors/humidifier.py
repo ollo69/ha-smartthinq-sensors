@@ -107,8 +107,8 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     def extra_state_attributes(self):
         """Return the optional state attributes with device specific additions."""
         state = {}
-        if FEAT_HUMIDITY in self._api.state.device_features:
-            state[ATTR_CURRENT_HUMIDITY] = self._api.state.device_features[FEAT_HUMIDITY]
+        if humidity := self._api.state.device_features.get(FEAT_HUMIDITY):
+            state[ATTR_CURRENT_HUMIDITY] = humidity
         return state
 
     @property

@@ -108,24 +108,24 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm1(self):
-        if not self.key_exist(AIR_PURIFIER_STATE_PM1):
-            return None
         value = self.lookup_range(AIR_PURIFIER_STATE_PM1)
-        return self._update_feature(FEAT_PM1, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM1, value, False)
 
     @property
     def pm10(self):
-        if not self.key_exist(AIR_PURIFIER_STATE_PM10):
-            return None
         value = self.lookup_range(AIR_PURIFIER_STATE_PM10)
-        return self._update_feature(FEAT_PM10, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM10, value, False)
 
     @property
     def pm25(self):
-        if not self.key_exist(AIR_PURIFIER_STATE_PM25):
-            return None
         value = self.lookup_range(AIR_PURIFIER_STATE_PM25)
-        return self._update_feature(FEAT_PM25, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM25, value, False)
 
     def _get_lower_filter_life(self):
         max_time = self.to_int_or_none(

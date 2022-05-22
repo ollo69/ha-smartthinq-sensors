@@ -296,42 +296,42 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def current_humidity(self):
-        if not self.key_exist(DHUM_STATE_CURRENT_HUM):
-            return None
         value = self.to_int_or_none(
             self.lookup_range(DHUM_STATE_CURRENT_HUM)
         )
-        return self._update_feature(FEAT_HUMIDITY, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_HUMIDITY, value, False)
 
     @property
     def target_humidity(self):
-        if not self.key_exist(DHUM_STATE_TARGET_HUM):
-            return None
         value = self.to_int_or_none(
             self.lookup_range(DHUM_STATE_TARGET_HUM)
         )
-        return self._update_feature(FEAT_TARGET_HUMIDITY, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_TARGET_HUMIDITY, value, False)
 
     @property
     def pm1(self):
-        if not self.key_exist(DHUM_STATE_PM1):
-            return None
         value = self.lookup_range(DHUM_STATE_PM1)
-        return self._update_feature(FEAT_PM1, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM1, value, False)
 
     @property
     def pm10(self):
-        if not self.key_exist(DHUM_STATE_PM10):
-            return None
         value = self.lookup_range(DHUM_STATE_PM10)
-        return self._update_feature(FEAT_PM10, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM10, value, False)
 
     @property
     def pm25(self):
-        if not self.key_exist(DHUM_STATE_PM25):
-            return None
         value = self.lookup_range(DHUM_STATE_PM25)
-        return self._update_feature(FEAT_PM25, value, False, allow_none=True)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM25, value, False)
 
     def _update_features(self):
         _ = [
