@@ -270,25 +270,3 @@ class LGERangeDevice(LGEBaseDevice):
             unit = self._api.state.oven_temp_unit
             return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
         return TEMP_CELSIUS
-
-
-class LGEAirPurifierDevice(LGEBaseDevice):
-    """A wrapper to monitor LGE air purifier devices"""
-
-    @property
-    def pm1(self):
-        if self._api.state:
-            return self._api.state.pm1
-        return None
-
-    @property
-    def pm25(self):
-        if self._api.state:
-            return self._api.state.pm25
-        return None
-
-    @property
-    def pm10(self):
-        if self._api.state:
-            return self._api.state.pm10
-        return None

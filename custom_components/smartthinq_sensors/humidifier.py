@@ -1,0 +1,158 @@
+"""Platform for LGE humidifier integration."""
+from __future__ import annotations
+
+from datetime import timedelta
+import logging
+
+from .wideq import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, DeviceType
+from .wideq.dehumidifier import DeHumidifierDevice
+
+from homeassistant.components.humidifier import HumidifierEntity, HumidifierDeviceClass
+from homeassistant.components.humidifier.const import (
+    DEFAULT_MAX_HUMIDITY,
+    DEFAULT_MIN_HUMIDITY,
+    HumidifierEntityFeature,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from . import LGEDevice
+from .const import DOMAIN, LGE_DEVICES
+
+ATTR_CURRENT_HUMIDITY = "current_humidity"
+
+SCAN_INTERVAL = timedelta(seconds=120)
+
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Set up LGE device climate based on config_entry."""
+    entry_config = hass.data[DOMAIN]
+    lge_devices = entry_config.get(LGE_DEVICES)
+    if not lge_devices:
+        return
+
+    _LOGGER.debug("Starting LGE ThinQ humidifier setup...")
+    lge_humidifier = []
+
+    # DeHumidifier devices
+    lge_humidifier.extend(
+        [
+            LGEDeHumidifier(lge_device)
+            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
+        ]
+    )
+
+    async_add_entities(lge_humidifier)
+
+
+class LGEBaseHumidifier(CoordinatorEntity, HumidifierEntity):
+    """Base humidifier device."""
+
+    def __init__(self, api: LGEDevice):
+        """Initialize the climate."""
+        super().__init__(api.coordinator)
+        self._api = api
+        self._attr_device_info = api.device_info
+
+    @property
+    def should_poll(self) -> bool:
+        """Return True if entity has to be polled for state.
+
+        We overwrite coordinator property default setting because we need
+        to poll to avoid the effect that after changing a climate settings
+        it is immediately set to prev state. The async_update method here
+        do nothing because the real update is performed by coordinator.
+        """
+        return True
+
+    async def async_update(self) -> None:
+        """Update the entity.
+
+        This is a fake update, real update is done by coordinator.
+        """
+        return
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self._api.available
+
+
+class LGEDeHumidifier(LGEBaseHumidifier):
+    """LG DeHumidifier device."""
+
+    def __init__(self, api: LGEDevice) -> None:
+        """Initialize the climate."""
+        super().__init__(api)
+        self._device: DeHumidifierDevice = api.device
+        self._attr_name = api.name
+        self._attr_unique_id = f"{api.unique_id}-DEHUM"
+        self._attr_device_class = HumidifierDeviceClass.DEHUMIDIFIER
+        self._attr_available_modes = self._device.op_modes
+
+    @property
+    def supported_features(self) -> int:
+        """Return the list of supported features."""
+        if self.available_modes:
+            return HumidifierEntityFeature.MODES
+        return 0
+
+    @property
+    def extra_state_attributes(self):
+        """Return the optional state attributes with device specific additions."""
+        state = {}
+        if FEAT_HUMIDITY in self._api.state.device_features:
+            state[ATTR_CURRENT_HUMIDITY] = self._api.state.device_features[FEAT_HUMIDITY]
+        return state
+
+    @property
+    def mode(self) -> str | None:
+        """Return current operation."""
+        return self._api.state.operation_mode
+
+    async def async_set_mode(self, mode: str) -> None:
+        """Set new target mode."""
+        if not self._api.state.is_on:
+            await self._device.power(True)
+        await self._device.set_op_mode(mode)
+
+    @property
+    def target_humidity(self) -> int | None:
+        """Return the humidity we try to reach."""
+        return self._api.state.device_features.get(FEAT_TARGET_HUMIDITY)
+
+    async def async_set_humidity(self, humidity: int) -> None:
+        """Set new target humidity."""
+        humidity_step = self._device.target_humidity_step or 1
+        target_humidity = humidity + (humidity % humidity_step)
+        await self._device.set_target_humidity(target_humidity)
+
+    async def async_turn_on(self) -> None:
+        """Turn the entity on."""
+        await self._device.power(True)
+
+    async def async_turn_off(self) -> None:
+        """Turn the entity off."""
+        await self._device.power(False)
+
+    @property
+    def min_humidity(self) -> int:
+        """Return the minimum humidity."""
+        if (min_value := self._device.target_humidity_min) is not None:
+            return min_value
+
+        return DEFAULT_MIN_HUMIDITY
+
+    @property
+    def max_humidity(self) -> int:
+        """Return the maximum humidity."""
+        if (max_value := self._device.target_humidity_max) is not None:
+            return max_value
+
+        return DEFAULT_MAX_HUMIDITY

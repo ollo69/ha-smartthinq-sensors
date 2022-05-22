@@ -1216,10 +1216,10 @@ class Device(object):
         """Override this function to manage feature title per device type"""
         return feature_name
 
-    def feature_title(self, feature_name, item_key=None, status=None):
+    def feature_title(self, feature_name, item_key=None, status=None, allow_none=False):
         title = self._available_features.get(feature_name)
         if title is None:
-            if status is None:
+            if status is None and not allow_none:
                 return None
             title = self._get_feature_title(feature_name, item_key)
             if not title:
@@ -1274,6 +1274,22 @@ class DeviceStatus(object):
             return int(value)
         except ValueError:
             return None
+
+    @staticmethod
+    def _str_to_num(s):
+        """Convert a string to either an `int` or a `float`.
+
+        Troublingly, the API likes values like "18", without a trailing
+        ".0", for whole numbers. So we use `int`s for integers and
+        `float`s for non-whole numbers.
+        """
+        if not s:
+            return None
+
+        f = float(s)
+        if f == int(f):
+            return int(f)
+        return f
 
     @property
     def has_data(self):
@@ -1389,16 +1405,18 @@ class DeviceStatus(object):
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF
 
-    def _update_feature(self, key, status, get_text=True, item_key=None):
-        title = self._device.feature_title(
-            key, item_key, status
-        )
-        if not title:
+    def _update_feature(self, key, status, get_text=True, item_key=None, *, allow_none=False):
+        """Update the status features."""
+        if not self._device.feature_title(key, item_key, status, allow_none):
             return None
 
-        if status is None:
+        if status is None and not allow_none:
             status = STATE_OPTIONITEM_NONE
-        if status == STATE_OPTIONITEM_NONE or not get_text:
+
+        if status == STATE_OPTIONITEM_NONE:
+            get_text = False
+
+        if status is None or not get_text:
             value = status
         else:
             value = self._device.get_enum_text(status)

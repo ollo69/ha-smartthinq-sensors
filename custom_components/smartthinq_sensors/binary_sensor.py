@@ -262,7 +262,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
             self,
             api: LGEDevice,
             description: ThinQBinarySensorEntityDescription,
-            wrapped_device,
+            wrapped_device=None,
     ):
         """Initialize the binary sensor."""
         super().__init__(api.coordinator)
@@ -314,7 +314,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return state == STATE_ON
 
     def _get_sensor_state(self):
-        if self.entity_description.value_fn is not None:
+        if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:

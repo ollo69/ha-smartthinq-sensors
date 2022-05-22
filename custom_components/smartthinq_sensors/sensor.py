@@ -7,6 +7,11 @@ import logging
 from typing import Any, Callable, Tuple
 
 from .wideq import (
+    FEAT_COOKTOP_LEFT_FRONT_STATE,
+    FEAT_COOKTOP_LEFT_REAR_STATE,
+    FEAT_COOKTOP_CENTER_STATE,
+    FEAT_COOKTOP_RIGHT_FRONT_STATE,
+    FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_DRYLEVEL,
     FEAT_ENERGY_CURRENT,
     FEAT_ERROR_MSG,
@@ -16,23 +21,22 @@ from .wideq import (
     FEAT_IN_WATER_TEMP,
     FEAT_LOWER_FILTER_LIFE,
     FEAT_OUT_WATER_TEMP,
-    FEAT_PRE_STATE,
-    FEAT_PROCESS_STATE,
-    FEAT_RUN_STATE,
-    FEAT_SPINSPEED,
-    FEAT_TUBCLEAN_COUNT,
-    FEAT_TEMPCONTROL,
-    FEAT_UPPER_FILTER_LIFE,
-    FEAT_WATERTEMP,
-    FEAT_COOKTOP_LEFT_FRONT_STATE,
-    FEAT_COOKTOP_LEFT_REAR_STATE,
-    FEAT_COOKTOP_CENTER_STATE,
-    FEAT_COOKTOP_RIGHT_FRONT_STATE,
-    FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_OVEN_LOWER_CURRENT_TEMP,
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_CURRENT_TEMP,
     FEAT_OVEN_UPPER_STATE,
+    FEAT_PM1,
+    FEAT_PM10,
+    FEAT_PM25,
+    FEAT_PRE_STATE,
+    FEAT_PROCESS_STATE,
+    FEAT_RUN_STATE,
+    FEAT_SPINSPEED,
+    FEAT_TARGET_HUMIDITY,
+    FEAT_TEMPCONTROL,
+    FEAT_TUBCLEAN_COUNT,
+    FEAT_UPPER_FILTER_LIFE,
+    FEAT_WATERTEMP,
     WM_DEVICE_TYPES,
     DeviceType,
 )
@@ -60,7 +64,6 @@ from .device_helpers import (
     DEVICE_ICONS,
     WASH_DEVICE_TYPES,
     LGEACDevice,
-    LGEAirPurifierDevice,
     LGERangeDevice,
     LGERefrigeratorDevice,
     LGEWashDevice,
@@ -93,11 +96,6 @@ ATTR_ROOM_TEMP = "room_temperature"
 ATTR_OVEN_LOWER_TARGET_TEMP = "oven_lower_target_temp"
 ATTR_OVEN_UPPER_TARGET_TEMP = "oven_upper_target_temp"
 ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
-
-# air purifier sensor attributes
-ATTR_PM1 = "pm1"
-ATTR_PM10 = "pm10"
-ATTR_PM25 = "pm25"
 
 # supported features
 SUPPORT_REMOTE_START = 1
@@ -354,27 +352,24 @@ RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
-        key=ATTR_PM1,
+        key=FEAT_PM1,
         name="PM1",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM1,
-        value_fn=lambda x: x.pm1,
         native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
-        key=ATTR_PM25,
-        name="PM2.5",
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.PM25,
-        value_fn=lambda x: x.pm25,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    ),
-    ThinQSensorEntityDescription(
-        key=ATTR_PM10,
+        key=FEAT_PM10,
         name="PM10",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM10,
-        value_fn=lambda x: x.pm10,
+        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_PM25,
+        name="PM2.5",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.PM25,
         native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
@@ -390,6 +385,47 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+    ),
+)
+DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
+    ThinQSensorEntityDescription(
+        key=FEAT_HUMIDITY,
+        name="Current Humidity",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.HUMIDITY,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_TARGET_HUMIDITY,
+        name="Target Humidity",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.HUMIDITY,
+        native_unit_of_measurement=PERCENTAGE,
+        entity_registry_enabled_default=False,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_PM1,
+        name="PM1",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.PM1,
+        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        entity_registry_enabled_default=False,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_PM10,
+        name="PM10",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.PM10,
+        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        entity_registry_enabled_default=False,
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_PM25,
+        name="PM2.5",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.PM25,
+        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        entity_registry_enabled_default=False,
     ),
 )
 
@@ -462,9 +498,19 @@ async def async_setup_entry(
     # add air purifiers
     lge_sensors.extend(
         [
-            LGESensor(lge_device, sensor_desc, LGEAirPurifierDevice(lge_device))
+            LGESensor(lge_device, sensor_desc)
             for sensor_desc in AIR_PURIFIER_SENSORS
             for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
+            if _sensor_exist(lge_device, sensor_desc)
+        ]
+    )
+
+    # add dehumidifier
+    lge_sensors.extend(
+        [
+            LGESensor(lge_device, sensor_desc)
+            for sensor_desc in DEHUMIDIFIER_SENSORS
+            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
             if _sensor_exist(lge_device, sensor_desc)
         ]
     )
@@ -496,7 +542,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
             self,
             api: LGEDevice,
             description: ThinQSensorEntityDescription,
-            wrapped_device,
+            wrapped_device=None,
     ):
         """Initialize the sensor."""
         super().__init__(api.coordinator)
@@ -517,7 +563,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         return None
 
     @property
-    def native_value(self) -> float | str | None:
+    def native_value(self) -> float | int | str | None:
         """Return the state of the sensor."""
         if not self.available:
             return STATE_UNAVAILABLE
@@ -526,7 +572,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str | None:
         """Return the unit of measurement of the sensor, if any."""
-        if self.entity_description.unit_fn is not None:
+        if self._wrap_device and self.entity_description.unit_fn is not None:
             return self.entity_description.unit_fn(self._wrap_device)
         return super().native_unit_of_measurement
 
@@ -550,7 +596,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
     def _get_sensor_state(self):
         """Get current sensor state"""
-        if self.entity_description.value_fn is not None:
+        if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:
