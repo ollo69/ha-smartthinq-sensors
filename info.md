@@ -3,6 +3,7 @@ A HomeAssistant custom integration to monitor and control LG devices using ThinQ
 Supported devices are:
 - Air Conditioner
 - Air Purifier
+- Dehumidifier
 - DishWasher
 - Dryer
 - Range 
