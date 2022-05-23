@@ -175,6 +175,12 @@ class LGEACClimate(LGEClimate):
         self._device: AirConditionerDevice = api.device
         self._attr_name = api.name
         self._attr_unique_id = f"{api.unique_id}-AC"
+        self._attr_fan_modes = self._device.fan_speeds
+        self._attr_swing_modes = [
+            f"{SWING_PREFIX[0]}{mode}" for mode in self._device.vertical_step_modes
+        ] + [
+            f"{SWING_PREFIX[1]}{mode}" for mode in self._device.horizontal_step_modes
+        ]
 
         self._hvac_mode_lookup: dict[str, HVACMode] | None = None
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
@@ -201,6 +207,16 @@ class LGEACClimate(LGEClimate):
         if mode:
             return f"{SWING_PREFIX[1 if hor_mode else 0]}{mode}"
         return None
+
+    @property
+    def supported_features(self) -> int:
+        """Return the list of supported features."""
+        features = ClimateEntityFeature.TARGET_TEMPERATURE
+        if len(self.fan_modes) > 0:
+            features |= ClimateEntityFeature.FAN_MODE
+        if self._support_ver_swing or self._support_hor_swing:
+            features |= ClimateEntityFeature.SWING_MODE
+        return features
 
     @property
     def extra_state_attributes(self):
@@ -290,12 +306,9 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
+        if fan_mode not in self.fan_modes:
+            raise ValueError(f"Invalid fan mode [{fan_mode}]")
         await self._device.set_fan_speed(fan_mode)
-
-    @property
-    def fan_modes(self) -> list[str] | None:
-        """Return the list of available fan modes."""
-        return self._device.fan_speeds
 
     @property
     def swing_mode(self) -> str | None:
@@ -330,26 +343,6 @@ class LGEACClimate(LGEClimate):
             else:
                 await self._device.set_vertical_step_mode(dev_mode)
         self._set_hor_swing = set_hor_swing
-
-    @property
-    def swing_modes(self) -> list[str] | None:
-        """Return the list of available swing modes."""
-        list_modes = list()
-        for mode in self._device.vertical_step_modes:
-            list_modes.append(f"{SWING_PREFIX[0]}{mode}")
-        for mode in self._device.horizontal_step_modes:
-            list_modes.append(f"{SWING_PREFIX[1]}{mode}")
-        return list_modes
-
-    @property
-    def supported_features(self) -> int:
-        """Return the list of supported features."""
-        features = ClimateEntityFeature.TARGET_TEMPERATURE
-        if len(self._device.fan_speeds) > 0:
-            features |= ClimateEntityFeature.FAN_MODE
-        if self._support_ver_swing or self._support_hor_swing:
-            features |= ClimateEntityFeature.SWING_MODE
-        return features
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
@@ -394,6 +387,13 @@ class LGERefrigeratorClimate(LGEClimate):
         self._attr_hvac_mode = HVACMode.AUTO
 
     @property
+    def supported_features(self) -> int:
+        """Return the list of supported features."""
+        if not self._wrap_device.device.set_values_allowed:
+            return 0
+        return ClimateEntityFeature.TARGET_TEMPERATURE
+
+    @property
     def target_temperature_step(self) -> float:
         """Return the supported step of target temperature."""
         return self._wrap_device.device.target_temperature_step
@@ -426,13 +426,6 @@ class LGERefrigeratorClimate(LGEClimate):
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
             await self.entity_description.set_temp_fn(self._wrap_device, new_temp)
-
-    @property
-    def supported_features(self) -> int:
-        """Return the list of supported features."""
-        if not self._wrap_device.device.set_values_allowed:
-            return 0
-        return ClimateEntityFeature.TARGET_TEMPERATURE
 
     @property
     def min_temp(self) -> float:

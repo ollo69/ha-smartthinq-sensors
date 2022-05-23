@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
+import voluptuous as vol
 
 from .wideq import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, DeviceType
 from .wideq.dehumidifier import DeHumidifierDevice
@@ -15,13 +16,17 @@ from homeassistant.components.humidifier.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES
 
 ATTR_CURRENT_HUMIDITY = "current_humidity"
+ATTR_FAN_MODE = "fan_mode"
+ATTR_FAN_MODES = "fan_modes"
+SERVICE_SET_FAN_MODE = "set_fan_mode"
 
 SCAN_INTERVAL = timedelta(seconds=120)
 
@@ -49,6 +54,14 @@ async def async_setup_entry(
     )
 
     async_add_entities(lge_humidifier)
+
+    # register services
+    platform = current_platform.get()
+    platform.async_register_entity_service(
+        SERVICE_SET_FAN_MODE,
+        {vol.Required(ATTR_FAN_MODE): cv.string},
+        "async_set_fan_mode",
+    )
 
 
 class LGEBaseHumidifier(CoordinatorEntity, HumidifierEntity):
@@ -109,6 +122,11 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         state = {}
         if humidity := self._api.state.device_features.get(FEAT_HUMIDITY):
             state[ATTR_CURRENT_HUMIDITY] = humidity
+        if fan_modes := self._device.fan_speeds:
+            state[ATTR_FAN_MODES] = fan_modes
+            if fan_mode := self._api.state.fan_speed:
+                state[ATTR_FAN_MODE] = fan_mode
+
         return state
 
     @property
@@ -123,8 +141,8 @@ class LGEDeHumidifier(LGEBaseHumidifier):
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new target mode."""
-        if not self._api.state.is_on:
-            await self._device.power(True)
+        if mode not in self.available_modes:
+            raise ValueError(f"Invalid mode [{mode}]")
         await self._device.set_op_mode(mode)
 
     @property
@@ -161,3 +179,9 @@ class LGEDeHumidifier(LGEBaseHumidifier):
             return max_value
 
         return DEFAULT_MAX_HUMIDITY
+
+    async def async_set_fan_mode(self, fan_mode: str) -> None:
+        """Set new fan mode."""
+        if fan_mode not in self._device.fan_speeds:
+            raise ValueError(f"Invalid fan mode [{fan_mode}]")
+        await self._device.set_fan_speed(fan_mode)
