@@ -112,6 +112,11 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         return state
 
     @property
+    def is_on(self) -> bool | None:
+        """Return True if entity is on."""
+        return self._api.state.is_on
+
+    @property
     def mode(self) -> str | None:
         """Return current operation."""
         return self._api.state.operation_mode

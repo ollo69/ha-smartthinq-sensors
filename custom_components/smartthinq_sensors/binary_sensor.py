@@ -190,9 +190,8 @@ def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEn
         return True
 
     feature = sensor_desc.key
-    for feat_name in lge_device.available_features.keys():
-        if feat_name == feature:
-            return True
+    if feature in lge_device.available_features:
+        return True
 
     return False
 

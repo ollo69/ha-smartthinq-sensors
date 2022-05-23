@@ -119,9 +119,8 @@ def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescripti
         return True
 
     feature = switch_desc.key
-    for feat_name in lge_device.available_features.keys():
-        if feat_name == feature:
-            return True
+    if feature in lge_device.available_features:
+        return True
 
     return False
 
