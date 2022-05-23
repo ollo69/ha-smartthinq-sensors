@@ -268,8 +268,7 @@ class AirConditionerDevice(Device):
             make a better decision.
         """
 
-        operations = self._get_supported_operations().copy()
-        operations.remove(ACOp.OFF)
+        operations = self._get_supported_operations()
 
         # This ON operation appears to be supported in newer AC models
         if ACOp.ALL_ON in operations:
@@ -282,8 +281,9 @@ class AirConditionerDevice(Device):
         # Older models, or possibly just the LP1419IVSM, do not support ALL_ON,
         # instead advertising only a single operation of RIGHT_ON.
         # Thus, if there's only one ON operation, we use that.
-        if len(operations) == 1:
-            return operations[0]
+        single_op = [op for op in operations if op != ACOp.OFF]
+        if len(single_op) == 1:
+            return single_op[0]
 
         # Hypothetically, the API could return multiple ON operations, neither
         # of which are ALL_ON. This will raise in that case, as we don't know
@@ -694,22 +694,6 @@ class AirConditionerStatus(DeviceStatus):
     def __init__(self, device, data):
         super().__init__(device, data)
         self._operation = None
-
-    @staticmethod
-    def _str_to_num(s):
-        """Convert a string to either an `int` or a `float`.
-
-        Troublingly, the API likes values like "18", without a trailing
-        ".0", for whole numbers. So we use `int`s for integers and
-        `float`s for non-whole numbers.
-        """
-        if not s:
-            return None
-
-        f = float(s)
-        if f == int(f):
-            return int(f)
-        return f
 
     def _str_to_temp(self, s):
         """Convert a string to either an `int` or a `float` temperature."""

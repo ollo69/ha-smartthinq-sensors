@@ -13,3 +13,19 @@ wake_up:
     entity:
       integration: smartthinq_sensors
       domain: sensor
+
+set_fan_mode:
+  name: Set fan mode
+  description: Set fan operation for dehumidifier device.
+  target:
+    entity:
+      integration: smartthinq_sensors
+      domain: humidifier
+  fields:
+    fan_mode:
+      name: Fan mode
+      description: New value of fan mode.
+      required: true
+      example: "low"
+      selector:
+        text:

@@ -3,7 +3,14 @@ import enum
 import logging
 from typing import Optional
 
-from .const import FEAT_LOWER_FILTER_LIFE, FEAT_UPPER_FILTER_LIFE
+from .const import (
+    FEAT_LOWER_FILTER_LIFE,
+    FEAT_PM1,
+    FEAT_PM10,
+    FEAT_PM25,
+    FEAT_UPPER_FILTER_LIFE,
+    STATE_OPTIONITEM_NONE,
+)
 from .device import Device, DeviceStatus
 
 LABEL_UPPER_FILTER_SUPPORT = "@SUPPORT_D_PLUS_TOP"
@@ -13,8 +20,8 @@ AIR_PURIFIER_CTRL_BASIC = ["Control", "basicCtrl"]
 
 AIR_PURIFIER_STATE_OPERATION = ["Operation", "airState.operation"]
 AIR_PURIFIER_STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
-AIR_PURIFIER_STATE_PM2 = ["SensorPM2", "airState.quality.PM2"]
 AIR_PURIFIER_STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
+AIR_PURIFIER_STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
 AIR_PURIFIER_STATE_FILTERMNG_USE_TIME = [
     "FilterUse", "airState.filterMngStates.useTime"
 ]
@@ -101,15 +108,24 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm1(self):
-        return self.lookup_range(AIR_PURIFIER_STATE_PM1)
-
-    @property
-    def pm25(self):
-        return self.lookup_range(AIR_PURIFIER_STATE_PM2)
+        value = self.lookup_range(AIR_PURIFIER_STATE_PM1)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM1, value, False)
 
     @property
     def pm10(self):
-        return self.lookup_range(AIR_PURIFIER_STATE_PM10)
+        value = self.lookup_range(AIR_PURIFIER_STATE_PM10)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM10, value, False)
+
+    @property
+    def pm25(self):
+        value = self.lookup_range(AIR_PURIFIER_STATE_PM25)
+        if value is None:
+            return None
+        return self._update_feature(FEAT_PM25, value, False)
 
     def _get_lower_filter_life(self):
         max_time = self.to_int_or_none(
@@ -158,6 +174,9 @@ class AirPurifierStatus(DeviceStatus):
 
     def _update_features(self):
         _ = [
+            self.pm1,
+            self.pm10,
+            self.pm25,
             self.lower_filter_life,
             self.upper_filter_life,
         ]

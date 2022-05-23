@@ -53,7 +53,11 @@ from .const import (
 )
 
 SMARTTHINQ_PLATFORMS = [
-    Platform.SENSOR, Platform.BINARY_SENSOR, Platform.CLIMATE, Platform.SWITCH
+    Platform.BINARY_SENSOR,
+    Platform.CLIMATE,
+    Platform.HUMIDIFIER,
+    Platform.SENSOR,
+    Platform.SWITCH
 ]
 
 MAX_DISC_COUNT = 4
