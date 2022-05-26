@@ -317,7 +317,7 @@ class DeHumidifierStatus(DeviceStatus):
         return self._update_feature(FEAT_TARGET_HUMIDITY, value, False)
 
     @property
-    def water_tank_light(self):
+    def water_tank_full(self):
         value = self.lookup_enum(DHUM_STATE_TANK_LIGHT)
         if value is None:
             return None
@@ -348,5 +348,5 @@ class DeHumidifierStatus(DeviceStatus):
         _ = [
             self.current_humidity,
             self.target_humidity,
-            self.water_tank_light,
+            self.water_tank_full,
         ]
