@@ -403,30 +403,6 @@ DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         entity_registry_enabled_default=False,
     ),
-    ThinQSensorEntityDescription(
-        key=FEAT_PM1,
-        name="PM1",
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.PM1,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-        entity_registry_enabled_default=False,
-    ),
-    ThinQSensorEntityDescription(
-        key=FEAT_PM10,
-        name="PM10",
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.PM10,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-        entity_registry_enabled_default=False,
-    ),
-    ThinQSensorEntityDescription(
-        key=FEAT_PM25,
-        name="PM2.5",
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.PM25,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-        entity_registry_enabled_default=False,
-    ),
 )
 
 

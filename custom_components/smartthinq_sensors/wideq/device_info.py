@@ -211,6 +211,4 @@ class DeviceInfo(object):
 
     @property
     def snapshot(self) -> Optional[Dict[str, Any]]:
-        if "snapshot" in self._data:
-            return self._data["snapshot"]
-        return None
+        return self._data.get("snapshot")

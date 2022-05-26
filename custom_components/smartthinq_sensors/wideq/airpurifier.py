@@ -14,7 +14,7 @@ from .const import (
 from .device import Device, DeviceStatus
 
 LABEL_UPPER_FILTER_SUPPORT = "@SUPPORT_D_PLUS_TOP"
-SUPPORT_AIR_PURIFIER_MFILTER = ["MFILTER", "support.mFilter"]
+SUPPORT_AIR_PURIFIER_MFILTER = ["SupportMFilter", "support.mFilter"]
 
 AIR_PURIFIER_CTRL_BASIC = ["Control", "basicCtrl"]
 

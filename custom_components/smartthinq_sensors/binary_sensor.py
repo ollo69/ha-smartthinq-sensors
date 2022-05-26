@@ -19,6 +19,7 @@ from .wideq import (
     FEAT_REMOTESTART,
     FEAT_RINSEREFILL,
     FEAT_SALTREFILL,
+    FEAT_WATER_TANK_FULL,
     DeviceType,
 )
 
@@ -182,6 +183,12 @@ RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
         value_fn=lambda x: x.oven_state,
     ),
 )
+DEHUMIDIFIER_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
+    ThinQBinarySensorEntityDescription(
+        key=FEAT_WATER_TANK_FULL,
+        name="Water Tank Full",
+    ),
+)
 
 
 def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription) -> bool:
@@ -234,6 +241,16 @@ async def async_setup_entry(
             LGEBinarySensor(lge_device, sensor_desc, LGERangeDevice(lge_device))
             for sensor_desc in RANGE_BINARY_SENSORS
             for lge_device in lge_devices.get(DeviceType.RANGE, [])
+            if _binary_sensor_exist(lge_device, sensor_desc)
+        ]
+    )
+
+    # add dehumidifier
+    lge_sensors.extend(
+        [
+            LGEBinarySensor(lge_device, sensor_desc)
+            for sensor_desc in DEHUMIDIFIER_BINARY_SENSORS
+            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
             if _binary_sensor_exist(lge_device, sensor_desc)
         ]
     )
@@ -307,6 +324,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
             return False
         if isinstance(ret_val, bool):
             return ret_val
+        ret_val = ret_val.lower()
         if ret_val == STATE_ON:
             return True
         state = STATE_LOOKUP.get(ret_val, STATE_OFF)
