@@ -31,7 +31,7 @@ DHUM_STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
 
 DHUM_STATE_POWER = [DHUM_STATE_POWER_V1, "airState.energy.onCurrent"]
 
-CMD_STATE_OPERATION = [DHUM_CTRL_BASIC, [DHUM_STATE_OPERATION[0], "Set"], [None, DHUM_STATE_OPERATION[1]]]
+CMD_STATE_OPERATION = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_OPERATION]
 CMD_STATE_OP_MODE = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_OPERATION_MODE]
 CMD_STATE_TARGET_HUM = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_TARGET_HUM]
 CMD_STATE_WIND_STRENGTH = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_WIND_STRENGTH]
@@ -150,10 +150,13 @@ class DeHumidifierDevice(Device):
 
         op = DHumOp.ON if turn_on else DHumOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
+        op_value = self.model_info.enum_value(keys[2], op.value)
         if self._should_poll:
-            op_value = "Start" if turn_on else "Stop"
-        else:
-            op_value = self.model_info.enum_value(keys[2], op.value)
+            # different power command for ThinQ1 devices
+            cmd = "Start" if turn_on else "Stop"
+            await self.set(keys[0], keys[2], key=None, value=cmd)
+            self._status.update_status(keys[2], op_value)
+            return
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
     async def set_op_mode(self, mode):
@@ -201,8 +204,8 @@ class DeHumidifierDevice(Device):
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
         )
-        if self._status:
-            self._status.update_status(key or command, value)
+        if key is not None and self._status:
+            self._status.update_status(key, value)
 
     def reset_status(self):
         self._status = DeHumidifierStatus(self, None)
