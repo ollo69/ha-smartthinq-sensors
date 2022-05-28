@@ -36,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up LGE device climate based on config_entry."""
+    """Set up LGE device humidifier based on config_entry."""
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES)
     if not lge_devices:
@@ -68,7 +68,7 @@ class LGEBaseHumidifier(CoordinatorEntity, HumidifierEntity):
     """Base humidifier device."""
 
     def __init__(self, api: LGEDevice):
-        """Initialize the climate."""
+        """Initialize the humidifier."""
         super().__init__(api.coordinator)
         self._api = api
         self._attr_device_info = api.device_info
@@ -101,7 +101,7 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     """LG DeHumidifier device."""
 
     def __init__(self, api: LGEDevice) -> None:
-        """Initialize the climate."""
+        """Initialize the dehumidifier."""
         super().__init__(api)
         self._device: DeHumidifierDevice = api.device
         self._attr_name = api.name
@@ -156,11 +156,11 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         target_humidity = humidity + (humidity % humidity_step)
         await self._device.set_target_humidity(target_humidity)
 
-    async def async_turn_on(self) -> None:
+    async def async_turn_on(self, **kwargs) -> None:
         """Turn the entity on."""
         await self._device.power(True)
 
-    async def async_turn_off(self) -> None:
+    async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""
         await self._device.power(False)
 
