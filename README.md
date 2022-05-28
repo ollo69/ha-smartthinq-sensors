@@ -12,6 +12,7 @@ Supported devices are:
 - Dehumidifier
 - DishWasher
 - Dryer
+- Fan
 - Range 
 - Refrigerator
 - Styler
