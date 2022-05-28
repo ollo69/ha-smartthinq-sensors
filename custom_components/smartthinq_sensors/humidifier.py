@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from typing import Any
 import voluptuous as vol
 
 from .wideq import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, DeviceType
@@ -157,11 +156,11 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         target_humidity = humidity + (humidity % humidity_step)
         await self._device.set_target_humidity(target_humidity)
 
-    async def async_turn_on(self, **kwargs: Any) -> None:
+    async def async_turn_on(self, **kwargs) -> None:
         """Turn the entity on."""
         await self._device.power(True)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""
         await self._device.power(False)
 

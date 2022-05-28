@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from typing import Any
 
 from .wideq import DeviceType
 from .wideq.fan import FanDevice
@@ -144,6 +143,6 @@ class LGEFan(LGEBaseFan):
         if percentage:
             await self.async_set_percentage(percentage)
 
-    async def async_turn_off(self, **kwargs: Any) -> None:
+    async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""
         await self._device.power(False)
