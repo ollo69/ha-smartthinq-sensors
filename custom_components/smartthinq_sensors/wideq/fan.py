@@ -78,7 +78,7 @@ class FanDevice(Device):
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
     async def set_fan_speed(self, speed):
-        """Set the fan speed to a value from the `ACFanSpeed` enum."""
+        """Set the fan speed to a value from the `FanSpeed` enum."""
 
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")

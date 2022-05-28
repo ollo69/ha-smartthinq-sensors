@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up LGE device climate based on config_entry."""
+    """Set up LGE device fan based on config_entry."""
     entry_config = hass.data[DOMAIN]
     lge_devices = entry_config.get(LGE_DEVICES)
     if not lge_devices:
@@ -39,7 +39,7 @@ async def async_setup_entry(
     _LOGGER.debug("Starting LGE ThinQ fan setup...")
     lge_fan = []
 
-    # DeHumidifier devices
+    # Fan devices
     lge_fan.extend(
         [
             LGEFan(lge_device)
@@ -54,7 +54,7 @@ class LGEBaseFan(CoordinatorEntity, FanEntity):
     """Base fan device."""
 
     def __init__(self, api: LGEDevice):
-        """Initialize the climate."""
+        """Initialize the base fan."""
         super().__init__(api.coordinator)
         self._api = api
         self._attr_device_info = api.device_info
@@ -87,7 +87,7 @@ class LGEFan(LGEBaseFan):
     """LG Fan device."""
 
     def __init__(self, api: LGEDevice) -> None:
-        """Initialize the climate."""
+        """Initialize the fan."""
         super().__init__(api)
         self._device: FanDevice = api.device
         self._attr_name = api.name
