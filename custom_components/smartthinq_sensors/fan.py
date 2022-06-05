@@ -148,7 +148,7 @@ class LGEFan(LGEBaseFan):
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
-        if percentage == 0 and self._api.state.fan_preset is None:
+        if percentage == 0 and self.preset_mode is None:
             await self.async_turn_off()
             return
         if self.speed_count == 0:
