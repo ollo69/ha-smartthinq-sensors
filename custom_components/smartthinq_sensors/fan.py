@@ -46,6 +46,14 @@ async def async_setup_entry(
         ]
     )
 
+    # Air Purifier devices
+    lge_fan.extend(
+        [
+            LGEFan(lge_device, icon="mdi:air-purifier")
+            for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
+        ]
+    )
+
     async_add_entities(lge_fan)
 
 
@@ -85,20 +93,27 @@ class LGEBaseFan(CoordinatorEntity, FanEntity):
 class LGEFan(LGEBaseFan):
     """LG Fan device."""
 
-    def __init__(self, api: LGEDevice) -> None:
+    def __init__(self, api: LGEDevice, *, icon: str = None) -> None:
         """Initialize the fan."""
         super().__init__(api)
         self._device: FanDevice = api.device
         self._attr_name = api.name
         self._attr_unique_id = f"{api.unique_id}-FAN"
+        if icon:
+            self._attr_icon = icon
         self._attr_speed_count = len(self._device.fan_speeds)
+        if len(self._device.fan_presets) > 0:
+            self._attr_preset_modes = self._device.fan_presets
 
     @property
     def supported_features(self) -> int:
         """Return the list of supported features."""
+        features = 0
         if self.speed_count > 0:
-            return FanEntityFeature.SET_SPEED
-        return 0
+            features |= FanEntityFeature.SET_SPEED
+        if self.preset_modes is not None:
+            features |= FanEntityFeature.PRESET_MODE
+        return features
 
     @property
     def extra_state_attributes(self):
@@ -118,19 +133,34 @@ class LGEFan(LGEBaseFan):
             return 0
         if self.speed_count == 0:
             return 100
+        if self._api.state.fan_speed is None:
+            return None
         return ordered_list_item_to_percentage(
             self._device.fan_speeds, self._api.state.fan_speed
         )
 
+    @property
+    def preset_mode(self) -> str | None:
+        """Return the current preset mode, e.g., auto, smart, interval, favorite."""
+        if self.preset_modes is None:
+            return None
+        return self._api.state.fan_preset
+
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
-        if percentage == 0:
+        if percentage == 0 and self._api.state.fan_preset is None:
             await self.async_turn_off()
             return
         if self.speed_count == 0:
             return
         named_speed = percentage_to_ordered_list_item(self._device.fan_speeds, percentage)
         await self._device.set_fan_speed(named_speed)
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Set new preset mode."""
+        if self.preset_modes is None:
+            raise NotImplementedError()
+        await self._device.set_fan_preset(preset_mode)
 
     async def async_turn_on(
         self,
@@ -142,6 +172,8 @@ class LGEFan(LGEBaseFan):
         await self._device.power(True)
         if percentage:
             await self.async_set_percentage(percentage)
+        elif preset_mode and self.preset_modes:
+            await self.async_set_preset_mode(preset_mode)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""

@@ -87,8 +87,11 @@ FEAT_OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
 FEAT_OVEN_UPPER_STATE = "oven_upper_state"
 
 # air purifier and dehumidifier device features
-FEAT_LOWER_FILTER_LIFE = "lower_filter_life"
-FEAT_UPPER_FILTER_LIFE = "upper_filter_life"
+FEAT_FILTER_BOTTOM_LIFE = "filter_bottom_life"
+FEAT_FILTER_DUST_LIFE = "filter_dust_life"
+FEAT_FILTER_MAIN_LIFE = "filter_main_life"
+FEAT_FILTER_MID_LIFE = "filter_mid_life"
+FEAT_FILTER_TOP_LIFE = "filter_top_life"
 FEAT_PM1 = "pm1"
 FEAT_PM10 = "pm10"
 FEAT_PM25 = "pm25"

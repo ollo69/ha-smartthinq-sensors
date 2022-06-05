@@ -5,17 +5,18 @@ from typing import Optional
 
 from .device import Device, DeviceStatus
 
-FAN_CTRL_BASIC = ["Control", "basicCtrl"]
+CTRL_BASIC = ["Control", "basicCtrl"]
 
-SUPPORT_FAN_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
-SUPPORT_FAN_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
-FAN_STATE_OPERATION = ["Operation", "airState.operation"]
-FAN_STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
-FAN_STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
+SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
+SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
 
-CMD_STATE_OPERATION = [FAN_CTRL_BASIC, "Set", FAN_STATE_OPERATION]
-CMD_STATE_OP_MODE = [FAN_CTRL_BASIC, "Set", FAN_STATE_OPERATION_MODE]
-CMD_STATE_WIND_STRENGTH = [FAN_CTRL_BASIC, "Set", FAN_STATE_WIND_STRENGTH]
+STATE_OPERATION = ["Operation", "airState.operation"]
+STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
+STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
+
+CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
+CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
+CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,11 +58,19 @@ class FanDevice(Device):
     def fan_speeds(self):
         """Return a list of available fan speeds."""
         if self._supported_fan_speeds is None:
-            key = self._get_state_key(SUPPORT_FAN_WIND_STRENGTH)
+            key = self._get_state_key(SUPPORT_WIND_STRENGTH)
+            if not self.model_info.is_enum_type(key):
+                self._supported_fan_speeds = []
+                return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in FanSpeed]
             self._supported_fan_speeds = [FanSpeed(o).name for o in mapping.values() if o in mode_list]
         return self._supported_fan_speeds
+
+    @property
+    def fan_presets(self):
+        """Return a list of available fan presets."""
+        return []
 
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
@@ -85,6 +94,11 @@ class FanDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
         speed_value = self.model_info.enum_value(keys[2], FanSpeed[speed].value)
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
+
+    async def set_fan_preset(self, preset):
+        """Set the fan preset to a value from the `FanPreset` enum."""
+
+        raise ValueError(f"Invalid fan preset: {preset}")
 
     async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
@@ -117,15 +131,13 @@ class FanStatus(DeviceStatus):
         super().__init__(device, data)
         self._operation = None
 
-    def _get_state_key(self, key_name):
-        if isinstance(key_name, list):
-            return key_name[1 if self.is_info_v2 else 0]
-        return key_name
-
     def _get_operation(self):
         if self._operation is None:
-            key = self._get_state_key(FAN_STATE_OPERATION)
+            key = self._get_state_key(STATE_OPERATION)
             self._operation = self.lookup_enum(key, True)
+            if self._operation is None:
+                return None
+
         try:
             return FanOp(self._operation)
         except ValueError:
@@ -134,7 +146,7 @@ class FanStatus(DeviceStatus):
     def update_status(self, key, value):
         if not super().update_status(key, value):
             return False
-        if key in FAN_STATE_OPERATION:
+        if key in STATE_OPERATION:
             self._operation = None
         return True
 
@@ -154,11 +166,17 @@ class FanStatus(DeviceStatus):
 
     @property
     def fan_speed(self):
-        key = self._get_state_key(FAN_STATE_WIND_STRENGTH)
+        key = self._get_state_key(STATE_WIND_STRENGTH)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
         try:
-            return FanSpeed(self.lookup_enum(key, True)).name
+            return FanSpeed(value).name
         except ValueError:
             return None
+
+    @property
+    def fan_preset(self):
+        return None
 
     def _update_features(self):
         return

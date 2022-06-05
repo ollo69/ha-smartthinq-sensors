@@ -30,6 +30,7 @@ class DeviceType(enum.Enum):
     DEHUMIDIFIER = 403
     FAN = 405
     WATER_HEATER = 406
+    AIR_PURIFIER_FAN = 410
     ROBOT_KING = 501
     TV = 701
     BOILER = 801

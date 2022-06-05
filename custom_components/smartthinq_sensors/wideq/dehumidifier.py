@@ -5,39 +5,38 @@ from typing import Optional
 
 from .const import (
     FEAT_HUMIDITY,
-    FEAT_PM1,
-    FEAT_PM10,
-    FEAT_PM25,
     FEAT_TARGET_HUMIDITY,
     FEAT_WATER_TANK_FULL,
 )
 from .core_exceptions import InvalidRequestError
 from .device import Device, DeviceStatus
 
-DHUM_CTRL_BASIC = ["Control", "basicCtrl"]
-DHUM_STATE_POWER_V1 = "InOutInstantPower"
+CTRL_BASIC = ["Control", "basicCtrl"]
+STATE_POWER_V1 = "InOutInstantPower"
 
-SUPPORT_DHUM_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
-SUPPORT_DHUM_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
-DHUM_STATE_OPERATION = ["Operation", "airState.operation"]
-DHUM_STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
-DHUM_STATE_CURRENT_HUM = ["SensorHumidity", "airState.humidity.current"]
-DHUM_STATE_TARGET_HUM = ["HumidityCfg", "airState.humidity.desired"]
-DHUM_STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
-DHUM_STATE_TANK_LIGHT = ["WatertankLight", "airState.miscFuncState.watertankLight"]
-DHUM_STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
-DHUM_STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
-DHUM_STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
+SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
+SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
+SUPPORT_AIR_POLUTION = ["SupportAirPolution", "support.airPolution"]
 
-DHUM_STATE_POWER = [DHUM_STATE_POWER_V1, "airState.energy.onCurrent"]
+STATE_OPERATION = ["Operation", "airState.operation"]
+STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
+STATE_TARGET_HUM = ["HumidityCfg", "airState.humidity.desired"]
+STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
 
-CMD_STATE_OPERATION = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_OPERATION]
-CMD_STATE_OP_MODE = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_OPERATION_MODE]
-CMD_STATE_TARGET_HUM = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_TARGET_HUM]
-CMD_STATE_WIND_STRENGTH = [DHUM_CTRL_BASIC, "Set", DHUM_STATE_WIND_STRENGTH]
+STATE_CURRENT_HUM = ["SensorHumidity", "airState.humidity.current"]
+STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
+STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
+STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
+STATE_TANK_LIGHT = ["WatertankLight", "airState.miscFuncState.watertankLight"]
+
+STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
+
+CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
+CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
+CMD_STATE_TARGET_HUM = [CTRL_BASIC, "Set", STATE_TARGET_HUM]
+CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
-
 
 DEFAULT_MIN_HUM = 30
 DEFAULT_MAX_HUM = 70
@@ -94,7 +93,7 @@ class DeHumidifierDevice(Device):
             if not self.model_info:
                 return None
 
-            key = self._get_state_key(DHUM_STATE_TARGET_HUM)
+            key = self._get_state_key(STATE_TARGET_HUM)
             range_info = self.model_info.value(key)
             if not range_info:
                 min_hum = DEFAULT_MIN_HUM
@@ -110,7 +109,10 @@ class DeHumidifierDevice(Device):
     def op_modes(self):
         """Return a list of available operation modes."""
         if self._supported_op_modes is None:
-            key = self._get_state_key(SUPPORT_DHUM_OPERATION_MODE)
+            key = self._get_state_key(SUPPORT_OPERATION_MODE)
+            if not self.model_info.is_enum_type(key):
+                self._supported_op_modes = []
+                return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in DHumMode]
             self._supported_op_modes = [DHumMode(o).name for o in mapping.values() if o in mode_list]
@@ -120,7 +122,10 @@ class DeHumidifierDevice(Device):
     def fan_speeds(self):
         """Return a list of available fan speeds."""
         if self._supported_fan_speeds is None:
-            key = self._get_state_key(SUPPORT_DHUM_WIND_STRENGTH)
+            key = self._get_state_key(SUPPORT_WIND_STRENGTH)
+            if not self.model_info.is_enum_type(key):
+                self._supported_fan_speeds = []
+                return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in DHumFanSpeed]
             self._supported_fan_speeds = [DHumFanSpeed(o).name for o in mapping.values() if o in mode_list]
@@ -192,8 +197,8 @@ class DeHumidifierDevice(Device):
             return 0
 
         try:
-            value = await self._get_config(DHUM_STATE_POWER_V1)
-            return value[DHUM_STATE_POWER_V1]
+            value = await self._get_config(STATE_POWER_V1)
+            return value[STATE_POWER_V1]
         except (ValueError, InvalidRequestError):
             # Device does not support whole unit instant power usage
             self._current_power_supported = False
@@ -250,15 +255,12 @@ class DeHumidifierStatus(DeviceStatus):
         super().__init__(device, data)
         self._operation = None
 
-    def _get_state_key(self, key_name):
-        if isinstance(key_name, list):
-            return key_name[1 if self.is_info_v2 else 0]
-        return key_name
-
     def _get_operation(self):
         if self._operation is None:
-            key = self._get_state_key(DHUM_STATE_OPERATION)
+            key = self._get_state_key(STATE_OPERATION)
             self._operation = self.lookup_enum(key, True)
+            if self._operation is None:
+                return None
         try:
             return DHumOp(self._operation)
         except ValueError:
@@ -267,7 +269,7 @@ class DeHumidifierStatus(DeviceStatus):
     def update_status(self, key, value):
         if not super().update_status(key, value):
             return False
-        if key in DHUM_STATE_OPERATION:
+        if key in STATE_OPERATION:
             self._operation = None
         return True
 
@@ -287,65 +289,47 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def operation_mode(self):
-        key = self._get_state_key(DHUM_STATE_OPERATION_MODE)
+        key = self._get_state_key(STATE_OPERATION_MODE)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
         try:
-            return DHumMode(self.lookup_enum(key, True)).name
+            return DHumMode(value).name
         except ValueError:
             return None
 
     @property
     def fan_speed(self):
-        key = self._get_state_key(DHUM_STATE_WIND_STRENGTH)
+        key = self._get_state_key(STATE_WIND_STRENGTH)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
         try:
-            return DHumFanSpeed(self.lookup_enum(key, True)).name
+            return DHumFanSpeed(value).name
         except ValueError:
             return None
 
     @property
     def current_humidity(self):
-        value = self.to_int_or_none(
-            self.lookup_range(DHUM_STATE_CURRENT_HUM)
-        )
-        if value is None:
+        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
+        if self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT") is None:
+            return None
+        key = self._get_state_key(STATE_CURRENT_HUM)
+        if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
         return self._update_feature(FEAT_HUMIDITY, value, False)
 
     @property
     def target_humidity(self):
-        value = self.to_int_or_none(
-            self.lookup_range(DHUM_STATE_TARGET_HUM)
-        )
-        if value is None:
+        key = self._get_state_key(STATE_TARGET_HUM)
+        if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
         return self._update_feature(FEAT_TARGET_HUMIDITY, value, False)
 
     @property
     def water_tank_full(self):
-        value = self.lookup_enum(DHUM_STATE_TANK_LIGHT)
-        if value is None:
+        key = self._get_state_key(STATE_TANK_LIGHT)
+        if (value := self.lookup_enum(key)) is None:
             return None
         return self._update_feature(FEAT_WATER_TANK_FULL, value)
-
-    @property
-    def pm1(self):
-        value = self.lookup_range(DHUM_STATE_PM1)
-        if value is None:
-            return None
-        return self._update_feature(FEAT_PM1, value, False)
-
-    @property
-    def pm10(self):
-        value = self.lookup_range(DHUM_STATE_PM10)
-        if value is None:
-            return None
-        return self._update_feature(FEAT_PM10, value, False)
-
-    @property
-    def pm25(self):
-        value = self.lookup_range(DHUM_STATE_PM25)
-        if value is None:
-            return None
-        return self._update_feature(FEAT_PM25, value, False)
 
     def _update_features(self):
         _ = [

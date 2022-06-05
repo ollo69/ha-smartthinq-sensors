@@ -336,11 +336,16 @@ class ModelInfo(object):
 
     def value_type(self, name):
         if name in self._data["Value"]:
-            return self._data["Value"][name]["type"]
+            return self._data["Value"][name].get("type")
         return None
 
     def value_exist(self, name):
         return name in self._data["Value"]
+
+    def is_enum_type(self, key):
+        if (value_type := self.value_type(key)) is None:
+            return False
+        return value_type in ("Enum", "enum")
 
     def value(self, name):
         """Look up information about a value.
@@ -659,6 +664,11 @@ class ModelInfoV2(object):
             return self._data["MonitoringValue"][name].get("dataType")
         return None
 
+    def is_enum_type(self, key):
+        if (value_type := self.value_type(key)) is None:
+            return False
+        return value_type in ("Enum", "enum")
+
     def value_exist(self, name):
         return name in self._data["MonitoringValue"]
 
@@ -869,7 +879,7 @@ class ModelInfoV2AC(ModelInfo):
 
     def value_type(self, name):
         if name in self._data["Value"]:
-            return self._data["Value"][name]["data_type"]
+            return self._data["Value"][name].get("data_type")
         return None
 
     def value(self, name):
@@ -1306,6 +1316,11 @@ class DeviceStatus(object):
     @property
     def is_info_v2(self):
         return self._device.model_info.is_info_v2
+
+    def _get_state_key(self, key_name):
+        if isinstance(key_name, list):
+            return key_name[1 if self.is_info_v2 else 0]
+        return key_name
 
     def _get_data_key(self, keys):
         if not self._data:
