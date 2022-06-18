@@ -28,6 +28,7 @@ CTRL_MISC = ["Control", "miscCtrl"]
 # CTRL_WIND_MODE = "wModeCtrl"
 
 DUCT_ZONE_V1 = "DuctZone"
+DUCT_ZONE_V1_GET_CMD = "GetDuctZone"
 STATE_POWER_V1 = "InOutInstantPower"
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
@@ -197,6 +198,7 @@ class AirConditionerDevice(Device):
         self._temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
         self._duct_zones = {}
+        self._duct_v1_supported: Optional[bool] = None
 
         self._current_power = 0
         self._current_power_supported = True
@@ -382,8 +384,14 @@ class AirConditionerDevice(Device):
         if not self._status:
             return {}
         duct_state = self._status.duct_zones_state
-        if not duct_state:
-            return {}
+        if self._should_poll:
+            if self._duct_v1_supported is None:
+                self._duct_v1_supported = self.model_info.get_control_cmd(DUCT_ZONE_V1_GET_CMD) is not None
+            if not self._duct_v1_supported:
+                return {}
+            if duct_state is None:
+                self._duct_v1_supported = False
+                return {}
 
         # get real duct zones states
         """
@@ -391,6 +399,8 @@ class AirConditionerDevice(Device):
         and than we create the result. We always have 8 duct zone.
         """
         if not self._should_poll:
+            if not duct_state:
+                return {}
             bin_arr = [x for x in reversed(f"{duct_state:08b}")]
             return {
                 str(v+1): {ZONE_ST_CUR: k} for v, k in enumerate(bin_arr)
@@ -405,6 +415,11 @@ class AirConditionerDevice(Device):
         - "State": Whether the zone is open. Also "1" or "0".
         """
         zones = await self._get_config(DUCT_ZONE_V1)
+        if not zones:
+            if not self._duct_zones:
+                self._duct_v1_supported = False
+            return {}
+
         return {
             zone["No"]: {ZONE_ST_CUR: zone["State"]}
             for zone in zones
