@@ -262,6 +262,37 @@ entity: 'sensor.the_dryer_dryer' # Washers work too!
 
 </details>
 
+- Alternative: Template (requires mushroom-card, <img src="https://user-images.githubusercontent.com/10727862/174490941-c0148343-e31b-42fe-a856-376428ee53a5.png" width="500px"/>)
+<details><summary>Hidden, click to expand</summary>
+
+**Note: You'll need to change the `sensor.dryer` to your own entity, and you might want to change `mdi:tumble-dryer` to `mdi:washing-machine` for washers.**
+```yaml
+type: custom:mushroom-template-card
+primary: Dryer
+secondary: >-
+  {% if is_state("sensor.dryer", "on") %}
+
+  Running {{ state_attr("sensor.dryer", "current_course") }}
+
+  Currently {{ state_attr("sensor.dryer", "run_state") }}
+
+  {{ state_attr("sensor.dryer", "initial_time") }} total, {{ state_attr("sensor.dryer", "remain_time") }} to go
+
+  {% else %}
+
+  Off
+
+  {% endif %}
+icon: mdi:tumble-dryer
+entity: sensor.dryer
+multiline_secondary: true
+icon_color: '{{ "indigo" if is_state("sensor.dryer", "on") else "" }}'
+tap_action:
+  action: more-info
+```
+
+</details>
+
 - Alternative: Washer picture status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
 <details><summary>Hidden, click to expand</summary>
     
