@@ -165,7 +165,7 @@ REFRIGERATOR_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_DOOR_OPEN,
         name="Door open",
-        device_class=BinarySensorDeviceClass.OPENING,
+        device_class=BinarySensorDeviceClass.DOOR,
         value_fn=lambda x: x.dooropen_state,
     ),
 )
