@@ -131,10 +131,10 @@ class LGEFan(LGEBaseFan):
         """Return the current speed percentage."""
         if not self._api.state.is_on:
             return 0
+        if self._api.state.fan_speed is None and self._api.state.fan_preset:
+            return None
         if self.speed_count == 0:
             return 100
-        if self._api.state.fan_speed is None:
-            return None
         return ordered_list_item_to_percentage(
             self._device.fan_speeds, self._api.state.fan_speed
         )
@@ -144,6 +144,8 @@ class LGEFan(LGEBaseFan):
         """Return the current preset mode, e.g., auto, smart, interval, favorite."""
         if self.preset_modes is None:
             return None
+        if not self._api.state.is_on:
+            return None
         return self._api.state.fan_preset
 
     async def async_set_percentage(self, percentage: int) -> None:
@@ -151,6 +153,8 @@ class LGEFan(LGEBaseFan):
         if percentage == 0 and self.preset_mode is None:
             await self.async_turn_off()
             return
+        if not self._api.state.is_on:
+            await self._device.power(True)
         if self.speed_count == 0:
             return
         named_speed = percentage_to_ordered_list_item(self._device.fan_speeds, percentage)
@@ -160,6 +164,8 @@ class LGEFan(LGEBaseFan):
         """Set new preset mode."""
         if self.preset_modes is None:
             raise NotImplementedError()
+        if not self._api.state.is_on:
+            await self._device.power(True)
         await self._device.set_fan_preset(preset_mode)
 
     async def async_turn_on(
@@ -169,11 +175,12 @@ class LGEFan(LGEBaseFan):
         **kwargs,
     ) -> None:
         """Turn on the fan."""
-        await self._device.power(True)
         if percentage:
             await self.async_set_percentage(percentage)
         elif preset_mode and self.preset_modes:
             await self.async_set_preset_mode(preset_mode)
+        else:
+            await self._device.power(True)
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""

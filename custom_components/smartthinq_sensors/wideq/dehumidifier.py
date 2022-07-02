@@ -258,9 +258,10 @@ class DeHumidifierStatus(DeviceStatus):
     def _get_operation(self):
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
-            self._operation = self.lookup_enum(key, True)
-            if self._operation is None:
+            operation = self.lookup_enum(key, True)
+            if not operation:
                 return None
+            self._operation = operation
         try:
             return DHumOp(self._operation)
         except ValueError:

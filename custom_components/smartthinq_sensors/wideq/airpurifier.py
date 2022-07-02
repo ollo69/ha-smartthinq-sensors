@@ -99,6 +99,7 @@ class AirPurifierFanSpeed(enum.Enum):
 class AirPurifierFanPreset(enum.Enum):
     """The fan preset for a AirPurifier device."""
 
+    POWER = "@AP_MAIN_MID_WINDSTRENGTH_POWER_W"
     AUTO = "@AP_MAIN_MID_WINDSTRENGTH_AUTO_W"
 
 
@@ -215,9 +216,10 @@ class AirPurifierStatus(DeviceStatus):
     def _get_operation(self):
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
-            self._operation = self.lookup_enum(key, True)
-            if self._operation is None:
+            operation = self.lookup_enum(key, True)
+            if not operation:
                 return None
+            self._operation = operation
         try:
             return AirPurifierOp(self._operation)
         except ValueError:
