@@ -9,6 +9,7 @@ from typing import Any
 import voluptuous as vol
 
 from .wideq.core_async import ClientAsync
+from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
 
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -38,6 +39,7 @@ CONF_USE_REDIRECT = "use_redirect"
 RESULT_SUCCESS = 0
 RESULT_FAIL = 1
 RESULT_NO_DEV = 2
+RESULT_CRED_FAIL = 3
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -188,6 +190,13 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 client = await lge_auth.create_client_from_token(
                     self.hass, self._token, self._oauth_url
                 )
+        except (AuthenticationError, InvalidCredentialError) as exc:
+            msg = "Invalid ThinQ credential error. Please use the LG App on your" \
+                  " mobile device to verify if there are Term of Service to accept." \
+                  " Account based on social network are not supported and in most" \
+                  " case do not work with this integration."
+            _LOGGER.exception(msg, exc_info=exc)
+            return None, RESULT_CRED_FAIL
         except Exception as exc:
             _LOGGER.exception("Error connecting to ThinQ", exc_info=exc)
             return None, RESULT_FAIL
@@ -195,6 +204,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not client:
             return None, RESULT_NO_DEV
 
+        await client.close()
         if not client.has_devices:
             return None, RESULT_NO_DEV
 
@@ -207,6 +217,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         self._error = "unknown"
         if error_code == RESULT_FAIL:
+            self._error = "error_connect"
+        elif error_code == RESULT_CRED_FAIL:
             self._error = "invalid_credentials"
 
         if is_user_step:

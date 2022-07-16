@@ -11,6 +11,7 @@ import hmac
 import json
 import logging
 import os
+import ssl
 import uuid
 import xmltodict
 
@@ -135,7 +136,7 @@ class CoreAsync:
             self._session = session
             self._managed_session = False
         else:
-            self._session = aiohttp.ClientSession()
+            self._session = None
             self._managed_session = True
 
     @property
@@ -150,8 +151,18 @@ class CoreAsync:
 
     async def close(self):
         """Close the managed session on exit."""
-        if self._managed_session:
+        if self._managed_session and self._session:
             await self._session.close()
+            self._session = None
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        """Return current aiohttp client session or init a new one when required."""
+        if not self._session:
+            context = ssl.create_default_context()
+            # context.set_ciphers("DEFAULT")
+            connector = aiohttp.TCPConnector(enable_cleanup_closed=True, ssl_context=context)
+            self._session = aiohttp.ClientSession(connector=connector)
+        return self._session
 
     @staticmethod
     async def _get_json_resp(response: aiohttp.ClientResponse) -> dict:
@@ -225,7 +236,7 @@ class CoreAsync:
         url: str,
     ) -> bytes:
         """Make a generic HTTP request."""
-        async with self._session.get(
+        async with self._get_session().get(
             url=url,
         ) as resp:
             result = await resp.content.read()
@@ -243,7 +254,7 @@ class CoreAsync:
 
         _LOGGER.debug("thinq2_get before: %s", url)
 
-        async with self._session.get(
+        async with self._get_session().get(
             url=url,
             headers=self._thinq2_headers(
                 access_token=access_token,
@@ -278,7 +289,7 @@ class CoreAsync:
 
         _LOGGER.debug("lgedm2_post before: %s", url)
 
-        async with self._session.post(
+        async with self._get_session().post(
             url=url,
             json=data if is_api_v2 else {DATA_ROOT: data},
             headers=self._thinq2_headers(
@@ -362,7 +373,7 @@ class CoreAsync:
           "log_param": f"login request / user_id : {username} / third_party : null / svc_list : SVC202,SVC710 / 3rd_service : ",
         }
 
-        async with self._session.post(
+        async with self._get_session().post(
             url=url, data=pre_login_data, headers=headers, timeout=self._timeout, raise_for_status=False
         ) as resp:
             pre_login = await resp.json()
@@ -380,24 +391,33 @@ class CoreAsync:
         }
         emp_login_url = urljoin(emp_base_url, 'emp/v2.0/account/session/' + quote(username))
 
-        async with self._session.post(
+        async with self._get_session().post(
             url=emp_login_url, data=data, headers=headers, timeout=self._timeout, raise_for_status=False
         ) as resp:
             account_data = await resp.json()
 
         _LOGGER.debug("auth_user_login - account_data: %s", account_data)
-        account = account_data["account"]
+        if "account" not in account_data or "error" in account_data:
+            msg = ""
+            if "error" in account_data:
+                if err_code := account_data["error"].get("code"):
+                    msg += f"code: {err_code}"
+                if err_msg := account_data["error"].get("message"):
+                    if msg:
+                        msg += " - "
+                    msg += f"message: {err_msg}"
+            if not msg:
+                _LOGGER.error("auth_user_login - invalid account_data: %s", account_data)
+                msg = "unknown error"
+            raise exc.AuthenticationError(msg)
 
-        #  const {code, message} = err.response.data.error;
-        #  if (code === 'MS.001.03') {
-        #    throw new AuthenticationError('Your account was already used to registered in '+ message +'.');
-        #  }
+        account = account_data["account"]
 
         # dynamic get secret key for emp signature
         _LOGGER.debug("auth_user_login - getting secret_data")
         emp_search_key_url = urljoin(login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP")
 
-        async with self._session.get(
+        async with self._get_session().get(
             url=emp_search_key_url, timeout=self._timeout, raise_for_status=False
         ) as resp:
             secret_data = json.loads(await resp.text())  # this return data as plain/text
@@ -434,7 +454,7 @@ class CoreAsync:
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.44",
         }
 
-        async with self._session.post(
+        async with self._get_session().post(
             url=V2_EMP_SESS_URL, headers=emp_headers, data=emp_data, timeout=self._timeout, raise_for_status=False
         ) as resp:
             token_data = await resp.json()
@@ -458,7 +478,7 @@ class CoreAsync:
           "x-thinq-security-key": SECURITY_KEY,
         },
 
-        async with self._session.post(
+        async with self._get_session().post(
             url=GATEWAY_URL,
             json={DATA_ROOT: {"countryCode": self._country, "langCode": self._language}},
             headers=headers,
@@ -489,15 +509,13 @@ class CoreAsync:
           "x-lge-oauth-signature": sig,
         }
 
-        try:
-            async with self._session.get(
-                url=url, headers=headers, timeout=self._timeout, raise_for_status=False
-            ) as resp:
-                res_data = await resp.json()
-        except Exception as ex:
-            raise exc.AuthenticationError() from ex
+        async with self._get_session().get(
+            url=url, headers=headers, timeout=self._timeout, raise_for_status=False
+        ) as resp:
+            res_data = await resp.json()
 
-        if res_data["status"] != 1:
+        if res_data["status"] != 1 or "account" not in res_data:
+            _LOGGER.error("get_user_number: invalid response: %s", res_data)
             raise exc.AuthenticationError("Failed to retrieve User Number")
         if LOG_AUTH_INFO:
             _LOGGER.debug(res_data)
@@ -520,7 +538,7 @@ class CoreAsync:
             "Accept": "application/json",
         }
 
-        async with self._session.post(
+        async with self._get_session().post(
             url=url, headers=headers, data=data, timeout=self._timeout, raise_for_status=False
         ) as resp:
             if resp.status != 200:
@@ -711,8 +729,10 @@ class Auth(object):
                 username,
                 hash_pwd.hexdigest(),
             )
+        except exc.AuthenticationError:
+            raise
         except Exception as ex:
-            raise exc.AuthenticationError() from ex
+            raise exc.AuthenticationError("User login failed") from ex
 
         refresh_token = token_info["refresh_token"]
         oauth_url = token_info["oauth2_backend_url"]

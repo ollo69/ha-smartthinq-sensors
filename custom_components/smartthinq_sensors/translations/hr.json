@@ -7,8 +7,7 @@
         "error": {
             "invalid_region": "Neispravan format regije.",
             "invalid_language": "Neispravan format jezika.",
-            "invalid_url": "Neispravan URL za preusmjeravanje.",
-            "invalid_credentials": "Neispravne SmartThinQ vjerodajnice."
+            "invalid_url": "Neispravan URL za preusmjeravanje."
         },
         "step": {
             "user": {

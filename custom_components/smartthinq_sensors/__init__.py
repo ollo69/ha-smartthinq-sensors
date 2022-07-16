@@ -4,6 +4,7 @@ Support for LG SmartThinQ device.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import timedelta
 import logging
 
@@ -16,6 +17,7 @@ from .wideq import (
 )
 from .wideq.core_async import ClientAsync
 from .wideq.core_exceptions import (
+    AuthenticationError,
     InvalidCredentialError,
     MonitorRefreshError,
     MonitorUnavailableError,
@@ -125,12 +127,29 @@ class LGEAuthentication:
         )
 
 
+def is_min_ha_version(min_ha_major_ver: int, min_ha_minor_ver: int) -> bool:
+    """Check if HA version at least a specific version."""
+    return (
+        MAJOR_VERSION > min_ha_major_ver or
+        (MAJOR_VERSION == min_ha_major_ver and MINOR_VERSION >= min_ha_minor_ver)
+    )
+
+
+async def async_setup_entity_platforms(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    platforms: Iterable[Platform | str],
+) -> None:
+    """Set up entity platforms using new method from HA version 2022.8."""
+    if is_min_ha_version(2022, 8):
+        await hass.config_entries.async_forward_entry_setups(config_entry, platforms)
+    else:
+        hass.config_entries.async_setup_platforms(config_entry, platforms)
+
+
 def is_valid_ha_version() -> bool:
     """Check if HA version is valid for this integration."""
-    return (
-        MAJOR_VERSION > MIN_HA_MAJ_VER or
-        (MAJOR_VERSION == MIN_HA_MAJ_VER and MINOR_VERSION >= MIN_HA_MIN_VER)
-    )
+    return is_min_ha_version(MIN_HA_MAJ_VER, MIN_HA_MIN_VER)
 
 
 def _notify_error(hass, notification_id, title, message) -> None:
@@ -188,13 +207,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         client = await lge_auth.create_client_from_token(hass, refresh_token, oauth_url)
 
-    except InvalidCredentialError:
+    except (AuthenticationError, InvalidCredentialError) as exc:
         msg = "Invalid ThinQ credential error, integration setup aborted." \
               " Please use the LG App on your mobile device to ensure your" \
-              " credentials are correct, then restart HomeAssistant." \
-              " If your credential changed, you must reconfigure integration"
+              " credentials are correct or there are new Term of Service" \
+              " to accept, then restart HomeAssistant." \
+              " If your credential changed, you must reconfigure integration." \
+              " Account based on social network are not supported and in most" \
+              " case do not work with this integration."
         _notify_error(hass, "inv_credential", "SmartThinQ Sensors", msg)
-        _LOGGER.error(msg)
+        _LOGGER.exception(msg, exc_info=exc)
         return False
 
     except Exception as exc:
@@ -225,7 +247,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         LGE_DEVICES: lge_devices,
         UNSUPPORTED_DEVICES: unsupported_devices,
     }
-    hass.config_entries.async_setup_platforms(entry, SMARTTHINQ_PLATFORMS)
+    await async_setup_entity_platforms(hass, entry, SMARTTHINQ_PLATFORMS)
 
     return True
 
@@ -235,7 +257,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok := await hass.config_entries.async_unload_platforms(
         entry, SMARTTHINQ_PLATFORMS
     ):
-        hass.data.pop(DOMAIN)
+        data = hass.data.pop(DOMAIN)
+        await data[CLIENT].close()
 
     return unload_ok
 

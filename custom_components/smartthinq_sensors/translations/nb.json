@@ -7,8 +7,7 @@
         "error": {
             "invalid_region": "Ugyldig regionformat.",
             "invalid_language": "Ugyldig språkformat.",
-            "invalid_url": "Ugyldig URL for omdirigering.",
-            "invalid_credentials": "Ugyldige SmartThinQ-legitimasjoner."
+            "invalid_url": "Ugyldig URL for omdirigering."
         },
         "step": {
             "user": {

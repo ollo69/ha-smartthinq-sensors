@@ -7,8 +7,7 @@
         "error": {
             "invalid_region": "Formato de país no válido.",
             "invalid_language": "Formato de idioma no válido.",
-            "invalid_url": "URL de redireccionamiento no válida",
-            "invalid_credentials": "Credenciales SmartThinQ no válidas."
+            "invalid_url": "URL de redireccionamiento no válida"
         },
         "step": {
             "user": {

@@ -10,7 +10,6 @@
             "invalid_region": "Nieprawidłowy format regionu.",
             "invalid_language": "Niepoprawny format języka.",
             "invalid_url": "Nieprawidłowy adres URL przekierowania.",
-            "invalid_credentials": "Nieprawidłowe dane logowania SmartThinQ.",
             "no_user_info": "Nazwa użytkownika i hasło są wymagane."
         },
         "step": {

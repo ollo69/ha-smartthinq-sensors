@@ -12,5 +12,5 @@
   ],
   "config_flow": true,
   "iot_class": "cloud_polling",
-  "version": "0.23.3"
+  "version": "0.23.4"
 }

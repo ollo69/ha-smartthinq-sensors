@@ -10,7 +10,6 @@
             "invalid_region": "Formato de região inválido.",
             "invalid_language": "Formato de idioma inválido.",
             "invalid_url": "URL de redirecionamento inválida. Certifique-se que tem acesso ao app ThinQ através do smartphone. Pode obter ajuda [aqui](https://git.io/JTjid).",
-            "invalid_credentials": "Credenciais SmartThinQ inválidas. Tente novamente e verifique se você tem acesso ao app ThinQ em seu smartphone.",
             "no_user_info": "Usuário e Senha são requiridos."
         },
         "step": {
