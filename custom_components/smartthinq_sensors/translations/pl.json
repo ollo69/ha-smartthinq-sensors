@@ -3,7 +3,7 @@
         "abort": {
             "single_instance_allowed": "Dozwolona jest tylko jedna konfiguracja SmartThinQ LGE Sensors.",
             "no_smartthinq_devices": "Nie znaleziono urządzeń SmartThinQ. Konfiguracja komponentów przerwana.",
-            "unsupported_version": "Ta integracja wymaga HomeAssistanta w wersji co najmniej {req_ver}, Ty używasz wersji {run_ver}.",
+            "unsupported_version": "Ta integracja wymaga HomeAssistanta w wersji co najmniej {req_ver}, Ty korzystasz z wersji {run_ver}.",
             "reconfigured": "Konfiguracja zakończona sukcesem."
         },
         "error": {
@@ -47,6 +47,6 @@
                 "title": "SmartThinQ LGE Sensors - token został zapisany"
             }
         },
-        "title": "SmartThinQ LGE Sensors"
+        "title": "Sensory SmartThinQ LGE"
     }
 }
