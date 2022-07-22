@@ -3,14 +3,19 @@
         "abort": {
             "single_instance_allowed": "Dozwolona jest tylko jedna konfiguracja SmartThinQ LGE Sensors.",
             "no_smartthinq_devices": "Nie znaleziono urządzeń SmartThinQ. Konfiguracja komponentów przerwana.",
-            "unsupported_version": "Ta integracja wymaga HomeAssistanta w wersji co najmniej {req_ver}, Ty używasz wersji {run_ver}."
+            "unsupported_version": "Ta integracja wymaga HomeAssistanta w wersji co najmniej {req_ver}, Ty korzystasz z wersji {run_ver}.",
+            "reconfigured": "Konfiguracja zakończona sukcesem."
         },
         "error": {
+            "error_connect": "Błąd łącznia ze SmartThinQ. Spróbuj ponownie i upewnij się, że możesz dostac się do ThinQ na swoim telefonie.",
             "error_url": "Błąd pobierania URL logowania z ThinQ.",
             "invalid_region": "Nieprawidłowy format regionu.",
             "invalid_language": "Niepoprawny format języka.",
             "invalid_url": "Nieprawidłowy adres URL przekierowania.",
-            "no_user_info": "Nazwa użytkownika i hasło są wymagane."
+            "invalid_credentials": "Błędne dane logowania do SmartThinQ. Użyj aplikacji LG na swoim telefonie, aby zweryfikować, czy nie ma nowych Warunków Usług do zaakceptowania. Konta bazujące na sieciach społecznościowych nie są wspierane i w większości przypadków nie działają z tą integracją.",
+            "invalid_config": "Znalaziono błędną konfigurację, zrekonfiguruj integrację.",
+            "no_user_info": "Nazwa użytkownika i hasło są wymagane.",
+            "unknown": "Nieznany błąd."
         },
         "step": {
             "user": {
@@ -28,11 +33,11 @@
             },
             "url": {
                 "data": {
-                    "login_url": "SmartThinQ login URL",
+                    "login_url": "URL logowania SmartThinQ",
                     "callback_url": "URL przekierowania"
                 },
                 "description": "Skopiuj i otwórz adres URL z pierwszego pola, aby zalogować się do SmartThinQ, a następnie po zalogowaniu się na konto SmartThinQ w drugie pole wklej adres URL, na który przekierowała cię przeglądarka po zalogowaniu.",
-                "title": "SmartThinQ LGE Sensors - Autoryzacja"
+                "title": "Sensory SmartThinQ LGE - Autoryzacja"
             },
             "token": {
                 "data": {
@@ -42,6 +47,6 @@
                 "title": "SmartThinQ LGE Sensors - token został zapisany"
             }
         },
-        "title": "SmartThinQ LGE Sensors"
+        "title": "Sensory SmartThinQ LGE"
     }
 }
