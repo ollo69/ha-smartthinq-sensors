@@ -73,6 +73,8 @@ TOKEN_EXP_LIMIT = 60  # will expire within 60 seconds
 # minimum time between 2 consecutive call for device snapshot updates (in seconds)
 MIN_TIME_BETWEEN_UPDATE = 25
 
+_LG_SSL_CIPHERS = "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK"
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -105,6 +107,14 @@ def oauth_info_from_url(url: str) -> dict:
         return {}
 
     return result
+
+
+def lg_client_session() -> aiohttp.ClientSession:
+    """Create an aiohttp client session to use with LG ThinQ."""
+    context = ssl.create_default_context()
+    context.set_ciphers(_LG_SSL_CIPHERS)
+    connector = aiohttp.TCPConnector(enable_cleanup_closed=True, ssl_context=context)
+    return aiohttp.ClientSession(connector=connector)
 
 
 class CoreAsync:
@@ -158,10 +168,7 @@ class CoreAsync:
     def _get_session(self) -> aiohttp.ClientSession:
         """Return current aiohttp client session or init a new one when required."""
         if not self._session:
-            context = ssl.create_default_context()
-            # context.set_ciphers("DEFAULT")
-            connector = aiohttp.TCPConnector(enable_cleanup_closed=True, ssl_context=context)
-            self._session = aiohttp.ClientSession(connector=connector)
+            self._session = lg_client_session()
         return self._session
 
     @staticmethod

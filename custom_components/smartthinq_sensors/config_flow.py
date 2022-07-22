@@ -147,8 +147,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._oauth_url = auth_info["oauth_url"]
             return self._save_config_entry()
 
-        lge_auth = LGEAuthentication(self._region, self._language)
-        self._login_url = await lge_auth.get_login_url(self.hass)
+        lge_auth = LGEAuthentication(self.hass, self._region, self._language)
+        self._login_url = await lge_auth.get_login_url()
         if not self._login_url:
             return self._show_form("error_url")
 
@@ -162,8 +162,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self._show_form(step_id="url")
 
         url = user_input[CONF_URL]
-        lge_auth = LGEAuthentication(self._region, self._language)
-        oauth_info = await lge_auth.get_auth_info_from_url(self.hass, url)
+        lge_auth = LGEAuthentication(self.hass, self._region, self._language)
+        oauth_info = await lge_auth.get_auth_info_from_url(url)
         if not oauth_info:
             return self._show_form(errors="invalid_url", step_id="url")
 
@@ -180,15 +180,15 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> tuple[ClientAsync | None, int]:
         """Test the connection to ThinQ."""
 
-        lge_auth = LGEAuthentication(self._region, self._language)
+        lge_auth = LGEAuthentication(self.hass, self._region, self._language)
         try:
             if username and password:
                 client = await lge_auth.create_client_from_login(
-                    self.hass, username, password
+                    username, password
                 )
             else:
                 client = await lge_auth.create_client_from_token(
-                    self.hass, self._token, self._oauth_url
+                    self._token, self._oauth_url
                 )
         except (AuthenticationError, InvalidCredentialError) as exc:
             msg = "Invalid ThinQ credential error. Please use the LG App on your" \

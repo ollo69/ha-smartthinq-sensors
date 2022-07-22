@@ -73,56 +73,56 @@ _LOGGER = logging.getLogger(__name__)
 class LGEAuthentication:
     """Class to authenticate connection with LG ThinQ."""
 
-    def __init__(self, region: str, language: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, region: str, language: str, use_ha_session=False
+    ) -> None:
         """Initialize the class."""
         self._region = region
         self._language = language
+        self._client_session = None
+        if use_ha_session:
+            self._client_session = async_get_clientsession(hass)
 
-    async def get_login_url(self, hass: HomeAssistant) -> str | None:
+    async def get_login_url(self) -> str | None:
         """Get an url to login in browser."""
-        session = async_get_clientsession(hass)
         try:
             return await ClientAsync.get_oauth_url(
-                self._region, self._language, aiohttp_session=session
+                self._region, self._language, aiohttp_session=self._client_session
             )
         except Exception as exc:
             _LOGGER.exception("Error retrieving login URL from ThinQ", exc_info=exc)
 
         return None
 
-    @staticmethod
-    async def get_auth_info_from_url(hass: HomeAssistant, callback_url: str) -> dict[str, str] | None:
+    async def get_auth_info_from_url(self, callback_url: str) -> dict[str, str] | None:
         """Retrieve auth info from redirect url."""
-        session = async_get_clientsession(hass)
         try:
-            return await ClientAsync.oauth_info_from_url(callback_url, aiohttp_session=session)
+            return await ClientAsync.oauth_info_from_url(
+                callback_url, aiohttp_session=self._client_session
+            )
         except Exception as exc:
             _LOGGER.exception("Error retrieving OAuth info from ThinQ", exc_info=exc)
 
         return None
 
-    async def create_client_from_login(self, hass: HomeAssistant, username: str, password: str) -> ClientAsync:
+    async def create_client_from_login(self, username: str, password: str) -> ClientAsync:
         """Create a new client using username and password."""
-        session = async_get_clientsession(hass)
         return await ClientAsync.from_login(
             username,
             password,
             country=self._region,
             language=self._language,
-            aiohttp_session=session,
+            aiohttp_session=self._client_session,
         )
 
-    async def create_client_from_token(
-            self, hass: HomeAssistant, token: str, oauth_url: str | None = None
-    ) -> ClientAsync:
+    async def create_client_from_token(self, token: str, oauth_url: str | None = None) -> ClientAsync:
         """Create a new client using refresh token."""
-        session = async_get_clientsession(hass)
         return await ClientAsync.from_token(
             token,
             oauth_url,
             country=self._region,
             language=self._language,
-            aiohttp_session=session,
+            aiohttp_session=self._client_session,
             # enable_emulation=True,
         )
 
@@ -203,9 +203,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
-    lge_auth = LGEAuthentication(region, language)
+    lge_auth = LGEAuthentication(hass, region, language)
     try:
-        client = await lge_auth.create_client_from_token(hass, refresh_token, oauth_url)
+        client = await lge_auth.create_client_from_token(refresh_token, oauth_url)
 
     except (AuthenticationError, InvalidCredentialError) as exc:
         msg = "Invalid ThinQ credential error, integration setup aborted." \
