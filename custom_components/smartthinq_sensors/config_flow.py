@@ -28,6 +28,7 @@ from .const import (
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_USE_API_V2,
+    CONF_USE_HA_SESSION,
     __min_ha_version__,
 )
 from . import LGEAuthentication, is_valid_ha_version
@@ -67,6 +68,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._language: str | None = None
         self._token: str | None = None
         self._oauth_url: str | None = None
+        self._use_ha_session = False
 
         self._user_lang: str | None = None
         self._login_url: str | None = None
@@ -115,8 +117,15 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         if self._is_import:
             self._error = "invalid_config"
-        elif self._async_current_entries():
-            return self.async_abort(reason="single_instance_allowed")
+        elif entries := self._async_current_entries():
+            entry = entries[0]
+            if entry.state == config_entries.ConfigEntryState.LOADED:
+                return self.async_abort(reason="single_instance_allowed")
+            if not self._region:
+                self._region = entry.data.get(CONF_REGION)
+            if not self._user_lang:
+                language: str | None = entry.data.get(CONF_LANGUAGE)
+                self._user_lang = language[0:2]
 
         if not user_input:
             return self._show_form()
@@ -126,6 +135,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         region = user_input[CONF_REGION]
         language = user_input[CONF_LANGUAGE]
         use_redirect = user_input[CONF_USE_REDIRECT]
+        self._use_ha_session = user_input.get(CONF_USE_HA_SESSION, False)
 
         if error := self._validate_region_language(region, language):
             return self._show_form(errors=error)
@@ -147,7 +157,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._oauth_url = auth_info["oauth_url"]
             return self._save_config_entry()
 
-        lge_auth = LGEAuthentication(self.hass, self._region, self._language)
+        lge_auth = LGEAuthentication(
+            self.hass, self._region, self._language, self._use_ha_session
+        )
         self._login_url = await lge_auth.get_login_url()
         if not self._login_url:
             return self._show_form("error_url")
@@ -162,7 +174,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self._show_form(step_id="url")
 
         url = user_input[CONF_URL]
-        lge_auth = LGEAuthentication(self.hass, self._region, self._language)
+        lge_auth = LGEAuthentication(
+            self.hass, self._region, self._language, self._use_ha_session
+        )
         oauth_info = await lge_auth.get_auth_info_from_url(url)
         if not oauth_info:
             return self._show_form(errors="invalid_url", step_id="url")
@@ -180,7 +194,9 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> tuple[ClientAsync | None, int]:
         """Test the connection to ThinQ."""
 
-        lge_auth = LGEAuthentication(self.hass, self._region, self._language)
+        lge_auth = LGEAuthentication(
+            self.hass, self._region, self._language, self._use_ha_session
+        )
         try:
             if username and password:
                 client = await lge_auth.create_client_from_login(
@@ -236,6 +252,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_OAUTH_URL: self._oauth_url,
             CONF_USE_API_V2: True,
         }
+        if self._use_ha_session:
+            data[CONF_USE_HA_SESSION] = True
 
         # if an entry exists, we are reconfiguring
         if entries := self._async_current_entries():
@@ -261,7 +279,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             )
 
-        return vol.Schema(
+        schema = vol.Schema(
             {
                 vol.Optional(CONF_USERNAME, default=""): str,
                 vol.Optional(CONF_PASSWORD, default=""): str,
@@ -270,6 +288,14 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_USE_REDIRECT, default=False): bool,
             }
         )
+        if self.show_advanced_options:
+            schema = schema.extend(
+                {
+                    vol.Required(CONF_USE_HA_SESSION, default=False): bool
+                }
+            )
+
+        return schema
 
     @callback
     def _show_form(self, errors: str | None = None, step_id="user") -> FlowResult:

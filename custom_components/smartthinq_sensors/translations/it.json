@@ -25,6 +25,7 @@
                     "region": "Codice Paese",
                     "language": "Codice Lingua",
                     "use_redirect": "Usa l'autenticazione basata su URL redirect",
+                    "use_ha_session": "Utilizza la connessione HTTP di Home Assistant (può cause errori SSL)",
                     "use_tls_v1": "Forza l'utilizzo del protocollo TLSv1 (richiesto in alcuni casi)",
                     "exclude_dh": "Non utilizzare il cypher DH (in caso di errore 'dh key too small')"
                 },

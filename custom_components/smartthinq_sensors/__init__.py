@@ -38,6 +38,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -46,6 +47,7 @@ from .const import (
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_USE_API_V2,
+    CONF_USE_HA_SESSION,
     DOMAIN,
     MIN_HA_MAJ_VER,
     MIN_HA_MIN_VER,
@@ -64,6 +66,7 @@ SMARTTHINQ_PLATFORMS = [
 ]
 
 MAX_DISC_COUNT = 4
+SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
 UNSUPPORTED_DEVICES = "unsupported_devices"
 
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -181,6 +184,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     language = entry.data[CONF_LANGUAGE]
     oauth_url = entry.data.get(CONF_OAUTH_URL)
     use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
+    use_ha_session = entry.data.get(CONF_USE_HA_SESSION, False)
 
     if not use_api_v2:
         _LOGGER.warning(
@@ -194,35 +198,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         return False
 
-    _LOGGER.info(STARTUP)
-    _LOGGER.info(
-        "Initializing ThinQ platform with region: %s - language: %s",
-        region,
-        language,
-    )
+    log_info: bool = hass.data.get(DOMAIN, {}).get(SIGNAL_RELOAD_ENTRY, 0) < 2
+    if log_info:
+        hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: 2}
+        _LOGGER.info(STARTUP)
+        _LOGGER.info(
+            "Initializing ThinQ platform with region: %s - language: %s",
+            region,
+            language,
+        )
 
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
-    lge_auth = LGEAuthentication(hass, region, language)
+    lge_auth = LGEAuthentication(hass, region, language, use_ha_session)
     try:
         client = await lge_auth.create_client_from_token(refresh_token, oauth_url)
 
     except (AuthenticationError, InvalidCredentialError) as exc:
         msg = "Invalid ThinQ credential error, integration setup aborted." \
               " Please use the LG App on your mobile device to ensure your" \
-              " credentials are correct or there are new Term of Service" \
-              " to accept, then restart HomeAssistant." \
+              " credentials are correct or there are new Term of Service to accept." \
               " If your credential changed, you must reconfigure integration." \
               " Account based on social network are not supported and in most" \
               " case do not work with this integration."
         _notify_error(hass, "inv_credential", "SmartThinQ Sensors", msg)
-        _LOGGER.exception(msg, exc_info=exc)
-        return False
+        if log_info:
+            _LOGGER.warning(msg, exc_info=True)
+        msg2 = "Invalid ThinQ credential error, integration setup aborted." \
+               " Please use the LG App on your mobile device to verify credential."
+        raise ConfigEntryNotReady(msg2) from exc
 
     except Exception as exc:
-        _LOGGER.warning(
-            "Connection not available. ThinQ platform not ready", exc_info=True
-        )
+        if log_info:
+            _LOGGER.warning(
+                "Connection not available. ThinQ platform not ready", exc_info=True
+            )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     if not client.has_devices:
@@ -234,13 +244,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         lge_devices, unsupported_devices = await lge_devices_setup(hass, client)
     except Exception as exc:
-        _LOGGER.warning(
-            "Connection not available. ThinQ platform not ready", exc_info=True
-        )
+        if log_info:
+            _LOGGER.warning(
+                "Connection not available. ThinQ platform not ready", exc_info=True
+            )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     # remove device not available anymore
     cleanup_orphan_lge_devices(hass, entry.entry_id, client)
+
+    async def _async_call_reload_entry():
+        """Reload current entry."""
+        if SIGNAL_RELOAD_ENTRY in hass.data[DOMAIN]:
+            return
+        hass.data[DOMAIN][SIGNAL_RELOAD_ENTRY] = 1
+        await hass.config_entries.async_reload(entry.entry_id)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, SIGNAL_RELOAD_ENTRY, _async_call_reload_entry)
+    )
 
     hass.data[DOMAIN] = {
         CLIENT: client,
@@ -258,8 +280,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry, SMARTTHINQ_PLATFORMS
     ):
         data = hass.data.pop(DOMAIN)
+        reload = data.get(SIGNAL_RELOAD_ENTRY, 0)
+        if reload > 0:
+            hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: reload}
         await data[CLIENT].close()
-
     return unload_ok
 
 
@@ -410,6 +434,12 @@ class LGEDevice:
             )
             self._available = False
             self._state = self._device.reset_status()
+            return
+
+        except InvalidCredentialError:
+            # If we receive invalid credential, we reload integration
+            # to provide proper notification
+            async_dispatcher_send(self._hass, SIGNAL_RELOAD_ENTRY)
             return
 
         self._available = True

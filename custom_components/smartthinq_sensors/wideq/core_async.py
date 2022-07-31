@@ -773,6 +773,7 @@ class Auth(object):
 
         if get_new_token:
             _LOGGER.debug("Request new access token")
+            self.access_token = None
             access_token, token_validity = await self._gateway.core.refresh_auth(
                 self.oauth_url, self.refresh_token
             )

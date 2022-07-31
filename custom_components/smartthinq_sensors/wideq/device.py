@@ -48,6 +48,7 @@ LOCAL_LANG_PACK = {
 MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
 MAX_RETRIES = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
+MAX_INVALID_CREDENTIAL_ERR = 3
 SLEEP_BETWEEN_RETRIES = 2  # seconds
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,19 +83,19 @@ class Monitor(object):
         self._work_id: Optional[str] = None
         self._disconnected = True
         self._has_error = False
+        self._invalid_credential_count = 0
 
     def _raise_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False):
         """Log and raise error with different level depending on condition."""
+        log_lev = logging.DEBUG
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
             self._has_error = True
-            _LOGGER.warning("%s (device: %s)", msg, self._device_descr, exc_info=exc_info)
+            log_lev = logging.WARNING
 
-        log_lev = logging.DEBUG
         if not self._has_error:
             self._has_error = True
-            if Monitor._client_connected:
-                log_lev = logging.WARNING
+            log_lev = logging.WARNING
         _LOGGER.log(log_lev, "Device %s: %s", self._device_descr, msg, exc_info=exc_info)
 
         if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
@@ -108,7 +109,11 @@ class Monitor(object):
     async def _refresh_auth(self):
         """Refresh the devices shared client auth token"""
         async with Monitor._client_lock:
-            await self._client.refresh_auth()
+            if Monitor._client_connected:
+                await self._client.refresh_auth()
+                return True
+            self._disconnected = True
+            return await self._refresh_client()
 
     async def _refresh_client(self):
         """Refresh the devices shared client"""
@@ -137,6 +142,8 @@ class Monitor(object):
     async def refresh(self, query_device=False) -> Optional[any]:
         """Update device state"""
         _LOGGER.debug("Updating ThinQ device %s", self._device_descr)
+        invalid_credential_count = self._invalid_credential_count
+        self._invalid_credential_count = 0
 
         state = None
         for iteration in range(MAX_RETRIES):
@@ -146,12 +153,8 @@ class Monitor(object):
                 await asyncio.sleep(SLEEP_BETWEEN_RETRIES)
 
             try:
-                if not await self._restart_monitor():
-                    self._raise_error(
-                        "Connection to ThinQ not available. Client refresh error",
-                        not_logged=True,
-                    )
-                state = await self.poll(query_device)
+                if mon_started := await self._restart_monitor():
+                    state = await self.poll(query_device)
 
             except core_exc.NotConnectedError:
                 self._disconnected = True
@@ -173,9 +176,20 @@ class Monitor(object):
                     exc=exc,
                 )
 
-            except (core_exc.InvalidCredentialError, core_exc.TokenError) as exc:
+            except core_exc.TokenError as exc:
                 self._raise_error(
-                    "Connection to ThinQ failed. Invalid Credential or Invalid Token",
+                    "Connection to ThinQ failed. Invalid Token",
+                    not_logged=True,
+                    exc=exc,
+                )
+
+            except core_exc.InvalidCredentialError as exc:
+                self._invalid_credential_count = invalid_credential_count
+                if self._invalid_credential_count >= MAX_INVALID_CREDENTIAL_ERR:
+                    raise
+                self._invalid_credential_count += 1
+                self._raise_error(
+                    "Connection to ThinQ failed. Invalid Credential",
                     not_logged=True,
                     exc=exc,
                 )
@@ -197,6 +211,12 @@ class Monitor(object):
                 )
 
             else:
+                if not mon_started:
+                    self._raise_error(
+                        "Connection to ThinQ not available. Client refresh error",
+                        not_logged=True,
+                    )
+
                 if state:
                     _LOGGER.debug("ThinQ status updated")
                     # l = dir(state)
@@ -213,13 +233,8 @@ class Monitor(object):
     async def _restart_monitor(self) -> bool:
         """Restart the device monitor"""
 
-        if Monitor._client_connected:
-            # try to refresh auth token before it expires
-            await self._refresh_auth()
-        else:
-            self._disconnected = True
-            if not await self._refresh_client():
-                return False
+        if not await self._refresh_auth():
+            return False
 
         if not self._disconnected:
             return True

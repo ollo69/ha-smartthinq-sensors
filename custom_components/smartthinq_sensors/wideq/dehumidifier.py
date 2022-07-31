@@ -310,9 +310,9 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def current_humidity(self):
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT") is None:
-            return None
+        # support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
+        # if self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT") is None:
+        #     return None
         key = self._get_state_key(STATE_CURRENT_HUM)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
