@@ -21,6 +21,7 @@ FEAT_HUMIDITY = "humidity"
 FEAT_HOT_WATER_TEMP = "hot_water_temperature"
 FEAT_IN_WATER_TEMP = "in_water_temperature"
 FEAT_OUT_WATER_TEMP = "out_water_temperature"
+FEAT_LIGHTING_DISPLAY = "lighting_display"
 
 # wash devices features
 FEAT_DRYLEVEL = "dry_level"
@@ -97,3 +98,6 @@ FEAT_PM10 = "pm10"
 FEAT_PM25 = "pm25"
 FEAT_TARGET_HUMIDITY = "target_humidity"
 FEAT_WATER_TANK_FULL = "water_tank_full"
+
+# ac
+LIGHTING_DISPLAY = "LightingDisplay"
