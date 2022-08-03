@@ -11,6 +11,7 @@ from .wideq import (
     FEAT_ECOFRIENDLY,
     FEAT_EXPRESSFRIDGE,
     FEAT_EXPRESSMODE,
+    FEAT_LIGHTING_DISPLAY,
     FEAT_ICEPLUS,
     WM_DEVICE_TYPES,
     DeviceType,
@@ -103,6 +104,16 @@ AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
     name="Zone",
 )
 
+AC_MISC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key=FEAT_LIGHTING_DISPLAY,
+        name="Display light",
+        icon="mdi:wall-sconce-round",
+        turn_off_fn=lambda x: x.device.set_lighting_display(False),
+        turn_on_fn=lambda x: x.device.set_lighting_display(True),
+    ),
+)
+
 
 def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription) -> bool:
     """Check if a switch exist for device."""
@@ -154,6 +165,16 @@ async def async_setup_entry(
             LGEDuctSwitch(lge_device, duct_zone)
             for lge_device in lge_devices.get(DeviceType.AC, [])
             for duct_zone in lge_device.device.duct_zones
+        ]
+    )
+
+    # add ac misc
+    lge_switch.extend(
+        [
+            LGESwitch(lge_device, switch_desc)
+            for switch_desc in AC_MISC_SWITCH
+            for lge_device in lge_devices.get(DeviceType.AC, [])
+            if _switch_exist(lge_device, switch_desc)
         ]
     )
 
