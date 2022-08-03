@@ -98,6 +98,3 @@ FEAT_PM10 = "pm10"
 FEAT_PM25 = "pm25"
 FEAT_TARGET_HUMIDITY = "target_humidity"
 FEAT_WATER_TANK_FULL = "water_tank_full"
-
-# ac
-LIGHTING_DISPLAY = "LightingDisplay"
