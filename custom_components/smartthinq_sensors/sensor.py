@@ -437,9 +437,7 @@ DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 
 
-def _sensor_exist(
-    lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription
-) -> bool:
+def _sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription) -> bool:
     """Check if a sensor exist for device."""
     if sensor_desc.value_fn is not None:
         return True
@@ -547,10 +545,10 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     entity_description = ThinQSensorEntityDescription
 
     def __init__(
-        self,
-        api: LGEDevice,
-        description: ThinQSensorEntityDescription,
-        wrapped_device=None,
+            self,
+            api: LGEDevice,
+            description: ThinQSensorEntityDescription,
+            wrapped_device=None,
     ):
         """Initialize the sensor."""
         super().__init__(api.coordinator)
@@ -630,9 +628,9 @@ class LGEWashDeviceSensor(LGESensor):
     """A sensor to monitor LGE Wash devices"""
 
     def __init__(
-        self,
-        api: LGEDevice,
-        description: ThinQSensorEntityDescription,
+            self,
+            api: LGEDevice,
+            description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGEWashDevice(api))
@@ -661,9 +659,9 @@ class LGERefrigeratorSensor(LGESensor):
     """A sensor to monitor LGE Refrigerator devices"""
 
     def __init__(
-        self,
-        api: LGEDevice,
-        description: ThinQSensorEntityDescription,
+            self,
+            api: LGEDevice,
+            description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGERefrigeratorDevice(api))
@@ -692,9 +690,9 @@ class LGERangeSensor(LGESensor):
     """A sensor to monitor LGE range devices"""
 
     def __init__(
-        self,
-        api: LGEDevice,
-        description: ThinQSensorEntityDescription,
+            self,
+            api: LGEDevice,
+            description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGERangeDevice(api))
