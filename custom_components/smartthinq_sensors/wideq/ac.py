@@ -12,7 +12,6 @@ from .const import (
     FEAT_OUT_WATER_TEMP,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
-    LIGHTING_DISPLAY,
 )
 from .core_exceptions import InvalidRequestError
 from .device import Device, DeviceStatus
