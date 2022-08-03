@@ -115,7 +115,9 @@ AC_MISC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
 )
 
 
-def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription) -> bool:
+def _switch_exist(
+    lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription
+) -> bool:
     """Check if a switch exist for device."""
     if switch_desc.value_fn is not None:
         return True
@@ -123,7 +125,7 @@ def _switch_exist(lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescripti
     feature = switch_desc.key
     if feature in lge_device.available_features:
         return True
-
+    # return True
     return False
 
 
@@ -187,9 +189,9 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
     entity_description = ThinQSwitchEntityDescription
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQSwitchEntityDescription,
+        self,
+        api: LGEDevice,
+        description: ThinQSwitchEntityDescription,
     ):
         """Initialize the switch."""
         super().__init__(api.coordinator)
@@ -269,11 +271,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
 class LGEDuctSwitch(LGESwitch):
     """Class to control switches for LGE AC duct device"""
 
-    def __init__(
-            self,
-            api: LGEDevice,
-            duct_zone: str
-    ):
+    def __init__(self, api: LGEDevice, duct_zone: str):
         """Initialize the switch."""
         super().__init__(api, AC_DUCT_SWITCH)
         self._attr_name += f" {duct_zone}"
