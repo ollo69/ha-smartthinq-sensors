@@ -61,25 +61,18 @@ class UnitTempModes(enum.Enum):
 
 class Monitor(object):
     """A monitoring task for a device.
-
-    This task is robust to some API-level failures. If the monitoring
-    task expires, it attempts to start a new one automatically. This
-    makes one `Monitor` object suitable for long-term monitoring.
-    """
-
+        
+        This task is robust to some API-level failures. If the monitoring
+        task expires, it attempts to start a new one automatically. This
+        makes one `Monitor` object suitable for long-term monitoring.
+        """
     _client_lock = asyncio.Lock()
     _client_connected = True
     _critical_error = False
     _last_client_refresh = datetime.min
     _not_logged_count = 0
 
-    def __init__(
-        self,
-        client,
-        device_id: str,
-        platform_type=PlatformType.THINQ1,
-        device_type: str = None,
-    ) -> None:
+    def __init__(self, client, device_id: str, platform_type=PlatformType.THINQ1, device_type: str = None) -> None:
         """Initialize monitor class."""
         self._client: ClientAsync = client
         self._device_id = device_id
@@ -92,9 +85,7 @@ class Monitor(object):
         self._has_error = False
         self._invalid_credential_count = 0
 
-    def _raise_error(
-        self, msg, *, not_logged=False, exc: Exception = None, exc_info=False
-    ):
+    def _raise_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False):
         """Log and raise error with different level depending on condition."""
         log_lev = logging.DEBUG
         if not_logged and Monitor._client_connected:
@@ -105,14 +96,9 @@ class Monitor(object):
         if not self._has_error:
             self._has_error = True
             log_lev = logging.WARNING
-        _LOGGER.log(
-            log_lev, "Device %s: %s", self._device_descr, msg, exc_info=exc_info
-        )
+        _LOGGER.log(log_lev, "Device %s: %s", self._device_descr, msg, exc_info=exc_info)
 
-        if (
-            not Monitor._critical_error
-            and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED
-        ):
+        if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
             Monitor._critical_error = True
             _LOGGER.error(msg, exc_info=exc_info)
 
@@ -173,20 +159,14 @@ class Monitor(object):
             except core_exc.NotConnectedError:
                 self._disconnected = True
                 self._has_error = False
-                _LOGGER.debug(
-                    "Device %s not connected. Status not available", self._device_descr
-                )
+                _LOGGER.debug("Device %s not connected. Status not available", self._device_descr)
                 raise
 
             except core_exc.DeviceNotFound:
                 self._raise_error("Device ID is invalid, status update failed")
 
             except core_exc.InvalidResponseError as exc:
-                self._raise_error(
-                    "Received invalid response, status update failed",
-                    exc=exc,
-                    exc_info=True,
-                )
+                self._raise_error("Received invalid response, status update failed", exc=exc, exc_info=True)
 
             except core_exc.NotLoggedInError as exc:
                 # This could be raised by an expired token
@@ -220,9 +200,7 @@ class Monitor(object):
 
             except aiohttp.ClientError as exc:
                 # These are network errors, refresh client is not required
-                self._raise_error(
-                    "Connection to ThinQ failed. Network connection error", exc=exc
-                )
+                self._raise_error("Connection to ThinQ failed. Network connection error", exc=exc)
 
             except Exception as exc:
                 self._raise_error(
@@ -281,24 +259,22 @@ class Monitor(object):
 
     async def poll(self, query_device=False) -> Optional[any]:
         """Get the current status data (a bytestring) or None if the
-        device is not yet ready.
-        """
+            device is not yet ready.
+            """
         if self._platform_type == PlatformType.THINQ1:
             return await self._poll_v1()
         return await self._poll_v2(query_device)
 
     async def _poll_v1(self) -> Optional[bytes]:
         """Get the current status data (a bytestring) or None if the
-        device is not yet ready.
-        """
+            device is not yet ready.
+            """
         if not self._work_id:
             await self.start()
             if not self._work_id:
                 return None
         try:
-            return await self._client.session.monitor_poll(
-                self._device_id, self._work_id
-            )
+            return await self._client.session.monitor_poll(self._device_id, self._work_id)
         except core_exc.MonitorError:
             # Try to restart the task.
             await self.stop()
@@ -306,8 +282,8 @@ class Monitor(object):
 
     async def _poll_v2(self, query_device=False) -> Optional[any]:
         """Get the current status data (a json str) or None if the
-        device is not yet ready.
-        """
+            device is not yet ready.
+            """
         if self._platform_type != PlatformType.THINQ2:
             return None
         if query_device:
@@ -328,8 +304,8 @@ class Monitor(object):
 
     async def poll_json(self) -> Optional[dict[str, Any]]:
         """For devices where status is reported via JSON data, get the
-        decoded status result (or None if status is not available).
-        """
+            decoded status result (or None if status is not available).
+            """
 
         data = await self.poll()
         return self.decode_json(data) if data else None
@@ -349,7 +325,8 @@ ReferenceValue = namedtuple("ReferenceValue", ["reference"])
 
 
 class ModelInfo(object):
-    """A description of a device model's capabilities."""
+    """A description of a device model's capabilities.
+        """
 
     def __init__(self, data):
         self._data = data
@@ -387,7 +364,7 @@ class ModelInfo(object):
 
     def value(self, name):
         """Look up information about a value.
-
+        
         Return either an `EnumValue` or a `RangeValue`.
         """
         d = self._data["Value"][name]
@@ -421,12 +398,14 @@ class ModelInfo(object):
             return None
 
     def default(self, name):
-        """Get the default value, if it exists, for a given value."""
+        """Get the default value, if it exists, for a given value.
+        """
 
         return self._data.get("Value", {}).get(name, {}).get("default")
 
     def enum_value(self, key, name):
-        """Look up the encoded value for a friendly enum name."""
+        """Look up the encoded value for a friendly enum name.
+        """
         if not self.value_type(key):
             return None
 
@@ -435,7 +414,8 @@ class ModelInfo(object):
         return options_inv.get(name)
 
     def enum_name(self, key, value):
-        """Look up the friendly enum name for an encoded value."""
+        """Look up the friendly enum name for an encoded value.
+        """
         if not self.value_type(key):
             return None
 
@@ -446,16 +426,19 @@ class ModelInfo(object):
         return options.get(value, "")
 
     def enum_index(self, key, index):
-        """Look up the friendly enum name for an indexed value."""
+        """Look up the friendly enum name for an indexed value.
+        """
         return self.enum_name(key, index)
 
     def range_name(self, key):
-        """Look up the value of a RangeValue.  Not very useful other than for comprehension"""
+        """Look up the value of a RangeValue.  Not very useful other than for comprehension
+        """
 
         return key
 
     def bit_name(self, key, bit_index, value):
-        """Look up the friendly name for an encoded bit value"""
+        """Look up the friendly name for an encoded bit value
+        """
         if not self.value_type(key):
             return str(value)
 
@@ -468,6 +451,7 @@ class ModelInfo(object):
         return enum_options[value]
 
     def _get_bit_key(self, key):
+
         def search_bit_key(key, data):
             if not data:
                 return {}
@@ -498,7 +482,8 @@ class ModelInfo(object):
         return bit_key
 
     def bit_value(self, key, values):
-        """Look up the bit value for an specific key"""
+        """Look up the bit value for an specific key
+        """
         bit_key = self._get_bit_key(key)
         if not bit_key:
             return None
@@ -512,11 +497,12 @@ class ModelInfo(object):
         for i in range(0, length):
             bit_index = 2 ** (start_bit + i)
             bit = 1 if bit_value & bit_index else 0
-            val += bit * (2**i)
+            val += bit * (2 ** i)
         return str(val)
 
     def reference_name(self, key, value, ref_key="_comment"):
-        """Look up the friendly name for an encoded reference value"""
+        """Look up the friendly name for an encoded reference value
+        """
         value = str(value)
         if not self.value_type(key):
             return None
@@ -532,7 +518,8 @@ class ModelInfo(object):
 
     @property
     def binary_control_data(self):
-        """Check that type of control is BINARY(BYTE)."""
+        """Check that type of control is BINARY(BYTE).
+        """
         return self._data["ControlWifi"]["type"] == "BINARY(BYTE)"
 
     def get_control_cmd(self, cmd_key, ctrl_key=None):
@@ -567,7 +554,7 @@ class ModelInfo(object):
             start_byte: int = item["startByte"]
             end_byte: int = start_byte + item["length"]
             if total_bytes >= end_byte:
-                for v in data[start_byte:end_byte]:
+                for v in data[start_byte: end_byte]:
                     value = (value << 8) + v
             decoded[key] = str(value)
         return decoded
@@ -655,9 +642,7 @@ class ModelInfo(object):
                 if isinstance(raw_value, Number):
                     value = str(int(raw_value))
                 elif value_key in convert_rule:
-                    value_rules = convert_rule[value_key].get(
-                        "MonitoringConvertingRule", {}
-                    )
+                    value_rules = convert_rule[value_key].get("MonitoringConvertingRule", {})
                     if raw_value in value_rules:
                         value = value_rules[raw_value]
             decoded[value_key] = str(value)
@@ -666,8 +651,8 @@ class ModelInfo(object):
 
 class ModelInfoV2(object):
     """A description of a device model's capabilities.
-    Type V2.
-    """
+        Type V2.
+        """
 
     def __init__(self, data):
         self._data = data
@@ -714,7 +699,7 @@ class ModelInfoV2(object):
 
     def value(self, data):
         """Look up information about a value.
-
+        
         Return either an `EnumValue` or a `RangeValue`.
         """
         data_type = data.get("dataType")
@@ -723,9 +708,7 @@ class ModelInfoV2(object):
         elif data_type in ("Enum", "enum"):
             return data["valueMapping"]
         elif data_type == "range":
-            return RangeValue(
-                data["valueMapping"]["min"], data["valueMapping"]["max"], 1
-            )
+            return RangeValue(data["valueMapping"]["min"], data["valueMapping"]["max"], 1)
         # elif d['dataType'] == 'Bit':
         #    bit_values = {}
         #    for bit in d['option']:
@@ -756,7 +739,8 @@ class ModelInfoV2(object):
             return None
 
     def default(self, name):
-        """Get the default value, if it exists, for a given value."""
+        """Get the default value, if it exists, for a given value.
+        """
         data = self.data_root(name)
         if data:
             return data.get("default")
@@ -764,19 +748,19 @@ class ModelInfoV2(object):
         return None
 
     def enum_value(self, key, name):
-        """Look up the encoded value for a friendly enum name."""
+        """Look up the encoded value for a friendly enum name.
+        """
         data = self.data_root(key)
         if not data:
             return None
 
         options = self.value(data)
-        options_inv = {
-            v["label"]: k for k, v in options.items() if v.get("label")
-        }  # Invert the map.
+        options_inv = {v["label"]: k for k, v in options.items() if v.get("label")}  # Invert the map.
         return options_inv.get(name)
 
     def enum_name(self, key, value):
-        """Look up the friendly enum name for an encoded value."""
+        """Look up the friendly enum name for an encoded value.
+        """
         data = self.data_root(key)
         if not data:
             return None
@@ -789,7 +773,8 @@ class ModelInfoV2(object):
         return item.get("label", "")
 
     def enum_index(self, key, index):
-        """Look up the friendly enum name for an indexed value."""
+        """Look up the friendly enum name for an indexed value.
+        """
         data = self.data_root(key)
         if not data:
             return None
@@ -803,21 +788,24 @@ class ModelInfoV2(object):
         return ""
 
     def range_name(self, key):
-        """Look up the value of a RangeValue.  Not very useful other than for comprehension"""
+        """Look up the value of a RangeValue.  Not very useful other than for comprehension
+        """
         return key
 
     def bit_name(self, key, bit_index, value):
-        """Look up the friendly name for an encoded bit value"""
+        """Look up the friendly name for an encoded bit value
+        """
         return None
 
     def bit_value(self, key, value):
         """Look up the bit value for an specific key
-        Not used in model V2
-        """
+            Not used in model V2
+            """
         return None
 
     def reference_name(self, key, value, ref_key="_comment"):
-        """Look up the friendly name for an encoded reference value"""
+        """Look up the friendly name for an encoded reference value
+        """
         data = self.data_root(key)
         if not data:
             return None
@@ -832,7 +820,8 @@ class ModelInfoV2(object):
         return None
 
     def target_key(self, key, value, target):
-        """Look up the friendly name for an encoded reference value"""
+        """Look up the friendly name for an encoded reference value
+        """
         data = self.data_root(key)
         if not data:
             return None
@@ -841,7 +830,8 @@ class ModelInfoV2(object):
 
     @property
     def binary_control_data(self):
-        """Check that type of control is BINARY(BYTE)."""
+        """Check that type of control is BINARY(BYTE).
+        """
         return False
 
     def get_control_cmd(self, cmd_key, ctrl_key=None):
@@ -857,11 +847,13 @@ class ModelInfoV2(object):
 
     @property
     def binary_monitor_data(self):
-        """Check that type of monitoring is BINARY(BYTE)."""
+        """Check that type of monitoring is BINARY(BYTE).
+        """
         return False
 
     def decode_monitor_binary(self, data):
-        """Decode binary encoded status data."""
+        """Decode binary encoded status data.
+        """
 
         return {}
 
@@ -885,8 +877,8 @@ class ModelInfoV2(object):
 
 class ModelInfoV2AC(ModelInfo):
     """A description of a device model's capabilities.
-    Type V2AC and other models with "data_type in Value.
-    """
+        Type V2AC and other models with "data_type in Value.
+        """
 
     @staticmethod
     def valid_value_data(value_data):
@@ -915,9 +907,7 @@ class ModelInfoV2AC(ModelInfo):
             return EnumValue(d["value_mapping"])
         elif d["data_type"] in ("Range", "range"):
             return RangeValue(
-                d["value_validation"]["min"],
-                d["value_validation"]["max"],
-                d["value_validation"].get("step", 0),
+                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"].get("step", 0)
             )
         # elif d["type"] == "Bit":
         #    bit_values = {}
@@ -943,19 +933,13 @@ class ModelInfoV2AC(ModelInfo):
 
 class Device(object):
     """A higher-level interface to a specific device.
-
+        
     Unlike `DeviceInfo`, which just stores data *about* a device,
     `Device` objects refer to their client and can perform operations
     regarding the device.
     """
 
-    def __init__(
-        self,
-        client: ClientAsync,
-        device: DeviceInfo,
-        status=None,
-        available_features=None,
-    ):
+    def __init__(self, client: ClientAsync, device: DeviceInfo, status=None, available_features=None):
         """Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
         """
@@ -1059,16 +1043,17 @@ class Device(object):
         return [ctrl, cmd, key]
 
     async def _set_control(
-        self,
-        ctrl_key,
-        command=None,
-        *,
-        key=None,
-        value=None,
-        data=None,
-        ctrl_path=None,
+            self,
+            ctrl_key,
+            command=None,
+            *,
+            key=None,
+            value=None,
+            data=None,
+            ctrl_path=None,
     ):
-        """Set a device's control for `key` to `value`."""
+        """Set a device's control for `key` to `value`.
+        """
         if self._client.emulation:
             return
 
@@ -1098,9 +1083,7 @@ class Device(object):
         """
         return None
 
-    async def set(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
-    ):
+    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
         log_level = logging.INFO if self._client.emulation else logging.DEBUG
         full_key = self._prepare_command(ctrl_key, command, key, value)
@@ -1108,19 +1091,14 @@ class Device(object):
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s: %s",
-                self._device_info.id,
-                str(full_key),
+                self._device_info.id, str(full_key),
             )
             await self._set_control(full_key, ctrl_path=ctrl_path)
         else:
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s:  %s - %s - %s - %s",
-                self._device_info.id,
-                ctrl_key,
-                command,
-                key,
-                value,
+                self._device_info.id, ctrl_key, command, key, value,
             )
             await self._set_control(
                 ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
@@ -1128,7 +1106,7 @@ class Device(object):
 
     async def _get_config(self, key):
         """Look up a device's configuration for a given value.
-
+            
         The response is parsed as base64-encoded JSON.
         """
         if not self._should_poll:
@@ -1139,13 +1117,12 @@ class Device(object):
         return json.loads(base64.b64decode(data).decode("utf8"))
 
     async def _get_control(self, key):
-        """Look up a device's control value."""
+        """Look up a device's control value.
+            """
         if not self._should_poll:
             return
         data = await self._client.session.get_device_config(
-            self._device_info.id,
-            key,
-            "Control",
+            self._device_info.id, key, "Control",
         )
         if self._control_set == 0:
             self._control_set = 1
@@ -1203,8 +1180,8 @@ class Device(object):
             return
         call_time = datetime.utcnow()
         if self._last_additional_poll is None:
-            self._last_additional_poll = call_time - timedelta(
-                seconds=max(poll_interval - 10, 1)
+            self._last_additional_poll = (
+                call_time - timedelta(seconds=max(poll_interval - 10, 1))
             )
         difference = (call_time - self._last_additional_poll).total_seconds()
         if difference >= poll_interval:
@@ -1212,11 +1189,11 @@ class Device(object):
             await self._get_device_info()
 
     async def device_poll(
-        self,
-        snapshot_key="",
-        *,
-        thinq1_additional_poll=0,
-        thinq2_query_device=False,
+            self,
+            snapshot_key="",
+            *,
+            thinq1_additional_poll=0,
+            thinq2_query_device=False,
     ):
         """Poll the device's current state.
         Monitoring for thinq1 devices must be started first with `monitor_start`.
@@ -1408,7 +1385,9 @@ class DeviceStatus(object):
         if data_is_num:
             value = str(int(value))
 
-        return self._device.model_info.enum_name(curr_key, value)
+        return self._device.model_info.enum_name(
+            curr_key, value
+        )
 
     def lookup_range(self, key):
         curr_key = self._get_data_key(key)
@@ -1430,7 +1409,9 @@ class DeviceStatus(object):
         else:
             str_val = self._data.get(key)
             if not str_val:
-                str_val = self._device.model_info.bit_value(key, self._data)
+                str_val = self._device.model_info.bit_value(
+                    key, self._data
+                )
 
         if str_val is None:
             return None
@@ -1454,9 +1435,7 @@ class DeviceStatus(object):
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF
 
-    def _update_feature(
-        self, key, status, get_text=True, item_key=None, *, allow_none=False
-    ):
+    def _update_feature(self, key, status, get_text=True, item_key=None, *, allow_none=False):
         """Update the status features."""
         if not self._device.feature_title(key, item_key, status, allow_none):
             return None
