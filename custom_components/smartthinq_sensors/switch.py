@@ -39,8 +39,6 @@ from .device_helpers import (
 # general sensor attributes
 ATTR_POWER_OFF = "power_off"
 
-SCAN_INTERVAL = timedelta(seconds=120)
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -181,24 +179,6 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         self._attr_device_info = api.device_info
 
     @property
-    def should_poll(self) -> bool:
-        """Return True if entity has to be polled for state.
-
-        We overwrite coordinator property default setting because we need
-        to poll to avoid the effect that after changing switch state
-        it is immediately set to prev state. The async_update method here
-        do nothing because the real update is performed by coordinator.
-        """
-        return True
-
-    async def async_update(self) -> None:
-        """Update the entity.
-
-        This is a fake update, real update is done by coordinator.
-        """
-        return
-
-    @property
     def is_on(self):
         """Return the state of the switch."""
         ret_val = self._get_switch_state()
@@ -225,6 +205,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
             raise NotImplementedError()
         if self.is_on:
             await self.entity_description.turn_off_fn(self._wrap_device)
+            self._api.async_set_updated()
 
     async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
@@ -232,6 +213,7 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
             raise NotImplementedError()
         if not self.is_on:
             await self.entity_description.turn_on_fn(self._wrap_device)
+            self._api.async_set_updated()
 
     def _get_switch_state(self):
         """Get current switch state"""

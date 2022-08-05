@@ -1366,6 +1366,7 @@ class DeviceStatus(object):
     def update_status(self, key, value):
         if key in self._data:
             self._data[key] = value
+            self._features_updated = False
             return True
         return False
 

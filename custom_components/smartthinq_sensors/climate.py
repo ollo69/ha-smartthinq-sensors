@@ -54,8 +54,6 @@ ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
 ATTR_SWING_VERTICAL = "swing_mode_vertical"
 SWING_PREFIX = ["Vertical", "Horizontal"]
 
-SCAN_INTERVAL = timedelta(seconds=120)
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -141,24 +139,6 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
         super().__init__(api.coordinator)
         self._api = api
         self._attr_device_info = api.device_info
-
-    @property
-    def should_poll(self) -> bool:
-        """Return True if entity has to be polled for state.
-
-        We overwrite coordinator property default setting because we need
-        to poll to avoid the effect that after changing a climate settings
-        it is immediately set to prev state. The async_update method here
-        do nothing because the real update is performed by coordinator.
-        """
-        return True
-
-    async def async_update(self) -> None:
-        """Update the entity.
-
-        This is a fake update, real update is done by coordinator.
-        """
-        return
 
     @property
     def available(self) -> bool:
@@ -254,6 +234,7 @@ class LGEACClimate(LGEClimate):
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.OFF:
             await self._device.power(False)
+            self._api.async_set_updated()
             return
 
         modes = self._available_hvac_modes()
@@ -265,6 +246,7 @@ class LGEACClimate(LGEClimate):
         if self.hvac_mode == HVACMode.OFF:
             await self._device.power(True)
         await self._device.set_op_mode(operation_mode)
+        self._api.async_set_updated()
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
@@ -293,11 +275,12 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
-            await self.async_set_hvac_mode(HVACMode(hvac_mode))
-
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
             await self._device.set_target_temp(new_temp)
+        if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
+            await self.async_set_hvac_mode(HVACMode(hvac_mode))
+        else:
+            self._api.async_set_updated()
 
     @property
     def fan_mode(self) -> str | None:
@@ -309,6 +292,7 @@ class LGEACClimate(LGEClimate):
         if fan_mode not in self.fan_modes:
             raise ValueError(f"Invalid fan mode [{fan_mode}]")
         await self._device.set_fan_speed(fan_mode)
+        self._api.async_set_updated()
 
     @property
     def swing_mode(self) -> str | None:
@@ -342,15 +326,18 @@ class LGEACClimate(LGEClimate):
                 await self._device.set_horizontal_step_mode(dev_mode)
             else:
                 await self._device.set_vertical_step_mode(dev_mode)
+            self._api.async_set_updated()
         self._set_hor_swing = set_hor_swing
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
         await self._device.power(True)
+        self._api.async_set_updated()
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
         await self._device.power(False)
+        self._api.async_set_updated()
 
     @property
     def min_temp(self) -> float:
@@ -426,6 +413,7 @@ class LGERefrigeratorClimate(LGEClimate):
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
             await self.entity_description.set_temp_fn(self._wrap_device, new_temp)
+            self._api.async_set_updated()
 
     @property
     def min_temp(self) -> float:

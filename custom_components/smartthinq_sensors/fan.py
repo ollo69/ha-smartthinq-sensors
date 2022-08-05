@@ -21,8 +21,6 @@ from .const import DOMAIN, LGE_DEVICES
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
 
-SCAN_INTERVAL = timedelta(seconds=120)
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -65,24 +63,6 @@ class LGEBaseFan(CoordinatorEntity, FanEntity):
         super().__init__(api.coordinator)
         self._api = api
         self._attr_device_info = api.device_info
-
-    @property
-    def should_poll(self) -> bool:
-        """Return True if entity has to be polled for state.
-
-        We overwrite coordinator property default setting because we need
-        to poll to avoid the effect that after changing a climate settings
-        it is immediately set to prev state. The async_update method here
-        do nothing because the real update is performed by coordinator.
-        """
-        return True
-
-    async def async_update(self) -> None:
-        """Update the entity.
-
-        This is a fake update, real update is done by coordinator.
-        """
-        return
 
     @property
     def available(self) -> bool:
@@ -155,10 +135,10 @@ class LGEFan(LGEBaseFan):
             return
         if not self._api.state.is_on:
             await self._device.power(True)
-        if self.speed_count == 0:
-            return
-        named_speed = percentage_to_ordered_list_item(self._device.fan_speeds, percentage)
-        await self._device.set_fan_speed(named_speed)
+        if self.speed_count != 0:
+            named_speed = percentage_to_ordered_list_item(self._device.fan_speeds, percentage)
+            await self._device.set_fan_speed(named_speed)
+        self._api.async_set_updated()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
@@ -167,6 +147,7 @@ class LGEFan(LGEBaseFan):
         if not self._api.state.is_on:
             await self._device.power(True)
         await self._device.set_fan_preset(preset_mode)
+        self._api.async_set_updated()
 
     async def async_turn_on(
         self,
@@ -181,7 +162,9 @@ class LGEFan(LGEBaseFan):
             await self.async_set_preset_mode(preset_mode)
         else:
             await self._device.power(True)
+        self._api.async_set_updated()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""
         await self._device.power(False)
+        self._api.async_set_updated()
