@@ -304,7 +304,7 @@ class LGEDevice:
         self._id = f"{self._type.name}:{self._device_id}"
 
         self._state = None
-        self._coordinator = None
+        self._coordinator: DataUpdateCoordinator | None = None
         self._disc_count = 0
         self._available = True
 
@@ -380,9 +380,15 @@ class LGEDevice:
 
         return True
 
+    @callback
+    def async_set_updated(self):
+        """Manually update state and notify coordinator entities."""
+        if self._coordinator:
+            self._coordinator.async_set_updated_data(self._state)
+
     async def _create_coordinator(self) -> None:
         """Get the coordinator for a specific device."""
-        coordinator = DataUpdateCoordinator(
+        coordinator: DataUpdateCoordinator = DataUpdateCoordinator(
             self._hass,
             _LOGGER,
             name=f"{DOMAIN}-{self._name}",
