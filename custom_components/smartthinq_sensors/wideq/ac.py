@@ -576,6 +576,11 @@ class AirConditionerDevice(Device):
             return None
         return self.conv_temp_unit(temp_range[1])
 
+    @property
+    def is_mode_jet_available(self):
+        """Return if JET mode is available."""
+        return self._status.is_mode_jet_available
+
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
@@ -663,14 +668,15 @@ class AirConditionerDevice(Device):
 
     async def set_mode_jet(self, status):
         """Set the mode jet."""
+        if not self.is_mode_jet_available:
+            raise ValueError("Invalid device status for jet mode")
+
         keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
         if status:
             if self._status.operation_mode == ACMode.HEAT.name:
                 jet = MODE_JET_HEAT
-            elif self._status.operation_mode in (ACMode.COOL.name, ACMode.DRY.name):
-                jet = MODE_JET_COOL
             else:
-                raise ValueError("Invalid device status for jet mode")
+                jet = MODE_JET_COOL
         else:
             jet = MODE_JET_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=jet)
@@ -922,6 +928,14 @@ class AirConditionerStatus(DeviceStatus):
             return None
         status = str(value) in (MODE_JET_COOL, MODE_JET_HEAT)
         return self._update_feature(FEAT_MODE_JET, status, False)
+
+    @property
+    def is_mode_jet_available(self):
+        if not self.is_on:
+            return False
+        if (curr_op_mode := self.operation_mode) is None:
+            return False
+        return curr_op_mode in (ACMode.COOL.name, ACMode.DRY.name, ACMode.HEAT.name)
 
     @property
     def lighting_display(self):

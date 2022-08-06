@@ -103,6 +103,7 @@ AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         icon="mdi:turbine",
         turn_off_fn=lambda x: x.device.set_mode_jet(False),
         turn_on_fn=lambda x: x.device.set_mode_jet(True),
+        available_fn=lambda x: x.device.is_mode_jet_available,
     ),
     ThinQSwitchEntityDescription(
         key=FEAT_LIGHTING_DISPLAY,
