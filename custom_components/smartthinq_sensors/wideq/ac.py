@@ -908,7 +908,7 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(STATE_MODE_JET)
         if (value := self.to_int_or_none(self._data.get(key))) is None:
             return None
-        status = value in (self.to_int_or_none(MODE_JET_COOL), self.to_int_or_none(MODE_JET_HEAT))
+        status = str(value) in (MODE_JET_COOL, MODE_JET_HEAT)
         return self._update_feature(FEAT_MODE_JET, status, False)
 
     def _update_features(self):
