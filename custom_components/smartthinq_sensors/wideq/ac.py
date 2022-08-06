@@ -900,11 +900,9 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def lighting_display(self):
         key = self._get_state_key(STATE_LIGHTING_DISPLAY)
-        if self._data.get(key) == self.to_int_or_none(LIGHTING_DISPLAY_ON):
-            value = True
-        else:
-            value = False
-        return self._update_feature(FEAT_LIGHTING_DISPLAY, value, False)
+        if (value := self.to_int_or_none(self._data.get(key))) is None:
+            return None
+        return self._update_feature(FEAT_LIGHTING_DISPLAY, value == self.to_int_or_none(LIGHTING_DISPLAY_ON), False)
 
     def _update_features(self):
         _ = [
