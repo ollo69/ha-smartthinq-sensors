@@ -10,6 +10,7 @@ from .const import (
     FEAT_IN_WATER_TEMP,
     FEAT_LIGHTING_DISPLAY,
     FEAT_OUT_WATER_TEMP,
+    FEAT_MODE_JET,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
@@ -51,6 +52,7 @@ STATE_WDIR_VSWING = ["WDirUpDown", "airState.wDir.upDown"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
+STATE_MODE_JET = ["ModeJet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["LightingDisplay", "airState.lightingState.displayControl"]
 
 CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
@@ -62,6 +64,7 @@ CMD_STATE_WDIR_VSTEP = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSTEP]
 CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
+CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
@@ -86,6 +89,10 @@ ZONE_OFF = "0"
 ZONE_ON = "1"
 ZONE_ST_CUR = "current"
 ZONE_ST_NEW = "new"
+
+MODE_JET_OFF = "0"
+MODE_JET_COOL = "1"
+MODE_JET_HEAT = "2"
 
 LIGHTING_DISPLAY_ON = "1"
 LIGHTING_DISPLAY_OFF = "0"
@@ -654,6 +661,20 @@ class AirConditionerDevice(Device):
             self._current_power_supported = False
             return 0
 
+    async def set_mode_jet(self, status):
+        """Set the mode jet."""
+        keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
+        if status:
+            if self._status.operation_mode is ACMode.HEAT.name:
+                jet = MODE_JET_HEAT
+            elif self._status.operation_mode in (ACMode.COOL.name, ACMode.DRY.name):
+                jet = MODE_JET_COOL
+            else:
+                raise ValueError("Invalid device status for jet mode")
+        else:
+            jet = MODE_JET_OFF
+        await self.set(keys[0], keys[1], key=keys[2], value=jet)
+
     async def set_lighting_display(self, status):
         """Set the lighting display."""
         keys = self._get_cmd_keys(CMD_STATE_LIGHTING_DISPLAY)
@@ -898,6 +919,14 @@ class AirConditionerStatus(DeviceStatus):
         return self.to_int_or_none(self._data.get(DUCT_ZONE_V1_TYPE))
 
     @property
+    def mode_jet(self):
+        key = self._get_state_key(STATE_MODE_JET)
+        if (value := self.to_int_or_none(self._data.get(key))) is None:
+            return None
+        status = str(value) in (MODE_JET_COOL, MODE_JET_HEAT)
+        return self._update_feature(FEAT_MODE_JET, status, False)
+
+    @property
     def lighting_display(self):
         key = self._get_state_key(STATE_LIGHTING_DISPLAY)
         if (value := self.to_int_or_none(self._data.get(key))) is None:
@@ -911,5 +940,6 @@ class AirConditionerStatus(DeviceStatus):
             self.out_water_current_temp,
             self.energy_current,
             self.humidity,
+            self.mode_jet,
             self.lighting_display,
         ]

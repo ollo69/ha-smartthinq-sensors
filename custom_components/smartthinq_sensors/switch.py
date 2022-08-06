@@ -13,6 +13,7 @@ from .wideq import (
     FEAT_EXPRESSMODE,
     FEAT_LIGHTING_DISPLAY,
     FEAT_ICEPLUS,
+    FEAT_MODE_JET,
     WM_DEVICE_TYPES,
     DeviceType,
 )
@@ -103,6 +104,13 @@ AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
 )
 
 AC_MISC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key=FEAT_MODE_JET,
+        name="Jet mode",
+        icon="mdi:turbine",
+        turn_off_fn=lambda x: x.device.set_mode_jet(False),
+        turn_on_fn=lambda x: x.device.set_mode_jet(True),
+    ),
     ThinQSwitchEntityDescription(
         key=FEAT_LIGHTING_DISPLAY,
         name="Display light",
