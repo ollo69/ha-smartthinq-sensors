@@ -1,7 +1,6 @@
 """Platform for LGE humidifier integration."""
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 import voluptuous as vol
 

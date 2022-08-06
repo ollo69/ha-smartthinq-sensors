@@ -85,17 +85,17 @@ TEMP_STEP_HALF = 0.5
 
 ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 
-ZONE_OFF = "0"
-ZONE_ON = "1"
-ZONE_ST_CUR = "current"
-ZONE_ST_NEW = "new"
+LIGHTING_DISPLAY_OFF = "0"
+LIGHTING_DISPLAY_ON = "1"
 
 MODE_JET_OFF = "0"
 MODE_JET_COOL = "1"
 MODE_JET_HEAT = "2"
 
-LIGHTING_DISPLAY_ON = "1"
-LIGHTING_DISPLAY_OFF = "0"
+ZONE_OFF = "0"
+ZONE_ON = "1"
+ZONE_ST_CUR = "current"
+ZONE_ST_NEW = "new"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -665,7 +665,7 @@ class AirConditionerDevice(Device):
         """Set the mode jet."""
         keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
         if status:
-            if self._status.operation_mode is ACMode.HEAT.name:
+            if self._status.operation_mode == ACMode.HEAT.name:
                 jet = MODE_JET_HEAT
             elif self._status.operation_mode in (ACMode.COOL.name, ACMode.DRY.name):
                 jet = MODE_JET_COOL
@@ -678,10 +678,7 @@ class AirConditionerDevice(Device):
     async def set_lighting_display(self, status):
         """Set the lighting display."""
         keys = self._get_cmd_keys(CMD_STATE_LIGHTING_DISPLAY)
-        if status:
-            lighting = LIGHTING_DISPLAY_ON
-        else:
-            lighting = LIGHTING_DISPLAY_OFF
+        lighting = LIGHTING_DISPLAY_ON if status else LIGHTING_DISPLAY_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=lighting)
 
     async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):

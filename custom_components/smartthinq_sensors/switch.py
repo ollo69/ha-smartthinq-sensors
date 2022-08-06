@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
 import logging
 from typing import Any, Awaitable, Callable, Tuple
 
@@ -11,8 +10,8 @@ from .wideq import (
     FEAT_ECOFRIENDLY,
     FEAT_EXPRESSFRIDGE,
     FEAT_EXPRESSMODE,
-    FEAT_LIGHTING_DISPLAY,
     FEAT_ICEPLUS,
+    FEAT_LIGHTING_DISPLAY,
     FEAT_MODE_JET,
     WM_DEVICE_TYPES,
     DeviceType,
@@ -97,13 +96,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
 )
-
-AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
-    key="duct-zone",
-    name="Zone",
-)
-
-AC_MISC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
         key=FEAT_MODE_JET,
         name="Jet mode",
@@ -118,6 +111,11 @@ AC_MISC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_lighting_display(False),
         turn_on_fn=lambda x: x.device.set_lighting_display(True),
     ),
+)
+
+AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
+    key="duct-zone",
+    name="Zone",
 )
 
 
@@ -165,22 +163,22 @@ async def async_setup_entry(
         ]
     )
 
+    # add AC switch
+    lge_switch.extend(
+        [
+            LGESwitch(lge_device, switch_desc)
+            for switch_desc in AC_SWITCH
+            for lge_device in lge_devices.get(DeviceType.AC, [])
+            if _switch_exist(lge_device, switch_desc)
+        ]
+    )
+
     # add AC duct zone switch
     lge_switch.extend(
         [
             LGEDuctSwitch(lge_device, duct_zone)
             for lge_device in lge_devices.get(DeviceType.AC, [])
             for duct_zone in lge_device.device.duct_zones
-        ]
-    )
-
-    # add ac misc
-    lge_switch.extend(
-        [
-            LGESwitch(lge_device, switch_desc)
-            for switch_desc in AC_MISC_SWITCH
-            for lge_device in lge_devices.get(DeviceType.AC, [])
-            if _switch_exist(lge_device, switch_desc)
         ]
     )
 
