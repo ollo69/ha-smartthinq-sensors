@@ -664,7 +664,7 @@ class AirConditionerDevice(Device):
             elif self._status.operation_mode in (ACMode.COOL.name, ACMode.DRY.name):
                 jet = MODE_JET_COOL
             else:
-                return False
+                raise ValueError("Invalid device status for jet mode")
         else:
             jet = MODE_JET_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=jet)
@@ -906,13 +906,10 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def mode_jet(self):
         key = self._get_state_key(STATE_MODE_JET)
-        if self._data.get(key) == self.to_int_or_none(MODE_JET_COOL) or self._data.get(
-            key
-        ) == self.to_int_or_none(MODE_JET_HEAT):
-            value = True
-        else:
-            value = False
-        return self._update_feature(FEAT_MODE_JET, value, False)
+        if (value := self.to_int_or_none(self._data.get(key))) is None:
+            return None
+        status = value in (self.to_int_or_none(MODE_JET_COOL), self.to_int_or_none(MODE_JET_HEAT))
+        return self._update_feature(FEAT_MODE_JET, status, False)
 
     def _update_features(self):
         _ = [
