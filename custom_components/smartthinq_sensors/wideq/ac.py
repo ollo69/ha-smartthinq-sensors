@@ -88,9 +88,9 @@ ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 LIGHTING_DISPLAY_OFF = "0"
 LIGHTING_DISPLAY_ON = "1"
 
-MODE_JET_OFF = "0"
-MODE_JET_COOL = "1"
-MODE_JET_HEAT = "2"
+MODE_JET_OFF = "@OFF"
+MODE_JET_COOL = "@COOL_JET"
+MODE_JET_HEAT = "@HEAT_JET"
 
 ZONE_OFF = "0"
 ZONE_ON = "1"
@@ -674,11 +674,12 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
         if status:
             if self._status.operation_mode == ACMode.HEAT.name:
-                jet = MODE_JET_HEAT
+                jet_key = MODE_JET_HEAT
             else:
-                jet = MODE_JET_COOL
+                jet_key = MODE_JET_COOL
         else:
-            jet = MODE_JET_OFF
+            jet_key = MODE_JET_OFF
+        jet = self.model_info.enum_value(keys[2], jet_key)
         await self.set(keys[0], keys[1], key=keys[2], value=jet)
 
     async def set_lighting_display(self, status):
@@ -924,9 +925,9 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def mode_jet(self):
         key = self._get_state_key(STATE_MODE_JET)
-        if (value := self.to_int_or_none(self._data.get(key))) is None:
+        if (value := self.lookup_enum(key, True)) is None:
             return None
-        status = str(value) in (MODE_JET_COOL, MODE_JET_HEAT)
+        status = value in (MODE_JET_COOL, MODE_JET_HEAT)
         return self._update_feature(FEAT_MODE_JET, status, False)
 
     @property

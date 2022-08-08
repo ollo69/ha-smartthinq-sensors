@@ -239,7 +239,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("No ThinQ devices found. Component setup aborted")
         return False
 
-    _LOGGER.info("ThinQ client connected")
+    _LOGGER.debug("ThinQ client connected")
 
     try:
         lge_devices, unsupported_devices = await lge_devices_setup(hass, client)
