@@ -410,8 +410,10 @@ class ModelInfo(object):
             return None
 
         options = self.value(key).options
-        options_inv = {v: k for k, v in options.items()}  # Invert the map.
-        return options_inv.get(name)
+        for k, v in options.items():
+            if v == name:
+                return k
+        return None
 
     def enum_name(self, key, value):
         """Look up the friendly enum name for an encoded value.
@@ -755,8 +757,12 @@ class ModelInfoV2(object):
             return None
 
         options = self.value(data)
-        options_inv = {v["label"]: k for k, v in options.items() if v.get("label")}  # Invert the map.
-        return options_inv.get(name)
+        for k, v in options.items():
+            if (label := v.get("label")) is None:
+                continue
+            if label == name:
+                return k
+        return None
 
     def enum_name(self, key, value):
         """Look up the friendly enum name for an encoded value.

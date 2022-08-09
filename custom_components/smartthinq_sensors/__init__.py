@@ -297,7 +297,9 @@ class LGEDevice:
         self._name = device.device_info.name
         self._device_id = device.device_info.id
         self._type = device.device_info.type
-        self._mac = device.device_info.macaddress
+        self._mac = None
+        if mac := device.device_info.macaddress:
+            self._mac = dr.format_mac(mac)
         self._firmware = device.device_info.firmware
 
         self._model = f"{device.device_info.model_name}"

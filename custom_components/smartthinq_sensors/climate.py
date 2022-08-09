@@ -18,6 +18,8 @@ from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
+    PRESET_ECO,
+    PRESET_NONE,
     ClimateEntityFeature,
     HVACMode,
 )
@@ -40,13 +42,17 @@ ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
 
 HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
-    ACMode.ENERGY_SAVER.name: HVACMode.AUTO,
     ACMode.AI.name: HVACMode.AUTO,
     ACMode.HEAT.name: HVACMode.HEAT,
     ACMode.DRY.name: HVACMode.DRY,
     ACMode.COOL.name: HVACMode.COOL,
     ACMode.FAN.name: HVACMode.FAN_ONLY,
     ACMode.ACO.name: HVACMode.HEAT_COOL,
+}
+
+PRESET_MODE_LOOKUP: dict[str, str] = {
+    ACMode.ENERGY_SAVING.name: PRESET_ECO,
+    ACMode.ENERGY_SAVER.name: PRESET_ECO,
 }
 
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
@@ -160,8 +166,11 @@ class LGEACClimate(LGEClimate):
         ] + [
             f"{SWING_PREFIX[1]}{mode}" for mode in self._device.horizontal_step_modes
         ]
+        self._attr_preset_mode = None
 
+        self._last_hvac_mode: HVACMode | None = None
         self._hvac_mode_lookup: dict[str, HVACMode] | None = None
+        self._preset_mode_lookup: dict[str, str] | None = None
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
         self._support_hor_swing = len(self._device.horizontal_step_modes) > 0
         self._set_hor_swing = self._support_hor_swing and not self._support_ver_swing
@@ -169,13 +178,25 @@ class LGEACClimate(LGEClimate):
     def _available_hvac_modes(self) -> dict[str, HVACMode]:
         """Return available hvac modes from lookup dict."""
         if self._hvac_mode_lookup is None:
+            self._hvac_mode_lookup = {
+                key: mode
+                for key, mode in HVAC_MODE_LOOKUP.items()
+                if key in self._device.op_modes
+            }
+        return self._hvac_mode_lookup
+
+    def _available_preset_modes(self) -> dict[str, str]:
+        """Return available preset modes from lookup dict."""
+        if self._preset_mode_lookup is None:
             modes = {}
-            for key, mode in HVAC_MODE_LOOKUP.items():
+            for key, mode in PRESET_MODE_LOOKUP.items():
                 if key in self._device.op_modes:
                     # invert key and mode to avoid duplicated HVAC modes
                     modes[mode] = key
-            self._hvac_mode_lookup = {v: k for k, v in modes.items()}
-        return self._hvac_mode_lookup
+            if modes:
+                self._attr_preset_mode = PRESET_NONE
+            self._preset_mode_lookup = {v: k for k, v in modes.items()}
+        return self._preset_mode_lookup
 
     def _get_swing_mode(self, hor_mode=False) -> str | None:
         """Return the current swing mode for vert of hor mode."""
@@ -193,6 +214,8 @@ class LGEACClimate(LGEClimate):
         features = ClimateEntityFeature.TARGET_TEMPERATURE
         if len(self.fan_modes) > 0:
             features |= ClimateEntityFeature.FAN_MODE
+        if self.preset_modes:
+            features |= ClimateEntityFeature.PRESET_MODE
         if self._support_ver_swing or self._support_hor_swing:
             features |= ClimateEntityFeature.SWING_MODE
         return features
@@ -222,12 +245,22 @@ class LGEACClimate(LGEClimate):
 
     @property
     def hvac_mode(self) -> HVACMode:
-        """Return hvac operation ie. heat, cool mode."""
+        """Return hvac operation i.e. heat, cool mode."""
         op_mode: str | None = self._api.state.operation_mode
         if not self._api.state.is_on or op_mode is None:
+            if self._attr_preset_mode:
+                self._attr_preset_mode = PRESET_NONE
+            self._last_hvac_mode = None
             return HVACMode.OFF
+        presets = self._available_preset_modes()
+        if op_mode in presets:
+            self._attr_preset_mode = presets[op_mode]
+            return self._last_hvac_mode or HVACMode.AUTO
+        if self._attr_preset_mode:
+            self._attr_preset_mode = PRESET_NONE
         modes = self._available_hvac_modes()
-        return modes.get(op_mode, HVACMode.AUTO)
+        self._last_hvac_mode = modes.get(op_mode)
+        return self._last_hvac_mode or HVACMode.AUTO
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
@@ -238,11 +271,10 @@ class LGEACClimate(LGEClimate):
 
         modes = self._available_hvac_modes()
         reverse_lookup = {v: k for k, v in modes.items()}
-        operation_mode = reverse_lookup.get(hvac_mode)
-        if operation_mode is None:
+        if (operation_mode := reverse_lookup.get(hvac_mode)) is None:
             raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
 
-        if self.hvac_mode == HVACMode.OFF:
+        if not self._api.state.is_on:
             await self._device.power(True)
         await self._device.set_op_mode(operation_mode)
         self._api.async_set_updated()
@@ -252,6 +284,33 @@ class LGEACClimate(LGEClimate):
         """Return the list of available hvac operation modes."""
         modes = self._available_hvac_modes()
         return [HVACMode.OFF] + list(modes.values())
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Set new preset mode."""
+        if not (modes := self._available_preset_modes()):
+            raise NotImplementedError()
+
+        if preset_mode == PRESET_NONE:
+            if self._attr_preset_mode != PRESET_NONE and self._api.state.is_on:
+                await self.async_set_hvac_mode(self._last_hvac_mode or HVACMode.OFF)
+            return
+
+        reverse_lookup = {v: k for k, v in modes.items()}
+        if (operation_mode := reverse_lookup.get(preset_mode)) is None:
+            raise ValueError(f"Invalid preset_mode [{preset_mode}]")
+
+        if not self._api.state.is_on:
+            await self._device.power(True)
+        await self._device.set_op_mode(operation_mode)
+        self._api.async_set_updated()
+
+    @property
+    def preset_modes(self) -> list[str] | None:
+        """Return the list of available preset modes."""
+        modes = self._available_preset_modes()
+        if not modes:
+            return None
+        return [PRESET_NONE] + list(modes.values())
 
     @property
     def current_temperature(self) -> float:
