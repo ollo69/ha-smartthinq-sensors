@@ -50,9 +50,9 @@ HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
     ACMode.ACO.name: HVACMode.HEAT_COOL,
 }
 
-PRESET_MODE_LOOKUP: dict[str, str] = {
-    ACMode.ENERGY_SAVING.name: PRESET_ECO,
-    ACMode.ENERGY_SAVER.name: PRESET_ECO,
+PRESET_MODE_LOOKUP: dict[str, dict[str, HVACMode]] = {
+    ACMode.ENERGY_SAVING.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
+    ACMode.ENERGY_SAVER.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
 }
 
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
@@ -168,7 +168,6 @@ class LGEACClimate(LGEClimate):
         ]
         self._attr_preset_mode = None
 
-        self._last_hvac_mode: HVACMode | None = None
         self._hvac_mode_lookup: dict[str, HVACMode] | None = None
         self._preset_mode_lookup: dict[str, str] | None = None
         self._support_ver_swing = len(self._device.vertical_step_modes) > 0
@@ -188,11 +187,16 @@ class LGEACClimate(LGEClimate):
     def _available_preset_modes(self) -> dict[str, str]:
         """Return available preset modes from lookup dict."""
         if self._preset_mode_lookup is None:
+            hvac_modes = list(self._available_hvac_modes().values())
             modes = {}
             for key, mode in PRESET_MODE_LOOKUP.items():
-                if key in self._device.op_modes:
-                    # invert key and mode to avoid duplicated HVAC modes
-                    modes[mode] = key
+                if key not in self._device.op_modes:
+                    continue
+                # skip preset mode with invalid hvac mode associated
+                if mode["hvac"] not in hvac_modes:
+                    continue
+                # invert key and mode to avoid duplicated preset modes
+                modes[mode["preset"]] = key
             if modes:
                 self._attr_preset_mode = PRESET_NONE
             self._preset_mode_lookup = {v: k for k, v in modes.items()}
@@ -250,17 +254,15 @@ class LGEACClimate(LGEClimate):
         if not self._api.state.is_on or op_mode is None:
             if self._attr_preset_mode:
                 self._attr_preset_mode = PRESET_NONE
-            self._last_hvac_mode = None
             return HVACMode.OFF
         presets = self._available_preset_modes()
         if op_mode in presets:
             self._attr_preset_mode = presets[op_mode]
-            return self._last_hvac_mode or HVACMode.AUTO
+            return PRESET_MODE_LOOKUP[op_mode]["hvac"]
         if self._attr_preset_mode:
             self._attr_preset_mode = PRESET_NONE
         modes = self._available_hvac_modes()
-        self._last_hvac_mode = modes.get(op_mode)
-        return self._last_hvac_mode or HVACMode.AUTO
+        return modes.get(op_mode, HVACMode.AUTO)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
@@ -290,12 +292,14 @@ class LGEACClimate(LGEClimate):
         if not (modes := self._available_preset_modes()):
             raise NotImplementedError()
 
+        reverse_lookup = {v: k for k, v in modes.items()}
         if preset_mode == PRESET_NONE:
-            if self._attr_preset_mode != PRESET_NONE and self._api.state.is_on:
-                await self.async_set_hvac_mode(self._last_hvac_mode or HVACMode.OFF)
+            curr_preset = self._attr_preset_mode
+            if curr_preset != PRESET_NONE and self._api.state.is_on:
+                op_mode = reverse_lookup[curr_preset]
+                await self.async_set_hvac_mode(PRESET_MODE_LOOKUP[op_mode]["hvac"])
             return
 
-        reverse_lookup = {v: k for k, v in modes.items()}
         if (operation_mode := reverse_lookup.get(preset_mode)) is None:
             raise ValueError(f"Invalid preset_mode [{preset_mode}]")
 
