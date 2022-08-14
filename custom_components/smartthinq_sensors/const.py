@@ -20,6 +20,8 @@ CONF_USE_HA_SESSION = "use_ha_session"
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 
+LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
+
 DEFAULT_ICON = "def_icon"
 DEFAULT_SENSOR = "default"
 

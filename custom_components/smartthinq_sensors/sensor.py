@@ -57,12 +57,13 @@ from homeassistant.const import (
     POWER_WATT,
     STATE_UNAVAILABLE,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
-from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES
+from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import (
     DEVICE_ICONS,
     WASH_DEVICE_TYPES,
@@ -454,74 +455,86 @@ async def async_setup_entry(
 ) -> None:
     """Set up the LGE sensors."""
     entry_config = hass.data[DOMAIN]
-    lge_devices = entry_config.get(LGE_DEVICES)
-    if not lge_devices:
-        return
+    lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
     _LOGGER.debug("Starting LGE ThinQ sensors setup...")
-    lge_sensors = []
 
-    # add WASH devices
-    lge_sensors.extend(
-        [
-            LGEWashDeviceSensor(lge_device, sensor_desc)
-            for sensor_desc in WASH_DEV_SENSORS
-            for lge_device in get_multiple_devices_types(lge_devices, WASH_DEVICE_TYPES)
-            if _sensor_exist(lge_device, sensor_desc)
-        ]
+    @callback
+    def _async_discover_device(lge_devices: dict) -> None:
+        """Add entities for a discovered ThinQ device."""
+
+        if not lge_devices:
+            return
+
+        lge_sensors = []
+
+        # add WASH devices
+        lge_sensors.extend(
+            [
+                LGEWashDeviceSensor(lge_device, sensor_desc)
+                for sensor_desc in WASH_DEV_SENSORS
+                for lge_device in get_multiple_devices_types(lge_devices, WASH_DEVICE_TYPES)
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        # add refrigerators
+        lge_sensors.extend(
+            [
+                LGERefrigeratorSensor(lge_device, sensor_desc)
+                for sensor_desc in REFRIGERATOR_SENSORS
+                for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        # add AC
+        lge_sensors.extend(
+            [
+                LGESensor(lge_device, sensor_desc, LGEACDevice(lge_device))
+                for sensor_desc in AC_SENSORS
+                for lge_device in lge_devices.get(DeviceType.AC, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        # add ranges
+        lge_sensors.extend(
+            [
+                LGERangeSensor(lge_device, sensor_desc)
+                for sensor_desc in RANGE_SENSORS
+                for lge_device in lge_devices.get(DeviceType.RANGE, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        # add air purifiers
+        lge_sensors.extend(
+            [
+                LGESensor(lge_device, sensor_desc)
+                for sensor_desc in AIR_PURIFIER_SENSORS
+                for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        # add dehumidifier
+        lge_sensors.extend(
+            [
+                LGESensor(lge_device, sensor_desc)
+                for sensor_desc in DEHUMIDIFIER_SENSORS
+                for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        async_add_entities(lge_sensors)
+
+    _async_discover_device(lge_cfg_devices)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
     )
-
-    # add refrigerators
-    lge_sensors.extend(
-        [
-            LGERefrigeratorSensor(lge_device, sensor_desc)
-            for sensor_desc in REFRIGERATOR_SENSORS
-            for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
-            if _sensor_exist(lge_device, sensor_desc)
-        ]
-    )
-
-    # add AC
-    lge_sensors.extend(
-        [
-            LGESensor(lge_device, sensor_desc, LGEACDevice(lge_device))
-            for sensor_desc in AC_SENSORS
-            for lge_device in lge_devices.get(DeviceType.AC, [])
-            if _sensor_exist(lge_device, sensor_desc)
-        ]
-    )
-
-    # add ranges
-    lge_sensors.extend(
-        [
-            LGERangeSensor(lge_device, sensor_desc)
-            for sensor_desc in RANGE_SENSORS
-            for lge_device in lge_devices.get(DeviceType.RANGE, [])
-            if _sensor_exist(lge_device, sensor_desc)
-        ]
-    )
-
-    # add air purifiers
-    lge_sensors.extend(
-        [
-            LGESensor(lge_device, sensor_desc)
-            for sensor_desc in AIR_PURIFIER_SENSORS
-            for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
-            if _sensor_exist(lge_device, sensor_desc)
-        ]
-    )
-
-    # add dehumidifier
-    lge_sensors.extend(
-        [
-            LGESensor(lge_device, sensor_desc)
-            for sensor_desc in DEHUMIDIFIER_SENSORS
-            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
-            if _sensor_exist(lge_device, sensor_desc)
-        ]
-    )
-
-    async_add_entities(lge_sensors)
 
     # register services
     platform = current_platform.get()

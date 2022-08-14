@@ -14,13 +14,14 @@ from homeassistant.components.humidifier.const import (
     HumidifierEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES
+from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 
 ATTR_CURRENT_HUMIDITY = "current_humidity"
 ATTR_FAN_MODE = "fan_mode"
@@ -35,22 +36,34 @@ async def async_setup_entry(
 ) -> None:
     """Set up LGE device humidifier based on config_entry."""
     entry_config = hass.data[DOMAIN]
-    lge_devices = entry_config.get(LGE_DEVICES)
-    if not lge_devices:
-        return
+    lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
     _LOGGER.debug("Starting LGE ThinQ humidifier setup...")
-    lge_humidifier = []
 
-    # DeHumidifier devices
-    lge_humidifier.extend(
-        [
-            LGEDeHumidifier(lge_device)
-            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
-        ]
+    @callback
+    def _async_discover_device(lge_devices: dict) -> None:
+        """Add entities for a discovered ThinQ device."""
+
+        if not lge_devices:
+            return
+
+        lge_humidifier = []
+
+        # DeHumidifier devices
+        lge_humidifier.extend(
+            [
+                LGEDeHumidifier(lge_device)
+                for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
+            ]
+        )
+
+        async_add_entities(lge_humidifier)
+
+    _async_discover_device(lge_cfg_devices)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
     )
-
-    async_add_entities(lge_humidifier)
 
     # register services
     platform = current_platform.get()

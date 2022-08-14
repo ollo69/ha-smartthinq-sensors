@@ -25,12 +25,13 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES
+from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import (
     TEMP_UNIT_LOOKUP,
     LGERefrigeratorDevice,
@@ -109,31 +110,43 @@ async def async_setup_entry(
 ) -> None:
     """Set up LGE device climate based on config_entry."""
     entry_config = hass.data[DOMAIN]
-    lge_devices = entry_config.get(LGE_DEVICES)
-    if not lge_devices:
-        return
+    lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
     _LOGGER.debug("Starting LGE ThinQ climate setup...")
-    lge_climates = []
 
-    # AC devices
-    lge_climates.extend(
-        [
-            LGEACClimate(lge_device)
-            for lge_device in lge_devices.get(DeviceType.AC, [])
-        ]
+    @callback
+    def _async_discover_device(lge_devices: dict) -> None:
+        """Add entities for a discovered ThinQ device."""
+
+        if not lge_devices:
+            return
+
+        lge_climates = []
+
+        # AC devices
+        lge_climates.extend(
+            [
+                LGEACClimate(lge_device)
+                for lge_device in lge_devices.get(DeviceType.AC, [])
+            ]
+        )
+
+        # Refrigerator devices
+        lge_climates.extend(
+            [
+                LGERefrigeratorClimate(lge_device, refrigerator_desc)
+                for refrigerator_desc in REFRIGERATOR_CLIMATE
+                for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+            ]
+        )
+
+        async_add_entities(lge_climates)
+
+    _async_discover_device(lge_cfg_devices)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
     )
-
-    # Refrigerator devices
-    lge_climates.extend(
-        [
-            LGERefrigeratorClimate(lge_device, refrigerator_desc)
-            for refrigerator_desc in REFRIGERATOR_CLIMATE
-            for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
-        ]
-    )
-
-    async_add_entities(lge_climates)
 
 
 class LGEClimate(CoordinatorEntity, ClimateEntity):

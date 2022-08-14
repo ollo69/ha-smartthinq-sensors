@@ -8,13 +8,14 @@ from .wideq.fan import FanDevice
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.percentage import ordered_list_item_to_percentage, percentage_to_ordered_list_item
 
 from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES
+from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 
 
 ATTR_FAN_MODE = "fan_mode"
@@ -28,30 +29,42 @@ async def async_setup_entry(
 ) -> None:
     """Set up LGE device fan based on config_entry."""
     entry_config = hass.data[DOMAIN]
-    lge_devices = entry_config.get(LGE_DEVICES)
-    if not lge_devices:
-        return
+    lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
     _LOGGER.debug("Starting LGE ThinQ fan setup...")
-    lge_fan = []
 
-    # Fan devices
-    lge_fan.extend(
-        [
-            LGEFan(lge_device)
-            for lge_device in lge_devices.get(DeviceType.FAN, [])
-        ]
+    @callback
+    def _async_discover_device(lge_devices: dict) -> None:
+        """Add entities for a discovered ThinQ device."""
+
+        if not lge_devices:
+            return
+
+        lge_fan = []
+
+        # Fan devices
+        lge_fan.extend(
+            [
+                LGEFan(lge_device)
+                for lge_device in lge_devices.get(DeviceType.FAN, [])
+            ]
+        )
+
+        # Air Purifier devices
+        lge_fan.extend(
+            [
+                LGEFan(lge_device, icon="mdi:air-purifier")
+                for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
+            ]
+        )
+
+        async_add_entities(lge_fan)
+
+    _async_discover_device(lge_cfg_devices)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
     )
-
-    # Air Purifier devices
-    lge_fan.extend(
-        [
-            LGEFan(lge_device, icon="mdi:air-purifier")
-            for lge_device in lge_devices.get(DeviceType.AIR_PURIFIER, [])
-        ]
-    )
-
-    async_add_entities(lge_fan)
 
 
 class LGEBaseFan(CoordinatorEntity, FanEntity):

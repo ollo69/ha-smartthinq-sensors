@@ -40,6 +40,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -52,6 +53,7 @@ from .const import (
     MIN_HA_MAJ_VER,
     MIN_HA_MIN_VER,
     LGE_DEVICES,
+    LGE_DISCOVERY_NEW,
     STARTUP,
     __min_ha_version__,
 )
@@ -67,6 +69,8 @@ SMARTTHINQ_PLATFORMS = [
 
 MAX_DISC_COUNT = 4
 SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
+
+DISCOVERED_DEVICES = "discovered_devices"
 UNSUPPORTED_DEVICES = "unsupported_devices"
 
 SCAN_INTERVAL = timedelta(seconds=30)
@@ -155,7 +159,9 @@ def is_valid_ha_version() -> bool:
     return is_min_ha_version(MIN_HA_MAJ_VER, MIN_HA_MIN_VER)
 
 
-def _notify_error(hass, notification_id, title, message) -> None:
+def _notify_message(
+    hass: HomeAssistant, notification_id: str, title: str, message: str
+) -> None:
     """Notify user with persistent notification"""
     hass.async_create_task(
         hass.services.async_call(
@@ -175,7 +181,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         msg = "This integration require at least HomeAssistant version " \
               f" {__min_ha_version__}, you are running version {__version__}." \
               " Please upgrade HomeAssistant to continue use this integration."
-        _notify_error(hass, "inv_ha_version", "SmartThinQ Sensors", msg)
+        _notify_message(hass, "inv_ha_version", "SmartThinQ Sensors", msg)
         _LOGGER.warning(msg)
         return False
 
@@ -221,7 +227,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
               " If your credential changed, you must reconfigure integration." \
               " Account based on social network are not supported and in most" \
               " case do not work with this integration."
-        _notify_error(hass, "inv_credential", "SmartThinQ Sensors", msg)
+        _notify_message(hass, "inv_credential", "SmartThinQ Sensors", msg)
         if log_info:
             _LOGGER.warning(msg, exc_info=True)
         msg2 = "Invalid ThinQ credential error, integration setup aborted." \
@@ -242,7 +248,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("ThinQ client connected")
 
     try:
-        lge_devices, unsupported_devices = await lge_devices_setup(hass, client)
+        lge_devices, unsupported_devices, discovered_devices = await lge_devices_setup(hass, client)
     except Exception as exc:
         if log_info:
             _LOGGER.warning(
@@ -268,8 +274,61 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         CLIENT: client,
         LGE_DEVICES: lge_devices,
         UNSUPPORTED_DEVICES: unsupported_devices,
+        DISCOVERED_DEVICES: discovered_devices,
     }
     await async_setup_entity_platforms(hass, entry, SMARTTHINQ_PLATFORMS)
+
+    async def _async_discover_devices(event_time):
+        """Discover new devices."""
+        _LOGGER.debug("Discovering new devices...")
+
+        old_devs = hass.data[DOMAIN][DISCOVERED_DEVICES]
+        lge_devs, unsupported_devs, new_devs = await lge_devices_setup(hass, client, old_devs)
+        hass.data[DOMAIN][DISCOVERED_DEVICES] = new_devs
+
+        # send signal to set up new entities
+        if lge_devs:
+            _notify_message(
+                hass, "new_devices", "SmartThinQ Sensors", "Discovered new devices."
+            )
+            async_dispatcher_send(hass, LGE_DISCOVERY_NEW, lge_devs)
+
+        # remove device not available anymore
+        if lge_devs or unsupported_devs or len(old_devs) != len(new_devs):
+            cleanup_orphan_lge_devices(hass, entry.entry_id, client)
+
+            # Update hass data LGE_DEVICES
+            prev_lge_devs: dict[DeviceType, list[LGEDevice]] = hass.data[DOMAIN][LGE_DEVICES]
+            new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
+            for dev_type, dev_list in prev_lge_devs.items():
+                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
+                if new_dev_list:
+                    new_lge_devs[dev_type] = new_dev_list
+            for dev_type, dev_list in lge_devs.items():
+                if dev_type in new_lge_devs:
+                    new_lge_devs[dev_type].extend(dev_list)
+                else:
+                    new_lge_devs[dev_type] = dev_list
+            hass.data[DOMAIN][LGE_DEVICES] = new_lge_devs
+
+            # Update hass data UNSUPPORTED_DEVICES
+            prev_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = hass.data[DOMAIN][UNSUPPORTED_DEVICES]
+            new_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = {}
+            for dev_type, dev_list in prev_uns_devs.items():
+                new_dev_list = [dev for dev in dev_list if dev.id in new_devs]
+                if new_dev_list:
+                    new_uns_devs[dev_type] = new_dev_list
+            for dev_type, dev_list in unsupported_devs.items():
+                if dev_type in new_uns_devs:
+                    new_uns_devs[dev_type].extend(dev_list)
+                else:
+                    new_uns_devs[dev_type] = dev_list
+            hass.data[DOMAIN][UNSUPPORTED_DEVICES] = new_uns_devs
+
+    # schedule discover new devices every 5 minutes
+    entry.async_on_unload(
+        async_track_time_interval(hass, _async_discover_devices, timedelta(minutes=5))
+    )
 
     return True
 
@@ -323,6 +382,11 @@ class LGEDevice:
     def device(self):
         """The device instance"""
         return self._device
+
+    @property
+    def device_id(self):
+        """The device unique identifier"""
+        return self._device_id
 
     @property
     def name(self) -> str:
@@ -460,13 +524,17 @@ class LGEDevice:
 
 
 async def lge_devices_setup(
-    hass: HomeAssistant, client: ClientAsync
-) -> tuple[dict[DeviceType, list[LGEDevice]], dict[DeviceType, list[LGDeviceInfo]]]:
+    hass: HomeAssistant, client: ClientAsync, discovered_devices: list[str] | None = None
+) -> tuple[dict[DeviceType, list[LGEDevice]], dict[DeviceType, list[LGDeviceInfo]], list[str]]:
     """Query connected devices from LG ThinQ."""
-    _LOGGER.info("Starting LGE ThinQ devices...")
+    _LOGGER.debug("Searching LGE ThinQ devices...")
 
     wrapped_devices: dict[DeviceType, list[LGEDevice]] = {}
     unsupported_devices: dict[DeviceType, list[LGDeviceInfo]] = {}
+    new_discovered_devices = []
+    if discovered_devices is None:
+        discovered_devices = []
+
     device_count = 0
     temp_unit = UNIT_TEMP_CELSIUS
     if hass.config.units.temperature_unit != TEMP_CELSIUS:
@@ -474,6 +542,10 @@ async def lge_devices_setup(
 
     for device in client.devices:
         device_id = device.id
+        new_discovered_devices.append(device_id)
+        if device_id in discovered_devices:
+            continue
+
         device_name = device.name
         device_type = device.type
         network_type = device.network_type
@@ -511,8 +583,10 @@ async def lge_devices_setup(
             device_id,
         )
 
-    _LOGGER.info("Founds %s LGE device(s)", str(device_count))
-    return wrapped_devices, unsupported_devices
+    if device_count > 0:
+        _LOGGER.info("Founds %s LGE device(s)", device_count)
+
+    return wrapped_devices, unsupported_devices, new_discovered_devices
 
 
 @callback

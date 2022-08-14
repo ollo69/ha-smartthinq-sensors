@@ -24,12 +24,13 @@ from homeassistant.components.switch import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES
+from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import (
     STATE_LOOKUP,
     LGEBaseDevice,
@@ -137,53 +138,65 @@ async def async_setup_entry(
 ) -> None:
     """Set up the LGE switch."""
     entry_config = hass.data[DOMAIN]
-    lge_devices = entry_config.get(LGE_DEVICES)
-    if not lge_devices:
-        return
+    lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
     _LOGGER.debug("Starting LGE ThinQ switch setup...")
-    lge_switch = []
 
-    # add WM devices
-    lge_switch.extend(
-        [
-            LGESwitch(lge_device, switch_desc)
-            for switch_desc in WASH_DEV_SWITCH
-            for lge_device in get_multiple_devices_types(lge_devices, WM_DEVICE_TYPES)
-            if _switch_exist(lge_device, switch_desc)
-        ]
+    @callback
+    def _async_discover_device(lge_devices: dict) -> None:
+        """Add entities for a discovered ThinQ device."""
+
+        if not lge_devices:
+            return
+
+        lge_switch = []
+
+        # add WM devices
+        lge_switch.extend(
+            [
+                LGESwitch(lge_device, switch_desc)
+                for switch_desc in WASH_DEV_SWITCH
+                for lge_device in get_multiple_devices_types(lge_devices, WM_DEVICE_TYPES)
+                if _switch_exist(lge_device, switch_desc)
+            ]
+        )
+
+        # add refrigerators
+        lge_switch.extend(
+            [
+                LGESwitch(lge_device, switch_desc)
+                for switch_desc in REFRIGERATOR_SWITCH
+                for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
+                if _switch_exist(lge_device, switch_desc)
+            ]
+        )
+
+        # add AC switch
+        lge_switch.extend(
+            [
+                LGESwitch(lge_device, switch_desc)
+                for switch_desc in AC_SWITCH
+                for lge_device in lge_devices.get(DeviceType.AC, [])
+                if _switch_exist(lge_device, switch_desc)
+            ]
+        )
+
+        # add AC duct zone switch
+        lge_switch.extend(
+            [
+                LGEDuctSwitch(lge_device, duct_zone)
+                for lge_device in lge_devices.get(DeviceType.AC, [])
+                for duct_zone in lge_device.device.duct_zones
+            ]
+        )
+
+        async_add_entities(lge_switch)
+
+    _async_discover_device(lge_cfg_devices)
+
+    entry.async_on_unload(
+        async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
     )
-
-    # add refrigerators
-    lge_switch.extend(
-        [
-            LGESwitch(lge_device, switch_desc)
-            for switch_desc in REFRIGERATOR_SWITCH
-            for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
-            if _switch_exist(lge_device, switch_desc)
-        ]
-    )
-
-    # add AC switch
-    lge_switch.extend(
-        [
-            LGESwitch(lge_device, switch_desc)
-            for switch_desc in AC_SWITCH
-            for lge_device in lge_devices.get(DeviceType.AC, [])
-            if _switch_exist(lge_device, switch_desc)
-        ]
-    )
-
-    # add AC duct zone switch
-    lge_switch.extend(
-        [
-            LGEDuctSwitch(lge_device, duct_zone)
-            for lge_device in lge_devices.get(DeviceType.AC, [])
-            for duct_zone in lge_device.device.duct_zones
-        ]
-    )
-
-    async_add_entities(lge_switch)
 
 
 class LGESwitch(CoordinatorEntity, SwitchEntity):
