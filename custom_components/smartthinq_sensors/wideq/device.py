@@ -72,20 +72,18 @@ class Monitor(object):
     _last_client_refresh = datetime.min
     _not_logged_count = 0
 
-    def __init__(self, client, device_id: str, platform_type=PlatformType.THINQ1, device_type: str = None) -> None:
+    def __init__(self, client, device_id: str, platform_type=PlatformType.THINQ1, device_name: str = None) -> None:
         """Initialize monitor class."""
         self._client: ClientAsync = client
         self._device_id = device_id
         self._platform_type = platform_type
-        self._device_descr = device_id
-        if device_type:
-            self._device_descr += f" ({device_type})"
+        self._device_descr = device_name or f"ID[{device_id}]"
         self._work_id: Optional[str] = None
         self._disconnected = True
         self._has_error = False
         self._invalid_credential_count = 0
 
-    def _raise_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False):
+    def _raise_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False) -> None:
         """Log and raise error with different level depending on condition."""
         log_lev = logging.DEBUG
         if not_logged and Monitor._client_connected:
@@ -96,7 +94,7 @@ class Monitor(object):
         if not self._has_error:
             self._has_error = True
             log_lev = logging.WARNING
-        _LOGGER.log(log_lev, "Device %s: %s", self._device_descr, msg, exc_info=exc_info)
+        _LOGGER.log(log_lev, "%s - Device: %s", msg, self._device_descr, exc_info=exc_info)
 
         if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
             Monitor._critical_error = True
@@ -106,7 +104,7 @@ class Monitor(object):
             raise core_exc.MonitorUnavailableError(self._device_id, msg) from exc
         raise core_exc.MonitorRefreshError(self._device_id, msg) from exc
 
-    async def _refresh_auth(self):
+    async def _refresh_auth(self) -> bool:
         """Refresh the devices shared client auth token"""
         async with Monitor._client_lock:
             if Monitor._client_connected:
@@ -115,7 +113,7 @@ class Monitor(object):
             self._disconnected = True
             return await self._refresh_client()
 
-    async def _refresh_client(self):
+    async def _refresh_client(self) -> bool:
         """Refresh the devices shared client"""
         async with Monitor._client_lock:
             if Monitor._client_connected:
@@ -157,13 +155,15 @@ class Monitor(object):
                     state = await self.poll(query_device)
 
             except core_exc.NotConnectedError:
+                if self._has_error:
+                    _LOGGER.info("Connection is now available - Device: %s", self._device_descr)
+                    self._has_error = False
+                _LOGGER.debug("Status not available. Device %s not connected", self._device_descr)
                 self._disconnected = True
-                self._has_error = False
-                _LOGGER.debug("Device %s not connected. Status not available", self._device_descr)
                 raise
 
             except core_exc.DeviceNotFound:
-                self._raise_error("Device ID is invalid, status update failed")
+                self._raise_error(f"Device ID {self._device_id} is invalid, status update failed")
 
             except core_exc.InvalidResponseError as exc:
                 self._raise_error("Received invalid response, status update failed", exc=exc, exc_info=True)
@@ -227,7 +227,9 @@ class Monitor(object):
                     _LOGGER.debug("No status available yet")
                     continue
 
-        self._has_error = False
+        if self._has_error:
+            _LOGGER.info("Connection is now available - Device: %s", self._device_descr)
+            self._has_error = False
         return state
 
     async def _restart_monitor(self) -> bool:
@@ -454,7 +456,7 @@ class ModelInfo(object):
 
     def _get_bit_key(self, key):
 
-        def search_bit_key(key, data):
+        def search_bit_key():
             if not data:
                 return {}
             for i in range(1, 4):
@@ -478,7 +480,7 @@ class ModelInfo(object):
         bit_key = self._bit_keys.get(key)
         if bit_key is None:
             data = self._data.get("Value")
-            bit_key = search_bit_key(key, data)
+            bit_key = search_bit_key()
             self._bit_keys[key] = bit_key
 
         return bit_key
@@ -595,7 +597,7 @@ class ModelInfo(object):
     @staticmethod
     def _get_current_temp_key(key: str, data):
         """Special case for oven current temperature, that in protocol
-        is represented with a suffix "F" or "C" depending from the unit
+        is represented with a suffix "F" or "C" depending on the unit
         """
         if key.count("CurrentTemperature") == 0:
             return key
@@ -611,14 +613,15 @@ class ModelInfo(object):
 
     def decode_snapshot(self, data, key):
         """Decode  status data."""
-        decoded = {}
         if self._data["Monitoring"]["type"] != "THINQ2":
-            return decoded
-        info = data.get(key)
-        if not info:
-            return decoded
+            return {}
+
+        if key and key not in data:
+            return {}
 
         protocol = self._data["Monitoring"]["protocol"]
+        decoded = {}
+
         if isinstance(protocol, list):
             for elem in protocol:
                 if super_set := elem.get("superSet"):
@@ -631,10 +634,14 @@ class ModelInfo(object):
                         value = value.get(pr_key)
                     if value is not None:
                         if isinstance(value, Number):
-                            value = int(value)
+                            try:
+                                value = int(value)
+                            except ValueError:
+                                continue
                         decoded[key] = str(value)
             return decoded
 
+        info = data[key] if key else data
         convert_rule = self._data.get("ConvertingRule", {})
         for data_key, value_key in protocol.items():
             value = ""
@@ -642,7 +649,10 @@ class ModelInfo(object):
             if raw_value is not None:
                 value = str(raw_value)
                 if isinstance(raw_value, Number):
-                    value = str(int(raw_value))
+                    try:
+                        value = str(int(raw_value))
+                    except ValueError:
+                        value = ""
                 elif value_key in convert_rule:
                     value_rules = convert_rule[value_key].get("MonitoringConvertingRule", {})
                     if raw_value in value_rules:
@@ -958,7 +968,7 @@ class Device(object):
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
-        self._mon = Monitor(client, device.id, device.platform_type, device.type.name)
+        self._mon = Monitor(client, device.id, device.platform_type, device.name)
         self._control_set = 0
         self._last_additional_poll: Optional[datetime] = None
         self._available_features = available_features or {}
@@ -1005,16 +1015,16 @@ class Device(object):
             model_data = self._model_data
             if "Monitoring" in model_data and "Value" in model_data:
                 if ModelInfoV2AC.valid_value_data(model_data["Value"]):
-                    # this are V2 models with format similar to V1
+                    # this is V2 model with format similar to V1
                     self._model_info = ModelInfoV2AC(model_data)
                 else:
-                    # this are old V1 model
+                    # this is old V1 model
                     self._model_info = ModelInfo(model_data)
             elif "MonitoringValue" in model_data:
-                # this are new V2 devices
+                # this is new V2 device
                 self._model_info = ModelInfoV2(model_data)
             elif "ControlDevice" in model_data and "Value" in model_data:
-                # this are new V2 ac
+                # this is new V2 ac
                 self._model_info = ModelInfoV2AC(model_data)
 
         if self._model_info is not None:
@@ -1293,9 +1303,13 @@ class DeviceStatus(object):
 
     @staticmethod
     def int_or_none(value):
-        if value is not None and isinstance(value, Number):
-            return str(int(value))
-        return None
+        if value is None:
+            return None
+        if not isinstance(value, Number):
+            return None
+        if (num_val := DeviceStatus.to_int_or_none(value)) is None:
+            return None
+        return str(num_val)
 
     @staticmethod
     def to_int_or_none(value):

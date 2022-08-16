@@ -1320,7 +1320,7 @@ class ClientAsync(object):
             return {}
         if url not in self._model_url_info:
             if device:
-                _LOGGER.info(
+                _LOGGER.debug(
                     "Loading model info for %s. Model: %s, Url: %s",
                     device.name,
                     device.model_name,

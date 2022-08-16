@@ -555,11 +555,10 @@ async def lge_devices_setup(
         lge_dev = get_lge_device(client, device, temp_unit)
         if not lge_dev:
             _LOGGER.info(
-                "Found unsupported LGE Device. Name: %s - Type: %s - NetworkType: %s - InfoUrl: %s",
+                "Found unsupported LGE Device. Name: %s - Type: %s - NetworkType: %s",
                 device_name,
                 device_type.name,
                 network_type.name,
-                device.model_info_url,
             )
             unsupported_devices.setdefault(device_type, []).append(device)
             continue
