@@ -29,8 +29,7 @@
                     "use_tls_v1": "Force use of protocol TLSv1 (sometimes required)",
                     "exclude_dh": "Do not use DH cypher (in case 'dh key too small' error)"
                 },
-                "description": "Insert your SmartThinQ account access information.",
-                "title": "SmartThinQ LGE Sensors"
+                "description": "Insert your SmartThinQ account access information."
             },
             "url": {
                 "data": {

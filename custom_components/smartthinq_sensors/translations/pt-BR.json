@@ -23,8 +23,7 @@
                     "use_tls_v1": "Forçar o uso do protocolo TLSv1 (às vezes é necessário)",
                     "exclude_dh": "Não use a cifra DH (no caso de erro 'chave dh muito pequena')"
                 },
-                "description": "Selecione a localização da sua conta SmartThinQ.",
-                "title": "SmartThinQ LGE Sensors"
+                "description": "Selecione a localização da sua conta SmartThinQ."
             },
             "url": {
                 "data": {

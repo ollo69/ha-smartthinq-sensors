@@ -28,8 +28,7 @@
                     "use_tls_v1": "Wymuś użycie protokołu TLSv1 (czasami wymagane)",
                     "exclude_dh": "Nie używaj szyfrowania DH (w przypadku błędu 'dh key too small')"
                 },
-                "description": "Podaj swoje ustawienia regionalne dla SmartThinQ.",
-                "title": "SmartThinQ LGE Sensors"
+                "description": "Podaj swoje ustawienia regionalne dla SmartThinQ."
             },
             "url": {
                 "data": {
