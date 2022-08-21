@@ -331,6 +331,7 @@ class ModelInfo(object):
         """
 
     def __init__(self, data):
+        """Initialize the class."""
         self._data = data
         self._bit_keys = {}
 
@@ -619,9 +620,10 @@ class ModelInfo(object):
         if key and key not in data:
             return {}
 
-        protocol = self._data["Monitoring"]["protocol"]
-        decoded = {}
+        if not (protocol := self._data["Monitoring"].get("protocol")):
+            return data[key] if key else data
 
+        decoded = {}
         if isinstance(protocol, list):
             for elem in protocol:
                 if super_set := elem.get("superSet"):
@@ -667,6 +669,7 @@ class ModelInfoV2(object):
         """
 
     def __init__(self, data):
+        """Initialize the class."""
         self._data = data
 
     @property
@@ -896,6 +899,11 @@ class ModelInfoV2AC(ModelInfo):
         Type V2AC and other models with "data_type in Value.
         """
 
+    def __init__(self, data):
+        """Initialize the class."""
+        super().__init__(data)
+        self._has_monitoring = "Monitoring" in data
+
     @staticmethod
     def valid_value_data(value_data):
         """Determine if valid Value data is in this model."""
@@ -944,7 +952,9 @@ class ModelInfoV2AC(ModelInfo):
             assert False, "unsupported value type {}".format(d["data_type"])
 
     def decode_snapshot(self, data, key):
-        return data
+        if not key or not self._has_monitoring:
+            return data
+        return super().decode_snapshot(data, key)
 
 
 class Device(object):

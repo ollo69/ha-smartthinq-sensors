@@ -31,6 +31,7 @@ CTRL_MISC = ["Control", "miscCtrl"]
 
 DUCT_ZONE_V1 = "DuctZone"
 DUCT_ZONE_V1_TYPE = "DuctZoneType"
+STATE_FILTER_V1 = "Filter"
 STATE_POWER_V1 = "InOutInstantPower"
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
@@ -214,6 +215,9 @@ class AirConditionerDevice(Device):
 
         self._current_power = 0
         self._current_power_supported = True
+
+        self._filter_status = None
+        self._filter_status_supported = True
 
         self._f2c_map = None
         self._c2f_map = None
@@ -653,19 +657,6 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
         await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
 
-    async def get_power(self):
-        """Get the instant power usage in watts of the whole unit"""
-        if not self._current_power_supported:
-            return 0
-
-        try:
-            value = await self._get_config(STATE_POWER_V1)
-            return value[STATE_POWER_V1]
-        except (ValueError, InvalidRequestError):
-            # Device does not support whole unit instant power usage
-            self._current_power_supported = False
-            return 0
-
     async def set_mode_jet(self, status):
         """Set the mode jet."""
         if not self.is_mode_jet_available:
@@ -687,6 +678,31 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_LIGHTING_DISPLAY)
         lighting = LIGHTING_DISPLAY_ON if status else LIGHTING_DISPLAY_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=lighting)
+
+    async def get_power(self):
+        """Get the instant power usage in watts of the whole unit."""
+        if not self._current_power_supported:
+            return 0
+
+        try:
+            value = await self._get_config(STATE_POWER_V1)
+            return value[STATE_POWER_V1]
+        except (ValueError, InvalidRequestError):
+            # Device does not support whole unit instant power usage
+            self._current_power_supported = False
+            return 0
+
+    async def get_filter_state(self):
+        """Get information about the filter."""
+        if not self._filter_status_supported:
+            return None
+
+        try:
+            return await self._get_config(STATE_FILTER_V1)
+        except (ValueError, InvalidRequestError):
+            # Device does not support filter status
+            self._filter_status_supported = False
+            return None
 
     async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
         """Set a device's control for `key` to `value`."""
