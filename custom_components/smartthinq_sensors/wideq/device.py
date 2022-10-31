@@ -1,16 +1,19 @@
 """A high-level, convenient abstraction for interacting with the LG
 SmartThinQ API for most use cases.
 """
-import aiohttp
+from __future__ import annotations
+
 import asyncio
 import base64
-from collections import namedtuple
-from datetime import datetime, timedelta
-import enum
+from enum import Enum
 import json
 import logging
+from collections import namedtuple
+from datetime import datetime, timedelta
 from numbers import Number
 from typing import Any, Optional
+
+import aiohttp
 
 from . import core_exceptions as core_exc
 from .const import (
@@ -19,8 +22,8 @@ from .const import (
     STATE_OPTIONITEM_ON,
     STATE_OPTIONITEM_UNKNOWN,
     UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-)
+    UNIT_TEMP_FAHRENHEIT
+    )
 from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
 
@@ -54,18 +57,19 @@ SLEEP_BETWEEN_RETRIES = 2  # seconds
 _LOGGER = logging.getLogger(__name__)
 
 
-class UnitTempModes(enum.Enum):
+class UnitTempModes(Enum):
     Celsius = UNIT_TEMP_CELSIUS
     Fahrenheit = UNIT_TEMP_FAHRENHEIT
 
 
-class Monitor(object):
-    """A monitoring task for a device.
-        
-        This task is robust to some API-level failures. If the monitoring
-        task expires, it attempts to start a new one automatically. This
-        makes one `Monitor` object suitable for long-term monitoring.
-        """
+class Monitor():
+    """
+    A monitoring task for a device.
+
+    This task is robust to some API-level failures. If the monitoring
+    task expires, it attempts to start a new one automatically. This
+    makes one `Monitor` object suitable for long-term monitoring.
+    """
     _client_lock = asyncio.Lock()
     _client_connected = True
     _critical_error = False
@@ -137,7 +141,7 @@ class Monitor(object):
             Monitor._not_logged_count = 0
             return True
 
-    async def refresh(self, query_device=False) -> Optional[any]:
+    async def refresh(self, query_device=False) -> Any | None:
         """Update device state"""
         _LOGGER.debug("Updating ThinQ device %s", self._device_descr)
         invalid_credential_count = self._invalid_credential_count
@@ -223,9 +227,8 @@ class Monitor(object):
                     # _LOGGER.debug('Status attributes: %s', l)
                     break
 
-                else:
-                    _LOGGER.debug("No status available yet")
-                    continue
+                _LOGGER.debug("No status available yet")
+                continue
 
         if self._has_error:
             _LOGGER.info("Connection is now available - Device: %s", self._device_descr)
@@ -260,17 +263,19 @@ class Monitor(object):
         await self._client.session.monitor_stop(self._device_id, work_id)
 
     async def poll(self, query_device=False) -> Optional[any]:
-        """Get the current status data (a bytestring) or None if the
-            device is not yet ready.
-            """
+        """
+        Get the current status data (a bytestring) or None if the
+        device is not yet ready.
+        """
         if self._platform_type == PlatformType.THINQ1:
             return await self._poll_v1()
         return await self._poll_v2(query_device)
 
     async def _poll_v1(self) -> Optional[bytes]:
-        """Get the current status data (a bytestring) or None if the
-            device is not yet ready.
-            """
+        """
+        Get the current status data (a bytestring) or None if the
+        device is not yet ready.
+        """
         if not self._work_id:
             await self.start()
             if not self._work_id:
@@ -283,9 +288,10 @@ class Monitor(object):
             return None
 
     async def _poll_v2(self, query_device=False) -> Optional[any]:
-        """Get the current status data (a json str) or None if the
-            device is not yet ready.
-            """
+        """
+        Get the current status data (a json str) or None if the
+        device is not yet ready.
+        """
         if self._platform_type != PlatformType.THINQ2:
             return None
         if query_device:
@@ -326,7 +332,7 @@ BitValue = namedtuple("BitValue", ["options"])
 ReferenceValue = namedtuple("ReferenceValue", ["reference"])
 
 
-class ModelInfo(object):
+class ModelInfo():
     """A description of a device model's capabilities.
         """
 
@@ -367,17 +373,17 @@ class ModelInfo(object):
 
     def value(self, name):
         """Look up information about a value.
-        
+
         Return either an `EnumValue` or a `RangeValue`.
         """
         d = self._data["Value"][name]
         if d["type"] in ("Enum", "enum"):
             return EnumValue(d["option"])
-        elif d["type"] == "Range":
+        if d["type"] == "Range":
             return RangeValue(
                 d["option"]["min"], d["option"]["max"], d["option"].get("step", 0)
             )
-        elif d["type"] == "Bit":
+        if d["type"] == "Bit":
             bit_values = {}
             for bit in d["option"]:
                 bit_values[bit["startbit"]] = {
@@ -385,12 +391,12 @@ class ModelInfo(object):
                     "length": bit["length"],
                 }
             return BitValue(bit_values)
-        elif d["type"] == "Reference":
+        if d["type"] == "Reference":
             ref = d["option"][0]
             return ReferenceValue(self._data[ref])
-        elif d["type"] == "Boolean":
+        if d["type"] == "Boolean":
             return EnumValue({"0": BIT_OFF, "1": BIT_ON})
-        elif d["type"] == "String":
+        if d["type"] == "String":
             pass
         else:
             _LOGGER.error(
@@ -401,14 +407,11 @@ class ModelInfo(object):
             return None
 
     def default(self, name):
-        """Get the default value, if it exists, for a given value.
-        """
-
+        """Get the default value, if it exists, for a given value."""
         return self._data.get("Value", {}).get(name, {}).get("default")
 
     def enum_value(self, key, name):
-        """Look up the encoded value for a friendly enum name.
-        """
+        """Look up the encoded value for a friendly enum name."""
         if not self.value_type(key):
             return None
 
@@ -419,8 +422,7 @@ class ModelInfo(object):
         return None
 
     def enum_name(self, key, value):
-        """Look up the friendly enum name for an encoded value.
-        """
+        """Look up the friendly enum name for an encoded value."""
         if not self.value_type(key):
             return None
 
@@ -431,19 +433,19 @@ class ModelInfo(object):
         return options.get(value, "")
 
     def enum_index(self, key, index):
-        """Look up the friendly enum name for an indexed value.
-        """
+        """Look up the friendly enum name for an indexed value."""
         return self.enum_name(key, index)
 
     def range_name(self, key):
-        """Look up the value of a RangeValue.  Not very useful other than for comprehension
+        """
+        Look up the value of a RangeValue.
+        Not very useful other than for comprehension.
         """
 
         return key
 
     def bit_name(self, key, bit_index, value):
-        """Look up the friendly name for an encoded bit value
-        """
+        """Look up the friendly name for an encoded bit value."""
         if not self.value_type(key):
             return str(value)
 
@@ -487,8 +489,7 @@ class ModelInfo(object):
         return bit_key
 
     def bit_value(self, key, values):
-        """Look up the bit value for an specific key
-        """
+        """Look up the bit value for an specific key."""
         bit_key = self._get_bit_key(key)
         if not bit_key:
             return None
@@ -506,8 +507,7 @@ class ModelInfo(object):
         return str(val)
 
     def reference_name(self, key, value, ref_key="_comment"):
-        """Look up the friendly name for an encoded reference value
-        """
+        """Look up the friendly name for an encoded reference value."""
         value = str(value)
         if not self.value_type(key):
             return None
@@ -523,8 +523,7 @@ class ModelInfo(object):
 
     @property
     def binary_control_data(self):
-        """Check that type of control is BINARY(BYTE).
-        """
+        """Check that type of control is BINARY(BYTE)."""
         return self._data["ControlWifi"]["type"] == "BINARY(BYTE)"
 
     def get_control_cmd(self, cmd_key, ctrl_key=None):
@@ -587,7 +586,7 @@ class ModelInfo(object):
         return json.loads(data.decode("utf8"))
 
     def decode_monitor(self, data):
-        """Decode  status data."""
+        """Decode status data."""
 
         if self.byte_monitor_data:
             return self.decode_monitor_byte(data)
@@ -597,8 +596,9 @@ class ModelInfo(object):
 
     @staticmethod
     def _get_current_temp_key(key: str, data):
-        """Special case for oven current temperature, that in protocol
-        is represented with a suffix "F" or "C" depending on the unit
+        """
+        Special case for oven current temperature, that in protocol
+        is represented with a suffix "F" or "C" depending on the unit.
         """
         if key.count("CurrentTemperature") == 0:
             return key
@@ -663,10 +663,11 @@ class ModelInfo(object):
         return decoded
 
 
-class ModelInfoV2(object):
-    """A description of a device model's capabilities.
-        Type V2.
-        """
+class ModelInfoV2():
+    """
+    A description of a device model's capabilities.
+    Type V2.
+    """
 
     def __init__(self, data):
         """Initialize the class."""
@@ -713,8 +714,8 @@ class ModelInfoV2(object):
         return None
 
     def value(self, data):
-        """Look up information about a value.
-        
+        """
+        Look up information about a value.
         Return either an `EnumValue` or a `RangeValue`.
         """
         data_type = data.get("dataType")
@@ -754,8 +755,7 @@ class ModelInfoV2(object):
             return None
 
     def default(self, name):
-        """Get the default value, if it exists, for a given value.
-        """
+        """Get the default value, if it exists, for a given value."""
         data = self.data_root(name)
         if data:
             return data.get("default")
@@ -763,8 +763,7 @@ class ModelInfoV2(object):
         return None
 
     def enum_value(self, key, name):
-        """Look up the encoded value for a friendly enum name.
-        """
+        """Look up the encoded value for a friendly enum name."""
         data = self.data_root(key)
         if not data:
             return None
@@ -778,8 +777,7 @@ class ModelInfoV2(object):
         return None
 
     def enum_name(self, key, value):
-        """Look up the friendly enum name for an encoded value.
-        """
+        """Look up the friendly enum name for an encoded value."""
         data = self.data_root(key)
         if not data:
             return None
@@ -792,8 +790,7 @@ class ModelInfoV2(object):
         return item.get("label", "")
 
     def enum_index(self, key, index):
-        """Look up the friendly enum name for an indexed value.
-        """
+        """Look up the friendly enum name for an indexed value."""
         data = self.data_root(key)
         if not data:
             return None
@@ -807,24 +804,25 @@ class ModelInfoV2(object):
         return ""
 
     def range_name(self, key):
-        """Look up the value of a RangeValue.  Not very useful other than for comprehension
+        """
+        Look up the value of a RangeValue.
+        Not very useful other than for comprehension.
         """
         return key
 
     def bit_name(self, key, bit_index, value):
-        """Look up the friendly name for an encoded bit value
-        """
+        """Look up the friendly name for an encoded bit value."""
         return None
 
     def bit_value(self, key, value):
-        """Look up the bit value for an specific key
-            Not used in model V2
-            """
+        """
+        Look up the bit value for a specific key.
+        Not used in model V2.
+        """
         return None
 
     def reference_name(self, key, value, ref_key="_comment"):
-        """Look up the friendly name for an encoded reference value
-        """
+        """Look up the friendly name for an encoded reference value."""
         data = self.data_root(key)
         if not data:
             return None
@@ -839,8 +837,7 @@ class ModelInfoV2(object):
         return None
 
     def target_key(self, key, value, target):
-        """Look up the friendly name for an encoded reference value
-        """
+        """Look up the friendly name for an encoded reference value."""
         data = self.data_root(key)
         if not data:
             return None
@@ -849,8 +846,7 @@ class ModelInfoV2(object):
 
     @property
     def binary_control_data(self):
-        """Check that type of control is BINARY(BYTE).
-        """
+        """Check that type of control is BINARY(BYTE)."""
         return False
 
     def get_control_cmd(self, cmd_key, ctrl_key=None):
@@ -866,38 +862,33 @@ class ModelInfoV2(object):
 
     @property
     def binary_monitor_data(self):
-        """Check that type of monitoring is BINARY(BYTE).
-        """
+        """Check that type of monitoring is BINARY(BYTE)."""
         return False
 
     def decode_monitor_binary(self, data):
-        """Decode binary encoded status data.
-        """
-
+        """Decode binary encoded status data."""
         return {}
 
     def decode_monitor_json(self, data):
         """Decode a bytestring that encodes JSON status data."""
-
         return json.loads(data.decode("utf8"))
 
     def decode_monitor(self, data):
-        """Decode  status data."""
-
+        """Decode status data."""
         if self.binary_monitor_data:
             return self.decode_monitor_binary(data)
-        else:
-            return self.decode_monitor_json(data)
+        return self.decode_monitor_json(data)
 
     def decode_snapshot(self, data, key):
-        """Decode  status data."""
+        """Decode status data."""
         return data.get(key)
 
 
 class ModelInfoV2AC(ModelInfo):
-    """A description of a device model's capabilities.
-        Type V2AC and other models with "data_type in Value.
-        """
+    """
+    A description of a device model's capabilities.
+    Type V2AC and other models with "data_type in Value.
+    """
 
     def __init__(self, data):
         """Initialize the class."""
@@ -922,14 +913,14 @@ class ModelInfoV2AC(ModelInfo):
         return None
 
     def value(self, name):
-        """Look up information about a value.
-
+        """
+        Look up information about a value.
         Return either an `EnumValue` or a `RangeValue`.
         """
         d = self._data["Value"][name]
         if d["data_type"] in ("Enum", "enum"):
             return EnumValue(d["value_mapping"])
-        elif d["data_type"] in ("Range", "range"):
+        if d["data_type"] in ("Range", "range"):
             return RangeValue(
                 d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"].get("step", 0)
             )
@@ -949,7 +940,7 @@ class ModelInfoV2AC(ModelInfo):
         elif d["data_type"] == "String":
             pass
         else:
-            assert False, "unsupported value type {}".format(d["data_type"])
+            assert False, f"unsupported value type {d['data_type']}"
 
     def decode_snapshot(self, data, key):
         if not key or not self._has_monitoring:
@@ -957,16 +948,17 @@ class ModelInfoV2AC(ModelInfo):
         return super().decode_snapshot(data, key)
 
 
-class Device(object):
-    """A higher-level interface to a specific device.
-        
+class Device():
+    """
+    A higher-level interface to a specific device.
     Unlike `DeviceInfo`, which just stores data *about* a device,
     `Device` objects refer to their client and can perform operations
     regarding the device.
     """
 
     def __init__(self, client: ClientAsync, device: DeviceInfo, status=None, available_features=None):
-        """Create a wrapper for a `DeviceInfo` object associated with a
+        """
+        Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
         """
 
@@ -1055,13 +1047,13 @@ class Device(object):
         return False
 
     def _get_state_key(self, key_name):
-        """Get the key used for state from an array based on info type"""
+        """Get the key used for state from an array based on info type."""
         if isinstance(key_name, list):
             return key_name[1 if self.model_info.is_info_v2 else 0]
         return key_name
 
     def _get_cmd_keys(self, key_name):
-        """Get the keys used for control based on info type"""
+        """Get the keys used for control based on info type."""
         ctrl = self._get_state_key(key_name[0])
         cmd = self._get_state_key(key_name[1])
         key = self._get_state_key(key_name[2])
@@ -1078,8 +1070,7 @@ class Device(object):
             data=None,
             ctrl_path=None,
     ):
-        """Set a device's control for `key` to `value`.
-        """
+        """Set a device's control for `key` to `value`."""
         if self._client.emulation:
             return
 
@@ -1104,7 +1095,8 @@ class Device(object):
         )
 
     def _prepare_command(self, ctrl_key, command, key, value):
-        """Prepare command for specific device.
+        """
+        Prepare command for specific device.
         Overwrite for specific device settings.
         """
         return None
@@ -1131,8 +1123,8 @@ class Device(object):
             )
 
     async def _get_config(self, key):
-        """Look up a device's configuration for a given value.
-            
+        """
+        Look up a device's configuration for a given value.
         The response is parsed as base64-encoded JSON.
         """
         if not self._should_poll:
@@ -1143,8 +1135,7 @@ class Device(object):
         return json.loads(base64.b64decode(data).decode("utf8"))
 
     async def _get_control(self, key):
-        """Look up a device's control value.
-            """
+        """Look up a device's control value."""
         if not self._should_poll:
             return
         data = await self._client.session.get_device_config(
@@ -1158,17 +1149,17 @@ class Device(object):
         return value
 
     async def _pre_update_v2(self):
-        """Call additional methods before data update for v2 API.
-
-        Override in specific device to call requested methods
+        """
+        Call additional methods before data update for v2 API.
+        Override in specific device to call requested methods.
         """
         return
 
     async def _get_device_snapshot(self, query_device=False):
-        """Get snapshot for ThinQ2 devices.
-
+        """
+        Get snapshot for ThinQ2 devices.
         Perform dedicated device query if query_device is set to true,
-        otherwise use the dashboard result
+        otherwise use the dashboard result.
         """
         if self._client.emulation:
             query_device = False
@@ -1192,9 +1183,9 @@ class Device(object):
         self._control_set -= 1
 
     async def _get_device_info(self):
-        """Call additional method to get device information for V1 API.
-
-        Override in specific device to call requested methods
+        """
+        Call additional method to get device information for V1 API.
+        Override in specific device to call requested methods.
         """
         return
 
@@ -1221,7 +1212,8 @@ class Device(object):
             thinq1_additional_poll=0,
             thinq2_query_device=False,
     ):
-        """Poll the device's current state.
+        """
+        Poll the device's current state.
         Monitoring for thinq1 devices must be started first with `monitor_start`.
 
         Return either a `Status` object or `None` if the status is not yet available.
@@ -1264,7 +1256,7 @@ class Device(object):
         return res
 
     def _get_feature_title(self, feature_name, item_key):
-        """Override this function to manage feature title per device type"""
+        """Override this function to manage feature title per device type."""
         return feature_name
 
     def feature_title(self, feature_name, item_key=None, status=None, allow_none=False):
@@ -1302,7 +1294,7 @@ class Device(object):
         return True
 
 
-class DeviceStatus(object):
+class DeviceStatus():
     """A higher-level interface to a specific device status."""
 
     def __init__(self, device, data):
@@ -1332,7 +1324,8 @@ class DeviceStatus(object):
 
     @staticmethod
     def _str_to_num(s):
-        """Convert a string to either an `int` or a `float`.
+        """
+        Convert a string to either an `int` or a `float`.
 
         Troublingly, the API likes values like "18", without a trailing
         ".0", for whole numbers. So we use `int`s for integers and
@@ -1347,8 +1340,8 @@ class DeviceStatus(object):
         return f
 
     @property
-    def has_data(self):
-        return True if self._data else False
+    def has_data(self) -> bool:
+        return bool(self._data)
 
     @property
     def data(self):
@@ -1486,7 +1479,7 @@ class DeviceStatus(object):
         return value
 
     def _update_features(self):
-        """Override this function to manage device features"""
+        """Override this function to manage device features."""
         raise NotImplementedError()
 
     @property

@@ -1,5 +1,5 @@
 """------------------for Air Purifier"""
-import enum
+from enum import Enum
 import logging
 from typing import Optional
 
@@ -73,14 +73,14 @@ FILTER_TYPES = [
 _LOGGER = logging.getLogger(__name__)
 
 
-class AirPurifierOp(enum.Enum):
+class AirPurifierOp(Enum):
     """Whether a device is on or off."""
 
     OFF = "@operation_off"
     ON = "@operation_on"
 
 
-class AirPurifierMode(enum.Enum):
+class AirPurifierMode(Enum):
     """The operation mode for a AirPurifier device."""
 
     CLEAN = "@AP_MAIN_MID_OPMODE_CLEAN_W"
@@ -88,7 +88,7 @@ class AirPurifierMode(enum.Enum):
     HUMIDITY = "@AP_MAIN_MID_OPMODE_HUMIDITY_W"
 
 
-class AirPurifierFanSpeed(enum.Enum):
+class AirPurifierFanSpeed(Enum):
     """The fan speed for a AirPurifier device."""
 
     LOW = "@AP_MAIN_MID_WINDSTRENGTH_LOW_W"
@@ -96,7 +96,7 @@ class AirPurifierFanSpeed(enum.Enum):
     HIGH = "@AP_MAIN_MID_WINDSTRENGTH_HIGH_W"
 
 
-class AirPurifierFanPreset(enum.Enum):
+class AirPurifierFanPreset(Enum):
     """The fan preset for a AirPurifier device."""
 
     POWER = "@AP_MAIN_MID_WINDSTRENGTH_POWER_W"
@@ -113,8 +113,8 @@ class AirPurifierDevice(Device):
         self._supported_fan_presets = None
 
     @property
-    def op_modes(self):
-        """Return a list of available operation modes."""
+    def op_modes(self) -> list:
+        """Available operation modes."""
         if self._supported_op_modes is None:
             key = self._get_state_key(SUPPORT_OPERATION_MODE)
             if not self.model_info.is_enum_type(key):
@@ -126,8 +126,8 @@ class AirPurifierDevice(Device):
         return self._supported_op_modes
 
     @property
-    def fan_speeds(self):
-        """Return a list of available fan speeds."""
+    def fan_speeds(self) -> list:
+        """Available fan speeds."""
         if self._supported_fan_speeds is None:
             key = self._get_state_key(SUPPORT_WIND_STRENGTH)
             if not self.model_info.is_enum_type(key):
@@ -142,8 +142,8 @@ class AirPurifierDevice(Device):
         return self._supported_fan_speeds
 
     @property
-    def fan_presets(self):
-        """Return a list of available fan presets."""
+    def fan_presets(self) -> list:
+        """Available fan presets."""
         if self._supported_fan_presets is None:
             _ = self.fan_speeds
         return self._supported_fan_presets
@@ -354,7 +354,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def filters_life(self):
-        """Return percentage status for all filters"""
+        """Return percentage status for all filters."""
         result = {}
 
         # Get the filter feature key

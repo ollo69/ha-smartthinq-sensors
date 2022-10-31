@@ -58,7 +58,8 @@ class RangeDevice(Device):
 
 
 class RangeStatus(DeviceStatus):
-    """Higher-level information about an range's current status.
+    """
+    Higher-level information about an range's current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.
@@ -103,9 +104,10 @@ class RangeStatus(DeviceStatus):
 
     @property
     def cooktop_left_front_state(self):
-        """For some cooktops (maybe depending on firmware or model), the
-        five burners do not report individual status. Instead, the 
-        cooktop_left_front reports aggregated status for all burners.
+        """
+        For some cooktops (maybe depending on firmware or model),
+        the five burners do not report individual status.
+        Instead, the cooktop_left_front reports aggregated status for all burners.
         """
         status = self.lookup_enum("LFState")
         if status and status == ITEM_STATE_OFF:
@@ -160,7 +162,7 @@ class RangeStatus(DeviceStatus):
             if r and r != STATE_OPTIONITEM_OFF:
                 return True
         return False
-    
+
     @property
     def oven_lower_state(self):
         status = self.lookup_enum("LowerOvenState")
@@ -241,4 +243,3 @@ class RangeStatus(DeviceStatus):
             self.oven_upper_state,
             self.oven_upper_current_temp,
         ]
-        return

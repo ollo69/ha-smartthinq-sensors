@@ -1,15 +1,15 @@
 """Definition for SmartThinQ device type and information."""
 
-import enum
+from enum import Enum
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from .const import STATE_OPTIONITEM_UNKNOWN
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class DeviceType(enum.Enum):
+class DeviceType(Enum):
     """The category of device."""
 
     REFRIGERATOR = 101
@@ -60,7 +60,7 @@ WM_DEVICE_TYPES = [
 ]
 
 
-class PlatformType(enum.Enum):
+class PlatformType(Enum):
     """The category of device."""
 
     THINQ1 = "thinq1"
@@ -68,7 +68,7 @@ class PlatformType(enum.Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
-class NetworkType(enum.Enum):
+class NetworkType(Enum):
     """The type of network."""
 
     WIFI = "02"
@@ -77,13 +77,13 @@ class NetworkType(enum.Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
-class DeviceInfo(object):
-    """Details about a user's device.
-
+class DeviceInfo():
+    """
+    Details about a user's device.
     This is populated from a JSON dictionary provided by the API.
     """
 
-    def __init__(self, data: Dict[str, Any]) -> None:
+    def __init__(self, data: dict[str, Any]) -> None:
         self._data = data
         self._device_id = None
         self._device_type = None
@@ -212,5 +212,5 @@ class DeviceInfo(object):
         return self._network_type
 
     @property
-    def snapshot(self) -> Optional[Dict[str, Any]]:
+    def snapshot(self) -> Optional[dict[str, Any]]:
         return self._data.get("snapshot")

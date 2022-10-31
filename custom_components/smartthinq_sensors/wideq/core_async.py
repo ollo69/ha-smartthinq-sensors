@@ -1,11 +1,10 @@
-"""A low-level, general abstraction for the LG SmartThinQ API.
+"""
+A low-level, general abstraction for the LG SmartThinQ API.
 """
 from __future__ import annotations
 
-import aiohttp
 import asyncio
 import base64
-import cchardet
 import hashlib
 import hmac
 import json
@@ -13,11 +12,13 @@ import logging
 import os
 import ssl
 import uuid
-import xmltodict
-
 from datetime import datetime
-from typing import Any, Dict, Generator, Optional
-from urllib.parse import urljoin, urlencode, urlparse, parse_qs, quote
+from typing import Any, Generator, Optional
+from urllib.parse import parse_qs, quote, urlencode, urljoin, urlparse
+
+import aiohttp
+import cchardet
+import xmltodict
 
 from . import core_exceptions as exc
 from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
@@ -79,7 +80,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def parse_oauth_callback(url: str):
-    """Parse the URL to which an OAuth login redirected to obtain two
+    """
+    Parse the URL to which an OAuth login redirected to obtain two
     tokens: an access token for API credentials, and a refresh token for
     getting updated access tokens.
     """
@@ -190,7 +192,8 @@ class CoreAsync:
 
     @staticmethod
     def _oauth2_signature(message: str, secret: str) -> str:
-        """Get the base64-encoded SHA-1 HMAC digest of a string, as used in
+        """
+        Get the base64-encoded SHA-1 HMAC digest of a string, as used in
         OAauth2 request signatures.
 
         Both the `secret` and `message` are given as text strings. We use
@@ -351,8 +354,9 @@ class CoreAsync:
     async def auth_user_login(
         self, login_base_url, emp_base_url, username, encrypted_pwd
     ):
-        """Perform a login with username and password.
-           password must be encrypted using hashlib with hash512 algorythm.
+        """
+        Perform a login with username and password.
+        Password must be encrypted using hashlib with hash512 algorythm.
         """
 
         _LOGGER.debug("auth_user_login - Enter")
@@ -483,7 +487,7 @@ class CoreAsync:
           "Accept": "application/json",
           "x-thinq-application-key": "wideq",
           "x-thinq-security-key": SECURITY_KEY,
-        },
+        }
 
         async with self._get_session().post(
             url=GATEWAY_URL,
@@ -530,7 +534,8 @@ class CoreAsync:
         return res_data["account"]["userNo"]
 
     async def _auth_request(self, oauth_url, data, *, log_auth_info=False):
-        """Use an auth code to log into the v2 API and obtain an access token
+        """
+        Use an auth code to log into the v2 API and obtain an access token
         and refresh token.
         """
         url = urljoin(oauth_url, V2_AUTH_PATH)
@@ -560,8 +565,8 @@ class CoreAsync:
         return res_data
 
     async def auth_code_login(self, oauth_url, auth_code):
-        """Get a new access_token using an authorization_code
-
+        """
+        Get a new access_token using an authorization_code.
         May raise a `tokenError`.
         """
 
@@ -578,8 +583,8 @@ class CoreAsync:
         return out["access_token"], out.get("expires_in"), out["refresh_token"]
 
     async def refresh_auth(self, oauth_root, refresh_token):
-        """Get a new access_token using a refresh_token.
-
+        """
+        Get a new access_token using a refresh_token.
         May raise a `TokenError`.
         """
         out = await self._auth_request(
@@ -591,7 +596,7 @@ class CoreAsync:
         return out["access_token"], out["expires_in"]
 
 
-class Gateway(object):
+class Gateway():
     def __init__(self, gw_info: dict, core: CoreAsync) -> None:
         self.auth_base = add_end_slash(gw_info["empUri"])
         self.emp_base_uri = add_end_slash(gw_info["empTermsUri"])
@@ -626,7 +631,8 @@ class Gateway(object):
         return cls(gw_info, core)
 
     def oauth_url(self, *, redirect_uri=None, state=None, use_oauth2=True) -> str:
-        """Construct the URL for users to log in (in a browser) to start an
+        """
+        Construct the URL for users to log in (in a browser) to start an
         authenticated session.
         """
 
@@ -662,7 +668,7 @@ class Gateway(object):
         }
 
 
-class Auth(object):
+class Auth():
     """ThinQ authentication object"""
 
     def __init__(
@@ -752,8 +758,9 @@ class Auth(object):
         )
 
     def start_session(self):
-        """Start an API session for the logged-in user. Return the
-        Session object and a list of the user's devices.
+        """
+        Start an API session for the logged-in user.
+        Return the Session object and a list of the user's devices.
         """
         return Session(self)
 
@@ -824,7 +831,7 @@ class Auth(object):
         )
 
 
-class Session(object):
+class Session():
     def __init__(self, auth: Auth, session_id=0) -> None:
         self._auth = auth
         self.session_id = session_id
@@ -835,12 +842,13 @@ class Session(object):
         return self._common_lang_pack_url
 
     async def refresh_auth(self) -> Auth:
-        """Refresh associated authentication"""
+        """Refresh associated authentication."""
         self._auth = await self._auth.refresh()
         return self._auth
 
     async def post(self, path: str, data: dict | None = None) -> dict:
-        """Make a POST request to the APIv1 server.
+        """
+        Make a POST request to the APIv1 server.
 
         This is like `lgedm_post`, but it pulls the context for the
         request from an active Session.
@@ -856,7 +864,8 @@ class Session(object):
         )
 
     async def post2(self, path: str, data: dict | None = None) -> dict:
-        """Make a POST request to the APIv2 server.
+        """
+        Make a POST request to the APIv2 server.
 
         This is like `lgedm_post`, but it pulls the context for the
         request from an active Session.
@@ -890,10 +899,10 @@ class Session(object):
             self._auth.user_number,
         )
 
-    async def get_devices(self):
-        """Get a list of devices associated with the user's account.
-
-        Return a list of dicts with information about the devices.
+    async def get_devices(self) -> list[dict]:
+        """
+        Get a list of devices associated with the user's account.
+        Return information about the devices.
         """
         dashboard = await self.get2("service/application/dashboard")
         if self._common_lang_pack_url is None:
@@ -901,8 +910,8 @@ class Session(object):
         return as_list(dashboard.get("item", []))
 
     async def monitor_start(self, device_id):
-        """Begin monitoring a device's status.
-
+        """
+        Begin monitoring a device's status.
         Return a "work ID" that can be used to retrieve the result of
         monitoring.
         """
@@ -919,10 +928,11 @@ class Session(object):
         return res["workId"]
 
     async def monitor_poll(self, device_id, work_id):
-        """Get the result of a monitoring task.
+        """
+        Get the result of a monitoring task.
 
-        `work_id` is a string ID retrieved from `monitor_start`. Return
-        a status result, which is a bytestring, or None if the
+        `work_id` is a string ID retrieved from `monitor_start`.
+        Return a status result, which is a bytestring, or None if the
         monitoring is not yet ready.
 
         May raise a `MonitorError`, in which case the right course of
@@ -969,8 +979,8 @@ class Session(object):
             value=None,
             data=None,
     ):
-        """Control a device's settings.
-
+        """
+        Control a device's settings.
         `values` is a key/value map containing the settings to update.
         """
         res = {}
@@ -1028,7 +1038,8 @@ class Session(object):
         return res
 
     async def get_device_config(self, device_id, key, category="Config"):
-        """Get a device configuration option.
+        """
+        Get a device configuration option.
 
         The `category` string should probably either be "Config" or
         "Control"; the right choice appears to depend on the key.
@@ -1052,14 +1063,15 @@ class Session(object):
         return await self.get2(f"service/devices/{device_id}")
 
     async def delete_permission(self, device_id):
-        """Delete permission on V1 device after a control command"""
+        """Delete permission on V1 device after a control command."""
         await self.post("rti/delControlPermission", {"deviceId": device_id})
 
 
-class ClientAsync(object):
-    """A higher-level API wrapper that provides a session more easily
-        and allows serialization of state.
-        """
+class ClientAsync():
+    """
+    A higher-level API wrapper that provides a session more easily
+    and allows serialization of state.
+    """
 
     def __init__(
         self,
@@ -1093,7 +1105,7 @@ class ClientAsync(object):
         self._emulation = enable_emulation
 
     def _inject_thinq2_device(self):
-        """This is used only for debug"""
+        """This is used only for debug."""
         data_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
         )
@@ -1136,7 +1148,7 @@ class ClientAsync(object):
     @property
     def has_devices(self) -> bool:
         """Return True if there are devices associated."""
-        return True if self._devices else False
+        return bool(self._devices)
 
     @property
     def devices(self) -> Generator[DeviceInfo, None, None] | None:
@@ -1165,7 +1177,7 @@ class ClientAsync(object):
         await self._auth.gateway.close()
 
     async def refresh_devices(self):
-        """Refresh the devices' information for this client"""
+        """Refresh the devices' information for this client."""
         async with self._lock:
             call_time = datetime.utcnow()
             difference = (call_time - self._last_device_update).total_seconds()
@@ -1175,8 +1187,8 @@ class ClientAsync(object):
             self._last_device_update = call_time
 
     def get_device(self, device_id) -> DeviceInfo | None:
-        """Look up a DeviceInfo object by device ID.
-            
+        """
+        Look up a DeviceInfo object by device ID.
         Return None if the device does not exist.
         """
         if not self._devices:
@@ -1213,12 +1225,13 @@ class ClientAsync(object):
         aiohttp_session: aiohttp.ClientSession | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
-        """Construct a client using username and password.
+        """
+        Construct a client using username and password.
 
-            This allows simpler state storage (e.g., for human-written
-            configuration) but it is a little less efficient because we need
-            to reload the gateway servers and restart the session.
-            """
+        This allows simpler state storage (e.g., for human-written
+        configuration) but it is a little less efficient because we need
+        to reload the gateway servers and restart the session.
+        """
 
         gateway = await Gateway.discover(
             CoreAsync(country, language, session=aiohttp_session)
@@ -1240,12 +1253,13 @@ class ClientAsync(object):
         aiohttp_session: aiohttp.ClientSession | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
-        """Construct a client using just a refresh token.
-            
-            This allows simpler state storage (e.g., for human-written
-            configuration) but it is a little less efficient because we need
-            to reload the gateway servers and restart the session.
-            """
+        """
+        Construct a client using just a refresh token.
+
+        This allows simpler state storage (e.g., for human-written
+        configuration) but it is a little less efficient because we need
+        to reload the gateway servers and restart the session.
+        """
 
         gateway = await Gateway.discover(
             CoreAsync(country, language, session=aiohttp_session)
@@ -1313,9 +1327,10 @@ class ClientAsync(object):
         return self._common_lang_pack
 
     async def model_url_info(self, url, device=None):
-        """For a DeviceInfo object, get a ModelInfo object describing
-            the model's capabilities.
-            """
+        """
+        For a DeviceInfo object, get a ModelInfo object describing
+        the model's capabilities.
+        """
         if not url:
             return {}
         if url not in self._model_url_info:
@@ -1349,7 +1364,7 @@ class ClientAsync(object):
         return out
 
     @classmethod
-    def load(cls, state: Dict[str, Any]) -> ClientAsync | None:
+    def load(cls, state: dict[str, Any]) -> ClientAsync | None:
         """Load a client from serialized state."""
 
         auth = None

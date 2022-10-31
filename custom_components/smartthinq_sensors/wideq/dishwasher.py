@@ -60,7 +60,8 @@ class DishWasherDevice(Device):
 
 
 class DishWasherStatus(DeviceStatus):
-    """Higher-level information about a dishwasher's current status.
+    """
+    Higher-level information about a dishwasher's current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.

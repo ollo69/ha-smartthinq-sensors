@@ -1,5 +1,5 @@
 """------------------for Fan"""
-import enum
+from enum import Enum
 import logging
 from typing import Optional
 
@@ -21,20 +21,20 @@ CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 _LOGGER = logging.getLogger(__name__)
 
 
-class FanOp(enum.Enum):
+class FanOp(Enum):
     """Whether a device is on or off."""
 
     OFF = "@OFF"
     ON = "@ON"
 
 
-class FanMode(enum.Enum):
+class FanMode(Enum):
     """The operation mode for a Fan device."""
 
     NORMAL = "@FAN_MAIN_OPERATION_MODE_NORMAL_W"
 
 
-class FanSpeed(enum.Enum):
+class FanSpeed(Enum):
     """The fan speed for a Fan device."""
 
     LOWEST_LOW = "@LOWST_LOW"
@@ -55,8 +55,8 @@ class FanDevice(Device):
         self._supported_fan_speeds = None
 
     @property
-    def fan_speeds(self):
-        """Return a list of available fan speeds."""
+    def fan_speeds(self) -> list:
+        """Available fan speeds."""
         if self._supported_fan_speeds is None:
             key = self._get_state_key(SUPPORT_WIND_STRENGTH)
             if not self.model_info.is_enum_type(key):
@@ -68,8 +68,8 @@ class FanDevice(Device):
         return self._supported_fan_speeds
 
     @property
-    def fan_presets(self):
-        """Return a list of available fan presets."""
+    def fan_presets(self) -> list:
+        """Available fan presets."""
         return []
 
     async def power(self, turn_on):

@@ -50,7 +50,8 @@ class StylerDevice(Device):
 
 
 class StylerStatus(DeviceStatus):
-    """Higher-level information about a styler's current status.
+    """
+    Higher-level information about a styler's current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.

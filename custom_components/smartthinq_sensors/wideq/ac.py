@@ -1,5 +1,5 @@
 """------------------for AC"""
-import enum
+from enum import Enum
 import logging
 from typing import Optional
 
@@ -101,7 +101,7 @@ ZONE_ST_NEW = "new"
 _LOGGER = logging.getLogger(__name__)
 
 
-class ACOp(enum.Enum):
+class ACOp(Enum):
     """Whether a device is on or off."""
 
     OFF = "@AC_MAIN_OPERATION_OFF_W"
@@ -111,7 +111,7 @@ class ACOp(enum.Enum):
     ALL_ON = "@AC_MAIN_OPERATION_ALL_ON_W"  # Both fans (or only fan) on.
 
 
-class ACMode(enum.Enum):
+class ACMode(Enum):
     """The operation mode for an AC/HVAC device."""
 
     COOL = "@AC_MAIN_OPERATION_MODE_COOL_W"
@@ -126,7 +126,7 @@ class ACMode(enum.Enum):
     ENERGY_SAVER = "@AC_MAIN_OPERATION_MODE_ENERGY_SAVER_W"
 
 
-class ACFanSpeed(enum.Enum):
+class ACFanSpeed(Enum):
     """The fan speed for an AC/HVAC device."""
 
     SLOW = "@AC_MAIN_WIND_STRENGTH_SLOW_W"
@@ -147,8 +147,9 @@ class ACFanSpeed(enum.Enum):
     L_HIGH = "@AC_MAIN_WIND_STRENGTH_HIGH_LEFT_W"
 
 
-class ACVStepMode(enum.Enum):
-    """The vertical step mode for an AC/HVAC device.
+class ACVStepMode(Enum):
+    """
+    The vertical step mode for an AC/HVAC device.
 
     Blades are numbered vertically from 1 (topmost)
     to 6.
@@ -166,8 +167,9 @@ class ACVStepMode(enum.Enum):
     Swing = "@100"
 
 
-class ACHStepMode(enum.Enum):
-    """The horizontal step mode for an AC/HVAC device.
+class ACHStepMode(Enum):
+    """
+    The horizontal step mode for an AC/HVAC device.
     Blades are numbered horizontally from 1 (leftmost)
     to 5.
     Left half goes from 1-3, and right half goes from
@@ -186,7 +188,7 @@ class ACHStepMode(enum.Enum):
     Swing = "@100"
 
 
-class ACSwingMode(enum.Enum):
+class ACSwingMode(Enum):
     """The swing mode for an AC/HVAC device."""
 
     SwingOff = "@OFF"
@@ -279,7 +281,8 @@ class AirConditionerDevice(Device):
         return self._supported_operation
 
     def _supported_on_operation(self):
-        """Get the most correct "On" operation the device supports.
+        """
+        Get the most correct "On" operation the device supports.
         :raises ValueError: If ALL_ON is not supported, but there are
             multiple supported ON operations. If a model raises this,
             its behaviour needs to be determined so this function can
@@ -408,25 +411,24 @@ class AirConditionerDevice(Device):
             return {}
 
         # get real duct zones states
-        """
-        For device that provide duct_state in payload we transform 
-        the value in the status in binary and than we create the result. 
-        We always have 8 duct zone.
-        """
+
+        # For device that provide duct_state in payload we transform
+        # the value in the status in binary and than we create the result.
+        # We always have 8 duct zone.
+
         if duct_state > 0:
             bin_arr = [x for x in reversed(f"{duct_state:08b}")]
             return {
                 str(v+1): {ZONE_ST_CUR: k} for v, k in enumerate(bin_arr)
             }
 
-        """
-        For ThinQ1 devices result is a list of dicts with these keys:
-        - "No": The zone index. A string containing a number,
-          starting from 1.
-        - "Cfg": Whether the zone is enabled. A string, either "1" or
-          "0".
-        - "State": Whether the zone is open. Also "1" or "0".
-        """
+        # For ThinQ1 devices result is a list of dicts with these keys:
+        # - "No": The zone index. A string containing a number,
+        #   starting from 1.
+        # - "Cfg": Whether the zone is enabled. A string, either "1" or
+        #   "0".
+        # - "State": Whether the zone is open. Also "1" or "0".
+
         zones = await self._get_config(DUCT_ZONE_V1)
         return {
             zone["No"]: {ZONE_ST_CUR: zone["State"]}
@@ -435,9 +437,9 @@ class AirConditionerDevice(Device):
         }
 
     async def _set_duct_zones(self, zones: dict):
-        """Turn off or on the device's zones.
-
-        The `zones` parameter is the same returned by _get_duct_zones()
+        """
+        Turn off or on the device's zones.
+        The `zones` parameter is the same returned by _get_duct_zones().
         """
 
         # Ensure at least one zone is enabled: we can't turn all zones
@@ -717,9 +719,9 @@ class AirConditionerDevice(Device):
         return self._status
 
     async def _get_device_info(self):
-        """Call additional method to get device information for API v1.
-
-        Called by 'device_poll' method using a lower poll rate
+        """
+        Call additional method to get device information for API v1.
+        Called by 'device_poll' method using a lower poll rate.
         """
         # this command is to get power usage on V1 device
         if not self.is_air_to_water:
