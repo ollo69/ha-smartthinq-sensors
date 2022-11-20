@@ -1,13 +1,18 @@
-name: Validate with hassfest
+name: Validate with Hassfest
 
 on:
   push:
+    branches:
+      - master
+
   pull_request:
+    branches: '*'
+
   schedule:
     - cron: "0 0 * * *"
 
 jobs:
-  validate:
+  validate_hassfest:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v2"
