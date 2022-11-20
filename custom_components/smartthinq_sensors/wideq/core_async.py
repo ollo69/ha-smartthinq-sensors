@@ -1126,7 +1126,7 @@ class ClientAsync:
 
         # Cached model info data. This is a mapping from URLs to JSON
         # responses.
-        self._model_url_info: Dict[str, Any] = {}
+        self._model_url_info: dict[str, Any] = {}
         self._common_lang_pack = None
 
         # Locale information used to discover a gateway, if necessary.
@@ -1386,7 +1386,7 @@ class ClientAsync:
             self._model_url_info[url] = await self._load_json_info(url)
         return self._model_url_info[url]
 
-    def dump(self) -> Dict[str, Any]:
+    def dump(self) -> dict[str, Any]:
         """Serialize the client state."""
 
         out = {
