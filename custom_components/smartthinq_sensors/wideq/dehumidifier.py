@@ -3,11 +3,7 @@ from enum import Enum
 import logging
 from typing import Optional
 
-from .const import (
-    FEAT_HUMIDITY,
-    FEAT_TARGET_HUMIDITY,
-    FEAT_WATER_TANK_FULL,
-)
+from .const import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, FEAT_WATER_TANK_FULL
 from .core_exceptions import InvalidRequestError
 from .device import Device, DeviceStatus
 

@@ -6,10 +6,40 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Callable, Tuple
 
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    PERCENTAGE,
+    POWER_WATT,
+    STATE_UNAVAILABLE,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from . import LGEDevice
+from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import (
+    DEVICE_ICONS,
+    WASH_DEVICE_TYPES,
+    LGEACDevice,
+    LGERangeDevice,
+    LGERefrigeratorDevice,
+    LGEWashDevice,
+    get_entity_name,
+    get_multiple_devices_types,
+)
 from .wideq import (
+    FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
-    FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_DRYLEVEL,
@@ -42,37 +72,6 @@ from .wideq import (
     FEAT_WATERTEMP,
     WM_DEVICE_TYPES,
     DeviceType,
-)
-
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    PERCENTAGE,
-    POWER_WATT,
-    STATE_UNAVAILABLE,
-)
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
-from . import LGEDevice
-from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import (
-    DEVICE_ICONS,
-    WASH_DEVICE_TYPES,
-    LGEACDevice,
-    LGERangeDevice,
-    LGERefrigeratorDevice,
-    LGEWashDevice,
-    get_entity_name,
-    get_multiple_devices_types,
 )
 
 # service definition

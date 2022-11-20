@@ -5,24 +5,6 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Callable, Tuple
 
-from .wideq import (
-    FEAT_AUTODOOR,
-    FEAT_CHILDLOCK,
-    FEAT_DOORCLOSE,
-    FEAT_DOORLOCK,
-    FEAT_DOOROPEN,
-    FEAT_DUALZONE,
-    FEAT_EXTRADRY,
-    FEAT_HIGHTEMP,
-    FEAT_NIGHTDRY,
-    FEAT_STANDBY,
-    FEAT_REMOTESTART,
-    FEAT_RINSEREFILL,
-    FEAT_SALTREFILL,
-    FEAT_WATER_TANK_FULL,
-    DeviceType,
-)
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -47,10 +29,23 @@ from .device_helpers import (
     get_entity_name,
     get_multiple_devices_types,
 )
-from .sensor import (
-    ATTR_DOOR_OPEN,
-    ATTR_ERROR_STATE,
-    ATTR_RUN_COMPLETED,
+from .sensor import ATTR_DOOR_OPEN, ATTR_ERROR_STATE, ATTR_RUN_COMPLETED
+from .wideq import (
+    FEAT_AUTODOOR,
+    FEAT_CHILDLOCK,
+    FEAT_DOORCLOSE,
+    FEAT_DOORLOCK,
+    FEAT_DOOROPEN,
+    FEAT_DUALZONE,
+    FEAT_EXTRADRY,
+    FEAT_HIGHTEMP,
+    FEAT_NIGHTDRY,
+    FEAT_REMOTESTART,
+    FEAT_RINSEREFILL,
+    FEAT_SALTREFILL,
+    FEAT_STANDBY,
+    FEAT_WATER_TANK_FULL,
+    DeviceType,
 )
 
 # range sensor attributes

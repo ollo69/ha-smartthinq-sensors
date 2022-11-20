@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections import namedtuple
+from datetime import datetime, timedelta
 from enum import Enum
 import json
 import logging
-from collections import namedtuple
-from datetime import datetime, timedelta
 from numbers import Number
 from typing import Any, Optional
 
@@ -22,8 +22,8 @@ from .const import (
     STATE_OPTIONITEM_ON,
     STATE_OPTIONITEM_UNKNOWN,
     UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT
-    )
+    UNIT_TEMP_FAHRENHEIT,
+)
 from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
 

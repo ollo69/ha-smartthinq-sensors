@@ -8,22 +8,6 @@ from collections.abc import Iterable
 from datetime import timedelta
 import logging
 
-from .wideq import (
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-    DeviceInfo as LGDeviceInfo,
-    DeviceType,
-    get_lge_device,
-)
-from .wideq.core_async import ClientAsync
-from .wideq.core_exceptions import (
-    AuthenticationError,
-    InvalidCredentialError,
-    MonitorRefreshError,
-    MonitorUnavailableError,
-    NotConnectedError,
-)
-
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_REGION,
@@ -38,7 +22,10 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -50,12 +37,27 @@ from .const import (
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     DOMAIN,
-    MIN_HA_MAJ_VER,
-    MIN_HA_MIN_VER,
     LGE_DEVICES,
     LGE_DISCOVERY_NEW,
+    MIN_HA_MAJ_VER,
+    MIN_HA_MIN_VER,
     STARTUP,
     __min_ha_version__,
+)
+from .wideq import (
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
+    DeviceInfo as LGDeviceInfo,
+    DeviceType,
+    get_lge_device,
+)
+from .wideq.core_async import ClientAsync
+from .wideq.core_exceptions import (
+    AuthenticationError,
+    InvalidCredentialError,
+    MonitorRefreshError,
+    MonitorUnavailableError,
+    NotConnectedError,
 )
 
 SMARTTHINQ_PLATFORMS = [

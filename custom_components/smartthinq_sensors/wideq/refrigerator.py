@@ -6,8 +6,8 @@ from typing import Optional
 
 from .const import (
     FEAT_ECOFRIENDLY,
-    FEAT_EXPRESSMODE,
     FEAT_EXPRESSFRIDGE,
+    FEAT_EXPRESSMODE,
     FEAT_FRESHAIRFILTER,
     FEAT_ICEPLUS,
     FEAT_SMARTSAVINGMODE,
@@ -15,13 +15,7 @@ from .const import (
     STATE_OPTIONITEM_NONE,
     UNIT_TEMP_FAHRENHEIT,
 )
-from .device import (
-    LABEL_BIT_OFF,
-    LABEL_BIT_ON,
-    Device,
-    DeviceStatus,
-    UnitTempModes,
-)
+from .device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
 
 FEATURE_DESCR = {
     "@RE_TERM_EXPRESS_FREEZE_W": "express_freeze",

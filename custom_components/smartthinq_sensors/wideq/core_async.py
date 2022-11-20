@@ -5,16 +5,16 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from datetime import datetime
 import hashlib
 import hmac
 import json
 import logging
 import os
 import ssl
-import uuid
-from datetime import datetime
 from typing import Any, Generator, Optional
 from urllib.parse import parse_qs, quote, urlencode, urljoin, urlparse
+import uuid
 
 import aiohttp
 import cchardet

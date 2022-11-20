@@ -6,17 +6,6 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Awaitable, Callable, Tuple
 
-from .wideq import (
-    FEAT_ECOFRIENDLY,
-    FEAT_EXPRESSFRIDGE,
-    FEAT_EXPRESSMODE,
-    FEAT_ICEPLUS,
-    FEAT_LIGHTING_DISPLAY,
-    FEAT_MODE_JET,
-    WM_DEVICE_TYPES,
-    DeviceType,
-)
-
 from homeassistant.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
@@ -36,6 +25,16 @@ from .device_helpers import (
     LGEBaseDevice,
     get_entity_name,
     get_multiple_devices_types,
+)
+from .wideq import (
+    FEAT_ECOFRIENDLY,
+    FEAT_EXPRESSFRIDGE,
+    FEAT_EXPRESSMODE,
+    FEAT_ICEPLUS,
+    FEAT_LIGHTING_DISPLAY,
+    FEAT_MODE_JET,
+    WM_DEVICE_TYPES,
+    DeviceType,
 )
 
 # general sensor attributes
