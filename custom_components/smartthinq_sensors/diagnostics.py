@@ -52,8 +52,7 @@ def _async_get_diagnostics(
     unsup_data = {}
     for dev_type, devices in unsup_devices.items():
         unsup_devs = [
-            async_redact_data(device.as_dict(), TO_REDACT_DEV)
-            for device in devices
+            async_redact_data(device.as_dict(), TO_REDACT_DEV) for device in devices
         ]
         unsup_data[dev_type.name] = unsup_devs
 
@@ -84,7 +83,7 @@ def _async_devices_as_dict(
                 ),
                 "model_info": device.model_info.as_dict(),
                 "device_status": device.status.data if device.status else None,
-                "home_assistant": _async_device_ha_info(hass, device.device_info.id)
+                "home_assistant": _async_device_ha_info(hass, device.device_info.id),
             }
             if lg_device_id:
                 return {dev_type.name: lge_devs}
@@ -96,16 +95,12 @@ def _async_devices_as_dict(
 
 
 @callback
-def _async_device_ha_info(
-    hass: HomeAssistant, lg_device_id: str
-) -> dict | None:
+def _async_device_ha_info(hass: HomeAssistant, lg_device_id: str) -> dict | None:
     """Gather information how this ThinQ device is represented in Home Assistant."""
 
     device_registry = dr.async_get(hass)
     entity_registry = er.async_get(hass)
-    hass_device = device_registry.async_get_device(
-        identifiers={(DOMAIN, lg_device_id)}
-    )
+    hass_device = device_registry.async_get_device(identifiers={(DOMAIN, lg_device_id)})
     if not hass_device:
         return None
 

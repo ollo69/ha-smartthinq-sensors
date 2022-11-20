@@ -31,6 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class StylerDevice(Device):
     """A higher-level interface for a styler."""
+
     def __init__(self, client, device):
         super().__init__(client, device, StylerStatus(self, None))
 
@@ -56,6 +57,7 @@ class StylerStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
+
     def __init__(self, device, data):
         super().__init__(device, data)
         self._run_state = None
@@ -124,9 +126,7 @@ class StylerStatus(DeviceStatus):
     @property
     def current_course(self):
         if self.is_info_v2:
-            course_key = self._device.model_info.config_value(
-                "courseType"
-            )
+            course_key = self._device.model_info.config_value("courseType")
         else:
             course_key = ["APCourse", "Course"]
         course = self.lookup_reference(course_key, ref_key="name")
@@ -135,9 +135,7 @@ class StylerStatus(DeviceStatus):
     @property
     def current_smartcourse(self):
         if self.is_info_v2:
-            course_key = self._device.model_info.config_value(
-                "smartCourseType"
-            )
+            course_key = self._device.model_info.config_value("smartCourseType")
         else:
             course_key = "SmartCourse"
         smart_course = self.lookup_reference(course_key, ref_key="name")
@@ -184,18 +182,14 @@ class StylerStatus(DeviceStatus):
         run_state = self._get_run_state()
         if run_state == STATE_STYLER_POWER_OFF:
             run_state = STATE_OPTIONITEM_NONE
-        return self._update_feature(
-            FEAT_RUN_STATE, run_state
-        )
+        return self._update_feature(FEAT_RUN_STATE, run_state)
 
     @property
     def pre_state(self):
         pre_state = self._get_pre_state()
         if pre_state == STATE_STYLER_POWER_OFF:
             pre_state = STATE_OPTIONITEM_NONE
-        return self._update_feature(
-            FEAT_PRE_STATE, pre_state
-        )
+        return self._update_feature(FEAT_PRE_STATE, pre_state)
 
     @property
     def error_msg(self):
@@ -203,36 +197,22 @@ class StylerStatus(DeviceStatus):
             error = STATE_OPTIONITEM_NONE
         else:
             error = self._get_error()
-        return self._update_feature(
-            FEAT_ERROR_MSG, error
-        )
+        return self._update_feature(FEAT_ERROR_MSG, error)
 
     @property
     def childlock_state(self):
-        status = self.lookup_bit(
-            "childLock" if self.is_info_v2 else "ChildLock"
-        )
-        return self._update_feature(
-            FEAT_CHILDLOCK, status, False
-        )
+        status = self.lookup_bit("childLock" if self.is_info_v2 else "ChildLock")
+        return self._update_feature(FEAT_CHILDLOCK, status, False)
 
     @property
     def nightdry_state(self):
-        status = self.lookup_bit(
-            "nightDry" if self.is_info_v2 else "NightDry"
-        )
-        return self._update_feature(
-            FEAT_NIGHTDRY, status, False
-        )
+        status = self.lookup_bit("nightDry" if self.is_info_v2 else "NightDry")
+        return self._update_feature(FEAT_NIGHTDRY, status, False)
 
     @property
     def remotestart_state(self):
-        status = self.lookup_bit(
-            "remoteStart" if self.is_info_v2 else "RemoteStart"
-        )
-        return self._update_feature(
-            FEAT_REMOTESTART, status, False
-        )
+        status = self.lookup_bit("remoteStart" if self.is_info_v2 else "RemoteStart")
+        return self._update_feature(FEAT_REMOTESTART, status, False)
 
     def _update_features(self):
         _ = [

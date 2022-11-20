@@ -45,10 +45,7 @@ async def async_setup_entry(
 
         # Fan devices
         lge_fan.extend(
-            [
-                LGEFan(lge_device)
-                for lge_device in lge_devices.get(DeviceType.FAN, [])
-            ]
+            [LGEFan(lge_device) for lge_device in lge_devices.get(DeviceType.FAN, [])]
         )
 
         # Air Purifier devices
@@ -149,7 +146,9 @@ class LGEFan(LGEBaseFan):
         if not self._api.state.is_on:
             await self._device.power(True)
         if self.speed_count != 0:
-            named_speed = percentage_to_ordered_list_item(self._device.fan_speeds, percentage)
+            named_speed = percentage_to_ordered_list_item(
+                self._device.fan_speeds, percentage
+            )
             await self._device.set_fan_speed(named_speed)
         self._api.async_set_updated()
 

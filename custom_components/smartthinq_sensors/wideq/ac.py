@@ -201,7 +201,9 @@ class AirConditionerDevice(Device):
     def __init__(self, client, device, temp_unit=UNIT_TEMP_CELSIUS):
         super().__init__(client, device, AirConditionerStatus(self, None))
         self._temperature_unit = (
-            UNIT_TEMP_FAHRENHEIT if temp_unit == UNIT_TEMP_FAHRENHEIT else UNIT_TEMP_CELSIUS
+            UNIT_TEMP_FAHRENHEIT
+            if temp_unit == UNIT_TEMP_FAHRENHEIT
+            else UNIT_TEMP_CELSIUS
         )
         self._is_air_to_water = None
         self._supported_operation = None
@@ -418,9 +420,7 @@ class AirConditionerDevice(Device):
 
         if duct_state > 0:
             bin_arr = [x for x in reversed(f"{duct_state:08b}")]
-            return {
-                str(v+1): {ZONE_ST_CUR: k} for v, k in enumerate(bin_arr)
-            }
+            return {str(v + 1): {ZONE_ST_CUR: k} for v, k in enumerate(bin_arr)}
 
         # For ThinQ1 devices result is a list of dicts with these keys:
         # - "No": The zone index. A string containing a number,
@@ -474,7 +474,9 @@ class AirConditionerDevice(Device):
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in ACMode]
-            self._supported_op_modes = [ACMode(o).name for o in mapping.values() if o in mode_list]
+            self._supported_op_modes = [
+                ACMode(o).name for o in mapping.values() if o in mode_list
+            ]
         return self._supported_op_modes
 
     @property
@@ -487,7 +489,9 @@ class AirConditionerDevice(Device):
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in ACFanSpeed]
-            self._supported_fan_speeds = [ACFanSpeed(o).name for o in mapping.values() if o in mode_list]
+            self._supported_fan_speeds = [
+                ACFanSpeed(o).name for o in mapping.values() if o in mode_list
+            ]
         return self._supported_fan_speeds
 
     @property
@@ -706,7 +710,9 @@ class AirConditionerDevice(Device):
             self._filter_status_supported = False
             return None
 
-    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
@@ -881,9 +887,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         key = self._get_state_key(STATE_HOT_WATER_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(
-            FEAT_HOT_WATER_TEMP, value, False
-        )
+        return self._update_feature(FEAT_HOT_WATER_TEMP, value, False)
 
     @property
     def in_water_current_temp(self):
@@ -891,9 +895,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         key = self._get_state_key(STATE_IN_WATER_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(
-            FEAT_IN_WATER_TEMP, value, False
-        )
+        return self._update_feature(FEAT_IN_WATER_TEMP, value, False)
 
     @property
     def out_water_current_temp(self):
@@ -901,9 +903,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         key = self._get_state_key(STATE_OUT_WATER_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(
-            FEAT_OUT_WATER_TEMP, value, False
-        )
+        return self._update_feature(FEAT_OUT_WATER_TEMP, value, False)
 
     @property
     def energy_current(self):
@@ -914,9 +914,7 @@ class AirConditionerStatus(DeviceStatus):
             new_value = self.to_int_or_none(value)
             if new_value and new_value <= 50:
                 value = 5.0
-        return self._update_feature(
-            FEAT_ENERGY_CURRENT, value, False
-        )
+        return self._update_feature(FEAT_ENERGY_CURRENT, value, False)
 
     @property
     def humidity(self):
@@ -925,9 +923,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         if value >= 100:
             value = value / 10
-        return self._update_feature(
-            FEAT_HUMIDITY, value, False
-        )
+        return self._update_feature(FEAT_HUMIDITY, value, False)
 
     @property
     def duct_zones_state(self):
@@ -961,7 +957,9 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(STATE_LIGHTING_DISPLAY)
         if (value := self.to_int_or_none(self._data.get(key))) is None:
             return None
-        return self._update_feature(FEAT_LIGHTING_DISPLAY, str(value) == LIGHTING_DISPLAY_ON, False)
+        return self._update_feature(
+            FEAT_LIGHTING_DISPLAY, str(value) == LIGHTING_DISPLAY_ON, False
+        )
 
     def _update_features(self):
         _ = [

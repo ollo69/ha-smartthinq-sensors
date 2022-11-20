@@ -69,6 +69,7 @@ def get_entity_name(device, ent_key, ent_name) -> str:
 
 class LGEBaseDevice:
     """A wrapper to monitor LGE devices"""
+
     def __init__(self, api_device):
         """Initialize the device."""
         self._api = api_device

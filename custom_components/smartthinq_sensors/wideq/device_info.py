@@ -77,7 +77,7 @@ class NetworkType(Enum):
     UNKNOWN = STATE_OPTIONITEM_UNKNOWN
 
 
-class DeviceInfo():
+class DeviceInfo:
     """
     Details about a user's device.
     This is populated from a JSON dictionary provided by the API.
@@ -122,9 +122,7 @@ class DeviceInfo():
 
     @property
     def model_info_url(self) -> str:
-        return self._get_data_value(
-            ["modelJsonUrl", "modelJsonUri"], default=None
-        )
+        return self._get_data_value(["modelJsonUrl", "modelJsonUri"], default=None)
 
     @property
     def model_lang_pack_url(self) -> str:
@@ -177,7 +175,9 @@ class DeviceInfo():
             try:
                 ret_val = DeviceType(device_type)
             except ValueError:
-                _LOGGER.warning("Device %s: unknown device type with id %s", self.id, device_type)
+                _LOGGER.warning(
+                    "Device %s: unknown device type with id %s", self.id, device_type
+                )
                 ret_val = DeviceType.UNKNOWN
             self._device_type = ret_val
         return self._device_type
@@ -191,7 +191,9 @@ class DeviceInfo():
             try:
                 ret_val = PlatformType(plat_type)
             except ValueError:
-                _LOGGER.warning("Device %s: unknown platform type with id %s", self.id, plat_type)
+                _LOGGER.warning(
+                    "Device %s: unknown platform type with id %s", self.id, plat_type
+                )
                 ret_val = PlatformType.UNKNOWN
             self._platform_type = ret_val
         return self._platform_type
@@ -205,7 +207,9 @@ class DeviceInfo():
             try:
                 ret_val = NetworkType(net_type)
             except ValueError:
-                _LOGGER.warning("Device %s: unknown network type with id %s", self.id, net_type)
+                _LOGGER.warning(
+                    "Device %s: unknown network type with id %s", self.id, net_type
+                )
                 # for the moment we set WIFI if unknown
                 ret_val = NetworkType.WIFI
             self._network_type = ret_val

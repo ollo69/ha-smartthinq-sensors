@@ -1,4 +1,3 @@
-
 from .ac import AirConditionerDevice
 from .airpurifier import AirPurifierDevice
 from .const import UNIT_TEMP_CELSIUS
