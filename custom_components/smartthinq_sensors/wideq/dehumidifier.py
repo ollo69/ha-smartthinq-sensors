@@ -1,5 +1,5 @@
 """------------------for Dehumidifier"""
-import enum
+from enum import Enum
 import logging
 from typing import Optional
 
@@ -47,14 +47,14 @@ ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 _LOGGER = logging.getLogger(__name__)
 
 
-class DHumOp(enum.Enum):
+class DHumOp(Enum):
     """Whether a device is on or off."""
 
     OFF = "@operation_off"
     ON = "@operation_on"
 
 
-class DHumMode(enum.Enum):
+class DHumMode(Enum):
     """The operation mode for a Dehumidifier device."""
 
     SMART = "@AP_MAIN_MID_OPMODE_SMART_DEHUM_W"
@@ -65,7 +65,7 @@ class DHumMode(enum.Enum):
     IONIZER = "@AP_MAIN_MID_OPMODE_IONIZER_W"
 
 
-class DHumFanSpeed(enum.Enum):
+class DHumFanSpeed(Enum):
     """The fan speed for a Dehumidifier device."""
 
     LOW = "@AP_MAIN_MID_WINDSTRENGTH_DHUM_LOW_W"
@@ -192,7 +192,7 @@ class DeHumidifierDevice(Device):
         await self.set(keys[0], keys[1], key=keys[2], value=humidity)
 
     async def get_power(self):
-        """Get the instant power usage in watts of the whole unit"""
+        """Get the instant power usage in watts of the whole unit."""
         if not self._current_power_supported:
             return 0
 

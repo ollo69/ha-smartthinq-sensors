@@ -87,7 +87,8 @@ class WMDevice(Device):
         return self.model_info.value(course_key).reference.get(course_id)
 
     def _update_course_info(self, data, course_id=None):
-        """Save information in the data payload for a specific course
+        """
+        Save information in the data payload for a specific course
         or default course if not already available.
         """
         ret_data = data.copy()
@@ -243,7 +244,8 @@ class WMDevice(Device):
 
 
 class WMStatus(DeviceStatus):
-    """Higher-level information about a WM current status.
+    """
+    Higher-level information about a WM current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.

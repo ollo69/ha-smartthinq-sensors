@@ -1,3 +1,5 @@
+"""Exceptions"""
+
 class APIError(Exception):
     """An error reported by the API."""
 

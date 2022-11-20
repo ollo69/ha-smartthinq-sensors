@@ -69,7 +69,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class RefrigeratorDevice(Device):
-    """A higher-level interface for a dryer."""
+    """A higher-level interface for a refrigerator."""
     def __init__(self, client, device):
         super().__init__(client, device, RefrigeratorStatus(self, None))
         self._temp_unit = None
@@ -233,7 +233,7 @@ class RefrigeratorDevice(Device):
         return None
 
     def get_fridge_temps(self, unit=None, unit_key=None):
-        """Get valid values for fridge temp"""
+        """Get valid values for fridge temp."""
         self._set_temp_unit(unit)
         if self._fridge_temps is None:
             key = self._get_state_key(STATE_FRIDGE_TEMP)
@@ -245,7 +245,7 @@ class RefrigeratorDevice(Device):
         return self._fridge_temps
 
     def get_freezer_temps(self, unit=None, unit_key=None):
-        """Get valid values for freezer temp"""
+        """Get valid values for freezer temp."""
         self._set_temp_unit(unit)
         if self._freezer_temps is None:
             key = self._get_state_key(STATE_FREEZER_TEMP)
@@ -283,9 +283,7 @@ class RefrigeratorDevice(Device):
 
     @property
     def set_values_allowed(self):
-        if not self._status or not self._status.is_on:
-            return False
-        if self._status.eco_friendly_enabled:
+        if not self._status or not self._status.is_on or self._status.eco_friendly_enabled:
             return False
         return True
 
@@ -379,7 +377,8 @@ class RefrigeratorDevice(Device):
 
 
 class RefrigeratorStatus(DeviceStatus):
-    """Higher-level information about a refrigerator's current status.
+    """
+    Higher-level information about a refrigerator's current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.
@@ -508,7 +507,7 @@ class RefrigeratorStatus(DeviceStatus):
         state = self._get_eco_friendly_state()
         if not state:
             return False
-        return True if state == LABEL_BIT_ON else False
+        return bool(state == LABEL_BIT_ON)
 
     @property
     def eco_friendly_state(self):

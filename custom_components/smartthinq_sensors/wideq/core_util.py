@@ -1,20 +1,18 @@
-"""
-Support for LG SmartThinQ device.
-"""
+"""Support for LG SmartThinQ device."""
 import uuid
 
 
 def as_list(obj):
-    """Wrap non-lists in lists.
+    """
+    Wrap non-lists in lists.
 
-    If `obj` is a list, return it unchanged. Otherwise, return a
-    single-element list containing it.
+    If `obj` is a list, return it unchanged.
+    Otherwise, return a single-element list containing it.
     """
 
     if isinstance(obj, list):
         return obj
-    else:
-        return [obj]
+    return [obj]
 
 
 def add_end_slash(url: str):
