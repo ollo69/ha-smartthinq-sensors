@@ -3,20 +3,21 @@ from __future__ import annotations
 
 import logging
 
-from .wideq import DeviceType
-from .wideq.fan import FanDevice
-
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util.percentage import ordered_list_item_to_percentage, percentage_to_ordered_list_item
+from homeassistant.util.percentage import (
+    ordered_list_item_to_percentage,
+    percentage_to_ordered_list_item,
+)
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-
+from .wideq import DeviceType
+from .wideq.fan import FanDevice
 
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
@@ -44,10 +45,7 @@ async def async_setup_entry(
 
         # Fan devices
         lge_fan.extend(
-            [
-                LGEFan(lge_device)
-                for lge_device in lge_devices.get(DeviceType.FAN, [])
-            ]
+            [LGEFan(lge_device) for lge_device in lge_devices.get(DeviceType.FAN, [])]
         )
 
         # Air Purifier devices
@@ -148,7 +146,9 @@ class LGEFan(LGEBaseFan):
         if not self._api.state.is_on:
             await self._device.power(True)
         if self.speed_count != 0:
-            named_speed = percentage_to_ordered_list_item(self._device.fan_speeds, percentage)
+            named_speed = percentage_to_ordered_list_item(
+                self._device.fan_speeds, percentage
+            )
             await self._device.set_fan_speed(named_speed)
         self._api.async_set_updated()
 

@@ -122,7 +122,9 @@ class AirPurifierDevice(Device):
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in AirPurifierMode]
-            self._supported_op_modes = [AirPurifierMode(o).name for o in mapping.values() if o in mode_list]
+            self._supported_op_modes = [
+                AirPurifierMode(o).name for o in mapping.values() if o in mode_list
+            ]
         return self._supported_op_modes
 
     @property
@@ -137,8 +139,14 @@ class AirPurifierDevice(Device):
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in AirPurifierFanSpeed]
             preset_list = [e.value for e in AirPurifierFanPreset]
-            self._supported_fan_speeds = [AirPurifierFanSpeed(o).name for o in mapping.values() if o in mode_list]
-            self._supported_fan_presets = [AirPurifierFanPreset(o).name for o in mapping.values() if o in preset_list]
+            self._supported_fan_speeds = [
+                AirPurifierFanSpeed(o).name for o in mapping.values() if o in mode_list
+            ]
+            self._supported_fan_presets = [
+                AirPurifierFanPreset(o).name
+                for o in mapping.values()
+                if o in preset_list
+            ]
         return self._supported_fan_speeds
 
     @property
@@ -171,7 +179,9 @@ class AirPurifierDevice(Device):
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
-        speed_value = self.model_info.enum_value(keys[2], AirPurifierFanSpeed[speed].value)
+        speed_value = self.model_info.enum_value(
+            keys[2], AirPurifierFanSpeed[speed].value
+        )
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
     async def set_fan_preset(self, preset):
@@ -180,10 +190,14 @@ class AirPurifierDevice(Device):
         if preset not in self.fan_presets:
             raise ValueError(f"Invalid fan preset: {preset}")
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
-        speed_value = self.model_info.enum_value(keys[2], AirPurifierFanPreset[preset].value)
+        speed_value = self.model_info.enum_value(
+            keys[2], AirPurifierFanPreset[preset].value
+        )
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
-    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
@@ -279,7 +293,10 @@ class AirPurifierStatus(DeviceStatus):
     @property
     def current_humidity(self):
         support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT") is None:
+        if (
+            self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT")
+            is None
+        ):
             return None
         key = self._get_state_key(STATE_HUMIDITY)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
@@ -316,24 +333,25 @@ class AirPurifierStatus(DeviceStatus):
             return None
         return self._update_feature(FEAT_PM25, value, False)
 
-    def _get_filter_life(self, use_time_status, max_time_status, support_key, filter_types=None):
+    def _get_filter_life(
+        self, use_time_status, max_time_status, support_key, filter_types=None
+    ):
         if filter_types:
             supported = False
             for filter_type in filter_types:
-                if self._device.model_info.enum_value(support_key, filter_type) is not None:
+                if (
+                    self._device.model_info.enum_value(support_key, filter_type)
+                    is not None
+                ):
                     supported = True
                     break
             if not supported:
                 return None
 
         key_max_status = self._get_state_key(max_time_status)
-        max_time = self.to_int_or_none(
-            self.lookup_enum(key_max_status, True)
-        )
+        max_time = self.to_int_or_none(self.lookup_enum(key_max_status, True))
         if max_time is None:
-            max_time = self.to_int_or_none(
-                self.lookup_range(key_max_status)
-            )
+            max_time = self.to_int_or_none(self.lookup_range(key_max_status))
             if max_time is None:
                 return None
             if max_time < 10:  # because is an enum
@@ -348,7 +366,7 @@ class AirPurifierStatus(DeviceStatus):
             return None
 
         try:
-            return int((use_time/max_time)*100)
+            return int((use_time / max_time) * 100)
         except ValueError:
             return None
 
@@ -361,7 +379,9 @@ class AirPurifierStatus(DeviceStatus):
         support_key = self._get_state_key(SUPPORT_MFILTER)
 
         for filter_def in FILTER_TYPES:
-            status = self._get_filter_life(filter_def[1], filter_def[2], support_key, filter_def[3])
+            status = self._get_filter_life(
+                filter_def[1], filter_def[2], support_key, filter_def[3]
+            )
             if status is not None:
                 self._update_feature(filter_def[0], status, False)
                 result[filter_def[0]] = status

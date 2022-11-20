@@ -8,6 +8,42 @@ from collections.abc import Iterable
 from datetime import timedelta
 import logging
 
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.const import (
+    CONF_REGION,
+    CONF_TOKEN,
+    MAJOR_VERSION,
+    MINOR_VERSION,
+    TEMP_CELSIUS,
+    Platform,
+    __version__,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .const import (
+    CLIENT,
+    CONF_LANGUAGE,
+    CONF_OAUTH_URL,
+    CONF_USE_API_V2,
+    CONF_USE_HA_SESSION,
+    DOMAIN,
+    LGE_DEVICES,
+    LGE_DISCOVERY_NEW,
+    MIN_HA_MAJ_VER,
+    MIN_HA_MIN_VER,
+    STARTUP,
+    __min_ha_version__,
+)
 from .wideq import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
@@ -24,47 +60,13 @@ from .wideq.core_exceptions import (
     NotConnectedError,
 )
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.const import (
-    CONF_REGION,
-    CONF_TOKEN,
-    MAJOR_VERSION,
-    MINOR_VERSION,
-    TEMP_CELSIUS,
-    Platform,
-    __version__,
-)
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.dispatcher import async_dispatcher_connect, async_dispatcher_send
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-
-from .const import (
-    CLIENT,
-    CONF_LANGUAGE,
-    CONF_OAUTH_URL,
-    CONF_USE_API_V2,
-    CONF_USE_HA_SESSION,
-    DOMAIN,
-    MIN_HA_MAJ_VER,
-    MIN_HA_MIN_VER,
-    LGE_DEVICES,
-    LGE_DISCOVERY_NEW,
-    STARTUP,
-    __min_ha_version__,
-)
-
 SMARTTHINQ_PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.CLIMATE,
     Platform.FAN,
     Platform.HUMIDIFIER,
     Platform.SENSOR,
-    Platform.SWITCH
+    Platform.SWITCH,
 ]
 
 MAX_DISC_COUNT = 4
@@ -112,7 +114,9 @@ class LGEAuthentication:
 
         return None
 
-    async def create_client_from_login(self, username: str, password: str) -> ClientAsync:
+    async def create_client_from_login(
+        self, username: str, password: str
+    ) -> ClientAsync:
         """Create a new client using username and password."""
         return await ClientAsync.from_login(
             username,
@@ -122,7 +126,9 @@ class LGEAuthentication:
             aiohttp_session=self._client_session,
         )
 
-    async def create_client_from_token(self, token: str, oauth_url: str | None = None) -> ClientAsync:
+    async def create_client_from_token(
+        self, token: str, oauth_url: str | None = None
+    ) -> ClientAsync:
         """Create a new client using refresh token."""
         return await ClientAsync.from_token(
             token,
@@ -136,9 +142,8 @@ class LGEAuthentication:
 
 def is_min_ha_version(min_ha_major_ver: int, min_ha_minor_ver: int) -> bool:
     """Check if HA version at least a specific version."""
-    return (
-        MAJOR_VERSION > min_ha_major_ver or
-        (MAJOR_VERSION == min_ha_major_ver and MINOR_VERSION >= min_ha_minor_ver)
+    return MAJOR_VERSION > min_ha_major_ver or (
+        MAJOR_VERSION == min_ha_major_ver and MINOR_VERSION >= min_ha_minor_ver
     )
 
 
@@ -165,11 +170,13 @@ def _notify_message(
     """Notify user with persistent notification"""
     hass.async_create_task(
         hass.services.async_call(
-            domain='persistent_notification', service='create', service_data={
-                'title': title,
-                'message': message,
-                'notification_id': f"{DOMAIN}.{notification_id}"
-            }
+            domain="persistent_notification",
+            service="create",
+            service_data={
+                "title": title,
+                "message": message,
+                "notification_id": f"{DOMAIN}.{notification_id}",
+            },
         )
     )
 
@@ -178,9 +185,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SmartThinQ integration from a config entry."""
 
     if not is_valid_ha_version():
-        msg = "This integration require at least HomeAssistant version " \
-              f" {__min_ha_version__}, you are running version {__version__}." \
-              " Please upgrade HomeAssistant to continue use this integration."
+        msg = (
+            "This integration require at least HomeAssistant version "
+            f" {__min_ha_version__}, you are running version {__version__}."
+            " Please upgrade HomeAssistant to continue use this integration."
+        )
         _notify_message(hass, "inv_ha_version", "SmartThinQ Sensors", msg)
         _LOGGER.warning(msg)
         return False
@@ -221,17 +230,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         client = await lge_auth.create_client_from_token(refresh_token, oauth_url)
 
     except (AuthenticationError, InvalidCredentialError) as exc:
-        msg = "Invalid ThinQ credential error, integration setup aborted." \
-              " Please use the LG App on your mobile device to ensure your" \
-              " credentials are correct or there are new Term of Service to accept." \
-              " If your credential changed, you must reconfigure integration." \
-              " Account based on social network are not supported and in most" \
-              " case do not work with this integration."
+        msg = (
+            "Invalid ThinQ credential error, integration setup aborted."
+            " Please use the LG App on your mobile device to ensure your"
+            " credentials are correct or there are new Term of Service to accept."
+            " If your credential changed, you must reconfigure integration."
+            " Account based on social network are not supported and in most"
+            " case do not work with this integration."
+        )
         _notify_message(hass, "inv_credential", "SmartThinQ Sensors", msg)
         if log_info:
             _LOGGER.warning(msg, exc_info=True)
-        msg2 = "Invalid ThinQ credential error, integration setup aborted." \
-               " Please use the LG App on your mobile device to verify credential."
+        msg2 = (
+            "Invalid ThinQ credential error, integration setup aborted."
+            " Please use the LG App on your mobile device to verify credential."
+        )
         raise ConfigEntryNotReady(msg2) from exc
 
     except Exception as exc:
@@ -248,7 +261,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("ThinQ client connected")
 
     try:
-        lge_devices, unsupported_devices, discovered_devices = await lge_devices_setup(hass, client)
+        lge_devices, unsupported_devices, discovered_devices = await lge_devices_setup(
+            hass, client
+        )
     except Exception as exc:
         if log_info:
             _LOGGER.warning(
@@ -283,7 +298,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("Discovering new devices...")
 
         old_devs = hass.data[DOMAIN][DISCOVERED_DEVICES]
-        lge_devs, unsupported_devs, new_devs = await lge_devices_setup(hass, client, old_devs)
+        lge_devs, unsupported_devs, new_devs = await lge_devices_setup(
+            hass, client, old_devs
+        )
         hass.data[DOMAIN][DISCOVERED_DEVICES] = new_devs
 
         # send signal to set up new entities
@@ -298,7 +315,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             cleanup_orphan_lge_devices(hass, entry.entry_id, client)
 
             # Update hass data LGE_DEVICES
-            prev_lge_devs: dict[DeviceType, list[LGEDevice]] = hass.data[DOMAIN][LGE_DEVICES]
+            prev_lge_devs: dict[DeviceType, list[LGEDevice]] = hass.data[DOMAIN][
+                LGE_DEVICES
+            ]
             new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
             for dev_type, dev_list in prev_lge_devs.items():
                 new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
@@ -312,7 +331,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN][LGE_DEVICES] = new_lge_devs
 
             # Update hass data UNSUPPORTED_DEVICES
-            prev_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = hass.data[DOMAIN][UNSUPPORTED_DEVICES]
+            prev_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = hass.data[DOMAIN][
+                UNSUPPORTED_DEVICES
+            ]
             new_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = {}
             for dev_type, dev_list in prev_uns_devs.items():
                 new_dev_list = [dev for dev in dev_list if dev.id in new_devs]
@@ -347,7 +368,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class LGEDevice:
-
     def __init__(self, device, hass):
         """initialize a LGE Device."""
 
@@ -460,7 +480,7 @@ class LGEDevice:
             name=f"{DOMAIN}-{self._name}",
             update_method=self._async_update,
             # Polling interval. Will only be polled if there are subscribers.
-            update_interval=SCAN_INTERVAL
+            update_interval=SCAN_INTERVAL,
         )
         await coordinator.async_refresh()
         self._coordinator = coordinator
@@ -524,8 +544,12 @@ class LGEDevice:
 
 
 async def lge_devices_setup(
-    hass: HomeAssistant, client: ClientAsync, discovered_devices: list[str] | None = None
-) -> tuple[dict[DeviceType, list[LGEDevice]], dict[DeviceType, list[LGDeviceInfo]], list[str]]:
+    hass: HomeAssistant,
+    client: ClientAsync,
+    discovered_devices: list[str] | None = None,
+) -> tuple[
+    dict[DeviceType, list[LGEDevice]], dict[DeviceType, list[LGDeviceInfo]], list[str]
+]:
     """Query connected devices from LG ThinQ."""
     _LOGGER.debug("Searching LGE ThinQ devices...")
 
@@ -596,9 +620,7 @@ def cleanup_orphan_lge_devices(
 
     # Load lg devices from registry
     device_registry = dr.async_get(hass)
-    all_lg_dev_entries = dr.async_entries_for_config_entry(
-        device_registry, entry_id
-    )
+    all_lg_dev_entries = dr.async_entries_for_config_entry(device_registry, entry_id)
 
     # get list of valid devices
     valid_lg_dev_ids = []

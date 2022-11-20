@@ -1,5 +1,6 @@
 """Exceptions"""
 
+
 class APIError(Exception):
     """An error reported by the API."""
 
@@ -11,12 +12,14 @@ class APIError(Exception):
 
 class NotLoggedInError(APIError):
     """The session is not valid or expired."""
+
     def __init__(self):
         pass
 
 
 class NotConnectedError(APIError):
     """The service can't contact the specified device."""
+
     def __init__(self):
         pass
 
@@ -25,36 +28,42 @@ class FailedRequestError(APIError):
     """A failed request typically indicates an unsupported control on a
     device.
     """
+
     def __init__(self):
         pass
 
 
 class InvalidRequestError(APIError):
     """The server rejected a request as invalid."""
+
     def __init__(self):
         pass
 
 
 class InvalidResponseError(APIError):
     """The server provide an invalid response."""
+
     def __init__(self, resp_msg):
         super().__init__("", resp_msg)
 
 
 class InvalidCredentialError(APIError):
     """The server rejected connection."""
+
     def __init__(self):
         pass
 
 
 class TokenError(APIError):
     """An authentication token was rejected."""
+
     def __init__(self):
         pass
 
 
 class DeviceNotFound(APIError):
     """Device ID not valid."""
+
     def __init__(self):
         pass
 
@@ -71,6 +80,7 @@ class MonitorError(APIError):
 
 class InvalidDeviceStatus(Exception):
     """Device exception occurred when status of device is not valid."""
+
     pass
 
 

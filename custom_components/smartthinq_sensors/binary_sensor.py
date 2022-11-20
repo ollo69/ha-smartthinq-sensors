@@ -5,24 +5,6 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Callable, Tuple
 
-from .wideq import (
-    FEAT_AUTODOOR,
-    FEAT_CHILDLOCK,
-    FEAT_DOORCLOSE,
-    FEAT_DOORLOCK,
-    FEAT_DOOROPEN,
-    FEAT_DUALZONE,
-    FEAT_EXTRADRY,
-    FEAT_HIGHTEMP,
-    FEAT_NIGHTDRY,
-    FEAT_STANDBY,
-    FEAT_REMOTESTART,
-    FEAT_RINSEREFILL,
-    FEAT_SALTREFILL,
-    FEAT_WATER_TANK_FULL,
-    DeviceType,
-)
-
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -47,10 +29,23 @@ from .device_helpers import (
     get_entity_name,
     get_multiple_devices_types,
 )
-from .sensor import (
-    ATTR_DOOR_OPEN,
-    ATTR_ERROR_STATE,
-    ATTR_RUN_COMPLETED,
+from .sensor import ATTR_DOOR_OPEN, ATTR_ERROR_STATE, ATTR_RUN_COMPLETED
+from .wideq import (
+    FEAT_AUTODOOR,
+    FEAT_CHILDLOCK,
+    FEAT_DOORCLOSE,
+    FEAT_DOORLOCK,
+    FEAT_DOOROPEN,
+    FEAT_DUALZONE,
+    FEAT_EXTRADRY,
+    FEAT_HIGHTEMP,
+    FEAT_NIGHTDRY,
+    FEAT_REMOTESTART,
+    FEAT_RINSEREFILL,
+    FEAT_SALTREFILL,
+    FEAT_STANDBY,
+    FEAT_WATER_TANK_FULL,
+    DeviceType,
 )
 
 # range sensor attributes
@@ -192,7 +187,9 @@ DEHUMIDIFIER_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
 )
 
 
-def _binary_sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription) -> bool:
+def _binary_sensor_exist(
+    lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription
+) -> bool:
     """Check if a sensor exist for device."""
     if sensor_desc.value_fn is not None:
         return True
@@ -227,7 +224,9 @@ async def async_setup_entry(
             [
                 LGEBinarySensor(lge_device, sensor_desc, LGEWashDevice(lge_device))
                 for sensor_desc in WASH_DEV_BINARY_SENSORS
-                for lge_device in get_multiple_devices_types(lge_devices, WASH_DEVICE_TYPES)
+                for lge_device in get_multiple_devices_types(
+                    lge_devices, WASH_DEVICE_TYPES
+                )
                 if _binary_sensor_exist(lge_device, sensor_desc)
             ]
         )
@@ -235,7 +234,9 @@ async def async_setup_entry(
         # add refrigerators
         lge_sensors.extend(
             [
-                LGEBinarySensor(lge_device, sensor_desc, LGERefrigeratorDevice(lge_device))
+                LGEBinarySensor(
+                    lge_device, sensor_desc, LGERefrigeratorDevice(lge_device)
+                )
                 for sensor_desc in REFRIGERATOR_BINARY_SENSORS
                 for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
                 if _binary_sensor_exist(lge_device, sensor_desc)
@@ -275,9 +276,7 @@ def get_binary_sensor_name(device, ent_key, ent_name) -> str:
     """Get the name for the binary sensor"""
     name = get_entity_name(device, ent_key, ent_name)
     if ent_key == ATTR_RUN_COMPLETED:
-        name = name.replace(
-            "<Run>", RUN_COMPLETED_PREFIX.get(device.type, "Run")
-        )
+        name = name.replace("<Run>", RUN_COMPLETED_PREFIX.get(device.type, "Run"))
 
     return name
 
@@ -288,10 +287,10 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     entity_description = ThinQBinarySensorEntityDescription
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQBinarySensorEntityDescription,
-            wrapped_device=None,
+        self,
+        api: LGEDevice,
+        description: ThinQBinarySensorEntityDescription,
+        wrapped_device=None,
     ):
         """Initialize the binary sensor."""
         super().__init__(api.coordinator)

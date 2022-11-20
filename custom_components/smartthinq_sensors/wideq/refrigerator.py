@@ -6,8 +6,8 @@ from typing import Optional
 
 from .const import (
     FEAT_ECOFRIENDLY,
-    FEAT_EXPRESSMODE,
     FEAT_EXPRESSFRIDGE,
+    FEAT_EXPRESSMODE,
     FEAT_FRESHAIRFILTER,
     FEAT_ICEPLUS,
     FEAT_SMARTSAVINGMODE,
@@ -15,13 +15,7 @@ from .const import (
     STATE_OPTIONITEM_NONE,
     UNIT_TEMP_FAHRENHEIT,
 )
-from .device import (
-    LABEL_BIT_OFF,
-    LABEL_BIT_ON,
-    Device,
-    DeviceStatus,
-    UnitTempModes,
-)
+from .device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
 
 FEATURE_DESCR = {
     "@RE_TERM_EXPRESS_FREEZE_W": "express_freeze",
@@ -60,7 +54,11 @@ STATE_FREEZER_TEMP = ["TempFreezer", "freezerTemp"]
 
 CMD_STATE_ECO_FRIENDLY = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_ECO_FRIENDLY]
 CMD_STATE_ICE_PLUS = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_ICE_PLUS]
-CMD_STATE_EXPRESS_FRIDGE = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_EXPRESS_FRIDGE]
+CMD_STATE_EXPRESS_FRIDGE = [
+    CTRL_BASIC,
+    ["SetControl", "basicCtrl"],
+    STATE_EXPRESS_FRIDGE,
+]
 CMD_STATE_EXPRESS_MODE = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_EXPRESS_MODE]
 CMD_STATE_FRIDGE_TEMP = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_FRIDGE_TEMP]
 CMD_STATE_FREEZER_TEMP = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_FREEZER_TEMP]
@@ -70,6 +68,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class RefrigeratorDevice(Device):
     """A higher-level interface for a refrigerator."""
+
     def __init__(self, client, device):
         super().__init__(client, device, RefrigeratorStatus(self, None))
         self._temp_unit = None
@@ -182,9 +181,7 @@ class RefrigeratorDevice(Device):
     def _get_temps_v2(self, key, unit_key=None):
         """Get valid values for temps for V1 models"""
         if unit_key:
-            ref_key = self.model_info.target_key(
-                key, unit_key, "tempUnit"
-            )
+            ref_key = self.model_info.target_key(key, unit_key, "tempUnit")
             key = ref_key or key
         value_type = self.model_info.value_type(key)
         if not value_type or value_type not in ("enum", "Enum"):
@@ -283,7 +280,11 @@ class RefrigeratorDevice(Device):
 
     @property
     def set_values_allowed(self):
-        if not self._status or not self._status.is_on or self._status.eco_friendly_enabled:
+        if (
+            not self._status
+            or not self._status.is_on
+            or self._status.eco_friendly_enabled
+        ):
             return False
         return True
 
@@ -383,6 +384,7 @@ class RefrigeratorStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
+
     def __init__(self, device, data):
         super().__init__(device, data)
         self._temp_unit = None
@@ -432,9 +434,7 @@ class RefrigeratorStatus(DeviceStatus):
             temp_unit = self.lookup_enum(["TempUnit", "tempUnit"])
             if not temp_unit:
                 return None
-            self._temp_unit = (
-                REFRTEMPUNIT.get(temp_unit, UnitTempModes.Celsius)
-            ).value
+            self._temp_unit = (REFRTEMPUNIT.get(temp_unit, UnitTempModes.Celsius)).value
         return self._temp_unit
 
     def _get_temp_key(self, key):
@@ -513,9 +513,7 @@ class RefrigeratorStatus(DeviceStatus):
     def eco_friendly_state(self):
         key = STATE_ECO_FRIENDLY[1 if self.is_info_v2 else 0]
         status = self._get_eco_friendly_state()
-        return self._update_feature(
-            FEAT_ECOFRIENDLY, status, True, key
-        )
+        return self._update_feature(FEAT_ECOFRIENDLY, status, True, key)
 
     @property
     def ice_plus_status(self):
@@ -523,9 +521,7 @@ class RefrigeratorStatus(DeviceStatus):
             return None
         key = STATE_ICE_PLUS[0]
         status = self.lookup_enum(key)
-        return self._update_feature(
-            FEAT_ICEPLUS, status, True, key
-        )
+        return self._update_feature(FEAT_ICEPLUS, status, True, key)
 
     @property
     def express_fridge_status(self):
@@ -533,9 +529,7 @@ class RefrigeratorStatus(DeviceStatus):
             return None
         key = STATE_EXPRESS_FRIDGE[1]
         status = self.lookup_enum(key)
-        return self._update_feature(
-            FEAT_EXPRESSFRIDGE, status, True, key
-        )
+        return self._update_feature(FEAT_EXPRESSFRIDGE, status, True, key)
 
     @property
     def express_mode_status(self):
@@ -543,9 +537,7 @@ class RefrigeratorStatus(DeviceStatus):
             return None
         key = STATE_EXPRESS_MODE[1]
         status = self.lookup_enum(key)
-        return self._update_feature(
-            FEAT_EXPRESSMODE, status, True, key
-        )
+        return self._update_feature(FEAT_EXPRESSMODE, status, True, key)
 
     @property
     def smart_saving_state(self):
@@ -561,9 +553,7 @@ class RefrigeratorStatus(DeviceStatus):
         else:
             key = "SmartSavingMode"
         status = self.lookup_enum(key)
-        return self._update_feature(
-            FEAT_SMARTSAVINGMODE, status, True, key
-        )
+        return self._update_feature(FEAT_SMARTSAVINGMODE, status, True, key)
 
     @property
     def fresh_air_filter_status(self):
@@ -572,9 +562,7 @@ class RefrigeratorStatus(DeviceStatus):
         else:
             key = "FreshAirFilter"
         status = self.lookup_enum(key)
-        return self._update_feature(
-            FEAT_FRESHAIRFILTER, status, True, key
-        )
+        return self._update_feature(FEAT_FRESHAIRFILTER, status, True, key)
 
     @property
     def water_filter_used_month(self):
@@ -593,9 +581,7 @@ class RefrigeratorStatus(DeviceStatus):
         else:
             counter = self._data.get(key)
         value = "N/A" if not counter else counter
-        return self._update_feature(
-            FEAT_WATERFILTERUSED_MONTH, value, False, key
-        )
+        return self._update_feature(FEAT_WATERFILTERUSED_MONTH, value, False, key)
 
     @property
     def locked_state(self):

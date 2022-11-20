@@ -2,6 +2,9 @@
 
 import logging
 
+from homeassistant.const import STATE_OFF, STATE_ON, TEMP_CELSIUS, TEMP_FAHRENHEIT
+
+from .const import DEFAULT_SENSOR
 from .wideq import (
     STATE_OPTIONITEM_OFF,
     STATE_OPTIONITEM_ON,
@@ -10,15 +13,6 @@ from .wideq import (
     WM_DEVICE_TYPES,
     DeviceType,
 )
-
-from homeassistant.const import (
-    STATE_ON,
-    STATE_OFF,
-    TEMP_CELSIUS,
-    TEMP_FAHRENHEIT,
-)
-
-from .const import DEFAULT_SENSOR
 
 STATE_LOOKUP = {
     STATE_OPTIONITEM_OFF: STATE_OFF,
@@ -75,6 +69,7 @@ def get_entity_name(device, ent_key, ent_name) -> str:
 
 class LGEBaseDevice:
     """A wrapper to monitor LGE devices"""
+
     def __init__(self, api_device):
         """Initialize the device."""
         self._api = api_device

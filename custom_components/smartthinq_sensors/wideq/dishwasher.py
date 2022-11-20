@@ -41,6 +41,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class DishWasherDevice(Device):
     """A higher-level interface for a dishwasher."""
+
     def __init__(self, client, device):
         super().__init__(client, device, DishWasherStatus(self, None))
 
@@ -66,6 +67,7 @@ class DishWasherStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
+
     def __init__(self, device, data):
         super().__init__(device, data)
         self._run_state = None
@@ -119,16 +121,17 @@ class DishWasherStatus(DeviceStatus):
         if not self.is_on:
             return False
         error = self._get_error()
-        if error in STATE_DISHWASHER_ERROR_NO_ERROR or error == STATE_DISHWASHER_ERROR_OFF:
+        if (
+            error in STATE_DISHWASHER_ERROR_NO_ERROR
+            or error == STATE_DISHWASHER_ERROR_OFF
+        ):
             return False
         return True
 
     @property
     def current_course(self):
         if self.is_info_v2:
-            course_key = self._device.model_info.config_value(
-                "courseType"
-            )
+            course_key = self._device.model_info.config_value("courseType")
         else:
             course_key = ["APCourse", "Course"]
         course = self.lookup_reference(course_key, ref_key="name")
@@ -137,9 +140,7 @@ class DishWasherStatus(DeviceStatus):
     @property
     def current_smartcourse(self):
         if self.is_info_v2:
-            course_key = self._device.model_info.config_value(
-                "smartCourseType"
-            )
+            course_key = self._device.model_info.config_value("smartCourseType")
         else:
             course_key = "SmartCourse"
         smart_course = self.lookup_reference(course_key, ref_key="name")
@@ -186,16 +187,12 @@ class DishWasherStatus(DeviceStatus):
         run_state = self._get_run_state()
         if run_state == STATE_DISHWASHER_POWER_OFF:
             run_state = STATE_OPTIONITEM_NONE
-        return self._update_feature(
-            FEAT_RUN_STATE, run_state
-        )
+        return self._update_feature(FEAT_RUN_STATE, run_state)
 
     @property
     def process_state(self):
         process = self._get_process()
-        return self._update_feature(
-            FEAT_PROCESS_STATE, process
-        )
+        return self._update_feature(FEAT_PROCESS_STATE, process)
 
     @property
     def halfload_state(self):
@@ -205,9 +202,7 @@ class DishWasherStatus(DeviceStatus):
             half_load = self.lookup_bit_enum("HalfLoad")
         if not half_load:
             half_load = STATE_OPTIONITEM_NONE
-        return self._update_feature(
-            FEAT_HALFLOAD, half_load
-        )
+        return self._update_feature(FEAT_HALFLOAD, half_load)
 
     @property
     def error_msg(self):
@@ -215,9 +210,7 @@ class DishWasherStatus(DeviceStatus):
             error = STATE_OPTIONITEM_NONE
         else:
             error = self._get_error()
-        return self._update_feature(
-            FEAT_ERROR_MSG, error
-        )
+        return self._update_feature(FEAT_ERROR_MSG, error)
 
     @property
     def tubclean_count(self):
@@ -227,108 +220,62 @@ class DishWasherStatus(DeviceStatus):
             result = self._data.get("TclCount")
         if result is None:
             result = "N/A"
-        return self._update_feature(
-            FEAT_TUBCLEAN_COUNT, result, False
-        )
+        return self._update_feature(FEAT_TUBCLEAN_COUNT, result, False)
 
     @property
     def door_opened_state(self):
-        status = self.lookup_bit(
-            "door" if self.is_info_v2 else "Door"
-        )
-        return self._update_feature(
-            FEAT_DOOROPEN, status, False
-        )
+        status = self.lookup_bit("door" if self.is_info_v2 else "Door")
+        return self._update_feature(FEAT_DOOROPEN, status, False)
 
     @property
     def childlock_state(self):
-        status = self.lookup_bit(
-            "childLock" if self.is_info_v2 else "ChildLock"
-        )
-        return self._update_feature(
-            FEAT_CHILDLOCK, status, False
-        )
+        status = self.lookup_bit("childLock" if self.is_info_v2 else "ChildLock")
+        return self._update_feature(FEAT_CHILDLOCK, status, False)
 
     @property
     def rinserefill_state(self):
-        status = self.lookup_bit(
-            "rinseRefill" if self.is_info_v2 else "RinseRefill"
-        )
-        return self._update_feature(
-            FEAT_RINSEREFILL, status, False
-        )
+        status = self.lookup_bit("rinseRefill" if self.is_info_v2 else "RinseRefill")
+        return self._update_feature(FEAT_RINSEREFILL, status, False)
 
     @property
     def saltrefill_state(self):
-        status = self.lookup_bit(
-            "saltRefill" if self.is_info_v2 else "SaltRefill"
-        )
-        return self._update_feature(
-            FEAT_SALTREFILL, status, False
-        )
+        status = self.lookup_bit("saltRefill" if self.is_info_v2 else "SaltRefill")
+        return self._update_feature(FEAT_SALTREFILL, status, False)
 
     @property
     def dualzone_state(self):
-        status = self.lookup_bit(
-            "dualZone" if self.is_info_v2 else "DualZone"
-        )
-        return self._update_feature(
-            FEAT_DUALZONE, status, False
-        )
+        status = self.lookup_bit("dualZone" if self.is_info_v2 else "DualZone")
+        return self._update_feature(FEAT_DUALZONE, status, False)
 
     @property
     def delaystart_state(self):
-        status = self.lookup_bit(
-            "delayStart" if self.is_info_v2 else "DelayStart"
-        )
-        return self._update_feature(
-            FEAT_DELAYSTART, status, False
-        )
+        status = self.lookup_bit("delayStart" if self.is_info_v2 else "DelayStart")
+        return self._update_feature(FEAT_DELAYSTART, status, False)
 
     @property
     def energysaver_state(self):
-        status = self.lookup_bit(
-            "energySaver" if self.is_info_v2 else "EnergySaver"
-        )
-        return self._update_feature(
-            FEAT_ENERGYSAVER, status, False
-        )
+        status = self.lookup_bit("energySaver" if self.is_info_v2 else "EnergySaver")
+        return self._update_feature(FEAT_ENERGYSAVER, status, False)
 
     @property
     def autodoor_state(self):
-        status = self.lookup_bit(
-            "autoDoor" if self.is_info_v2 else "AutoDoor"
-        )
-        return self._update_feature(
-            FEAT_AUTODOOR, status, False
-        )
+        status = self.lookup_bit("autoDoor" if self.is_info_v2 else "AutoDoor")
+        return self._update_feature(FEAT_AUTODOOR, status, False)
 
     @property
     def hightemp_state(self):
-        status = self.lookup_bit(
-            "highTemp" if self.is_info_v2 else "HighTemp"
-        )
-        return self._update_feature(
-            FEAT_HIGHTEMP, status, False
-        )
+        status = self.lookup_bit("highTemp" if self.is_info_v2 else "HighTemp")
+        return self._update_feature(FEAT_HIGHTEMP, status, False)
 
     @property
     def extradry_state(self):
-        status = self.lookup_bit(
-            "extraDry" if self.is_info_v2 else "ExtraDry"
-        )
-        return self._update_feature(
-            FEAT_EXTRADRY, status, False
-        )
+        status = self.lookup_bit("extraDry" if self.is_info_v2 else "ExtraDry")
+        return self._update_feature(FEAT_EXTRADRY, status, False)
 
     @property
     def nightdry_state(self):
-        status = self.lookup_bit(
-            "nightDry" if self.is_info_v2 else "NightDry"
-        )
-        return self._update_feature(
-            FEAT_NIGHTDRY, status, False
-        )
+        status = self.lookup_bit("nightDry" if self.is_info_v2 else "NightDry")
+        return self._update_feature(FEAT_NIGHTDRY, status, False)
 
     def _update_features(self):
         _ = [

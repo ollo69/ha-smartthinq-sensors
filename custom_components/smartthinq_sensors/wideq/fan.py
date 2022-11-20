@@ -64,7 +64,9 @@ class FanDevice(Device):
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in FanSpeed]
-            self._supported_fan_speeds = [FanSpeed(o).name for o in mapping.values() if o in mode_list]
+            self._supported_fan_speeds = [
+                FanSpeed(o).name for o in mapping.values() if o in mode_list
+            ]
         return self._supported_fan_speeds
 
     @property
@@ -100,7 +102,9 @@ class FanDevice(Device):
 
         raise ValueError(f"Invalid fan preset: {preset}")
 
-    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path

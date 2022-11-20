@@ -5,16 +5,16 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from datetime import datetime
 import hashlib
 import hmac
 import json
 import logging
 import os
 import ssl
-import uuid
-from datetime import datetime
 from typing import Any, Generator, Optional
 from urllib.parse import parse_qs, quote, urlencode, urljoin, urlparse
+import uuid
 
 import aiohttp
 import cchardet
@@ -47,7 +47,7 @@ V2_USER_INFO = "/users/profile"
 V2_EMP_SESS_URL = "https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession"
 OAUTH_REDIRECT_URI = "https://kr.m.lgaccount.com/login/iabClose"
 APPLICATION_KEY = "6V1V8H2BN5P9ZQGOI5DAQ92YZBDO3EK9"  # for spx login
-OAUTH_CLIENT_KEY = 'LGAO722A02'
+OAUTH_CLIENT_KEY = "LGAO722A02"
 
 # orig
 DATA_ROOT = "lgedmRoot"
@@ -74,7 +74,9 @@ TOKEN_EXP_LIMIT = 60  # will expire within 60 seconds
 # minimum time between 2 consecutive call for device snapshot updates (in seconds)
 MIN_TIME_BETWEEN_UPDATE = 25
 
-_LG_SSL_CIPHERS = "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK"
+_LG_SSL_CIPHERS = (
+    "DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK"
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -181,7 +183,7 @@ class CoreAsync:
         try:
             return await response.json()
         except ValueError as ex:
-            resp_text = await response.text(errors='replace')
+            resp_text = await response.text(errors="replace")
             _LOGGER.debug("Error decoding json response %s: %s", resp_text, ex)
 
         # if fails, we try to convert text from xml to json
@@ -380,12 +382,16 @@ class CoreAsync:
 
         url = urljoin(login_base_url, "preLogin")
         pre_login_data = {
-          "user_auth2": encrypted_pwd,
-          "log_param": f"login request / user_id : {username} / third_party : null / svc_list : SVC202,SVC710 / 3rd_service : ",
+            "user_auth2": encrypted_pwd,
+            "log_param": f"login request / user_id : {username} / third_party : null / svc_list : SVC202,SVC710 / 3rd_service : ",
         }
 
         async with self._get_session().post(
-            url=url, data=pre_login_data, headers=headers, timeout=self._timeout, raise_for_status=False
+            url=url,
+            data=pre_login_data,
+            headers=headers,
+            timeout=self._timeout,
+            raise_for_status=False,
         ) as resp:
             pre_login = await resp.json()
 
@@ -396,14 +402,20 @@ class CoreAsync:
         # try login with username and hashed password
         _LOGGER.debug("auth_user_login - getting account_data")
         data = {
-          "user_auth2": pre_login["encrypted_pw"],
-          "password_hash_prameter_flag": "Y",
-          "svc_list": "SVC202,SVC710",  # SVC202=LG SmartHome, SVC710=EMP OAuth
+            "user_auth2": pre_login["encrypted_pw"],
+            "password_hash_prameter_flag": "Y",
+            "svc_list": "SVC202,SVC710",  # SVC202=LG SmartHome, SVC710=EMP OAuth
         }
-        emp_login_url = urljoin(emp_base_url, 'emp/v2.0/account/session/' + quote(username))
+        emp_login_url = urljoin(
+            emp_base_url, "emp/v2.0/account/session/" + quote(username)
+        )
 
         async with self._get_session().post(
-            url=emp_login_url, data=data, headers=headers, timeout=self._timeout, raise_for_status=False
+            url=emp_login_url,
+            data=data,
+            headers=headers,
+            timeout=self._timeout,
+            raise_for_status=False,
         ) as resp:
             account_data = await resp.json()
 
@@ -418,7 +430,9 @@ class CoreAsync:
                         msg += " - "
                     msg += f"message: {err_msg}"
             if not msg:
-                _LOGGER.error("auth_user_login - invalid account_data: %s", account_data)
+                _LOGGER.error(
+                    "auth_user_login - invalid account_data: %s", account_data
+                )
                 msg = "unknown error"
             raise exc.AuthenticationError(msg)
 
@@ -426,12 +440,16 @@ class CoreAsync:
 
         # dynamic get secret key for emp signature
         _LOGGER.debug("auth_user_login - getting secret_data")
-        emp_search_key_url = urljoin(login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP")
+        emp_search_key_url = urljoin(
+            login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP"
+        )
 
         async with self._get_session().get(
             url=emp_search_key_url, timeout=self._timeout, raise_for_status=False
         ) as resp:
-            secret_data = json.loads(await resp.text())  # this return data as plain/text
+            secret_data = json.loads(
+                await resp.text()
+            )  # this return data as plain/text
 
         _LOGGER.debug("auth_user_login - secret_data: %s", secret_data)
         secret_key = secret_data["returnData"]
@@ -439,10 +457,10 @@ class CoreAsync:
         # get token data
         _LOGGER.debug("auth_user_login - getting token_data")
         emp_data = {
-          "account_type": account["userIDType"],
-          "client_id": CLIENT_ID,
-          "country_code": account["country"],
-          "username": account["userID"],
+            "account_type": account["userIDType"],
+            "client_id": CLIENT_ID,
+            "country_code": account["country"],
+            "username": account["userID"],
         }
 
         parse_url = urlparse(V2_EMP_SESS_URL)
@@ -451,22 +469,26 @@ class CoreAsync:
         signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
         emp_headers = {
-          "lgemp-x-app-key": OAUTH_CLIENT_KEY,
-          "lgemp-x-date": timestamp,
-          "lgemp-x-session-key": account["loginSessionID"],
-          "lgemp-x-signature": signature,
-          "Accept": "application/json",
-          "X-Device-Type": "M01",
-          "X-Device-Platform": "ADR",
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Access-Control-Allow-Origin": "*",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Accept-Language": "en-US,en;q=0.9",
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.44",
+            "lgemp-x-app-key": OAUTH_CLIENT_KEY,
+            "lgemp-x-date": timestamp,
+            "lgemp-x-session-key": account["loginSessionID"],
+            "lgemp-x-signature": signature,
+            "Accept": "application/json",
+            "X-Device-Type": "M01",
+            "X-Device-Platform": "ADR",
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Access-Control-Allow-Origin": "*",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.44",
         }
 
         async with self._get_session().post(
-            url=V2_EMP_SESS_URL, headers=emp_headers, data=emp_data, timeout=self._timeout, raise_for_status=False
+            url=V2_EMP_SESS_URL,
+            headers=emp_headers,
+            data=emp_data,
+            timeout=self._timeout,
+            raise_for_status=False,
         ) as resp:
             token_data = await resp.json()
 
@@ -484,14 +506,16 @@ class CoreAsync:
         """Return url used for oauth2 authentication."""
 
         headers = {
-          "Accept": "application/json",
-          "x-thinq-application-key": "wideq",
-          "x-thinq-security-key": SECURITY_KEY,
+            "Accept": "application/json",
+            "x-thinq-application-key": "wideq",
+            "x-thinq-security-key": SECURITY_KEY,
         }
 
         async with self._get_session().post(
             url=GATEWAY_URL,
-            json={DATA_ROOT: {"countryCode": self._country, "langCode": self._language}},
+            json={
+                DATA_ROOT: {"countryCode": self._country, "langCode": self._language}
+            },
             headers=headers,
             timeout=self._timeout,
             raise_for_status=False,
@@ -509,15 +533,15 @@ class CoreAsync:
         sig = self._oauth2_signature(f"{V2_USER_INFO}\n{timestamp}", OAUTH_SECRET_KEY)
 
         headers = {
-          "Accept": "application/json",
-          "Authorization": f"Bearer {access_token}",
-          "X-Lge-Svccode": SVC_CODE,
-          "X-Application-Key": APPLICATION_KEY,
-          "lgemp-x-app-key": CLIENT_ID,
-          "X-Device-Type": "M01",
-          "X-Device-Platform": "ADR",
-          "x-lge-oauth-date": timestamp,
-          "x-lge-oauth-signature": sig,
+            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "X-Lge-Svccode": SVC_CODE,
+            "X-Application-Key": APPLICATION_KEY,
+            "lgemp-x-app-key": CLIENT_ID,
+            "X-Device-Type": "M01",
+            "X-Device-Platform": "ADR",
+            "x-lge-oauth-date": timestamp,
+            "x-lge-oauth-signature": sig,
         }
 
         async with self._get_session().get(
@@ -551,7 +575,11 @@ class CoreAsync:
         }
 
         async with self._get_session().post(
-            url=url, headers=headers, data=data, timeout=self._timeout, raise_for_status=False
+            url=url,
+            headers=headers,
+            data=data,
+            timeout=self._timeout,
+            raise_for_status=False,
         ) as resp:
             if resp.status != 200:
                 raise exc.TokenError()
@@ -596,7 +624,7 @@ class CoreAsync:
         return out["access_token"], out["expires_in"]
 
 
-class Gateway():
+class Gateway:
     def __init__(self, gw_info: dict, core: CoreAsync) -> None:
         self.auth_base = add_end_slash(gw_info["empUri"])
         self.emp_base_uri = add_end_slash(gw_info["empTermsUri"])
@@ -668,7 +696,7 @@ class Gateway():
         }
 
 
-class Auth():
+class Auth:
     """ThinQ authentication object"""
 
     def __init__(
@@ -685,7 +713,9 @@ class Auth():
         self.refresh_token = refresh_token
         self.oauth_url = oauth_url
         self.access_token = access_token
-        self.token_validity = int(token_validity) if token_validity else DEFAULT_TOKEN_VALIDITY
+        self.token_validity = (
+            int(token_validity) if token_validity else DEFAULT_TOKEN_VALIDITY
+        )
         self.user_number = user_number
         self._token_created_on = datetime.utcnow() if access_token else datetime.min
 
@@ -831,7 +861,7 @@ class Auth():
         )
 
 
-class Session():
+class Session:
     def __init__(self, auth: Auth, session_id=0) -> None:
         self._auth = auth
         self.session_id = session_id
@@ -972,12 +1002,12 @@ class Session():
         )
 
     async def set_device_controls(
-            self,
-            device_id,
-            ctrl_key,
-            command=None,
-            value=None,
-            data=None,
+        self,
+        device_id,
+        ctrl_key,
+        command=None,
+        value=None,
+        data=None,
     ):
         """
         Control a device's settings.
@@ -996,24 +1026,26 @@ class Session():
             }
 
         if payload:
-            payload.update({
-                "deviceId": device_id,
-                "workId": gen_uuid(),
-            })
+            payload.update(
+                {
+                    "deviceId": device_id,
+                    "workId": gen_uuid(),
+                }
+            )
             res = await self.post("rti/rtiControl", payload)
             _LOGGER.debug("Set V1 result: %s", str(res))
 
         return res
 
     async def set_device_v2_controls(
-            self,
-            device_id,
-            ctrl_key,
-            command=None,
-            key=None,
-            value=None,
-            *,
-            ctrl_path=None,
+        self,
+        device_id,
+        ctrl_key,
+        command=None,
+        key=None,
+        value=None,
+        *,
+        ctrl_path=None,
     ):
         """Control a device's settings based on api V2."""
 
@@ -1067,7 +1099,7 @@ class Session():
         await self.post("rti/delControlPermission", {"deviceId": device_id})
 
 
-class ClientAsync():
+class ClientAsync:
     """
     A higher-level API wrapper that provides a session more easily
     and allows serialization of state.
@@ -1080,7 +1112,7 @@ class ClientAsync():
         country: str = DEFAULT_COUNTRY,
         language: str = DEFAULT_LANGUAGE,
         *,
-        enable_emulation: bool = False
+        enable_emulation: bool = False,
     ) -> None:
         """Initialize the client."""
         # The three steps required to get access to call the API.
@@ -1237,7 +1269,12 @@ class ClientAsync():
             CoreAsync(country, language, session=aiohttp_session)
         )
         auth = await Auth.from_user_login(gateway, username, password)
-        client = cls(auth=auth, country=country, language=language, enable_emulation=enable_emulation)
+        client = cls(
+            auth=auth,
+            country=country,
+            language=language,
+            enable_emulation=enable_emulation,
+        )
         client._session = auth.start_session()
         await client._load_devices()
         return client
@@ -1265,7 +1302,12 @@ class ClientAsync():
             CoreAsync(country, language, session=aiohttp_session)
         )
         auth = Auth(gateway, refresh_token, oauth_url)
-        client = cls(auth=auth, country=country, language=language, enable_emulation=enable_emulation)
+        client = cls(
+            auth=auth,
+            country=country,
+            language=language,
+            enable_emulation=enable_emulation,
+        )
         await client.refresh()
         return client
 
@@ -1301,9 +1343,9 @@ class ClientAsync():
         content = await self._auth.gateway.core.http_get_bytes(info_url)
 
         # we use cchardet to detect correct encoding and convert to unicode string
-        encoding = cchardet.detect(content)['encoding']
+        encoding = cchardet.detect(content)["encoding"]
         try:
-            str_content = str(content, encoding, errors='replace')
+            str_content = str(content, encoding, errors="replace")
         except (LookupError, TypeError):
             # A LookupError is raised if the encoding was not found which could
             # indicate a misspelling or similar mistake.
@@ -1311,7 +1353,7 @@ class ClientAsync():
             # A TypeError can be raised if encoding is None
             #
             # So we try blindly encoding.
-            str_content = str(content, errors='replace')
+            str_content = str(content, errors="replace")
 
         enc_resp = str_content.encode()
         return json.loads(enc_resp)
@@ -1376,7 +1418,7 @@ class ClientAsync():
                 CoreAsync(
                     data.get("country", DEFAULT_COUNTRY),
                     data.get("language", DEFAULT_LANGUAGE),
-                )
+                ),
             )
 
         if "auth" in state and gateway:

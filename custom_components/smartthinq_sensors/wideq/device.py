@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections import namedtuple
+from datetime import datetime, timedelta
 from enum import Enum
 import json
 import logging
-from collections import namedtuple
-from datetime import datetime, timedelta
 from numbers import Number
 from typing import Any, Optional
 
@@ -22,8 +22,8 @@ from .const import (
     STATE_OPTIONITEM_ON,
     STATE_OPTIONITEM_UNKNOWN,
     UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT
-    )
+    UNIT_TEMP_FAHRENHEIT,
+)
 from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
 
@@ -62,7 +62,7 @@ class UnitTempModes(Enum):
     Fahrenheit = UNIT_TEMP_FAHRENHEIT
 
 
-class Monitor():
+class Monitor:
     """
     A monitoring task for a device.
 
@@ -70,13 +70,20 @@ class Monitor():
     task expires, it attempts to start a new one automatically. This
     makes one `Monitor` object suitable for long-term monitoring.
     """
+
     _client_lock = asyncio.Lock()
     _client_connected = True
     _critical_error = False
     _last_client_refresh = datetime.min
     _not_logged_count = 0
 
-    def __init__(self, client, device_id: str, platform_type=PlatformType.THINQ1, device_name: str = None) -> None:
+    def __init__(
+        self,
+        client,
+        device_id: str,
+        platform_type=PlatformType.THINQ1,
+        device_name: str = None,
+    ) -> None:
         """Initialize monitor class."""
         self._client: ClientAsync = client
         self._device_id = device_id
@@ -87,7 +94,9 @@ class Monitor():
         self._has_error = False
         self._invalid_credential_count = 0
 
-    def _raise_error(self, msg, *, not_logged=False, exc: Exception = None, exc_info=False) -> None:
+    def _raise_error(
+        self, msg, *, not_logged=False, exc: Exception = None, exc_info=False
+    ) -> None:
         """Log and raise error with different level depending on condition."""
         log_lev = logging.DEBUG
         if not_logged and Monitor._client_connected:
@@ -98,9 +107,14 @@ class Monitor():
         if not self._has_error:
             self._has_error = True
             log_lev = logging.WARNING
-        _LOGGER.log(log_lev, "%s - Device: %s", msg, self._device_descr, exc_info=exc_info)
+        _LOGGER.log(
+            log_lev, "%s - Device: %s", msg, self._device_descr, exc_info=exc_info
+        )
 
-        if not Monitor._critical_error and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED:
+        if (
+            not Monitor._critical_error
+            and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED
+        ):
             Monitor._critical_error = True
             _LOGGER.error(msg, exc_info=exc_info)
 
@@ -160,17 +174,27 @@ class Monitor():
 
             except core_exc.NotConnectedError:
                 if self._has_error:
-                    _LOGGER.info("Connection is now available - Device: %s", self._device_descr)
+                    _LOGGER.info(
+                        "Connection is now available - Device: %s", self._device_descr
+                    )
                     self._has_error = False
-                _LOGGER.debug("Status not available. Device %s not connected", self._device_descr)
+                _LOGGER.debug(
+                    "Status not available. Device %s not connected", self._device_descr
+                )
                 self._disconnected = True
                 raise
 
             except core_exc.DeviceNotFound:
-                self._raise_error(f"Device ID {self._device_id} is invalid, status update failed")
+                self._raise_error(
+                    f"Device ID {self._device_id} is invalid, status update failed"
+                )
 
             except core_exc.InvalidResponseError as exc:
-                self._raise_error("Received invalid response, status update failed", exc=exc, exc_info=True)
+                self._raise_error(
+                    "Received invalid response, status update failed",
+                    exc=exc,
+                    exc_info=True,
+                )
 
             except core_exc.NotLoggedInError as exc:
                 # This could be raised by an expired token
@@ -204,7 +228,9 @@ class Monitor():
 
             except aiohttp.ClientError as exc:
                 # These are network errors, refresh client is not required
-                self._raise_error("Connection to ThinQ failed. Network connection error", exc=exc)
+                self._raise_error(
+                    "Connection to ThinQ failed. Network connection error", exc=exc
+                )
 
             except Exception as exc:
                 self._raise_error(
@@ -281,7 +307,9 @@ class Monitor():
             if not self._work_id:
                 return None
         try:
-            return await self._client.session.monitor_poll(self._device_id, self._work_id)
+            return await self._client.session.monitor_poll(
+                self._device_id, self._work_id
+            )
         except core_exc.MonitorError:
             # Try to restart the task.
             await self.stop()
@@ -312,8 +340,8 @@ class Monitor():
 
     async def poll_json(self) -> Optional[dict[str, Any]]:
         """For devices where status is reported via JSON data, get the
-            decoded status result (or None if status is not available).
-            """
+        decoded status result (or None if status is not available).
+        """
 
         data = await self.poll()
         return self.decode_json(data) if data else None
@@ -332,9 +360,8 @@ BitValue = namedtuple("BitValue", ["options"])
 ReferenceValue = namedtuple("ReferenceValue", ["reference"])
 
 
-class ModelInfo():
-    """A description of a device model's capabilities.
-        """
+class ModelInfo:
+    """A description of a device model's capabilities."""
 
     def __init__(self, data):
         """Initialize the class."""
@@ -458,7 +485,6 @@ class ModelInfo():
         return enum_options[value]
 
     def _get_bit_key(self, key):
-
         def search_bit_key():
             if not data:
                 return {}
@@ -503,7 +529,7 @@ class ModelInfo():
         for i in range(0, length):
             bit_index = 2 ** (start_bit + i)
             bit = 1 if bit_value & bit_index else 0
-            val += bit * (2 ** i)
+            val += bit * (2**i)
         return str(val)
 
     def reference_name(self, key, value, ref_key="_comment"):
@@ -558,7 +584,7 @@ class ModelInfo():
             start_byte: int = item["startByte"]
             end_byte: int = start_byte + item["length"]
             if total_bytes >= end_byte:
-                for v in data[start_byte: end_byte]:
+                for v in data[start_byte:end_byte]:
                     value = (value << 8) + v
             decoded[key] = str(value)
         return decoded
@@ -656,14 +682,16 @@ class ModelInfo():
                     except ValueError:
                         value = ""
                 elif value_key in convert_rule:
-                    value_rules = convert_rule[value_key].get("MonitoringConvertingRule", {})
+                    value_rules = convert_rule[value_key].get(
+                        "MonitoringConvertingRule", {}
+                    )
                     if raw_value in value_rules:
                         value = value_rules[raw_value]
             decoded[value_key] = str(value)
         return decoded
 
 
-class ModelInfoV2():
+class ModelInfoV2:
     """
     A description of a device model's capabilities.
     Type V2.
@@ -724,7 +752,9 @@ class ModelInfoV2():
         elif data_type in ("Enum", "enum"):
             return data["valueMapping"]
         elif data_type == "range":
-            return RangeValue(data["valueMapping"]["min"], data["valueMapping"]["max"], 1)
+            return RangeValue(
+                data["valueMapping"]["min"], data["valueMapping"]["max"], 1
+            )
         # elif d['dataType'] == 'Bit':
         #    bit_values = {}
         #    for bit in d['option']:
@@ -922,7 +952,9 @@ class ModelInfoV2AC(ModelInfo):
             return EnumValue(d["value_mapping"])
         if d["data_type"] in ("Range", "range"):
             return RangeValue(
-                d["value_validation"]["min"], d["value_validation"]["max"], d["value_validation"].get("step", 0)
+                d["value_validation"]["min"],
+                d["value_validation"]["max"],
+                d["value_validation"].get("step", 0),
             )
         # elif d["type"] == "Bit":
         #    bit_values = {}
@@ -948,7 +980,7 @@ class ModelInfoV2AC(ModelInfo):
         return super().decode_snapshot(data, key)
 
 
-class Device():
+class Device:
     """
     A higher-level interface to a specific device.
     Unlike `DeviceInfo`, which just stores data *about* a device,
@@ -956,7 +988,13 @@ class Device():
     regarding the device.
     """
 
-    def __init__(self, client: ClientAsync, device: DeviceInfo, status=None, available_features=None):
+    def __init__(
+        self,
+        client: ClientAsync,
+        device: DeviceInfo,
+        status=None,
+        available_features=None,
+    ):
         """
         Create a wrapper for a `DeviceInfo` object associated with a
         `Client`.
@@ -1061,14 +1099,14 @@ class Device():
         return [ctrl, cmd, key]
 
     async def _set_control(
-            self,
-            ctrl_key,
-            command=None,
-            *,
-            key=None,
-            value=None,
-            data=None,
-            ctrl_path=None,
+        self,
+        ctrl_key,
+        command=None,
+        *,
+        key=None,
+        value=None,
+        data=None,
+        ctrl_path=None,
     ):
         """Set a device's control for `key` to `value`."""
         if self._client.emulation:
@@ -1101,7 +1139,9 @@ class Device():
         """
         return None
 
-    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
         """Set a device's control for `key` to `value`."""
         log_level = logging.INFO if self._client.emulation else logging.DEBUG
         full_key = self._prepare_command(ctrl_key, command, key, value)
@@ -1109,14 +1149,19 @@ class Device():
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s: %s",
-                self._device_info.id, str(full_key),
+                self._device_info.id,
+                str(full_key),
             )
             await self._set_control(full_key, ctrl_path=ctrl_path)
         else:
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s:  %s - %s - %s - %s",
-                self._device_info.id, ctrl_key, command, key, value,
+                self._device_info.id,
+                ctrl_key,
+                command,
+                key,
+                value,
             )
             await self._set_control(
                 ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
@@ -1139,7 +1184,9 @@ class Device():
         if not self._should_poll:
             return
         data = await self._client.session.get_device_config(
-            self._device_info.id, key, "Control",
+            self._device_info.id,
+            key,
+            "Control",
         )
         if self._control_set == 0:
             self._control_set = 1
@@ -1197,8 +1244,8 @@ class Device():
             return
         call_time = datetime.utcnow()
         if self._last_additional_poll is None:
-            self._last_additional_poll = (
-                call_time - timedelta(seconds=max(poll_interval - 10, 1))
+            self._last_additional_poll = call_time - timedelta(
+                seconds=max(poll_interval - 10, 1)
             )
         difference = (call_time - self._last_additional_poll).total_seconds()
         if difference >= poll_interval:
@@ -1206,11 +1253,11 @@ class Device():
             await self._get_device_info()
 
     async def device_poll(
-            self,
-            snapshot_key="",
-            *,
-            thinq1_additional_poll=0,
-            thinq2_query_device=False,
+        self,
+        snapshot_key="",
+        *,
+        thinq1_additional_poll=0,
+        thinq2_query_device=False,
     ):
         """
         Poll the device's current state.
@@ -1294,7 +1341,7 @@ class Device():
         return True
 
 
-class DeviceStatus():
+class DeviceStatus:
     """A higher-level interface to a specific device status."""
 
     def __init__(self, device, data):
@@ -1409,9 +1456,7 @@ class DeviceStatus():
         if data_is_num:
             value = str(int(value))
 
-        return self._device.model_info.enum_name(
-            curr_key, value
-        )
+        return self._device.model_info.enum_name(curr_key, value)
 
     def lookup_range(self, key):
         curr_key = self._get_data_key(key)
@@ -1433,9 +1478,7 @@ class DeviceStatus():
         else:
             str_val = self._data.get(key)
             if not str_val:
-                str_val = self._device.model_info.bit_value(
-                    key, self._data
-                )
+                str_val = self._device.model_info.bit_value(key, self._data)
 
         if str_val is None:
             return None
@@ -1459,7 +1502,9 @@ class DeviceStatus():
             return STATE_OPTIONITEM_ON
         return STATE_OPTIONITEM_OFF
 
-    def _update_feature(self, key, status, get_text=True, item_key=None, *, allow_none=False):
+    def _update_feature(
+        self, key, status, get_text=True, item_key=None, *, allow_none=False
+    ):
         """Update the status features."""
         if not self._device.feature_title(key, item_key, status, allow_none):
             return None

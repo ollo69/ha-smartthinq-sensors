@@ -5,14 +5,6 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Awaitable, Callable, List, Tuple
 
-from .wideq import (
-    FEAT_HUMIDITY,
-    FEAT_OUT_WATER_TEMP,
-    UNIT_TEMP_FAHRENHEIT,
-    DeviceType,
-)
-from .wideq.ac import AirConditionerDevice, ACMode
-
 from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
@@ -32,11 +24,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import (
-    TEMP_UNIT_LOOKUP,
-    LGERefrigeratorDevice,
-    get_entity_name,
-)
+from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, get_entity_name
+from .wideq import FEAT_HUMIDITY, FEAT_OUT_WATER_TEMP, UNIT_TEMP_FAHRENHEIT, DeviceType
+from .wideq.ac import ACMode, AirConditionerDevice
 
 # general ac attributes
 ATTR_FRIDGE = "fridge"
@@ -66,6 +56,7 @@ _LOGGER = logging.getLogger(__name__)
 @dataclass
 class ThinQRefClimateRequiredKeysMixin:
     """Mixin for required keys."""
+
     range_temp_fn: Callable[[Any], List[float]]
     set_temp_fn: Callable[[Any, float], Awaitable[None]]
     temp_fn: Callable[[Any], float | str]
@@ -101,7 +92,7 @@ REFRIGERATOR_CLIMATE: Tuple[ThinQRefClimateEntityDescription, ...] = (
 def remove_prefix(text: str, prefix: str) -> str:
     """Remove a prefix from a string."""
     if text.startswith(prefix):
-        return text[len(prefix):]
+        return text[len(prefix) :]
     return text
 
 
@@ -176,9 +167,7 @@ class LGEACClimate(LGEClimate):
         self._attr_fan_modes = self._device.fan_speeds
         self._attr_swing_modes = [
             f"{SWING_PREFIX[0]}{mode}" for mode in self._device.vertical_step_modes
-        ] + [
-            f"{SWING_PREFIX[1]}{mode}" for mode in self._device.horizontal_step_modes
-        ]
+        ] + [f"{SWING_PREFIX[1]}{mode}" for mode in self._device.horizontal_step_modes]
         self._attr_preset_mode = None
 
         self._hvac_mode_lookup: dict[str, HVACMode] | None = None
@@ -381,9 +370,7 @@ class LGEACClimate(LGEClimate):
         avl_mode = False
         curr_mode = None
         set_hor_swing = swing_mode.startswith(SWING_PREFIX[1])
-        dev_mode = remove_prefix(
-            swing_mode, SWING_PREFIX[1 if set_hor_swing else 0]
-        )
+        dev_mode = remove_prefix(swing_mode, SWING_PREFIX[1 if set_hor_swing else 0])
         if set_hor_swing:
             if dev_mode in self._device.horizontal_step_modes:
                 avl_mode = True
@@ -435,9 +422,9 @@ class LGERefrigeratorClimate(LGEClimate):
     entity_description = ThinQRefClimateEntityDescription
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQRefClimateEntityDescription,
+        self,
+        api: LGEDevice,
+        description: ThinQRefClimateEntityDescription,
     ) -> None:
         """Initialize the climate."""
         super().__init__(api)

@@ -2,17 +2,10 @@
 from __future__ import annotations
 
 import logging
-from pycountry import countries as py_countries, languages as py_languages
 import re
 from typing import Any
 
-import voluptuous as vol
-
-from .wideq.core_async import ClientAsync
-from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
-
 from homeassistant import config_entries
-from homeassistant.core import callback
 from homeassistant.const import (
     CONF_BASE,
     CONF_PASSWORD,
@@ -21,17 +14,22 @@ from homeassistant.const import (
     CONF_USERNAME,
     __version__,
 )
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from pycountry import countries as py_countries, languages as py_languages
+import voluptuous as vol
 
+from . import LGEAuthentication, is_valid_ha_version
 from .const import (
-    DOMAIN,
     CONF_LANGUAGE,
     CONF_OAUTH_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
+    DOMAIN,
     __min_ha_version__,
 )
-from . import LGEAuthentication, is_valid_ha_version
+from .wideq.core_async import ClientAsync
+from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
 
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
@@ -111,7 +109,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(
                 reason="unsupported_version",
                 description_placeholders={
-                    "req_ver": __min_ha_version__, "run_ver": __version__
+                    "req_ver": __min_ha_version__,
+                    "run_ver": __version__,
                 },
             )
 
@@ -199,18 +198,18 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
         try:
             if username and password:
-                client = await lge_auth.create_client_from_login(
-                    username, password
-                )
+                client = await lge_auth.create_client_from_login(username, password)
             else:
                 client = await lge_auth.create_client_from_token(
                     self._token, self._oauth_url
                 )
         except (AuthenticationError, InvalidCredentialError) as exc:
-            msg = "Invalid ThinQ credential error. Please use the LG App on your" \
-                  " mobile device to verify if there are Term of Service to accept." \
-                  " Account based on social network are not supported and in most" \
-                  " case do not work with this integration."
+            msg = (
+                "Invalid ThinQ credential error. Please use the LG App on your"
+                " mobile device to verify if there are Term of Service to accept."
+                " Account based on social network are not supported and in most"
+                " case do not work with this integration."
+            )
             _LOGGER.exception(msg, exc_info=exc)
             return None, RESULT_CRED_FAIL
         except Exception as exc:
@@ -259,7 +258,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if entries := self._async_current_entries():
             entry = entries[0]
             self.hass.config_entries.async_update_entry(
-                entry=entry, data=data,
+                entry=entry,
+                data=data,
             )
             self.hass.async_create_task(
                 self.hass.config_entries.async_reload(entry.entry_id)
@@ -283,16 +283,18 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Optional(CONF_USERNAME, default=""): str,
                 vol.Optional(CONF_PASSWORD, default=""): str,
-                vol.Required(CONF_REGION, default=self._region or ""): vol.In(COUNTRIES),
-                vol.Required(CONF_LANGUAGE, default=self._user_lang or ""): vol.In(LANGUAGES),
+                vol.Required(CONF_REGION, default=self._region or ""): vol.In(
+                    COUNTRIES
+                ),
+                vol.Required(CONF_LANGUAGE, default=self._user_lang or ""): vol.In(
+                    LANGUAGES
+                ),
                 vol.Required(CONF_USE_REDIRECT, default=False): bool,
             }
         )
         if self.show_advanced_options:
             schema = schema.extend(
-                {
-                    vol.Required(CONF_USE_HA_SESSION, default=False): bool
-                }
+                {vol.Required(CONF_USE_HA_SESSION, default=False): bool}
             )
 
         return schema

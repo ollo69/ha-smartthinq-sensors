@@ -3,11 +3,7 @@ from enum import Enum
 import logging
 from typing import Optional
 
-from .const import (
-    FEAT_HUMIDITY,
-    FEAT_TARGET_HUMIDITY,
-    FEAT_WATER_TANK_FULL,
-)
+from .const import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, FEAT_WATER_TANK_FULL
 from .core_exceptions import InvalidRequestError
 from .device import Device, DeviceStatus
 
@@ -115,7 +111,9 @@ class DeHumidifierDevice(Device):
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in DHumMode]
-            self._supported_op_modes = [DHumMode(o).name for o in mapping.values() if o in mode_list]
+            self._supported_op_modes = [
+                DHumMode(o).name for o in mapping.values() if o in mode_list
+            ]
         return self._supported_op_modes
 
     @property
@@ -128,7 +126,9 @@ class DeHumidifierDevice(Device):
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in DHumFanSpeed]
-            self._supported_fan_speeds = [DHumFanSpeed(o).name for o in mapping.values() if o in mode_list]
+            self._supported_fan_speeds = [
+                DHumFanSpeed(o).name for o in mapping.values() if o in mode_list
+            ]
         return self._supported_fan_speeds
 
     @property
@@ -204,7 +204,9 @@ class DeHumidifierDevice(Device):
             self._current_power_supported = False
             return 0
 
-    async def set(self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None):
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path

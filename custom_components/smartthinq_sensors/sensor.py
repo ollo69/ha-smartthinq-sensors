@@ -6,10 +6,40 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Callable, Tuple
 
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    PERCENTAGE,
+    POWER_WATT,
+    STATE_UNAVAILABLE,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from . import LGEDevice
+from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import (
+    DEVICE_ICONS,
+    WASH_DEVICE_TYPES,
+    LGEACDevice,
+    LGERangeDevice,
+    LGERefrigeratorDevice,
+    LGEWashDevice,
+    get_entity_name,
+    get_multiple_devices_types,
+)
 from .wideq import (
+    FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
     FEAT_COOKTOP_LEFT_REAR_STATE,
-    FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_DRYLEVEL,
@@ -42,37 +72,6 @@ from .wideq import (
     FEAT_WATERTEMP,
     WM_DEVICE_TYPES,
     DeviceType,
-)
-
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    PERCENTAGE,
-    POWER_WATT,
-    STATE_UNAVAILABLE,
-)
-from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
-
-from . import LGEDevice
-from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import (
-    DEVICE_ICONS,
-    WASH_DEVICE_TYPES,
-    LGEACDevice,
-    LGERangeDevice,
-    LGERefrigeratorDevice,
-    LGEWashDevice,
-    get_entity_name,
-    get_multiple_devices_types,
 )
 
 # service definition
@@ -438,7 +437,9 @@ DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 
 
-def _sensor_exist(lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription) -> bool:
+def _sensor_exist(
+    lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription
+) -> bool:
     """Check if a sensor exist for device."""
     if sensor_desc.value_fn is not None:
         return True
@@ -473,7 +474,9 @@ async def async_setup_entry(
             [
                 LGEWashDeviceSensor(lge_device, sensor_desc)
                 for sensor_desc in WASH_DEV_SENSORS
-                for lge_device in get_multiple_devices_types(lge_devices, WASH_DEVICE_TYPES)
+                for lge_device in get_multiple_devices_types(
+                    lge_devices, WASH_DEVICE_TYPES
+                )
                 if _sensor_exist(lge_device, sensor_desc)
             ]
         )
@@ -558,10 +561,10 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     entity_description = ThinQSensorEntityDescription
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQSensorEntityDescription,
-            wrapped_device=None,
+        self,
+        api: LGEDevice,
+        description: ThinQSensorEntityDescription,
+        wrapped_device=None,
     ):
         """Initialize the sensor."""
         super().__init__(api.coordinator)
@@ -641,9 +644,9 @@ class LGEWashDeviceSensor(LGESensor):
     """A sensor to monitor LGE Wash devices"""
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQSensorEntityDescription,
+        self,
+        api: LGEDevice,
+        description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGEWashDevice(api))
@@ -672,9 +675,9 @@ class LGERefrigeratorSensor(LGESensor):
     """A sensor to monitor LGE Refrigerator devices"""
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQSensorEntityDescription,
+        self,
+        api: LGEDevice,
+        description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGERefrigeratorDevice(api))
@@ -703,9 +706,9 @@ class LGERangeSensor(LGESensor):
     """A sensor to monitor LGE range devices"""
 
     def __init__(
-            self,
-            api: LGEDevice,
-            description: ThinQSensorEntityDescription,
+        self,
+        api: LGEDevice,
+        description: ThinQSensorEntityDescription,
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGERangeDevice(api))
