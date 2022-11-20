@@ -1,0 +1,28 @@
+name: Linting
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches: '*'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: isort
+        run: isort --diff --check .
+      - name: Black
+        run: black --line-length 88 --check .
