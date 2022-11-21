@@ -69,6 +69,9 @@ SMARTTHINQ_PLATFORMS = [
     Platform.SWITCH,
 ]
 
+AUTH_RETRY = "auth_retry"
+MAX_AUTH_RETRY = 5
+
 MAX_DISC_COUNT = 4
 SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
 
@@ -230,6 +233,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         client = await lge_auth.create_client_from_token(refresh_token, oauth_url)
 
     except (AuthenticationError, InvalidCredentialError) as exc:
+        if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
+            hass.data.pop(DOMAIN)
+            # Launch config entries setup
+            hass.async_create_task(
+                hass.config_entries.flow.async_init(
+                    DOMAIN, context={"source": SOURCE_IMPORT}, data=entry.data
+                )
+            )
+            return False
+
+        hass.data[DOMAIN][AUTH_RETRY] = auth_retry + 1
         msg = (
             "Invalid ThinQ credential error, integration setup aborted."
             " Please use the LG App on your mobile device to ensure your"
@@ -293,63 +307,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
     await async_setup_entity_platforms(hass, entry, SMARTTHINQ_PLATFORMS)
 
-    async def _async_discover_devices(event_time):
-        """Discover new devices."""
-        _LOGGER.debug("Discovering new devices...")
-
-        old_devs = hass.data[DOMAIN][DISCOVERED_DEVICES]
-        lge_devs, unsupported_devs, new_devs = await lge_devices_setup(
-            hass, client, old_devs
-        )
-        hass.data[DOMAIN][DISCOVERED_DEVICES] = new_devs
-
-        # send signal to set up new entities
-        if lge_devs:
-            _notify_message(
-                hass, "new_devices", "SmartThinQ Sensors", "Discovered new devices."
-            )
-            async_dispatcher_send(hass, LGE_DISCOVERY_NEW, lge_devs)
-
-        # remove device not available anymore
-        if lge_devs or unsupported_devs or len(old_devs) != len(new_devs):
-            cleanup_orphan_lge_devices(hass, entry.entry_id, client)
-
-            # Update hass data LGE_DEVICES
-            prev_lge_devs: dict[DeviceType, list[LGEDevice]] = hass.data[DOMAIN][
-                LGE_DEVICES
-            ]
-            new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
-            for dev_type, dev_list in prev_lge_devs.items():
-                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
-                if new_dev_list:
-                    new_lge_devs[dev_type] = new_dev_list
-            for dev_type, dev_list in lge_devs.items():
-                if dev_type in new_lge_devs:
-                    new_lge_devs[dev_type].extend(dev_list)
-                else:
-                    new_lge_devs[dev_type] = dev_list
-            hass.data[DOMAIN][LGE_DEVICES] = new_lge_devs
-
-            # Update hass data UNSUPPORTED_DEVICES
-            prev_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = hass.data[DOMAIN][
-                UNSUPPORTED_DEVICES
-            ]
-            new_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = {}
-            for dev_type, dev_list in prev_uns_devs.items():
-                new_dev_list = [dev for dev in dev_list if dev.id in new_devs]
-                if new_dev_list:
-                    new_uns_devs[dev_type] = new_dev_list
-            for dev_type, dev_list in unsupported_devs.items():
-                if dev_type in new_uns_devs:
-                    new_uns_devs[dev_type].extend(dev_list)
-                else:
-                    new_uns_devs[dev_type] = dev_list
-            hass.data[DOMAIN][UNSUPPORTED_DEVICES] = new_uns_devs
-
-    # schedule discover new devices every 5 minutes
-    entry.async_on_unload(
-        async_track_time_interval(hass, _async_discover_devices, timedelta(minutes=5))
-    )
+    start_devices_discovery(hass, entry, client)
 
     return True
 
@@ -635,3 +593,68 @@ def cleanup_orphan_lge_devices(
         if dev_id in valid_lg_dev_ids:
             continue
         device_registry.async_remove_device(dev_id)
+
+
+@callback
+def start_devices_discovery(
+    hass: HomeAssistant, entry: ConfigEntry, client: ClientAsync
+) -> None:
+    """Start devices discovery."""
+
+    async def _async_discover_devices(_):
+        """Discover new devices."""
+        _LOGGER.debug("Discovering new devices...")
+
+        old_devs = hass.data[DOMAIN][DISCOVERED_DEVICES]
+        lge_devs, unsupported_devs, new_devs = await lge_devices_setup(
+            hass, client, old_devs
+        )
+        hass.data[DOMAIN][DISCOVERED_DEVICES] = new_devs
+
+        # send signal to set up new entities
+        if lge_devs:
+            _notify_message(
+                hass, "new_devices", "SmartThinQ Sensors", "Discovered new devices."
+            )
+            async_dispatcher_send(hass, LGE_DISCOVERY_NEW, lge_devs)
+
+        # remove device not available anymore
+        if lge_devs or unsupported_devs or len(old_devs) != len(new_devs):
+            cleanup_orphan_lge_devices(hass, entry.entry_id, client)
+
+            # Update hass data LGE_DEVICES
+            prev_lge_devs: dict[DeviceType, list[LGEDevice]] = hass.data[DOMAIN][
+                LGE_DEVICES
+            ]
+            new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
+            for dev_type, dev_list in prev_lge_devs.items():
+                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
+                if new_dev_list:
+                    new_lge_devs[dev_type] = new_dev_list
+            for dev_type, dev_list in lge_devs.items():
+                if dev_type in new_lge_devs:
+                    new_lge_devs[dev_type].extend(dev_list)
+                else:
+                    new_lge_devs[dev_type] = dev_list
+            hass.data[DOMAIN][LGE_DEVICES] = new_lge_devs
+
+            # Update hass data UNSUPPORTED_DEVICES
+            prev_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = hass.data[DOMAIN][
+                UNSUPPORTED_DEVICES
+            ]
+            new_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = {}
+            for dev_type, dev_list in prev_uns_devs.items():
+                new_dev_list = [dev for dev in dev_list if dev.id in new_devs]
+                if new_dev_list:
+                    new_uns_devs[dev_type] = new_dev_list
+            for dev_type, dev_list in unsupported_devs.items():
+                if dev_type in new_uns_devs:
+                    new_uns_devs[dev_type].extend(dev_list)
+                else:
+                    new_uns_devs[dev_type] = dev_list
+            hass.data[DOMAIN][UNSUPPORTED_DEVICES] = new_uns_devs
+
+    # schedule discover new devices every 5 minutes
+    entry.async_on_unload(
+        async_track_time_interval(hass, _async_discover_devices, timedelta(minutes=5))
+    )

@@ -22,6 +22,8 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+      - name: flake8
+        run: flake8 .
       - name: isort
         run: isort --diff --check .
       - name: Black

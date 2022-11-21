@@ -25,6 +25,7 @@ voluptuous==0.13.1
 voluptuous-serialize==2.5.0
 yarl==1.8.1
 pre-commit
+flake8
 isort
 black
 xmltodict>=0.12.0
