@@ -1,58 +1,62 @@
+# LG ThinQ Devices integration for HomeAssistant
+
 [![](https://img.shields.io/github/release/ollo69/ha-smartthinq-sensors/all.svg?style=for-the-badge)](https://github.com/ollo69/ha-smartthinq-sensors/releases)
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 [![](https://img.shields.io/github/license/ollo69/ha-smartthinq-sensors?style=for-the-badge)](LICENSE)
 [![](https://img.shields.io/badge/MAINTAINER-%40ollo69-red?style=for-the-badge)](https://github.com/ollo69)
 [![](https://img.shields.io/badge/COMMUNITY-FORUM-success?style=for-the-badge)](https://community.home-assistant.io)
 
-# LG ThinQ Devices integration for HomeAssistant
-A HomeAssistant custom integration to monitor and control LG devices using ThinQ API based on [WideQ project][wideq].<br/>
+A HomeAssistant custom integration to monitor and control LG devices using ThinQ API based on [WideQ project][wideq].
+
 Supported devices are:
+
 - Air Conditioner
 - Air Purifier
 - Dehumidifier
-- DishWasher
+- Dishwasher
 - Dryer
 - Fan
-- Range 
+- Range
 - Refrigerator
 - Styler
 - Washer
 
-
-**Important Version note:** 
-1. From version 0.3.x component name changed from `smartthinq_washer` to `smartthinq_sensors`
-If you are upgrading to version 0.3.x from previous version, you must **remove component configuration and uninstall component**
-from Home Assistant before upgrade.<br/>
-
 **Important**: The component will **not work if you have logged into the ThinQ application and registered your devices using a social network account** (Google, Facebook or Amazon). In order to use the component you need to create a new independent LG account and make sure you log into the ThinQ app and associate your devices with it.
 If during configuration you receive the message "No SmartThinQ devices found", probably your devices are still associated with the social network account. To solve the problem perform the following step:
+
 - remove your devices from the ThinQ app
 - logout from the app and login again with the independent LG account
 - reconnect the devices in the app
 
 **Important 2**: If you receive an "Invalid Credential" error during component configuration/startup, check in the LG mobile app if is requested to accept new Term Of Service.
 
-**Note**: some device status may not be correctly detected, this depends on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.<br/>
+**Note**: some device status may not be correctly detected, this depends on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.
 
 ## Installation
-You can install this component in two ways: via HACS or manually.
+
+You can install this component in two ways: via [HACS](https://github.com/hacs/integration) or manually.
 
 ### Option A: Installing via HACS
-If you have HACS, just go in the Integration Tab and search the "SmartThinQ LGE Sensors" component to install it.
 
-### Option B: Manually installation (custom_component)
-Prerequisite: SSH into your server. [Home Assistant Add-on: SSH server](https://github.com/home-assistant/hassio-addons/tree/master/ssh)
-1. Clone the git master branch.  
+If you have HACS, just go in the Integration Tab and search the "SmartThinQ LGE Sensors" component and install it.
+
+### Option B: Manual installation (custom_component)
+
+Prerequisite: SSH into your server.
+[Home Assistant Add-on: SSH server](https://github.com/home-assistant/hassio-addons/tree/master/ssh)
+
+1. Clone the git master branch.
 `git clone https://github.com/ollo69/ha-smartthinq-sensors.git`
-2. If missing, create a `custom_components` directory where your configuration.yaml file resides. This is usually in the config directory of homeassistant.  
+2. If missing, create a `custom_components` directory where your configuration.yaml file resides. This is usually in the config directory of homeassistant.
 `mkdir ~/.homeassistant/custom_components`
-3. Copy the smartthinq_sensors directory within the `custom_components` directory of your homeassistant installation from step 2.  
+3. Copy the smartthinq_sensors directory within the `custom_components` directory of your homeassistant installation from step 2.
 `cp -R ha-smartthinq-sensors/custom_components/smartthinq_sensors/ ~/.homeassistant/custom_components`
-4. (Optional) Delete the git repo.  
+4. (Optional) Delete the git repo.
 `rm -R ha-smartthinq-sensors/`
 
     After a correct installation, your configuration directory should look like the following.
-    ```
+
+    ```shell
         └── ...
         └── configuration.yaml
         └── secrects.yaml
@@ -66,26 +70,29 @@ Prerequisite: SSH into your server. [Home Assistant Add-on: SSH server](https://
 
 5. Reboot HomeAssistant
 
-## Component configuration    
+## Component configuration
+
 Once the component has been installed, you need to configure it using the web interface in order to make it work.
 
-1. Go to "Settings->Devices & Services".  
-2. Hit shift-reload in your browser (this is important!).  
-3. Click "+ Add Integration".  
+1. Go to "Settings->Devices & Services".
+2. Hit shift-reload in your browser (this is important!).
+3. Click "+ Add Integration".
 4. Search for "SmartThinQ LGE Sensors"
-5. Select the integration and **Follow setup worflow** 
+5. Select the integration and **Follow setup workflow**
 
-**Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale, 
-so be sure to use the country and language you originally created your account with. 
-Reference for valid code:<br/>
+**Important**: use your country and language code: SmartThinQ accounts are associated with a specific locale,
+so be sure to use the country and language you originally created your account with.
+Reference for valid code:
 
-- Country code: [ISO 3166-1 alpha-2 code][ISO-3166-1-alpha-2]<br/>
-- Language code: [ISO 639-1 code][ISO-639-1]<br/>
-
+- Country code: [ISO 3166-1 alpha-2 code][ISO-3166-1-alpha-2]
+- Language code: [ISO 639-1 code][ISO-639-1]
 
 ## Docs
+
 In this example, "My [insert thing]" will just be the placeholder
-#### Entities
+
+### Entities
+
 | Entity ID | Entity Name | Description |
 | :-- | :-: | :-- |
 | sensor.my_washer | My Washer | Washer, turns On when on, turns Off when off |
@@ -96,8 +103,12 @@ In this example, "My [insert thing]" will just be the placeholder
 | binary_sensor.my_dryer_error_state | My Dryer Error State | Off/OK means that it's fine. On/Error means there's an error. |
 
 #### Attributes `sensor.my_washer`
+
 Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for @KTibow's washer, values may differ for yours. Feel free to open an issue/PR.
-<details><summary>Hidden, click to expand</summary>
+<details>
+  <summary>
+    Hidden, click to expand
+  </summary>
 
 | Attribute ID | Description |
 | :-- | :-- |
@@ -126,8 +137,12 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 </details>
 
 #### Attributes `sensor.my_dryer`
+
 Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for @KTibow's dryer, values may differ for yours. Feel free to open an issue/PR.
-<details><summary>Hidden, click to expand</summary>
+<details>
+  <summary>
+    Hidden, click to expand
+  </summary>
 
 | Attribute ID | Description |
 | :-- | :-- |
@@ -149,28 +164,36 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 </details>
 
 #### Examples (washer/dryer)
+
 - Get a notification when the clothes are done drying (or when the clothes are done washing, automation)
+
 ```yaml
 - id: 'dry_clothes_notification'
-  alias: Dry clothes notification
-  description: Alert when dryer finishes
+  alias: "Dry clothes notification"
+  description: "Alert when dryer finishes"
   trigger:
   - entity_id: binary_sensor.my_dryer_dry_completed
     platform: state
-    from: 'off'
     to: 'on'
   condition: []
   action:
   - data:
-      title: 'The clothes are dry!'
-      message: 'Get them while they're hot!'
+      title: "The clothes are dry!"
+      message: "Get them while they're hot!"
     service: notify.notify
 ```
-Substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer.
-- Custom card for dryer and washer (![Screenshot of laundry card](https://user-images.githubusercontent.com/10727862/135772833-de1a555a-3a88-4319-a82c-33dbe80fa4c5.png))
-<details><summary>Hidden, click to expand</summary>
 
-Put this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
+You can substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer, for example.
+
+- Custom card for dryer and washer (![Screenshot of laundry card](https://user-images.githubusercontent.com/10727862/135772833-de1a555a-3a88-4319-a82c-33dbe80fa4c5.png))
+
+<details>
+  <summary>
+    Hidden, click to expand
+  </summary>
+
+Place this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
+
 ```js
 class LaundryCard extends HTMLElement {
   // Whenever states are updated
@@ -255,6 +278,7 @@ window.customCards.push(
 ```
 
 Lovelace:
+
 ```yaml
 type: 'custom:laundry-card'
 entity: 'sensor.the_dryer_dryer' # Washers work too!
@@ -263,9 +287,14 @@ entity: 'sensor.the_dryer_dryer' # Washers work too!
 </details>
 
 - Alternative: Template (requires mushroom-card, <img src="https://user-images.githubusercontent.com/10727862/174490941-c0148343-e31b-42fe-a856-376428ee53a5.png" width="500px"/>)
-<details><summary>Hidden, click to expand</summary>
+
+<details>
+  <summary>
+    Hidden, click to expand
+  </summary>
 
 **Note: You'll need to change the `sensor.dryer` to your own entity, and you might want to change `mdi:tumble-dryer` to `mdi:washing-machine` for washers.**
+
 ```yaml
 type: custom:mushroom-template-card
 primary: Dryer
@@ -294,9 +323,14 @@ tap_action:
 </details>
 
 - Alternative: Washer picture status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
-<details><summary>Hidden, click to expand</summary>
-    
+
+<details>
+  <summary>
+    Hidden, click to expand
+  </summary>
+
 configuration.yaml:
+
 ```yaml
 sensor:
   - platform: template
@@ -306,7 +340,9 @@ sensor:
         friendly_name: Washer Cycle State
         icon_template: 'mdi:washing-machine'
 ```
+
 lovelace:
+
 ```yaml
 cards:
   - type: conditional
@@ -332,17 +368,18 @@ type: vertical-stack
 
 </details>
 
-## Be nice!
+## Be kind
+
 If you like the component, why don't you support me by buying me a coffee?
 It would certainly motivate me to further improve this work.
 
 [![Buy me a coffee!](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/ollo69)
 
-
 Credits
+
 -------
 
-This component is developed by [Ollo69][ollo69] based on [WideQ API][wideq].<br/>
+This component is developed by [Ollo69][ollo69] based on [WideQ API][wideq].
 Original WideQ API was developed by [Adrian Sampson][adrian] under license [MIT][].
 
 [ollo69]: https://github.com/ollo69
