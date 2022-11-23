@@ -8,6 +8,7 @@ name: "Close stale issues and PRs"
 on:
   schedule:
   - cron: "0 1 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,4 +30,5 @@ jobs:
         days-before-pr-stale: -1
         days-before-issue-close: 7
         days-before-pr-close: -1
-        # operations-per-run: 100
+        ascending: true
+        operations-per-run: 100
