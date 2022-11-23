@@ -31,4 +31,4 @@ jobs:
         days-before-issue-close: 7
         days-before-pr-close: -1
         ascending: true
-        operations-per-run: 100
+        operations-per-run: 400
