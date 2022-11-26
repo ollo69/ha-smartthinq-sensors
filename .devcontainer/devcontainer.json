@@ -1,0 +1,28 @@
+{
+	"name": "SmartThinQ Sensors Component",
+	"image": "ghcr.io/ludeeus/devcontainer/integration:stable",
+	"postCreateCommand": "container install && sudo apt-get install libpcap-dev ",
+	"context": "..",
+	"appPort": [
+		"9123:8123"
+	],
+	"extensions": [
+		"ms-python.python",
+		"github.vscode-pull-request-github",
+		"ryanluker.vscode-coverage-gutters",
+		"ms-python.vscode-pylance"
+	],
+	"settings": {
+		"files.eol": "\n",
+		"editor.tabSize": 4,
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"python.linting.pylintEnabled": true,
+		"python.linting.enabled": true,
+		"python.formatting.provider": "black",
+		"python.pythonPath": "/usr/local/python/bin/python",
+		"editor.formatOnPaste": false,
+		"editor.formatOnSave": true,
+		"editor.formatOnType": true,
+		"files.trimTrailingWhitespace": true
+	}
+}

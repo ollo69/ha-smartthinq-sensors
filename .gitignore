@@ -1,8 +1,14 @@
+# pycharm
+.idea/
 
-.idea/ha-smartthinq-sensors.iml
-.idea/inspectionProfiles/profiles_settings.xml
-.idea/inspectionProfiles/Project_Default.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/vcs.xml
-.idea/workspace.xml
+# pytest
+.pytest_cache
+.cache
+
+# Unit test / coverage reports
+.coverage
+coverage.xml
+
+# Temporary files
+__pycache__/
+custom_components/__init__.py

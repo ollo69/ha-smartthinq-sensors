@@ -1,0 +1,72 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Home Assistant on port 9123",
+            "type": "shell",
+            "command": "source ./script/integration_init; container start",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Home Assistant configuration against /config",
+            "type": "shell",
+            "command": "container check",
+            "problemMatcher": []
+        },
+        {
+            "label": "Upgrade Home Assistant to latest dev",
+            "type": "shell",
+            "command": "container install",
+            "problemMatcher": []
+        },
+        {
+            "label": "Install a specific version of Home Assistant",
+            "type": "shell",
+            "command": "container set-version",
+            "problemMatcher": []
+        },
+		{
+		  "label": "Install Requirements",
+		  "type": "shell",
+		  "command": "pip3 install --use-deprecated=legacy-resolver -r requirements.txt",
+		  "group": {
+			"kind": "build",
+			"isDefault": true
+		  },
+		  "presentation": {
+			"reveal": "always",
+			"panel": "new"
+		  },
+		  "problemMatcher": []
+		},
+		{
+		  "label": "Install Test Requirements",
+		  "type": "shell",
+		  "command": "pip3 install --use-deprecated=legacy-resolver -r requirements_test.txt",
+		  "group": {
+			"kind": "build",
+			"isDefault": true
+		  },
+		  "presentation": {
+			"reveal": "always",
+			"panel": "new"
+		  },
+		  "problemMatcher": []
+		},
+		{
+		  "label": "Run PyTest",
+		  "detail": "Run pytest for integration.",
+		  "type": "shell",
+		  "command": "pytest --cov-report term-missing -vv --durations-min=1 --durations=0 --numprocesses=auto",
+		  "group": {
+			"kind": "test",
+			"isDefault": true
+		  },
+		  "presentation": {
+			"reveal": "always",
+			"panel": "new"
+		  },
+		  "problemMatcher": []
+		}
+    ]
+}

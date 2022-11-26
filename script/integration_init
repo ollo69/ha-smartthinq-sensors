@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# Create empty init in custom components directory
+echo "Init custom components directory"
+touch "${PWD}/custom_components/__init__.py"
