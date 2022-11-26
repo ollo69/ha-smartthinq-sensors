@@ -1,5 +1,5 @@
 # Strictly for tests
-pytest
+pytest==7.1.3
 #pytest-cov==2.9.0
 #pytest-homeassistant
 pytest-homeassistant-custom-component==0.12.21
