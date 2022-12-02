@@ -11,4 +11,3 @@ coverage.xml
 
 # Temporary files
 __pycache__/
-custom_components/__init__.py

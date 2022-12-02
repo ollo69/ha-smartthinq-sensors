@@ -4,7 +4,7 @@
         {
             "label": "Run Home Assistant on port 9123",
             "type": "shell",
-            "command": "source ./script/integration_init; container start",
+            "command": "container start",
             "problemMatcher": []
         },
         {
@@ -57,7 +57,7 @@
 		  "label": "Run PyTest",
 		  "detail": "Run pytest for integration.",
 		  "type": "shell",
-		  "command": "pytest --cov-report term-missing -vv --durations-min=1 --durations=0 --numprocesses=auto",
+		  "command": "pytest --cov-report term-missing -vv --durations=10",
 		  "group": {
 			"kind": "test",
 			"isDefault": true
