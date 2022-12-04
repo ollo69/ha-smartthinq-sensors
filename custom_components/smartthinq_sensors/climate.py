@@ -484,4 +484,5 @@ class LGERefrigeratorClimate(LGEClimate):
 
     @property
     def max_temp(self) -> float:
+        """Return the maximum temperature."""
         return self.entity_description.range_temp_fn(self._wrap_device)[1]
