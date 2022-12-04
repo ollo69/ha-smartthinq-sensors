@@ -1,6 +1,4 @@
-"""
-Support to interface with LGE ThinQ Devices.
-"""
+"""Constants for LGE ThinQ custom componet."""
 
 __version__ = "0.24.2"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
