@@ -115,6 +115,7 @@ class LGEBaseDevice:
         return STATE_OFF
 
     def get_features_attributes(self):
+        """Return a dict with device features and name."""
         ret_val = {}
         if self._api.state:
             states = self._api.state.device_features
@@ -131,6 +132,7 @@ class LGEWashDevice(LGEBaseDevice):
 
     @property
     def run_completed(self):
+        """Return the state on/off for run completed."""
         if self._api.state:
             if self._api.state.is_run_completed:
                 return STATE_ON
@@ -138,6 +140,7 @@ class LGEWashDevice(LGEBaseDevice):
 
     @property
     def error_state(self):
+        """Return the state on/off for error."""
         if self._api.state:
             if self._api.state.is_error:
                 return STATE_ON
@@ -145,6 +148,7 @@ class LGEWashDevice(LGEBaseDevice):
 
     @property
     def initial_time(self):
+        """Return the initial time in format HH:MM."""
         if self._api.state:
             if self._api.state.is_on:
                 return self.format_time(
@@ -154,6 +158,7 @@ class LGEWashDevice(LGEBaseDevice):
 
     @property
     def remain_time(self):
+        """Return the remaining time in format HH:MM."""
         if self._api.state:
             if self._api.state.is_on:
                 return self.format_time(
@@ -163,6 +168,7 @@ class LGEWashDevice(LGEBaseDevice):
 
     @property
     def reserve_time(self):
+        """Return the reserved time in format HH:MM."""
         if self._api.state:
             if self._api.state.is_on:
                 return self.format_time(
@@ -172,6 +178,7 @@ class LGEWashDevice(LGEBaseDevice):
 
     @property
     def current_course(self):
+        """Return wash device current course."""
         if self._api.state:
             if self._api.state.is_on:
                 course = self._api.state.current_course
@@ -188,18 +195,21 @@ class LGERefrigeratorDevice(LGEBaseDevice):
 
     @property
     def temp_fridge(self):
+        """Return fridge temperature."""
         if self._api.state:
             return self._api.state.temp_fridge
         return None
 
     @property
     def temp_freezer(self):
+        """Return freezer temperature."""
         if self._api.state:
             return self._api.state.temp_freezer
         return None
 
     @property
     def temp_unit(self):
+        """Return refrigerator temperature unit."""
         if self._api.state:
             unit = self._api.state.temp_unit
             return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
@@ -207,6 +217,7 @@ class LGERefrigeratorDevice(LGEBaseDevice):
 
     @property
     def dooropen_state(self):
+        """Return refrigerator door open state."""
         if self._api.state:
             state = self._api.state.door_opened_state
             return STATE_LOOKUP.get(state, STATE_OFF)
@@ -218,12 +229,14 @@ class LGEACDevice(LGEBaseDevice):
 
     @property
     def curr_temp(self):
+        """Return AC device current temperature."""
         if self._api.state:
             return self._api.state.current_temp
         return None
 
     @property
     def temp_unit(self):
+        """Return AC device temperature unit."""
         unit = self._api.device.temperature_unit
         return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
 
@@ -249,18 +262,21 @@ class LGERangeDevice(LGEBaseDevice):
 
     @property
     def oven_lower_target_temp(self):
+        """Oven lower target temperature."""
         if self._api.state:
             return self._api.state.oven_lower_target_temp
         return None
 
     @property
     def oven_upper_target_temp(self):
+        """Oven upper target temperature."""
         if self._api.state:
             return self._api.state.oven_upper_target_temp
         return None
 
     @property
     def oven_temp_unit(self):
+        """Oven temperature unit."""
         if self._api.state:
             unit = self._api.state.oven_temp_unit
             return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
