@@ -368,7 +368,7 @@ class AirConditionerDevice(Device):
     @property
     def duct_zones(self) -> list:
         """Return a list of available duct zones"""
-        return [key for key in self._duct_zones]
+        return list(self._duct_zones)
 
     async def update_duct_zones(self):
         """Update the current duct zones status."""
@@ -419,7 +419,7 @@ class AirConditionerDevice(Device):
         # We always have 8 duct zone.
 
         if duct_state > 0:
-            bin_arr = [x for x in reversed(f"{duct_state:08b}")]
+            bin_arr = list(reversed(f"{duct_state:08b}"))
             return {str(v + 1): {ZONE_ST_CUR: k} for v, k in enumerate(bin_arr)}
 
         # For ThinQ1 devices result is a list of dicts with these keys:
