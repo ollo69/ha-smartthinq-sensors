@@ -16,8 +16,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
-    POWER_WATT,
     STATE_UNAVAILABLE,
+    UnitOfPower,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -260,7 +260,7 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         name="Energy current",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
-        native_unit_of_measurement=POWER_WATT,
+        native_unit_of_measurement=UnitOfPower.WATT,
     ),
     ThinQSensorEntityDescription(
         key=FEAT_HUMIDITY,
@@ -443,7 +443,7 @@ WATER_HEATER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         name="Energy current",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
-        native_unit_of_measurement=POWER_WATT,
+        native_unit_of_measurement=UnitOfPower.WATT,
     ),
 )
 

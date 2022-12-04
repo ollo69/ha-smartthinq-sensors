@@ -14,7 +14,7 @@ from homeassistant.const import (
     CONF_TOKEN,
     MAJOR_VERSION,
     MINOR_VERSION,
-    TEMP_CELSIUS,
+    UnitOfTemperature,
     Platform,
     __version__,
 )
@@ -526,7 +526,7 @@ async def lge_devices_setup(
 
     device_count = 0
     temp_unit = UNIT_TEMP_CELSIUS
-    if hass.config.units.temperature_unit != TEMP_CELSIUS:
+    if hass.config.units.temperature_unit != UnitOfTemperature.CELSIUS:
         temp_unit = UNIT_TEMP_FAHRENHEIT
 
     for device in client.devices:
