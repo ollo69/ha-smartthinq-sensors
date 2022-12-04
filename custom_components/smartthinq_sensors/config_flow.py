@@ -26,6 +26,7 @@ from .const import (
     CONF_OAUTH_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
+    CONF_USE_REDIRECT,
     DOMAIN,
     __min_ha_version__,
 )
@@ -34,7 +35,6 @@ from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
 
 CONF_LOGIN = "login_url"
 CONF_URL = "callback_url"
-CONF_USE_REDIRECT = "use_redirect"
 
 RESULT_SUCCESS = 0
 RESULT_FAIL = 1

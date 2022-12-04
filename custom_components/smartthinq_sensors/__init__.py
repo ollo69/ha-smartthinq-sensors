@@ -326,6 +326,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class LGEDevice:
+    """Generic class that represents a LGE device."""
+
     def __init__(self, device, hass):
         """initialize a LGE Device."""
 
@@ -349,6 +351,7 @@ class LGEDevice:
 
     @property
     def available(self) -> bool:
+        """Return True if device is available."""
         return self._available
 
     @property
@@ -388,10 +391,12 @@ class LGEDevice:
 
     @property
     def available_features(self) -> dict:
+        """Return a list of available features."""
         return self._device.available_features
 
     @property
     def device_info(self) -> DeviceInfo:
+        """Return device info for the device."""
         data = DeviceInfo(
             identifiers={(DOMAIN, self._device_id)},
             name=self._name,
@@ -407,6 +412,7 @@ class LGEDevice:
 
     @property
     def coordinator(self) -> DataUpdateCoordinator | None:
+        """Return the DataUpdateCoordinator used by this device."""
         return self._coordinator
 
     async def init_device(self) -> bool:
