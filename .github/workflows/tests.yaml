@@ -1,0 +1,44 @@
+name: Python tests
+
+on:
+  push:
+    branches:
+      - master
+
+  pull_request:
+    branches: '*'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10"]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements_test.txt
+
+      - name: Run pytest
+        # run: |
+        #  pytest --cov-report xml:coverage.xml
+        run: |
+          pytest \
+            -qq \
+            --timeout=9 \
+            --durations=10 \
+            -n auto \
+            -o console_output_style=count \
+            -p no:sugar \
+            tests
