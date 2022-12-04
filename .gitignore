@@ -11,3 +11,6 @@ coverage.xml
 
 # Temporary files
 __pycache__/
+
+# WideQ test file
+custom_components/smartthinq_sensors/wideq/deviceV2.txt
