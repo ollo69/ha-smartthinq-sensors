@@ -14,8 +14,8 @@ from homeassistant.const import (
     CONF_TOKEN,
     MAJOR_VERSION,
     MINOR_VERSION,
-    UnitOfTemperature,
     Platform,
+    UnitOfTemperature,
     __version__,
 )
 from homeassistant.core import HomeAssistant, callback
