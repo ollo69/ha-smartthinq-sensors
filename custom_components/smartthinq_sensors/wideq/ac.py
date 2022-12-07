@@ -5,14 +5,13 @@ from typing import Optional
 
 from .const import (
     FEAT_ENERGY_CURRENT,
-    FEAT_HOT_WATER_TARGET_TEMP,
     FEAT_HOT_WATER_TEMP,
     FEAT_HUMIDITY,
-    FEAT_IN_WATER_TEMP,
     FEAT_LIGHTING_DISPLAY,
+    FEAT_MODE_AWHP_SILENT,
     FEAT_MODE_JET,
-    FEAT_MODE_SILENT,
-    FEAT_OUT_WATER_TEMP,
+    FEAT_WATER_IN_TEMP,
+    FEAT_WATER_OUT_TEMP,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
@@ -71,20 +70,20 @@ CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 
 # AWHP Section
-STATE_IN_WATER_TEMP = ["WaterInTempCur", "airState.tempState.inWaterCurrent"]
-STATE_OUT_WATER_TEMP = ["WaterTempCur", "airState.tempState.outWaterCurrent"]
-STATE_HEAT_WATER_MIN_TEMP = ["WaterHeatMinTemp", "airState.tempState.waterTempHeatMin"]
-STATE_HEAT_WATER_MAX_TEMP = ["WaterHeatMaxTemp", "airState.tempState.waterTempHeatMax"]
+STATE_WATER_IN_TEMP = ["WaterInTempCur", "airState.tempState.inWaterCurrent"]
+STATE_WATER_OUT_TEMP = ["WaterTempCur", "airState.tempState.outWaterCurrent"]
+STATE_WATER_MIN_TEMP = ["WaterHeatMinTemp", "airState.tempState.waterTempCoolMin"]
+STATE_WATER_MAX_TEMP = ["WaterHeatMaxTemp", "airState.tempState.waterTempHeatMax"]
 STATE_HOT_WATER_TEMP = ["HotWaterTempCur", "airState.tempState.hotWaterCurrent"]
 STATE_HOT_WATER_TARGET_TEMP = ["HotWaterTempCfg", "airState.tempState.hotWaterTarget"]
 STATE_HOT_WATER_MIN_TEMP = ["HotWaterMinTemp", "airState.tempState.hotWaterTempMin"]
 STATE_HOT_WATER_MAX_TEMP = ["HotWaterMaxTemp", "airState.tempState.hotWaterTempMax"]
 STATE_HOT_WATER_MODE = ["HotWater", "airState.miscFuncState.hotWater"]
-STATE_MODE_SILENT = ["SilentMode", "airState.miscFuncState.silentAWHP"]
+STATE_MODE_AWHP_SILENT = ["SilentMode", "airState.miscFuncState.silentAWHP"]
 
 CMD_STATE_HOT_WATER_MODE = [CTRL_BASIC, "Set", STATE_HOT_WATER_MODE]
 CMD_STATE_HOT_WATER_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_HOT_WATER_TARGET_TEMP]
-CMD_STATE_MODE_SILENT = [CTRL_BASIC, "Set", STATE_MODE_SILENT]
+CMD_STATE_MODE_AWHP_SILENT = [CTRL_BASIC, "Set", STATE_MODE_AWHP_SILENT]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
@@ -236,6 +235,7 @@ class AirConditionerDevice(Device):
         self._supported_vertical_steps = None
         self._supported_vertical_swings = None
         self._temperature_range = None
+        self._hot_water_temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
         self._duct_zones = {}
 
@@ -347,8 +347,8 @@ class AirConditionerDevice(Device):
                 return None
 
             if self.is_air_to_water:
-                min_temp = MIN_AWHP_TEMP
-                max_temp = MAX_AWHP_TEMP
+                min_temp = self._status.water_target_min_temp or MIN_AWHP_TEMP
+                max_temp = self._status.water_target_max_temp or MAX_AWHP_TEMP
             else:
                 key = self._get_state_key(STATE_TARGET_TEMP)
                 range_info = self.model_info.value(key)
@@ -360,6 +360,20 @@ class AirConditionerDevice(Device):
                     max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
             self._temperature_range = [min_temp, max_temp]
         return self._temperature_range
+
+    def _get_hot_water_temperature_range(self):
+        """Get valid hot water temperature range for model."""
+
+        if not self.is_water_heater_supported:
+            return None
+
+        if not self._hot_water_temperature_range:
+            min_temp = self._status.hot_water_target_min_temp
+            max_temp = self._status.hot_water_target_max_temp
+            if min_temp is None or max_temp is None:
+                return [MIN_AWHP_TEMP, MAX_AWHP_TEMP]
+            self._hot_water_temperature_range = [min_temp, max_temp]
+        return self._hot_water_temperature_range
 
     def _is_vane_mode_supported(self, mode):
         """Check if a specific vane mode is supported."""
@@ -605,11 +619,6 @@ class AirConditionerDevice(Device):
         return self._temperature_step
 
     @property
-    def target_temperature_step_hot_water(self):
-        """Return target temperature step used for hot water."""
-        return TEMP_STEP_WHOLE
-
-    @property
     def target_temperature_min(self):
         """Return minimum value for target temperature."""
         temp_range = self._get_temperature_range()
@@ -629,6 +638,27 @@ class AirConditionerDevice(Device):
     def is_mode_jet_available(self):
         """Return if JET mode is available."""
         return self._status.is_mode_jet_available
+
+    @property
+    def hot_water_target_temperature_step(self):
+        """Return target temperature step used for hot water."""
+        return TEMP_STEP_WHOLE
+
+    @property
+    def hot_water_target_temperature_min(self):
+        """Return minimum value for hot water target temperature."""
+        temp_range = self._get_hot_water_temperature_range()
+        if not temp_range:
+            return None
+        return self.conv_temp_unit(temp_range[0])
+
+    @property
+    def hot_water_target_temperature_max(self):
+        """Return maximum value for hot water target temperature."""
+        temp_range = self._get_hot_water_temperature_range()
+        if not temp_range:
+            return None
+        return self.conv_temp_unit(temp_range[1])
 
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
@@ -724,8 +754,18 @@ class AirConditionerDevice(Device):
         lighting = LIGHTING_DISPLAY_ON if status else LIGHTING_DISPLAY_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=lighting)
 
-    async def set_hot_water_mode(self, value: bool):
-        """Set the device's hot water mode on or off."""
+    async def set_mode_awhp_silent(self, value: bool):
+        """Set the AWHP silent mode on or off."""
+        if not self.is_air_to_water:
+            raise ValueError("AWHP silent mode not supported")
+        mode = MODE_ON if value else MODE_OFF
+        keys = self._get_cmd_keys(CMD_STATE_MODE_AWHP_SILENT)
+        if (silent_mode := self.model_info.enum_value(keys[2], mode)) is None:
+            raise ValueError(f"Invalid AWHP silent mode: {mode}")
+        await self.set(keys[0], keys[1], key=keys[2], value=silent_mode)
+
+    async def hot_water_mode(self, value: bool):
+        """Set the device hot water mode on or off."""
         if not self.is_water_heater_supported:
             raise ValueError("Hot water mode not supported")
         mode = MODE_ON if value else MODE_OFF
@@ -735,22 +775,15 @@ class AirConditionerDevice(Device):
         await self.set(keys[0], keys[1], key=keys[2], value=hot_water_mode)
 
     async def set_hot_water_target_temp(self, temp):
-        """Set the device's hot water target temperature in Celsius degrees."""
+        """Set the device hot water target temperature in Celsius degrees."""
         if not self.is_water_heater_supported:
             raise ValueError("Hot water mode not supported")
+        range_info = self._get_hot_water_temperature_range()
         conv_temp = self._f2c(temp)
+        if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
+            raise ValueError(f"Target temperature out of range: {temp}")
         keys = self._get_cmd_keys(CMD_STATE_HOT_WATER_TARGET_TEMP)
         await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
-
-    async def set_mode_silent(self, value: bool):
-        """Set the silent mode on or off."""
-        if not self.is_air_to_water:
-            raise ValueError("Silent mode not supported")
-        mode = MODE_ON if value else MODE_OFF
-        keys = self._get_cmd_keys(CMD_STATE_MODE_SILENT)
-        if (silent_mode := self.model_info.enum_value(keys[2], mode)) is None:
-            raise ValueError(f"Invalid silent mode: {mode}")
-        await self.set(keys[0], keys[1], key=keys[2], value=silent_mode)
 
     async def get_power(self):
         """Get the instant power usage in watts of the whole unit."""
@@ -1032,38 +1065,49 @@ class AirConditionerStatus(DeviceStatus):
         )
 
     @property
-    def in_water_current_temp(self):
+    def water_in_current_temp(self):
         """Return AWHP in water current temperature."""
         if not self.is_info_v2:
             return None
-        key = self._get_state_key(STATE_IN_WATER_TEMP)
+        key = self._get_state_key(STATE_WATER_IN_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_IN_WATER_TEMP, value, False)
+        return self._update_feature(FEAT_WATER_IN_TEMP, value, False)
 
     @property
-    def out_water_current_temp(self):
+    def water_out_current_temp(self):
         """Return AWHP out water current temperature."""
         if not self.is_info_v2:
             return None
-        key = self._get_state_key(STATE_OUT_WATER_TEMP)
+        key = self._get_state_key(STATE_WATER_OUT_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_OUT_WATER_TEMP, value, False)
+        return self._update_feature(FEAT_WATER_OUT_TEMP, value, False)
 
     @property
-    def water_heat_target_temp_min(self):
-        """Return AWHP hot water target minimum allowed temperature."""
+    def water_target_min_temp(self):
+        """Return AWHP water target minimum allowed temperature."""
         if not self.is_info_v2:
             return None
-        key = self._get_state_key(STATE_HEAT_WATER_MIN_TEMP)
+        key = self._get_state_key(STATE_WATER_MIN_TEMP)
         return self._str_to_temp(self._data.get(key))
 
     @property
-    def water_heat_target_temp_max(self):
-        """Return AWHP hot water target maximun allowed temperature."""
+    def water_target_max_temp(self):
+        """Return AWHP water target maximun allowed temperature."""
         if not self.is_info_v2:
             return None
-        key = self._get_state_key(STATE_HEAT_WATER_MAX_TEMP)
+        key = self._get_state_key(STATE_WATER_MAX_TEMP)
         return self._str_to_temp(self._data.get(key))
+
+    @property
+    def mode_awhp_silent(self):
+        """Return AWHP silent mode status."""
+        if not self.is_info_v2:
+            return None
+        key = self._get_state_key(STATE_MODE_AWHP_SILENT)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == MODE_ON
+        return self._update_feature(FEAT_MODE_AWHP_SILENT, status, False)
 
     @property
     def hot_water_current_temp(self):
@@ -1080,11 +1124,10 @@ class AirConditionerStatus(DeviceStatus):
         if not self.is_info_v2:
             return None
         key = self._get_state_key(STATE_HOT_WATER_TARGET_TEMP)
-        value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_HOT_WATER_TARGET_TEMP, value, False)
+        return self._str_to_temp(self._data.get(key))
 
     @property
-    def hot_water_target_temp_min(self):
+    def hot_water_target_min_temp(self):
         """Return AWHP hot water target minimum allowed temperature."""
         if not self.is_info_v2:
             return None
@@ -1092,33 +1135,21 @@ class AirConditionerStatus(DeviceStatus):
         return self._str_to_temp(self._data.get(key))
 
     @property
-    def hot_water_target_temp_max(self):
+    def hot_water_target_max_temp(self):
         """Return AWHP hot water target maximun allowed temperature."""
         if not self.is_info_v2:
             return None
         key = self._get_state_key(STATE_HOT_WATER_MAX_TEMP)
         return self._str_to_temp(self._data.get(key))
 
-    @property
-    def mode_silent(self):
-        """Return AWHP silent mode status."""
-        if not self.is_info_v2:
-            return None
-        key = self._get_state_key(STATE_MODE_SILENT)
-        if (value := self.lookup_enum(key, True)) is None:
-            return None
-        status = value == MODE_ON
-        return self._update_feature(FEAT_MODE_SILENT, status, False)
-
     def _update_features(self):
         _ = [
-            self.hot_water_current_temp,
-            self.hot_water_target_temp,
-            self.in_water_current_temp,
-            self.out_water_current_temp,
             self.energy_current,
             self.humidity,
             self.mode_jet,
-            self.mode_silent,
             self.lighting_display,
+            self.water_in_current_temp,
+            self.water_out_current_temp,
+            self.mode_awhp_silent,
+            self.hot_water_current_temp,
         ]
