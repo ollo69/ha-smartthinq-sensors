@@ -1,5 +1,6 @@
-"""A high-level, convenient abstraction for interacting with the LG
-SmartThinQ API for most use cases.
+"""
+A high-level, convenient abstraction for interacting with
+the LG SmartThinQ API for most use cases.
 """
 from __future__ import annotations
 
@@ -232,7 +233,7 @@ class Monitor:
                     "Connection to ThinQ failed. Network connection error", exc=exc
                 )
 
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 self._raise_error(
                     "Unexpected error while updating device status",
                     not_logged=True,
@@ -370,6 +371,7 @@ class ModelInfo:
 
     @property
     def is_info_v2(self):
+        """Return the type of 'model_info' represented."""
         return False
 
     def as_dict(self):
@@ -380,20 +382,25 @@ class ModelInfo:
 
     @property
     def model_type(self):
+        """Return the model type."""
         return self._data.get("Info", {}).get("modelType", "")
 
     def config_value(self, key):
+        """Get config value for a specific key."""
         return self._data.get("Config", {}).get(key, "")
 
     def value_type(self, name):
+        """Return the value type for a specific value key."""
         if name in self._data["Value"]:
             return self._data["Value"][name].get("type")
         return None
 
     def value_exist(self, name):
+        """Check if a value key exist inside model info."""
         return name in self._data["Value"]
 
     def is_enum_type(self, key):
+        """Check if specific key is enum type."""
         if (value_type := self.value_type(key)) is None:
             return False
         return value_type in ("Enum", "enum")
@@ -485,6 +492,8 @@ class ModelInfo:
         return enum_options[value]
 
     def _get_bit_key(self, key):
+        """Get bit values for a specific key."""
+
         def search_bit_key():
             if not data:
                 return {}
@@ -703,6 +712,7 @@ class ModelInfoV2:
 
     @property
     def is_info_v2(self):
+        """Return the type of 'model_info' represented."""
         return True
 
     def as_dict(self):
@@ -713,25 +723,31 @@ class ModelInfoV2:
 
     @property
     def model_type(self):
+        """Return the model type."""
         return self._data.get("Info", {}).get("modelType", "")
 
     def config_value(self, key):
+        """Get config value for a specific key."""
         return self._data.get("Config", {}).get(key, "")
 
     def value_type(self, name):
+        """Return the value type for a specific value key."""
         if name in self._data["MonitoringValue"]:
             return self._data["MonitoringValue"][name].get("dataType")
         return None
 
     def is_enum_type(self, key):
+        """Check if specific key is enum type."""
         if (value_type := self.value_type(key)) is None:
             return False
         return value_type in ("Enum", "enum")
 
     def value_exist(self, name):
+        """Check if a value key exist inside model info."""
         return name in self._data["MonitoringValue"]
 
     def data_root(self, name):
+        """Return the data root for a specific value key."""
         if name in self._data["MonitoringValue"]:
             if "dataType" in self._data["MonitoringValue"][name]:
                 return self._data["MonitoringValue"][name]
@@ -910,7 +926,7 @@ class ModelInfoV2:
         return self.decode_monitor_json(data)
 
     def decode_snapshot(self, data, key):
-        """Decode status data."""
+        """Decode snapshot data inside payload."""
         return data.get(key)
 
 
@@ -935,9 +951,11 @@ class ModelInfoV2AC(ModelInfo):
 
     @property
     def is_info_v2(self):
+        """Return the type of 'model_info' represented."""
         return True
 
     def value_type(self, name):
+        """Return the value type for a specific value key."""
         if name in self._data["Value"]:
             return self._data["Value"][name].get("data_type")
         return None
@@ -969,12 +987,18 @@ class ModelInfoV2AC(ModelInfo):
         #    return ReferenceValue(self._data[ref])
         # elif d["type"] == "Boolean":
         #    return EnumValue({"0": "False", "1": "True"})
-        elif d["data_type"] in ("String", "string"):
+        if d["data_type"] in ("String", "string"):
             pass
         else:
-            assert False, f"unsupported value type {d['data_type']}"
+            _LOGGER.error(
+                "ModelInfoV2AC: unsupported value type (%s) - value: %s",
+                d["data_type"],
+                d,
+            )
+            return None
 
     def decode_snapshot(self, data, key):
+        """Decode snapshot data inside payload."""
         if not key or not self._has_monitoring:
             return data
         return super().decode_snapshot(data, key)
@@ -1018,27 +1042,33 @@ class Device:
 
     @property
     def client(self):
+        """Return client instance associated to this device."""
         return self._client
 
     @property
     def device_info(self):
+        """Return 'device_info' for this device."""
         return self._device_info
 
     @property
     def model_info(self):
+        """Return 'model_info' for this device."""
         return self._model_info
 
     @property
     def available_features(self) -> dict:
+        """Return available features."""
         return self._available_features
 
     @property
     def status(self):
+        """Return status object associated to the device."""
         if not self._model_info:
             return None
         return self._status
 
     def reset_status(self):
+        """Reset the status objevt associated to the device."""
         self._status = None
         return self._status
 
@@ -1144,8 +1174,7 @@ class Device:
     ):
         """Set a device's control for `key` to `value`."""
         log_level = logging.INFO if self._client.emulation else logging.DEBUG
-        full_key = self._prepare_command(ctrl_key, command, key, value)
-        if full_key:
+        if full_key := self._prepare_command(ctrl_key, command, key, value):
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s: %s",
@@ -1214,7 +1243,7 @@ class Device:
         if query_device:
             try:
                 await self._pre_update_v2()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 _LOGGER.debug("Error %s calling pre_update function", exc)
 
         return await self._mon.refresh(query_device)
@@ -1294,7 +1323,7 @@ class Device:
         if res and thinq1_additional_poll > 0:
             try:
                 await self._additional_poll(thinq1_additional_poll)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 _LOGGER.debug("Error %s calling additional poll methods", exc)
 
         # remove control permission if previously set
@@ -1307,6 +1336,7 @@ class Device:
         return feature_name
 
     def feature_title(self, feature_name, item_key=None, status=None, allow_none=False):
+        """Return title associated to a specific feature."""
         title = self._available_features.get(feature_name)
         if title is None:
             if status is None and not allow_none:
@@ -1318,7 +1348,7 @@ class Device:
         return title
 
     def get_enum_text(self, enum_name):
-
+        """Get the text associated to an enum value from language pack."""
         if not enum_name:
             return STATE_OPTIONITEM_NONE
 
@@ -1333,7 +1363,7 @@ class Device:
         return text_value
 
     def is_unknown_status(self, status):
-
+        """Return if status is unknown."""
         if status in self._unknown_states:
             return False
 
@@ -1345,6 +1375,7 @@ class DeviceStatus:
     """A higher-level interface to a specific device status."""
 
     def __init__(self, device, data):
+        """Initialize devicestatus object."""
         self._device = device
         self._data = {} if data is None else data
         self._device_features: dict[str, Any] = {}
@@ -1352,6 +1383,7 @@ class DeviceStatus:
 
     @staticmethod
     def int_or_none(value):
+        """Return specific value only if is a number."""
         if value is None:
             return None
         if not isinstance(value, Number):
@@ -1362,6 +1394,7 @@ class DeviceStatus:
 
     @staticmethod
     def to_int_or_none(value):
+        """Try to convert the value to int or return None."""
         if value is None:
             return None
         try:
@@ -1370,7 +1403,7 @@ class DeviceStatus:
             return None
 
     @staticmethod
-    def _str_to_num(s):
+    def _str_to_num(str_val):
         """
         Convert a string to either an `int` or a `float`.
 
@@ -1378,36 +1411,41 @@ class DeviceStatus:
         ".0", for whole numbers. So we use `int`s for integers and
         `float`s for non-whole numbers.
         """
-        if not s:
+        if not str_val:
             return None
 
-        f = float(s)
-        if f == int(f):
-            return int(f)
-        return f
+        fl_val = float(str_val)
+        int_val = int(fl_val)
+        return int_val if int_val == fl_val else fl_val
 
     @property
     def has_data(self) -> bool:
+        """Check if status cointain valid data."""
         return bool(self._data)
 
     @property
     def data(self):
+        """Return status raw data."""
         return self._data
 
     @property
     def is_on(self) -> bool:
+        """Check is on status."""
         return False
 
     @property
     def is_info_v2(self):
+        """Return type of associated model info."""
         return self._device.model_info.is_info_v2
 
     def _get_state_key(self, key_name):
+        """Return the key name based on model info."""
         if isinstance(key_name, list):
             return key_name[1 if self.is_info_v2 else 0]
         return key_name
 
     def _get_data_key(self, keys):
+        """Return the raw data for a specific key."""
         if not self._data:
             return ""
         if isinstance(keys, list):
@@ -1420,6 +1458,7 @@ class DeviceStatus:
         return ""
 
     def _set_unknown(self, status, key, status_type):
+        """Set a status for a specific key as unknown."""
         if status:
             return status
 
@@ -1434,6 +1473,7 @@ class DeviceStatus:
         return STATE_OPTIONITEM_UNKNOWN
 
     def update_status(self, key, value):
+        """Update the status key to a specific value."""
         if key in self._data:
             self._data[key] = value
             self._features_updated = False
@@ -1441,6 +1481,7 @@ class DeviceStatus:
         return False
 
     def key_exist(self, keys):
+        """Chek if a secific key exists inside the status."""
         if isinstance(keys, list):
             for key in keys:
                 if self._device.model_info.value_exist(key):
@@ -1449,6 +1490,7 @@ class DeviceStatus:
         return self._device.model_info.value_exist(keys)
 
     def lookup_enum(self, key, data_is_num=False):
+        """Lookup value for a specific key of type enum."""
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
@@ -1459,12 +1501,14 @@ class DeviceStatus:
         return self._device.model_info.enum_name(curr_key, value)
 
     def lookup_range(self, key):
+        """Lookup value for a specific key of type range."""
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
         return self._data[curr_key]
 
     def lookup_reference(self, key, ref_key="_comment"):
+        """Lookup value for a specific key of type reference."""
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
@@ -1473,6 +1517,7 @@ class DeviceStatus:
         )
 
     def lookup_bit_enum(self, key):
+        """Lookup value for a specific key of type bit enum."""
         if not self._data:
             str_val = ""
         else:
@@ -1494,6 +1539,7 @@ class DeviceStatus:
         return ret_val
 
     def lookup_bit(self, key):
+        """Lookup bit value for a specific key of type enum."""
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
             return None
@@ -1529,6 +1575,7 @@ class DeviceStatus:
 
     @property
     def device_features(self) -> dict[str, Any]:
+        """Return features associated to the status."""
         if not self._features_updated:
             self._update_features()
             self._features_updated = True
