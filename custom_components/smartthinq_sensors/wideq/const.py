@@ -5,6 +5,10 @@ DEFAULT_COUNTRY = "US"
 DEFAULT_LANGUAGE = "en-US"
 DEFAULT_TIMEOUT = 10  # seconds
 
+# bit status
+BIT_OFF = "OFF"
+BIT_ON = "ON"
+
 # state options
 STATE_OPTIONITEM_OFF = "off"
 STATE_OPTIONITEM_ON = "on"
