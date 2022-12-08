@@ -67,6 +67,7 @@ SMARTTHINQ_PLATFORMS = [
     Platform.HUMIDIFIER,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.WATER_HEATER,
 ]
 
 AUTH_RETRY = "auth_retry"

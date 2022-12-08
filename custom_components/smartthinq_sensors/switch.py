@@ -32,8 +32,8 @@ from .wideq import (
     FEAT_EXPRESSMODE,
     FEAT_ICEPLUS,
     FEAT_LIGHTING_DISPLAY,
-    FEAT_MODE_JET,
     FEAT_MODE_AWHP_SILENT,
+    FEAT_MODE_JET,
     WM_DEVICE_TYPES,
     DeviceType,
 )
