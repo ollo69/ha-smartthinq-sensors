@@ -53,8 +53,6 @@ from .wideq import (
     FEAT_HALFLOAD,
     FEAT_HOT_WATER_TEMP,
     FEAT_HUMIDITY,
-    FEAT_IN_WATER_TEMP,
-    FEAT_OUT_WATER_TEMP,
     FEAT_OVEN_LOWER_CURRENT_TEMP,
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_CURRENT_TEMP,
@@ -69,6 +67,8 @@ from .wideq import (
     FEAT_TARGET_HUMIDITY,
     FEAT_TEMPCONTROL,
     FEAT_TUBCLEAN_COUNT,
+    FEAT_WATER_IN_TEMP,
+    FEAT_WATER_OUT_TEMP,
     FEAT_WATERTEMP,
     WM_DEVICE_TYPES,
     DeviceType,
@@ -244,15 +244,14 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_IN_WATER_TEMP,
+        key=FEAT_WATER_IN_TEMP,
         name="In water temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.temp_unit,
-        entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_OUT_WATER_TEMP,
+        key=FEAT_WATER_OUT_TEMP,
         name="Out water temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -265,7 +264,6 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=POWER_WATT,
-        entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
         key=FEAT_HUMIDITY,
@@ -273,7 +271,6 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
-        entity_registry_enabled_default=False,
     ),
 )
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (

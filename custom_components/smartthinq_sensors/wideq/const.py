@@ -17,12 +17,13 @@ UNIT_TEMP_FAHRENHEIT = "fahrenheit"
 
 # ac devices features
 FEAT_ENERGY_CURRENT = "energy_current"
-FEAT_HUMIDITY = "humidity"
 FEAT_HOT_WATER_TEMP = "hot_water_temperature"
-FEAT_IN_WATER_TEMP = "in_water_temperature"
+FEAT_HUMIDITY = "humidity"
 FEAT_LIGHTING_DISPLAY = "lighting_display"
+FEAT_MODE_AWHP_SILENT = "mode_awhp_silent"
 FEAT_MODE_JET = "mode_jet"
-FEAT_OUT_WATER_TEMP = "out_water_temperature"
+FEAT_WATER_IN_TEMP = "water_in_temperature"
+FEAT_WATER_OUT_TEMP = "water_out_temperature"
 
 # wash devices features
 FEAT_DRYLEVEL = "dry_level"

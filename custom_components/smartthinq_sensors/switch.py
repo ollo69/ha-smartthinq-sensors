@@ -32,6 +32,7 @@ from .wideq import (
     FEAT_EXPRESSMODE,
     FEAT_ICEPLUS,
     FEAT_LIGHTING_DISPLAY,
+    FEAT_MODE_AWHP_SILENT,
     FEAT_MODE_JET,
     WM_DEVICE_TYPES,
     DeviceType,
@@ -111,6 +112,14 @@ AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         icon="mdi:wall-sconce-round",
         turn_off_fn=lambda x: x.device.set_lighting_display(False),
         turn_on_fn=lambda x: x.device.set_lighting_display(True),
+    ),
+    ThinQSwitchEntityDescription(
+        key=FEAT_MODE_AWHP_SILENT,
+        name="Silent mode",
+        icon="mdi:ear-hearing-off",
+        turn_off_fn=lambda x: x.device.set_mode_awhp_silent(False),
+        turn_on_fn=lambda x: x.device.set_mode_awhp_silent(True),
+        available_fn=lambda x: x.is_power_on,
     ),
 )
 
