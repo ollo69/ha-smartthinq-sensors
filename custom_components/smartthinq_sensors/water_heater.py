@@ -95,7 +95,7 @@ class LGEACWaterHeater(LGEWaterHeater):
         self._attr_unique_id = f"{api.unique_id}-AC-WH"
         self._attr_supported_features = SUPPORT_FLAGS_HEATER
         self._attr_operation_list = [STATE_OFF, STATE_HEAT_PUMP]
-        self._attr_precsion = self._device.hot_water_target_temperature_step
+        self._attr_precision = self._device.hot_water_target_temperature_step
 
     @property
     def temperature_unit(self) -> str:
