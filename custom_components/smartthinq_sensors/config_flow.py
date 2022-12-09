@@ -213,7 +213,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             )
             _LOGGER.exception(msg, exc_info=exc)
             return None, RESULT_CRED_FAIL
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.exception("Error connecting to ThinQ", exc_info=exc)
             return None, RESULT_FAIL
 

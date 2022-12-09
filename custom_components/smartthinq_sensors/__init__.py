@@ -102,7 +102,7 @@ class LGEAuthentication:
             return await ClientAsync.get_oauth_url(
                 self._region, self._language, aiohttp_session=self._client_session
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.exception("Error retrieving login URL from ThinQ", exc_info=exc)
 
         return None
@@ -113,7 +113,7 @@ class LGEAuthentication:
             return await ClientAsync.oauth_info_from_url(
                 callback_url, aiohttp_session=self._client_session
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.exception("Error retrieving OAuth info from ThinQ", exc_info=exc)
 
         return None
