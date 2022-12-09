@@ -23,7 +23,6 @@ LABEL_VANE_HSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_LEFT_RIGHT_W"
 LABEL_VANE_VSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_UP_DOWN_W"
 LABEL_VANE_HSWING = "@AC_MAIN_WIND_DIRECTION_SWING_LEFT_RIGHT_W"
 LABEL_VANE_VSWING = "@AC_MAIN_WIND_DIRECTION_SWING_UP_DOWN_W"
-LABEL_VANE_SWIRL = "@AC_MAIN_WIND_DIRECTION_SWIRL_W"
 LABEL_HOT_WATER = "@HOTWATER"
 
 CTRL_BASIC = ["Control", "basicCtrl"]
@@ -88,7 +87,6 @@ CMD_STATE_MODE_AWHP_SILENT = [CTRL_BASIC, "Set", STATE_MODE_AWHP_SILENT]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
-# STATE_CURRENT_HUMIDITY_V2 = "airState.humidity.current"
 # STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
 # STATE_AIRCLEAN_MODE_V2 = "airState.wMode.airClean"
 # STATE_FILTER_MAX_TIME_V2 = "airState.filterMngStates.maxTime"
@@ -96,8 +94,8 @@ CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
 DEFAULT_MIN_TEMP = 16
 DEFAULT_MAX_TEMP = 30
-MIN_AWHP_TEMP = 5
-MAX_AWHP_TEMP = 80
+AWHP_MIN_TEMP = 5
+AWHP_MAX_TEMP = 80
 
 TEMP_STEP_WHOLE = 1.0
 TEMP_STEP_HALF = 0.5
@@ -312,8 +310,8 @@ class AirConditionerDevice(Device):
                 return None
 
             if self.is_air_to_water:
-                min_temp = self._status.water_target_min_temp or MIN_AWHP_TEMP
-                max_temp = self._status.water_target_max_temp or MAX_AWHP_TEMP
+                min_temp = self._status.water_target_min_temp or AWHP_MIN_TEMP
+                max_temp = self._status.water_target_max_temp or AWHP_MAX_TEMP
             else:
                 key = self._get_state_key(STATE_TARGET_TEMP)
                 range_info = self.model_info.value(key)
@@ -336,7 +334,7 @@ class AirConditionerDevice(Device):
             min_temp = self._status.hot_water_target_min_temp
             max_temp = self._status.hot_water_target_max_temp
             if min_temp is None or max_temp is None:
-                return [MIN_AWHP_TEMP, MAX_AWHP_TEMP]
+                return [AWHP_MIN_TEMP, AWHP_MAX_TEMP]
             self._hot_water_temperature_range = [min_temp, max_temp]
         return self._hot_water_temperature_range
 
@@ -601,9 +599,9 @@ class AirConditionerDevice(Device):
 
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
-        op = self._supported_on_operation() if turn_on else ACOp.OFF
+        operation = self._supported_on_operation() if turn_on else ACOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
-        op_value = self.model_info.enum_value(keys[2], op.value)
+        op_value = self.model_info.enum_value(keys[2], operation.value)
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
     async def set_op_mode(self, mode):
@@ -791,7 +789,7 @@ class AirConditionerDevice(Device):
         # manage duct devices, does nothing if not ducted
         try:
             await self.update_duct_zones()
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             _LOGGER.exception("Duct zone control failed", exc_info=ex)
 
         return self._status
@@ -805,9 +803,9 @@ class AirConditionerStatus(DeviceStatus):
         super().__init__(device, data)
         self._operation = None
 
-    def _str_to_temp(self, s):
+    def _str_to_temp(self, str_temp):
         """Convert a string to either an `int` or a `float` temperature."""
-        temp = self._str_to_num(s)
+        temp = self._str_to_num(str_temp)
         if not temp:  # value 0 return None!!!
             return None
         return self._device.conv_temp_unit(temp)

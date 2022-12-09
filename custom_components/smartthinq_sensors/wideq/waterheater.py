@@ -1,0 +1,364 @@
+"""------------------for WATER HEATER"""
+from enum import Enum
+from typing import Optional
+
+from .const import FEAT_ENERGY_CURRENT, UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT
+from .core_exceptions import InvalidRequestError
+from .core_util import TempUnitConversion
+from .device import Device, DeviceStatus
+
+CTRL_BASIC = ["Control", "basicCtrl"]
+
+STATE_POWER_V1 = "InOutInstantPower"
+
+SUPPORT_OPERATION_MODE = ["SupportOpModeExt2", "support.airState.opModeExt2"]
+
+# AC Section
+STATE_OPERATION = ["Operation", "airState.operation"]
+STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
+STATE_CURRENT_TEMP = ["TempCur", "airState.tempState.hotWaterCurrent"]
+STATE_TARGET_TEMP = ["TempCfg", "airState.tempState.hotWaterTarget"]
+STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
+
+CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
+CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
+CMD_STATE_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_TARGET_TEMP]
+
+CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
+
+DEFAULT_MIN_TEMP = 35
+DEFAULT_MAX_TEMP = 60
+
+TEMP_STEP_WHOLE = 1.0
+TEMP_STEP_HALF = 0.5
+
+ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
+
+# _LOGGER = logging.getLogger(__name__)
+
+
+class ACOp(Enum):
+    """Whether a device is on or off."""
+
+    OFF = "@AC_MAIN_OPERATION_OFF_W"
+    ON = "@AC_MAIN_OPERATION_ON_W"
+    RIGHT_ON = "@AC_MAIN_OPERATION_RIGHT_ON_W"  # Right fan only.
+    LEFT_ON = "@AC_MAIN_OPERATION_LEFT_ON_W"  # Left fan only.
+    ALL_ON = "@AC_MAIN_OPERATION_ALL_ON_W"  # Both fans (or only fan) on.
+
+
+class WHMode(Enum):
+    """The operation mode for an WH device."""
+
+    HEAT_PUMP = "@WH_MODE_HEAT_PUMP_W"
+    AUTO = "@WH_MODE_AUTO_W"
+    TURBO = "@WH_MODE_TURBO_W"
+    VACATION = "@WH_MODE_VACATION_W"
+
+
+class WaterHeaterDevice(Device):
+    """A higher-level interface for a Water Heater."""
+
+    def __init__(self, client, device, temp_unit=UNIT_TEMP_CELSIUS):
+        """Initialize WaterHeaterDevice object."""
+        super().__init__(client, device, WaterHeaterStatus(self, None))
+        self._temperature_unit = (
+            UNIT_TEMP_FAHRENHEIT
+            if temp_unit == UNIT_TEMP_FAHRENHEIT
+            else UNIT_TEMP_CELSIUS
+        )
+        self._supported_operation = None
+        self._supported_op_modes = None
+        self._temperature_range = None
+        self._temperature_step = TEMP_STEP_WHOLE
+
+        self._current_power = 0
+        self._current_power_supported = True
+
+        self._unit_conv = TempUnitConversion()
+
+    def _f2c(self, value):
+        """Convert Fahrenheit to Celsius temperatures for this device if required."""
+        if self._temperature_unit == UNIT_TEMP_CELSIUS:
+            return value
+        return self._unit_conv.f2c(value, self.model_info)
+
+    def conv_temp_unit(self, value):
+        """Convert Celsius to Fahrenheit temperatures for this device if required."""
+        if self._temperature_unit == UNIT_TEMP_CELSIUS:
+            return float(value)
+        return self._unit_conv.c2f(value, self.model_info)
+
+    def _get_supported_operations(self):
+        """Get a list of the ACOp Operations the device supports."""
+
+        if not self._supported_operation:
+            key = self._get_state_key(STATE_OPERATION)
+            mapping = self.model_info.value(key).options
+            self._supported_operation = [ACOp(o) for o in mapping.values()]
+        return self._supported_operation
+
+    def _supported_on_operation(self):
+        """
+        Get the most correct "On" operation the device supports.
+        :raises ValueError: If ALL_ON is not supported, but there are
+            multiple supported ON operations. If a model raises this,
+            its behaviour needs to be determined so this function can
+            make a better decision.
+        """
+
+        operations = self._get_supported_operations()
+
+        # This ON operation appears to be supported in newer AC models
+        if ACOp.ALL_ON in operations:
+            return ACOp.ALL_ON
+
+        # This ON operation appears to be supported in V2 AC models, to check
+        if ACOp.ON in operations:
+            return ACOp.ON
+
+        # Older models, or possibly just the LP1419IVSM, do not support ALL_ON,
+        # instead advertising only a single operation of RIGHT_ON.
+        # Thus, if there's only one ON operation, we use that.
+        single_op = [op for op in operations if op != ACOp.OFF]
+        if len(single_op) == 1:
+            return single_op[0]
+
+        # Hypothetically, the API could return multiple ON operations, neither
+        # of which are ALL_ON. This will raise in that case, as we don't know
+        # what that model will expect us to do to turn everything on.
+        # Or, this code will never actually be reached! We can only hope. :)
+        raise ValueError(
+            f"could not determine correct 'on' operation:"
+            f" too many reported operations: '{str(operations)}'"
+        )
+
+    def _get_temperature_range(self):
+        """Get valid temperature range for model."""
+
+        if not self._temperature_range:
+            if not self.model_info:
+                return None
+
+            key = self._get_state_key(STATE_TARGET_TEMP)
+            range_info = self.model_info.value(key)
+            if not range_info:
+                min_temp = DEFAULT_MIN_TEMP
+                max_temp = DEFAULT_MAX_TEMP
+            else:
+                min_temp = min(range_info.min, DEFAULT_MIN_TEMP)
+                max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
+            self._temperature_range = [min_temp, max_temp]
+        return self._temperature_range
+
+    @property
+    def op_modes(self):
+        """Return a list of available operation modes."""
+        if self._supported_op_modes is None:
+            key = self._get_state_key(SUPPORT_OPERATION_MODE)
+            if not self.model_info.is_enum_type(key):
+                self._supported_op_modes = []
+                return []
+            mapping = self.model_info.value(key).options
+            mode_list = [e.value for e in WHMode]
+            self._supported_op_modes = [
+                WHMode(o).name for o in mapping.values() if o in mode_list
+            ]
+        return self._supported_op_modes
+
+    @property
+    def temperature_unit(self):
+        """Return the unit used for temperature."""
+        return self._temperature_unit
+
+    @property
+    def target_temperature_step(self):
+        """Return target temperature step used."""
+        return self._temperature_step
+
+    @property
+    def target_temperature_min(self):
+        """Return minimum value for target temperature."""
+        temp_range = self._get_temperature_range()
+        if not temp_range:
+            return None
+        return self.conv_temp_unit(temp_range[0])
+
+    @property
+    def target_temperature_max(self):
+        """Return maximum value for target temperature."""
+        temp_range = self._get_temperature_range()
+        if not temp_range:
+            return None
+        return self.conv_temp_unit(temp_range[1])
+
+    async def power(self, turn_on: bool):
+        """Turn on or off the device (according to a boolean)."""
+        operation = self._supported_on_operation() if turn_on else ACOp.OFF
+        keys = self._get_cmd_keys(CMD_STATE_OPERATION)
+        op_value = self.model_info.enum_value(keys[2], operation.value)
+        await self.set(keys[0], keys[1], key=keys[2], value=op_value)
+
+    async def set_op_mode(self, mode):
+        """Set the device's operating mode to an `OpMode` value."""
+        if mode not in self.op_modes:
+            raise ValueError(f"Invalid operating mode: {mode}")
+        keys = self._get_cmd_keys(CMD_STATE_OP_MODE)
+        mode_value = self.model_info.enum_value(keys[2], WHMode[mode].value)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode_value)
+
+    async def set_target_temp(self, temp):
+        """Set the device's target temperature in Celsius degrees."""
+        range_info = self._get_temperature_range()
+        conv_temp = self._f2c(temp)
+        if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
+            raise ValueError(f"Target temperature out of range: {temp}")
+        keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
+        await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
+
+    async def get_power(self):
+        """Get the instant power usage in watts of the whole unit."""
+        if not self._current_power_supported:
+            return 0
+        try:
+            value = await self._get_config(STATE_POWER_V1)
+            return value[STATE_POWER_V1]
+        except (ValueError, InvalidRequestError):
+            # Device does not support whole unit instant power usage
+            self._current_power_supported = False
+            return 0
+
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
+        """Set a device's control for `key` to `value`."""
+        await super().set(
+            ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
+        )
+        if self._status:
+            self._status.update_status(key, value)
+
+    def reset_status(self):
+        """Reset the device's status"""
+        self._status = WaterHeaterStatus(self, None)
+        return self._status
+
+    # async def _get_device_info(self):
+    #    """
+    #    Call additional method to get device information for API v1.
+    #    Called by 'device_poll' method using a lower poll rate.
+    #    """
+    #    # this command is to get power usage on V1 device
+    #    self._current_power = await self.get_power()
+
+    # async def _pre_update_v2(self):
+    #    """Call additional methods before data update for v2 API."""
+    #    # this command is to get power and temp info on V2 device
+    #    keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
+    #    await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
+
+    async def poll(self) -> Optional["WaterHeaterStatus"]:
+        """Poll the device's current state."""
+        res = await self.device_poll(
+            thinq1_additional_poll=0,  # ADD_FEAT_POLL_INTERVAL,
+            thinq2_query_device=False,  # True,
+        )
+        if not res:
+            return None
+        # if self._should_poll:
+        #    res[STATE_POWER_V1] = self._current_power
+
+        self._status = WaterHeaterStatus(self, res)
+
+        return self._status
+
+
+class WaterHeaterStatus(DeviceStatus):
+    """Higher-level information about a Water Heater's current status."""
+
+    def __init__(self, device, data):
+        """Initialize device status."""
+        super().__init__(device, data)
+        self._operation = None
+
+    def _str_to_temp(self, str_temp):
+        """Convert a string to either an `int` or a `float` temperature."""
+        temp = self._str_to_num(str_temp)
+        if not temp:  # value 0 return None!!!
+            return None
+        return self._device.conv_temp_unit(temp)
+
+    def _get_operation(self):
+        """Get current operation."""
+        if self._operation is None:
+            key = self._get_state_key(STATE_OPERATION)
+            operation = self.lookup_enum(key, True)
+            if not operation:
+                return None
+            self._operation = operation
+        try:
+            return ACOp(self._operation)
+        except ValueError:
+            return None
+
+    def update_status(self, key, value):
+        """Update device status."""
+        if not super().update_status(key, value):
+            return False
+        if key in STATE_OPERATION:
+            self._operation = None
+        return True
+
+    @property
+    def is_on(self):
+        """Return if device is on."""
+        if not (operation := self._get_operation()):
+            return False
+        return operation != ACOp.OFF
+
+    @property
+    def operation(self):
+        """Return current device operation."""
+        if not (operation := self._get_operation()):
+            return None
+        return operation.name
+
+    @property
+    def operation_mode(self):
+        """Return current device operation mode."""
+        key = self._get_state_key(STATE_OPERATION_MODE)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        try:
+            return WHMode(value).name
+        except ValueError:
+            return None
+
+    @property
+    def current_temp(self):
+        """Return current temperature."""
+        key = self._get_state_key(STATE_CURRENT_TEMP)
+        return self._str_to_temp(self._data.get(key))
+
+    @property
+    def target_temp(self):
+        """Return target temperature."""
+        key = self._get_state_key(STATE_TARGET_TEMP)
+        return self._str_to_temp(self._data.get(key))
+
+    @property
+    def energy_current(self):
+        """Return current energy usage."""
+        key = self._get_state_key(STATE_POWER)
+        value = self._data.get(key)
+        if value is not None and self.is_info_v2 and not self.is_on:
+            # decrease power for V2 device that always return 50 when standby
+            new_value = self.to_int_or_none(value)
+            if new_value and new_value <= 50:
+                value = 5.0
+        return self._update_feature(FEAT_ENERGY_CURRENT, value, False)
+
+    def _update_features(self):
+        _ = [
+            self.energy_current,
+        ]

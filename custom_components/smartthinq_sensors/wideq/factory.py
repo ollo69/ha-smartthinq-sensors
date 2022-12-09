@@ -15,6 +15,7 @@ from .range import RangeDevice
 from .refrigerator import RefrigeratorDevice
 from .styler import StylerDevice
 from .washerDryer import WMDevice
+from .waterheater import WaterHeaterDevice
 
 
 def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
@@ -47,5 +48,7 @@ def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
         return StylerDevice(client, device)
     if device_type in WM_DEVICE_TYPES:
         return WMDevice(client, device)
+    if device_type == DeviceType.WATER_HEATER:
+        return WaterHeaterDevice(client, device, temp_unit)
 
     return None

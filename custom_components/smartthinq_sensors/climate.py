@@ -26,7 +26,7 @@ from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, get_entity_name
 from .wideq import FEAT_HUMIDITY, FEAT_WATER_OUT_TEMP, UNIT_TEMP_FAHRENHEIT, DeviceType
-from .wideq.ac import MAX_AWHP_TEMP, MIN_AWHP_TEMP, ACMode, AirConditionerDevice
+from .wideq.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
 
 # general ac attributes
 ATTR_FRIDGE = "fridge"
@@ -407,7 +407,7 @@ class LGEACClimate(LGEClimate):
         if (min_value := self._device.target_temperature_min) is not None:
             return min_value
         return self._device.conv_temp_unit(
-            MIN_AWHP_TEMP if self._device.is_air_to_water else DEFAULT_MIN_TEMP
+            AWHP_MIN_TEMP if self._device.is_air_to_water else DEFAULT_MIN_TEMP
         )
 
     @property
@@ -416,7 +416,7 @@ class LGEACClimate(LGEClimate):
         if (max_value := self._device.target_temperature_max) is not None:
             return max_value
         return self._device.conv_temp_unit(
-            MAX_AWHP_TEMP if self._device.is_air_to_water else DEFAULT_MAX_TEMP
+            AWHP_MAX_TEMP if self._device.is_air_to_water else DEFAULT_MAX_TEMP
         )
 
 
