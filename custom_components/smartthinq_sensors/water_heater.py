@@ -33,11 +33,12 @@ from .wideq.waterheater import (
     WHMode,
 )
 
-SUPPORT_FLAGS_HEATER = (
+LGEAC_SUPPORT_FLAGS = (
     WaterHeaterEntityFeature.TARGET_TEMPERATURE
     | WaterHeaterEntityFeature.OPERATION_MODE
 )
 
+LGEWH_AWAY_MODE = WHMode.VACATION.name
 LGEWH_STATE_TO_HA = {
     WHMode.AUTO.name: STATE_ECO,
     WHMode.HEAT_PUMP.name: STATE_HEAT_PUMP,
@@ -115,7 +116,7 @@ class LGEWHWaterHeater(LGEWaterHeater):
         self._device: WaterHeaterDevice = api.device
         self._attr_name = f"{api.name}"
         self._attr_unique_id = f"{api.unique_id}-WH"
-        self._attr_supported_features = SUPPORT_FLAGS_HEATER
+        self._supported_features = None
         self._modes_lookup = None
 
     def _available_modes(self) -> dict[str, str]:
@@ -128,6 +129,35 @@ class LGEWHWaterHeater(LGEWaterHeater):
             }
         return self._modes_lookup
 
+    async def _set_away_mode(self, mode: bool) -> None:
+        """Set the vacation mode."""
+        if LGEWH_AWAY_MODE not in self._device.op_modes:
+            raise NotImplementedError()
+        is_away = self.is_away_mode_on
+        if not mode:
+            if is_away:
+                await self._device.power(False)
+                self._api.async_set_updated()
+            return
+
+        if not is_away:
+            if not self._api.state.is_on:
+                await self._device.power(True)
+            await self._device.set_op_mode(LGEWH_AWAY_MODE)
+            self._api.async_set_updated()
+
+    @property
+    def supported_features(self) -> WaterHeaterEntityFeature:
+        """Return the list of supported features."""
+        if self._supported_features is None:
+            features = WaterHeaterEntityFeature.TARGET_TEMPERATURE
+            if self.operation_list is not None:
+                features |= WaterHeaterEntityFeature.OPERATION_MODE
+            if LGEWH_AWAY_MODE in self._device.op_modes:
+                features |= WaterHeaterEntityFeature.AWAY_MODE
+            self._supported_features = features
+        return self._supported_features
+
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
@@ -136,10 +166,16 @@ class LGEWHWaterHeater(LGEWaterHeater):
         return TEMP_CELSIUS
 
     @property
+    def is_away_mode_on(self) -> bool | None:
+        """Return true if away mode is on."""
+        op_mode: str | None = self._api.state.operation_mode
+        return self._api.state.is_on and op_mode == LGEWH_AWAY_MODE
+
+    @property
     def current_operation(self) -> str | None:
         """Return current operation."""
         op_mode: str | None = self._api.state.operation_mode
-        if not self._api.state.is_on or op_mode is None:
+        if not self._api.state.is_on or op_mode is None or op_mode == LGEWH_AWAY_MODE:
             return STATE_OFF
         modes = self._available_modes()
         return modes.get(op_mode)
@@ -147,7 +183,8 @@ class LGEWHWaterHeater(LGEWaterHeater):
     @property
     def operation_list(self) -> list[str] | None:
         """Return the list of available hvac operation modes."""
-        modes = self._available_modes()
+        if not (modes := self._available_modes()):
+            return None
         return [STATE_OFF] + list(modes.values())
 
     async def async_set_temperature(self, **kwargs) -> None:
@@ -172,6 +209,14 @@ class LGEWHWaterHeater(LGEWaterHeater):
             await self._device.power(True)
         await self._device.set_op_mode(new_mode)
         self._api.async_set_updated()
+
+    async def async_turn_away_mode_on(self) -> None:
+        """Turn away mode on."""
+        await self._set_away_mode(True)
+
+    async def async_turn_away_mode_off(self) -> None:
+        """Turn away mode off."""
+        await self._set_away_mode(False)
 
     @property
     def current_temperature(self) -> float | None:
@@ -207,7 +252,7 @@ class LGEACWaterHeater(LGEWaterHeater):
         self._device: AirConditionerDevice = api.device
         self._attr_name = f"{api.name} Water Heater"
         self._attr_unique_id = f"{api.unique_id}-AC-WH"
-        self._attr_supported_features = SUPPORT_FLAGS_HEATER
+        self._attr_supported_features = LGEAC_SUPPORT_FLAGS
         self._attr_operation_list = [STATE_OFF, STATE_HEAT_PUMP]
         # self._attr_precision = self._device.hot_water_target_temperature_step
 
