@@ -132,10 +132,12 @@ class FanStatus(DeviceStatus):
     """Higher-level information about a Fan's current status."""
 
     def __init__(self, device, data):
+        """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
 
     def _get_operation(self):
+        """Get current operation."""
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
             operation = self.lookup_enum(key, True)
@@ -148,6 +150,7 @@ class FanStatus(DeviceStatus):
             return None
 
     def update_status(self, key, value):
+        """Update device status."""
         if not super().update_status(key, value):
             return False
         if key in STATE_OPERATION:
@@ -156,6 +159,7 @@ class FanStatus(DeviceStatus):
 
     @property
     def is_on(self):
+        """Return if device is on."""
         op = self._get_operation()
         if not op:
             return False
@@ -163,6 +167,7 @@ class FanStatus(DeviceStatus):
 
     @property
     def operation(self):
+        """Return current device operation."""
         op = self._get_operation()
         if not op:
             return None
@@ -170,6 +175,7 @@ class FanStatus(DeviceStatus):
 
     @property
     def fan_speed(self):
+        """Return current fan speed."""
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -180,6 +186,7 @@ class FanStatus(DeviceStatus):
 
     @property
     def fan_preset(self):
+        """Return current fan preset."""
         return None
 
     def _update_features(self):

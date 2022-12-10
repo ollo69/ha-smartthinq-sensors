@@ -224,10 +224,12 @@ class AirPurifierStatus(DeviceStatus):
     """Higher-level information about a Air Purifier's current status."""
 
     def __init__(self, device, data):
+        """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
 
     def _get_operation(self):
+        """Get current operation."""
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
             operation = self.lookup_enum(key, True)
@@ -240,6 +242,7 @@ class AirPurifierStatus(DeviceStatus):
             return None
 
     def update_status(self, key, value):
+        """Update device status."""
         if not super().update_status(key, value):
             return False
         if key in STATE_OPERATION:
@@ -248,6 +251,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def is_on(self):
+        """Return if device is on."""
         op = self._get_operation()
         if not op:
             return False
@@ -255,6 +259,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def operation(self):
+        """Return current device operation."""
         op = self._get_operation()
         if not op:
             return None
@@ -262,6 +267,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def operation_mode(self):
+        """Return current device operation mode."""
         key = self._get_state_key(STATE_OPERATION_MODE)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -272,6 +278,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def fan_speed(self):
+        """Return current fan speed."""
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -282,6 +289,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def fan_preset(self):
+        """Return current fan preset."""
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -292,6 +300,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def current_humidity(self):
+        """Return current humidity."""
         support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
         if (
             self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT")
@@ -305,6 +314,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm1(self):
+        """Return Air PM1 value."""
         support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
         if self._device.model_info.enum_value(support_key, "@PM1_0_SUPPORT") is None:
             return None
@@ -315,6 +325,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm10(self):
+        """Return Air PM10 value."""
         support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
         if self._device.model_info.enum_value(support_key, "@PM10_SUPPORT") is None:
             return None
@@ -325,6 +336,7 @@ class AirPurifierStatus(DeviceStatus):
 
     @property
     def pm25(self):
+        """Return Air PM2.5 value."""
         support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
         if self._device.model_info.enum_value(support_key, "@PM2_5_SUPPORT") is None:
             return None
@@ -336,6 +348,7 @@ class AirPurifierStatus(DeviceStatus):
     def _get_filter_life(
         self, use_time_status, max_time_status, support_key, filter_types=None
     ):
+        """Get filter status."""
         if filter_types:
             supported = False
             for filter_type in filter_types:
