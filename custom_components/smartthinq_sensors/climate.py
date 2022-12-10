@@ -25,7 +25,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, get_entity_name
-from .wideq import FEAT_HUMIDITY, FEAT_WATER_OUT_TEMP, UNIT_TEMP_FAHRENHEIT, DeviceType
+from .wideq import (
+    FEAT_HUMIDITY,
+    FEAT_ROOM_TEMP,
+    FEAT_WATER_OUT_TEMP,
+    UNIT_TEMP_FAHRENHEIT,
+    DeviceType,
+)
 from .wideq.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
 
 # general ac attributes
@@ -325,7 +331,7 @@ class LGEACClimate(LGEClimate):
         if self._device.is_air_to_water:
             curr_temp = self._api.state.device_features.get(FEAT_WATER_OUT_TEMP)
         if curr_temp is None:
-            curr_temp = self._api.state.current_temp
+            curr_temp = self._api.state.device_features.get(FEAT_ROOM_TEMP)
         return curr_temp
 
     @property

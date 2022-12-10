@@ -10,6 +10,7 @@ from .const import (
     FEAT_LIGHTING_DISPLAY,
     FEAT_MODE_AWHP_SILENT,
     FEAT_MODE_JET,
+    FEAT_ROOM_TEMP,
     FEAT_WATER_IN_TEMP,
     FEAT_WATER_OUT_TEMP,
     UNIT_TEMP_CELSIUS,
@@ -933,7 +934,8 @@ class AirConditionerStatus(DeviceStatus):
     def current_temp(self):
         """Return current temperature."""
         key = self._get_state_key(STATE_CURRENT_TEMP)
-        return self._str_to_temp(self._data.get(key))
+        value = self._str_to_temp(self._data.get(key))
+        return self._update_feature(FEAT_ROOM_TEMP, value, False)
 
     @property
     def target_temp(self):
@@ -1084,6 +1086,7 @@ class AirConditionerStatus(DeviceStatus):
 
     def _update_features(self):
         _ = [
+            self.current_temp,
             self.energy_current,
             self.humidity,
             self.mode_jet,

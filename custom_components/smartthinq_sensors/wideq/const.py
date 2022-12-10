@@ -26,6 +26,7 @@ FEAT_HUMIDITY = "humidity"
 FEAT_LIGHTING_DISPLAY = "lighting_display"
 FEAT_MODE_AWHP_SILENT = "mode_awhp_silent"
 FEAT_MODE_JET = "mode_jet"
+FEAT_ROOM_TEMP = "room_temperature"
 FEAT_WATER_IN_TEMP = "water_in_temperature"
 FEAT_WATER_OUT_TEMP = "water_out_temperature"
 
