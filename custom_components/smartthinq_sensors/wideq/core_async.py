@@ -625,7 +625,10 @@ class CoreAsync:
 
 
 class Gateway:
+    """ThinQ authentication gateway."""
+
     def __init__(self, gw_info: dict, core: CoreAsync) -> None:
+        """Initialize the gateway object."""
         self.auth_base = add_end_slash(gw_info["empUri"])
         self.emp_base_uri = add_end_slash(gw_info["empTermsUri"])
         self.login_base_uri = add_end_slash(gw_info["empSpxUri"])
@@ -685,6 +688,7 @@ class Gateway:
         return f"{url}?{url_query}"
 
     def dump(self) -> dict:
+        """Dump the gateway objet."""
         return {
             "empUri": self.auth_base,
             "empTermsUri": self.emp_base_uri,
@@ -697,7 +701,7 @@ class Gateway:
 
 
 class Auth:
-    """ThinQ authentication object"""
+    """ThinQ authentication."""
 
     def __init__(
         self,
@@ -708,7 +712,7 @@ class Auth:
         token_validity: str | None = None,
         user_number: str | None = None,
     ) -> None:
-        """Initialize ThinQ authentication"""
+        """Initialize ThinQ authentication object."""
         self._gateway: Gateway = gateway
         self.refresh_token = refresh_token
         self.oauth_url = oauth_url
@@ -862,13 +866,17 @@ class Auth:
 
 
 class Session:
+    """ThinQ authentication session."""
+
     def __init__(self, auth: Auth, session_id=0) -> None:
+        """Initialize session object."""
         self._auth = auth
         self.session_id = session_id
         self._common_lang_pack_url = None
 
     @property
     def common_lang_pack_url(self):
+        """Return common language pack url."""
         return self._common_lang_pack_url
 
     async def refresh_auth(self) -> Auth:
@@ -1434,7 +1442,7 @@ class ClientAsync:
             client._session = Session(client.auth, state["session"])
 
         if "model_info" in state:
-            client._model_info = state["model_info"]
+            client._model_url_info = state["model_url_info"]
 
         if "country" in state:
             client._country = state["country"]

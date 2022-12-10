@@ -254,10 +254,12 @@ class DeHumidifierStatus(DeviceStatus):
     """Higher-level information about a DeHumidifier's current status."""
 
     def __init__(self, device, data):
+        """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
 
     def _get_operation(self):
+        """Get current operation."""
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
             operation = self.lookup_enum(key, True)
@@ -270,6 +272,7 @@ class DeHumidifierStatus(DeviceStatus):
             return None
 
     def update_status(self, key, value):
+        """Update device status."""
         if not super().update_status(key, value):
             return False
         if key in STATE_OPERATION:
@@ -278,6 +281,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def is_on(self):
+        """Return if device is on."""
         op = self._get_operation()
         if not op:
             return False
@@ -285,6 +289,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def operation(self):
+        """Return current device operation."""
         op = self._get_operation()
         if not op:
             return None
@@ -292,6 +297,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def operation_mode(self):
+        """Return current device operation mode."""
         key = self._get_state_key(STATE_OPERATION_MODE)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -302,6 +308,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def fan_speed(self):
+        """Return current fan speed."""
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -312,6 +319,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def current_humidity(self):
+        """Return current humidity."""
         # support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
         # if self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT") is None:
         #     return None
@@ -322,6 +330,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def target_humidity(self):
+        """Return target humidity."""
         key = self._get_state_key(STATE_TARGET_HUM)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
@@ -329,6 +338,7 @@ class DeHumidifierStatus(DeviceStatus):
 
     @property
     def water_tank_full(self):
+        """Return water tank full status."""
         key = self._get_state_key(STATE_TANK_LIGHT)
         if (value := self.lookup_enum(key)) is None:
             return None

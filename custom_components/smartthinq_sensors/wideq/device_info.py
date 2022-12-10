@@ -84,6 +84,7 @@ class DeviceInfo:
     """
 
     def __init__(self, data: dict[str, Any]) -> None:
+        """Initialize the object."""
         self._data = data
         self._device_id = None
         self._device_type = None
@@ -97,12 +98,14 @@ class DeviceInfo:
         return self._data.copy()
 
     def _get_data_key(self, keys):
+        """Get valid key from a list of possible keys."""
         for key in keys:
             if key in self._data:
                 return key
         return ""
 
     def _get_data_value(self, key, default: Any = STATE_OPTIONITEM_UNKNOWN):
+        """Get data value for a specific key or list of keys."""
         if isinstance(key, list):
             vkey = self._get_data_key(key)
         else:
@@ -112,44 +115,53 @@ class DeviceInfo:
 
     @property
     def model_id(self) -> str:
+        """Return the model name."""
         return self._get_data_value(["modelName", "modelNm"])
 
     @property
     def id(self) -> str:
+        """Return the device id."""
         if self._device_id is None:
             self._device_id = self._get_data_value("deviceId")
         return self._device_id
 
     @property
     def model_info_url(self) -> str:
+        """Return the url used to retrieve model info."""
         return self._get_data_value(["modelJsonUrl", "modelJsonUri"], default=None)
 
     @property
     def model_lang_pack_url(self) -> str:
+        """Return the url used to retrieve model language pack."""
         return self._get_data_value(
             ["langPackModelUrl", "langPackModelUri"], default=None
         )
 
     @property
     def product_lang_pack_url(self) -> str:
+        """Return the url used to retrieve product info."""
         return self._get_data_value(
             ["langPackProductTypeUrl", "langPackProductTypeUri"], default=None
         )
 
     @property
     def name(self) -> str:
+        """Return the device name."""
         return self._get_data_value("alias")
 
     @property
     def model_name(self) -> str:
+        """Return the model name for the device."""
         return self._get_data_value(["modelName", "modelNm"])
 
     @property
     def macaddress(self) -> Optional[str]:
+        """Return the device mac address."""
         return self._data.get("macAddress")
 
     @property
     def firmware(self) -> Optional[str]:
+        """Return the device firmware version."""
         if fw := self._data.get("fwVer"):
             return fw
         if "modemInfo" in self._data:
@@ -217,4 +229,5 @@ class DeviceInfo:
 
     @property
     def snapshot(self) -> Optional[dict[str, Any]]:
+        """Return the snapshot data associated to the device."""
         return self._data.get("snapshot")

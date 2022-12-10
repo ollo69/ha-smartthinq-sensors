@@ -69,12 +69,14 @@ class DishWasherStatus(DeviceStatus):
     """
 
     def __init__(self, device, data):
+        """Initialize device status."""
         super().__init__(device, data)
         self._run_state = None
         self._process = None
         self._error = None
 
     def _get_run_state(self):
+        """Get current run state."""
         if not self._run_state:
             state = self.lookup_enum(["State", "state"])
             if not state:
@@ -84,6 +86,7 @@ class DishWasherStatus(DeviceStatus):
         return self._run_state
 
     def _get_process(self):
+        """Get current process."""
         if not self._process:
             process = self.lookup_enum(["Process", "process"])
             if not process:
@@ -93,6 +96,7 @@ class DishWasherStatus(DeviceStatus):
         return self._process
 
     def _get_error(self):
+        """Get current error."""
         if not self._error:
             error = self.lookup_reference(["Error", "error"], ref_key="title")
             if not error:
@@ -103,11 +107,13 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def is_on(self):
+        """Return if device is on."""
         run_state = self._get_run_state()
         return run_state != STATE_DISHWASHER_POWER_OFF
 
     @property
     def is_run_completed(self):
+        """Return if run is completed."""
         run_state = self._get_run_state()
         process = self._get_process()
         if run_state in STATE_DISHWASHER_END or (
@@ -118,6 +124,7 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def is_error(self):
+        """Return if an error is present."""
         if not self.is_on:
             return False
         error = self._get_error()
@@ -130,6 +137,7 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def current_course(self):
+        """Return current course."""
         if self.is_info_v2:
             course_key = self._device.model_info.config_value("courseType")
         else:
@@ -139,6 +147,7 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def current_smartcourse(self):
+        """Return current smartcourse."""
         if self.is_info_v2:
             course_key = self._device.model_info.config_value("smartCourseType")
         else:
@@ -148,42 +157,49 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def initialtime_hour(self):
+        """Return hour initial time."""
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("initialTimeHour"))
         return self._data.get("Initial_Time_H")
 
     @property
     def initialtime_min(self):
+        """Return minute initial time."""
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("initialTimeMinute"))
         return self._data.get("Initial_Time_M")
 
     @property
     def remaintime_hour(self):
+        """Return hour remaining time."""
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("remainTimeHour"))
         return self._data.get("Remain_Time_H")
 
     @property
     def remaintime_min(self):
+        """Return minute remaining time."""
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("remainTimeMinute"))
         return self._data.get("Remain_Time_M")
 
     @property
     def reservetime_hour(self):
+        """Return hour reserved time."""
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("reserveTimeHour"))
         return self._data.get("Reserve_Time_H")
 
     @property
     def reservetime_min(self):
+        """Return minute reserved time."""
         if self.is_info_v2:
             return DeviceStatus.int_or_none(self._data.get("reserveTimeMinute"))
         return self._data.get("Reserve_Time_M")
 
     @property
     def run_state(self):
+        """Return current run state."""
         run_state = self._get_run_state()
         if run_state == STATE_DISHWASHER_POWER_OFF:
             run_state = STATE_OPTIONITEM_NONE
@@ -191,11 +207,13 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def process_state(self):
+        """Return current process state."""
         process = self._get_process()
         return self._update_feature(FEAT_PROCESS_STATE, process)
 
     @property
     def halfload_state(self):
+        """Return half load state."""
         if self.is_info_v2:
             half_load = self.lookup_bit_enum("halfLoad")
         else:
@@ -206,6 +224,7 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def error_msg(self):
+        """Return current error message."""
         if not self.is_error:
             error = STATE_OPTIONITEM_NONE
         else:
@@ -214,6 +233,7 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def tubclean_count(self):
+        """Return tub clean counter."""
         if self.is_info_v2:
             result = DeviceStatus.int_or_none(self._data.get("tclCount"))
         else:
@@ -224,56 +244,67 @@ class DishWasherStatus(DeviceStatus):
 
     @property
     def door_opened_state(self):
+        """Return door opened state."""
         status = self.lookup_bit("door" if self.is_info_v2 else "Door")
         return self._update_feature(FEAT_DOOROPEN, status, False)
 
     @property
     def childlock_state(self):
+        """Return child lock state."""
         status = self.lookup_bit("childLock" if self.is_info_v2 else "ChildLock")
         return self._update_feature(FEAT_CHILDLOCK, status, False)
 
     @property
     def rinserefill_state(self):
+        """Return rinse refill state."""
         status = self.lookup_bit("rinseRefill" if self.is_info_v2 else "RinseRefill")
         return self._update_feature(FEAT_RINSEREFILL, status, False)
 
     @property
     def saltrefill_state(self):
+        """Return salt refill state."""
         status = self.lookup_bit("saltRefill" if self.is_info_v2 else "SaltRefill")
         return self._update_feature(FEAT_SALTREFILL, status, False)
 
     @property
     def dualzone_state(self):
+        """Return dual zone state."""
         status = self.lookup_bit("dualZone" if self.is_info_v2 else "DualZone")
         return self._update_feature(FEAT_DUALZONE, status, False)
 
     @property
     def delaystart_state(self):
+        """Return delay start state."""
         status = self.lookup_bit("delayStart" if self.is_info_v2 else "DelayStart")
         return self._update_feature(FEAT_DELAYSTART, status, False)
 
     @property
     def energysaver_state(self):
+        """Return energy saver state."""
         status = self.lookup_bit("energySaver" if self.is_info_v2 else "EnergySaver")
         return self._update_feature(FEAT_ENERGYSAVER, status, False)
 
     @property
     def autodoor_state(self):
+        """Return auto door state."""
         status = self.lookup_bit("autoDoor" if self.is_info_v2 else "AutoDoor")
         return self._update_feature(FEAT_AUTODOOR, status, False)
 
     @property
     def hightemp_state(self):
+        """Return high temp state."""
         status = self.lookup_bit("highTemp" if self.is_info_v2 else "HighTemp")
         return self._update_feature(FEAT_HIGHTEMP, status, False)
 
     @property
     def extradry_state(self):
+        """Return extra dry state."""
         status = self.lookup_bit("extraDry" if self.is_info_v2 else "ExtraDry")
         return self._update_feature(FEAT_EXTRADRY, status, False)
 
     @property
     def nightdry_state(self):
+        """Return night dry state."""
         status = self.lookup_bit("nightDry" if self.is_info_v2 else "NightDry")
         return self._update_feature(FEAT_NIGHTDRY, status, False)
 

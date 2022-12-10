@@ -830,6 +830,14 @@ class DeviceStatus:
             return True
         return False
 
+    def update_status_feat(self, key, value, upd_features=False):
+        """Update device status and features."""
+        if not self.update_status(key, value):
+            return False
+        if upd_features:
+            self._update_features()
+        return True
+
     def key_exist(self, keys):
         """Chek if a secific key exists inside the status."""
         if isinstance(keys, list):

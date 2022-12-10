@@ -866,7 +866,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def fan_speed(self):
-        """Return currrent fan speed."""
+        """Return current fan speed."""
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -952,7 +952,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def humidity(self):
-        """Return current humidity"""
+        """Return current humidity."""
         key = self._get_state_key(STATE_HUMIDITY)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
