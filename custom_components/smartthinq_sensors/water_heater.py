@@ -24,7 +24,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import UNIT_TEMP_FAHRENHEIT, DeviceType
+from .wideq import FEAT_HOT_WATER_TEMP, UNIT_TEMP_FAHRENHEIT, DeviceType
 from .wideq.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, AirConditionerDevice
 from .wideq.waterheater import (
     DEFAULT_MAX_TEMP as WH_MAX_TEMP,
@@ -43,6 +43,7 @@ LGEWH_STATE_TO_HA = {
     WHMode.AUTO.name: STATE_ECO,
     WHMode.HEAT_PUMP.name: STATE_HEAT_PUMP,
     WHMode.TURBO.name: STATE_PERFORMANCE,
+    WHMode.VACATION.name: STATE_OFF,
 }
 
 _LOGGER = logging.getLogger(__name__)
@@ -129,23 +130,6 @@ class LGEWHWaterHeater(LGEWaterHeater):
             }
         return self._modes_lookup
 
-    async def _set_away_mode(self, mode: bool) -> None:
-        """Set the vacation mode."""
-        if LGEWH_AWAY_MODE not in self._device.op_modes:
-            raise NotImplementedError()
-        is_away = self.is_away_mode_on
-        if not mode:
-            if is_away:
-                await self._device.power(False)
-                self._api.async_set_updated()
-            return
-
-        if not is_away:
-            if not self._api.state.is_on:
-                await self._device.power(True)
-            await self._device.set_op_mode(LGEWH_AWAY_MODE)
-            self._api.async_set_updated()
-
     @property
     def supported_features(self) -> WaterHeaterEntityFeature:
         """Return the list of supported features."""
@@ -153,8 +137,6 @@ class LGEWHWaterHeater(LGEWaterHeater):
             features = WaterHeaterEntityFeature.TARGET_TEMPERATURE
             if self.operation_list is not None:
                 features |= WaterHeaterEntityFeature.OPERATION_MODE
-            if LGEWH_AWAY_MODE in self._device.op_modes:
-                features |= WaterHeaterEntityFeature.AWAY_MODE
             self._supported_features = features
         return self._supported_features
 
@@ -166,16 +148,10 @@ class LGEWHWaterHeater(LGEWaterHeater):
         return TEMP_CELSIUS
 
     @property
-    def is_away_mode_on(self) -> bool | None:
-        """Return true if away mode is on."""
-        op_mode: str | None = self._api.state.operation_mode
-        return self._api.state.is_on and op_mode == LGEWH_AWAY_MODE
-
-    @property
     def current_operation(self) -> str | None:
         """Return current operation."""
         op_mode: str | None = self._api.state.operation_mode
-        if not self._api.state.is_on or op_mode is None or op_mode == LGEWH_AWAY_MODE:
+        if op_mode is None:
             return STATE_OFF
         modes = self._available_modes()
         return modes.get(op_mode)
@@ -185,7 +161,7 @@ class LGEWHWaterHeater(LGEWaterHeater):
         """Return the list of available hvac operation modes."""
         if not (modes := self._available_modes()):
             return None
-        return [STATE_OFF] + list(modes.values())
+        return list(modes.values())
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -195,33 +171,17 @@ class LGEWHWaterHeater(LGEWaterHeater):
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set operation mode."""
-        if operation_mode == STATE_OFF:
-            await self._device.power(False)
-            self._api.async_set_updated()
-            return
-
         modes = self._available_modes()
         reverse_lookup = {v: k for k, v in modes.items()}
         if (new_mode := reverse_lookup.get(operation_mode)) is None:
             raise ValueError(f"Invalid operation_mode [{operation_mode}]")
-
-        if not self._api.state.is_on:
-            await self._device.power(True)
         await self._device.set_op_mode(new_mode)
         self._api.async_set_updated()
-
-    async def async_turn_away_mode_on(self) -> None:
-        """Turn away mode on."""
-        await self._set_away_mode(True)
-
-    async def async_turn_away_mode_off(self) -> None:
-        """Turn away mode off."""
-        await self._set_away_mode(False)
 
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return self._api.state.current_temp
+        return self._api.state.device_features.get(FEAT_HOT_WATER_TEMP)
 
     @property
     def target_temperature(self) -> float | None:
@@ -288,7 +248,7 @@ class LGEACWaterHeater(LGEWaterHeater):
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return self._api.state.hot_water_current_temp
+        return self._api.state.device_features.get(FEAT_HOT_WATER_TEMP)
 
     @property
     def target_temperature(self) -> float | None:

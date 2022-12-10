@@ -29,7 +29,7 @@ from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOV
 from .device_helpers import (
     DEVICE_ICONS,
     WASH_DEVICE_TYPES,
-    LGEACDevice,
+    LGETempDevice,
     LGERangeDevice,
     LGERefrigeratorDevice,
     LGEWashDevice,
@@ -62,6 +62,7 @@ from .wideq import (
     FEAT_PM25,
     FEAT_PRE_STATE,
     FEAT_PROCESS_STATE,
+    FEAT_ROOM_TEMP,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
     FEAT_TARGET_HUMIDITY,
@@ -91,9 +92,6 @@ ATTR_DOOR_OPEN = "door_open"
 ATTR_FRIDGE_TEMP = "fridge_temp"
 ATTR_FREEZER_TEMP = "freezer_temp"
 ATTR_TEMP_UNIT = "temp_unit"
-
-# ac sensor attributes
-ATTR_ROOM_TEMP = "room_temperature"
 
 # range sensor attributes
 ATTR_OVEN_LOWER_TARGET_TEMP = "oven_lower_target_temp"
@@ -227,12 +225,11 @@ REFRIGERATOR_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
-        key=ATTR_ROOM_TEMP,
+        key=FEAT_ROOM_TEMP,
         name="Room temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.temp_unit,
-        value_fn=lambda x: x.curr_temp,
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
@@ -432,6 +429,16 @@ DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
 )
+WATER_HEATER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
+    ThinQSensorEntityDescription(
+        key=FEAT_HOT_WATER_TEMP,
+        name="Hot water temperature",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        unit_fn=lambda x: x.temp_unit,
+        entity_registry_enabled_default=False,
+    ),
+)
 
 
 def _sensor_exist(
@@ -491,7 +498,7 @@ async def async_setup_entry(
         # add AC
         lge_sensors.extend(
             [
-                LGESensor(lge_device, sensor_desc, LGEACDevice(lge_device))
+                LGESensor(lge_device, sensor_desc, LGETempDevice(lge_device))
                 for sensor_desc in AC_SENSORS
                 for lge_device in lge_devices.get(DeviceType.AC, [])
                 if _sensor_exist(lge_device, sensor_desc)
@@ -524,6 +531,16 @@ async def async_setup_entry(
                 LGESensor(lge_device, sensor_desc)
                 for sensor_desc in DEHUMIDIFIER_SENSORS
                 for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
+        # add water_heater
+        lge_sensors.extend(
+            [
+                LGESensor(lge_device, sensor_desc, LGETempDevice(lge_device))
+                for sensor_desc in WATER_HEATER_SENSORS
+                for lge_device in lge_devices.get(DeviceType.WATER_HEATER, [])
                 if _sensor_exist(lge_device, sensor_desc)
             ]
         )

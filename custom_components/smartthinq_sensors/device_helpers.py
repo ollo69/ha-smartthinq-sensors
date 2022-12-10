@@ -224,19 +224,12 @@ class LGERefrigeratorDevice(LGEBaseDevice):
         return STATE_OFF
 
 
-class LGEACDevice(LGEBaseDevice):
-    """A wrapper to monitor LGE AC devices"""
-
-    @property
-    def curr_temp(self):
-        """Return AC device current temperature."""
-        if self._api.state:
-            return self._api.state.current_temp
-        return None
+class LGETempDevice(LGEBaseDevice):
+    """A wrapper to monitor LGE devices that support temperature unit."""
 
     @property
     def temp_unit(self):
-        """Return AC device temperature unit."""
+        """Return device temperature unit."""
         unit = self._api.device.temperature_unit
         return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
 

@@ -2,7 +2,12 @@
 from enum import Enum
 from typing import Optional
 
-from .const import FEAT_ENERGY_CURRENT, UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT
+from .const import (
+    FEAT_ENERGY_CURRENT,
+    FEAT_HOT_WATER_TEMP,
+    UNIT_TEMP_CELSIUS,
+    UNIT_TEMP_FAHRENHEIT,
+)
 from .core_exceptions import InvalidRequestError
 from .core_util import TempUnitConversion
 from .device import Device, DeviceStatus
@@ -20,7 +25,6 @@ STATE_CURRENT_TEMP = ["TempCur", "airState.tempState.hotWaterCurrent"]
 STATE_TARGET_TEMP = ["TempCfg", "airState.tempState.hotWaterTarget"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 
-CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
 CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
 CMD_STATE_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_TARGET_TEMP]
 
@@ -67,7 +71,6 @@ class WaterHeaterDevice(Device):
             if temp_unit == UNIT_TEMP_FAHRENHEIT
             else UNIT_TEMP_CELSIUS
         )
-        self._supported_operation = None
         self._supported_op_modes = None
         self._temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
@@ -88,50 +91,6 @@ class WaterHeaterDevice(Device):
         if self._temperature_unit == UNIT_TEMP_CELSIUS:
             return float(value)
         return self._unit_conv.c2f(value, self.model_info)
-
-    def _get_supported_operations(self):
-        """Get a list of the ACOp Operations the device supports."""
-
-        if not self._supported_operation:
-            key = self._get_state_key(STATE_OPERATION)
-            mapping = self.model_info.value(key).options
-            self._supported_operation = [ACOp(o) for o in mapping.values()]
-        return self._supported_operation
-
-    def _supported_on_operation(self):
-        """
-        Get the most correct "On" operation the device supports.
-        :raises ValueError: If ALL_ON is not supported, but there are
-            multiple supported ON operations. If a model raises this,
-            its behaviour needs to be determined so this function can
-            make a better decision.
-        """
-
-        operations = self._get_supported_operations()
-
-        # This ON operation appears to be supported in newer AC models
-        if ACOp.ALL_ON in operations:
-            return ACOp.ALL_ON
-
-        # This ON operation appears to be supported in V2 AC models, to check
-        if ACOp.ON in operations:
-            return ACOp.ON
-
-        # Older models, or possibly just the LP1419IVSM, do not support ALL_ON,
-        # instead advertising only a single operation of RIGHT_ON.
-        # Thus, if there's only one ON operation, we use that.
-        single_op = [op for op in operations if op != ACOp.OFF]
-        if len(single_op) == 1:
-            return single_op[0]
-
-        # Hypothetically, the API could return multiple ON operations, neither
-        # of which are ALL_ON. This will raise in that case, as we don't know
-        # what that model will expect us to do to turn everything on.
-        # Or, this code will never actually be reached! We can only hope. :)
-        raise ValueError(
-            f"could not determine correct 'on' operation:"
-            f" too many reported operations: '{str(operations)}'"
-        )
 
     def _get_temperature_range(self):
         """Get valid temperature range for model."""
@@ -191,13 +150,6 @@ class WaterHeaterDevice(Device):
         if not temp_range:
             return None
         return self.conv_temp_unit(temp_range[1])
-
-    async def power(self, turn_on: bool):
-        """Turn on or off the device (according to a boolean)."""
-        operation = self._supported_on_operation() if turn_on else ACOp.OFF
-        keys = self._get_cmd_keys(CMD_STATE_OPERATION)
-        op_value = self.model_info.enum_value(keys[2], operation.value)
-        await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
     async def set_op_mode(self, mode):
         """Set the device's operating mode to an `OpMode` value."""
@@ -338,7 +290,8 @@ class WaterHeaterStatus(DeviceStatus):
     def current_temp(self):
         """Return current temperature."""
         key = self._get_state_key(STATE_CURRENT_TEMP)
-        return self._str_to_temp(self._data.get(key))
+        value = self._str_to_temp(self._data.get(key))
+        return self._update_feature(FEAT_HOT_WATER_TEMP, value, False)
 
     @property
     def target_temp(self):
@@ -360,5 +313,6 @@ class WaterHeaterStatus(DeviceStatus):
 
     def _update_features(self):
         _ = [
+            self.current_temp,
             self.energy_current,
         ]
