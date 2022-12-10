@@ -26,6 +26,12 @@ STATE_STYLER_ERROR_NO_ERROR = [
     "No_Error",
 ]
 
+BIT_FEATURES = {
+    FEAT_CHILDLOCK: ["ChildLock", "childLock"],
+    FEAT_NIGHTDRY: ["NightDry", "nightDry"],
+    FEAT_REMOTESTART: ["RemoteStart", "remoteStart"],
+}
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -216,30 +222,17 @@ class StylerStatus(DeviceStatus):
             error = self._get_error()
         return self._update_feature(FEAT_ERROR_MSG, error)
 
-    @property
-    def childlock_state(self):
-        """Return child lock state."""
-        status = self.lookup_bit("childLock" if self.is_info_v2 else "ChildLock")
-        return self._update_feature(FEAT_CHILDLOCK, status, False)
-
-    @property
-    def nightdry_state(self):
-        """Return night dry state."""
-        status = self.lookup_bit("nightDry" if self.is_info_v2 else "NightDry")
-        return self._update_feature(FEAT_NIGHTDRY, status, False)
-
-    @property
-    def remotestart_state(self):
-        """Return remote start state."""
-        status = self.lookup_bit("remoteStart" if self.is_info_v2 else "RemoteStart")
-        return self._update_feature(FEAT_REMOTESTART, status, False)
+    def _update_bit_features(self):
+        """Update features related to bit status."""
+        index = 1 if self.is_info_v2 else 0
+        for feature, keys in BIT_FEATURES.items():
+            status = self.lookup_bit(keys[index])
+            self._update_feature(feature, status, False)
 
     def _update_features(self):
         _ = [
             self.run_state,
             self.pre_state,
             self.error_msg,
-            self.childlock_state,
-            self.nightdry_state,
-            self.remotestart_state,
         ]
+        self._update_bit_features()

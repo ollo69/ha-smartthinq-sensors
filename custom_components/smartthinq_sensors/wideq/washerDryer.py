@@ -66,6 +66,24 @@ CMD_REMOTE_START = [
     ["Start", "WMStart"],
 ]
 
+BIT_FEATURES = {
+    FEAT_ANTICREASE: ["AntiCrease", "antiCrease"],
+    FEAT_CHILDLOCK: ["ChildLock", "childLock"],
+    FEAT_CREASECARE: ["CreaseCare", "creaseCare"],
+    FEAT_DAMPDRYBEEP: ["DampDryBeep", "dampDryBeep"],
+    FEAT_DOORCLOSE: ["DoorClose", "doorClose"],
+    FEAT_DOORLOCK: ["DoorLock", "doorLock"],
+    FEAT_HANDIRON: ["HandIron", "handIron"],
+    FEAT_MEDICRINSE: ["MedicRinse", "medicRinse"],
+    FEAT_PREWASH: ["PreWash", "preWash"],
+    FEAT_REMOTESTART: REMOTE_START_KEY,
+    FEAT_RESERVATION: ["Reservation", "reservation"],
+    FEAT_SELFCLEAN: ["SelfClean", "selfClean"],
+    FEAT_STEAM: ["Steam", "steam"],
+    FEAT_STEAMSOFTENER: ["SteamSoftener", "steamSoftener"],
+    FEAT_TURBOWASH: ["TurboWash", "turboWash"],
+}
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -538,99 +556,12 @@ class WMStatus(DeviceStatus):
             status = STATE_OPTIONITEM_OFF
         return self._update_feature(FEAT_STANDBY, status)
 
-    @property
-    def remotestart_state(self):
-        """Return remote start state."""
-        status = self.lookup_bit(
-            REMOTE_START_KEY[1] if self.is_info_v2 else REMOTE_START_KEY[0]
-        )
-        return self._update_feature(FEAT_REMOTESTART, status, False)
-
-    @property
-    def doorlock_state(self):
-        """Return door lock state."""
-        status = self.lookup_bit("doorLock" if self.is_info_v2 else "DoorLock")
-        return self._update_feature(FEAT_DOORLOCK, status, False)
-
-    @property
-    def doorclose_state(self):
-        """Return door close state."""
-        status = self.lookup_bit("doorClose" if self.is_info_v2 else "DoorClose")
-        return self._update_feature(FEAT_DOORCLOSE, status, False)
-
-    @property
-    def childlock_state(self):
-        """Return child lock state."""
-        status = self.lookup_bit("childLock" if self.is_info_v2 else "ChildLock")
-        return self._update_feature(FEAT_CHILDLOCK, status, False)
-
-    @property
-    def creasecare_state(self):
-        """Return crease care state."""
-        status = self.lookup_bit("creaseCare" if self.is_info_v2 else "CreaseCare")
-        return self._update_feature(FEAT_CREASECARE, status, False)
-
-    @property
-    def steam_state(self):
-        """Return steam state."""
-        status = self.lookup_bit("steam" if self.is_info_v2 else "Steam")
-        return self._update_feature(FEAT_STEAM, status, False)
-
-    @property
-    def steam_softener_state(self):
-        """Return steam softener state."""
-        status = self.lookup_bit(
-            "steamSoftener" if self.is_info_v2 else "SteamSoftener"
-        )
-        return self._update_feature(FEAT_STEAMSOFTENER, status, False)
-
-    @property
-    def prewash_state(self):
-        """Return prewash state."""
-        status = self.lookup_bit("preWash" if self.is_info_v2 else "PreWash")
-        return self._update_feature(FEAT_PREWASH, status, False)
-
-    @property
-    def turbowash_state(self):
-        """Return turbowash state."""
-        status = self.lookup_bit("turboWash" if self.is_info_v2 else "TurboWash")
-        return self._update_feature(FEAT_TURBOWASH, status, False)
-
-    @property
-    def medicrinse_state(self):
-        """Return medicrinse state."""
-        status = self.lookup_bit("medicRinse" if self.is_info_v2 else "MedicRinse")
-        return self._update_feature(FEAT_MEDICRINSE, status, False)
-
-    @property
-    def dampdrybeep_state(self):
-        """Return dry beep state."""
-        status = self.lookup_bit("dampDryBeep" if self.is_info_v2 else "DampDryBeep")
-        return self._update_feature(FEAT_DAMPDRYBEEP, status, False)
-
-    @property
-    def reservation_state(self):
-        """Return reservation state."""
-        status = self.lookup_bit("reservation" if self.is_info_v2 else "Reservation")
-        return self._update_feature(FEAT_RESERVATION, status, False)
-
-    @property
-    def handiron_state(self):
-        """Return hand iron state."""
-        status = self.lookup_bit("handIron" if self.is_info_v2 else "HandIron")
-        return self._update_feature(FEAT_HANDIRON, status, False)
-
-    @property
-    def selfclean_state(self):
-        """Return self clean state."""
-        status = self.lookup_bit("selfClean" if self.is_info_v2 else "SelfClean")
-        return self._update_feature(FEAT_SELFCLEAN, status, False)
-
-    @property
-    def anticrease_state(self):
-        """Return anti crease state."""
-        status = self.lookup_bit("antiCrease" if self.is_info_v2 else "AntiCrease")
-        return self._update_feature(FEAT_ANTICREASE, status, False)
+    def _update_bit_features(self):
+        """Update features related to bit status."""
+        index = 1 if self.is_info_v2 else 0
+        for feature, keys in BIT_FEATURES.items():
+            status = self.lookup_bit(keys[index])
+            self._update_feature(feature, status, False)
 
     def _update_features(self):
         _ = [
@@ -646,19 +577,5 @@ class WMStatus(DeviceStatus):
             self.eco_hybrid_option_state,
             self.tubclean_count,
             self.standby_state,
-            self.remotestart_state,
-            self.doorlock_state,
-            self.doorclose_state,
-            self.childlock_state,
-            self.creasecare_state,
-            self.steam_state,
-            self.steam_softener_state,
-            self.prewash_state,
-            self.turbowash_state,
-            self.medicrinse_state,
-            self.dampdrybeep_state,
-            self.reservation_state,
-            self.handiron_state,
-            self.selfclean_state,
-            self.anticrease_state,
         ]
+        self._update_bit_features()
