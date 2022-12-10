@@ -39,6 +39,7 @@ STATE_POWER_V1 = "InOutInstantPower"
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
 SUPPORT_RAC_SUBMODE = ["SupportRACSubMode", "support.racSubMode"]
+SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
 SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
 
 # AC Section
@@ -220,6 +221,7 @@ class AirConditionerDevice(Device):
         )
         self._is_air_to_water = None
         self._is_water_heater_supported = None
+        self._is_duct_zones_supported = None
         self._supported_operation = None
         self._supported_op_modes = None
         self._supported_fan_speeds = None
@@ -345,6 +347,20 @@ class AirConditionerDevice(Device):
             return False
         return True
 
+    @property
+    def is_duct_zones_supported(self):
+        """Check if device support duct zones."""
+        if self._is_duct_zones_supported is None:
+            self._is_duct_zones_supported = False
+            supp_key = self._get_state_key(SUPPORT_DUCT_ZONE)
+            if not self.model_info.is_enum_type(supp_key):
+                return False
+            mapping = self.model_info.value(supp_key).options
+            zones = [key for key in mapping.keys() if key != "0"]
+            if zones:
+                self._is_duct_zones_supported = True
+        return self._is_duct_zones_supported
+
     def is_duct_zone_enabled(self, zone: str) -> bool:
         """Get if a specific zone is enabled"""
         return zone in self._duct_zones
@@ -401,7 +417,7 @@ class AirConditionerDevice(Device):
         """
 
         # first check if duct is supported
-        if not self._status:
+        if not (self.is_duct_zones_supported and self._status):
             return {}
 
         duct_state = -1
