@@ -36,6 +36,20 @@ STATE_DISHWASHER_ERROR_NO_ERROR = [
     "No_Error",
 ]
 
+BIT_FEATURES = {
+    FEAT_AUTODOOR: ["AutoDoor", "autoDoor"],
+    FEAT_CHILDLOCK: ["ChildLock", "childLock"],
+    FEAT_DELAYSTART: ["DelayStart", "delayStart"],
+    FEAT_DOOROPEN: ["Door", "door"],
+    FEAT_DUALZONE: ["DualZone", "dualZone"],
+    FEAT_ENERGYSAVER: ["EnergySaver", "energySaver"],
+    FEAT_EXTRADRY: ["ExtraDry", "extraDry"],
+    FEAT_HIGHTEMP: ["HighTemp", "highTemp"],
+    FEAT_NIGHTDRY: ["NightDry", "nightDry"],
+    FEAT_RINSEREFILL: ["RinseRefill", "rinseRefill"],
+    FEAT_SALTREFILL: ["SaltRefill", "saltRefill"],
+}
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -242,71 +256,12 @@ class DishWasherStatus(DeviceStatus):
             result = "N/A"
         return self._update_feature(FEAT_TUBCLEAN_COUNT, result, False)
 
-    @property
-    def door_opened_state(self):
-        """Return door opened state."""
-        status = self.lookup_bit("door" if self.is_info_v2 else "Door")
-        return self._update_feature(FEAT_DOOROPEN, status, False)
-
-    @property
-    def childlock_state(self):
-        """Return child lock state."""
-        status = self.lookup_bit("childLock" if self.is_info_v2 else "ChildLock")
-        return self._update_feature(FEAT_CHILDLOCK, status, False)
-
-    @property
-    def rinserefill_state(self):
-        """Return rinse refill state."""
-        status = self.lookup_bit("rinseRefill" if self.is_info_v2 else "RinseRefill")
-        return self._update_feature(FEAT_RINSEREFILL, status, False)
-
-    @property
-    def saltrefill_state(self):
-        """Return salt refill state."""
-        status = self.lookup_bit("saltRefill" if self.is_info_v2 else "SaltRefill")
-        return self._update_feature(FEAT_SALTREFILL, status, False)
-
-    @property
-    def dualzone_state(self):
-        """Return dual zone state."""
-        status = self.lookup_bit("dualZone" if self.is_info_v2 else "DualZone")
-        return self._update_feature(FEAT_DUALZONE, status, False)
-
-    @property
-    def delaystart_state(self):
-        """Return delay start state."""
-        status = self.lookup_bit("delayStart" if self.is_info_v2 else "DelayStart")
-        return self._update_feature(FEAT_DELAYSTART, status, False)
-
-    @property
-    def energysaver_state(self):
-        """Return energy saver state."""
-        status = self.lookup_bit("energySaver" if self.is_info_v2 else "EnergySaver")
-        return self._update_feature(FEAT_ENERGYSAVER, status, False)
-
-    @property
-    def autodoor_state(self):
-        """Return auto door state."""
-        status = self.lookup_bit("autoDoor" if self.is_info_v2 else "AutoDoor")
-        return self._update_feature(FEAT_AUTODOOR, status, False)
-
-    @property
-    def hightemp_state(self):
-        """Return high temp state."""
-        status = self.lookup_bit("highTemp" if self.is_info_v2 else "HighTemp")
-        return self._update_feature(FEAT_HIGHTEMP, status, False)
-
-    @property
-    def extradry_state(self):
-        """Return extra dry state."""
-        status = self.lookup_bit("extraDry" if self.is_info_v2 else "ExtraDry")
-        return self._update_feature(FEAT_EXTRADRY, status, False)
-
-    @property
-    def nightdry_state(self):
-        """Return night dry state."""
-        status = self.lookup_bit("nightDry" if self.is_info_v2 else "NightDry")
-        return self._update_feature(FEAT_NIGHTDRY, status, False)
+    def _update_bit_features(self):
+        """Update features related to bit status."""
+        index = 1 if self.is_info_v2 else 0
+        for feature, keys in BIT_FEATURES.items():
+            status = self.lookup_bit(keys[index])
+            self._update_feature(feature, status, False)
 
     def _update_features(self):
         _ = [
@@ -315,15 +270,5 @@ class DishWasherStatus(DeviceStatus):
             self.halfload_state,
             self.error_msg,
             self.tubclean_count,
-            self.door_opened_state,
-            self.childlock_state,
-            self.autodoor_state,
-            self.rinserefill_state,
-            self.saltrefill_state,
-            self.dualzone_state,
-            self.delaystart_state,
-            self.energysaver_state,
-            self.hightemp_state,
-            self.extradry_state,
-            self.nightdry_state,
         ]
+        self._update_bit_features()
