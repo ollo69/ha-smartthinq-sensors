@@ -29,9 +29,9 @@ from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOV
 from .device_helpers import (
     DEVICE_ICONS,
     WASH_DEVICE_TYPES,
-    LGETempDevice,
     LGERangeDevice,
     LGERefrigeratorDevice,
+    LGETempDevice,
     LGEWashDevice,
     get_entity_name,
     get_multiple_devices_types,
