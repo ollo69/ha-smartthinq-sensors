@@ -203,17 +203,17 @@ class WaterHeaterDevice(Device):
     #    # this command is to get power usage on V1 device
     #    self._current_power = await self.get_power()
 
-    # async def _pre_update_v2(self):
-    #    """Call additional methods before data update for v2 API."""
-    #    # this command is to get power and temp info on V2 device
-    #    keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
-    #    await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
+    async def _pre_update_v2(self):
+        """Call additional methods before data update for v2 API."""
+        # this command is to get power and temp info on V2 device
+        keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
+        await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
 
     async def poll(self) -> Optional["WaterHeaterStatus"]:
         """Poll the device's current state."""
         res = await self.device_poll(
             thinq1_additional_poll=0,  # ADD_FEAT_POLL_INTERVAL,
-            thinq2_query_device=False,  # True,
+            thinq2_query_device=True,
         )
         if not res:
             return None
@@ -304,7 +304,7 @@ class WaterHeaterStatus(DeviceStatus):
         """Return current energy usage."""
         key = self._get_state_key(STATE_POWER)
         value = self._data.get(key)
-        if value is not None and self.is_info_v2 and not self.is_on:
+        if value is not None and self.is_info_v2:
             # decrease power for V2 device that always return 50 when standby
             new_value = self.to_int_or_none(value)
             if new_value and new_value <= 50:
