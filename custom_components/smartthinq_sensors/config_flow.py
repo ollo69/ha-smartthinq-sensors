@@ -90,14 +90,28 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
         return None
 
+    def _get_hass_region_lang(self):
+        """Get the hass configured region and languange."""
+        if self._region and self._user_lang:
+            return
+        # This works starting from HA 2022.12
+        ha_conf = self.hass.config
+        if not self._region and hasattr(ha_conf, "country"):
+            country = ha_conf.country
+            if country and country in COUNTRIES:
+                self._region = country
+        if not self._user_lang and hasattr(ha_conf, "language"):
+            language = ha_conf.language
+            if language and language[0:2] in LANGUAGES:
+                self._user_lang = language[0:2]
+
     async def async_step_import(
         self, import_config: dict[str, Any] | None = None
     ) -> FlowResult:
         """Import a config entry."""
         self._is_import = True
         self._region = import_config.get(CONF_REGION)
-        language: str | None = import_config.get(CONF_LANGUAGE)
-        if language:
+        if language := import_config.get(CONF_LANGUAGE):
             self._user_lang = language[0:2]
         return await self.async_step_user()
 
@@ -124,10 +138,11 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if not self._region:
                 self._region = entry.data.get(CONF_REGION)
             if not self._user_lang:
-                language: str | None = entry.data.get(CONF_LANGUAGE)
-                self._user_lang = language[0:2]
+                if language := entry.data.get(CONF_LANGUAGE):
+                    self._user_lang = language[0:2]
 
         if not user_input:
+            # self._get_hass_region_lang() # disabled because default values are not shown in the form (HA bug)
             return self._show_form()
 
         username = user_input.get(CONF_USERNAME)
