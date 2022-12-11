@@ -438,6 +438,13 @@ WATER_HEATER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         unit_fn=lambda x: x.temp_unit,
         entity_registry_enabled_default=False,
     ),
+    ThinQSensorEntityDescription(
+        key=FEAT_ENERGY_CURRENT,
+        name="Energy current",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=POWER_WATT,
+    ),
 )
 
 
