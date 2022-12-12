@@ -1,4 +1,4 @@
-"""Constants for LGE ThinQ custom componet."""
+"""Constants for LGE ThinQ custom component."""
 
 __version__ = "0.25.2"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"

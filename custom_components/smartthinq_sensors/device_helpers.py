@@ -2,7 +2,7 @@
 
 import logging
 
-from homeassistant.const import STATE_OFF, STATE_ON, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 
 from .const import DEFAULT_SENSOR
 from .wideq import (
@@ -20,8 +20,8 @@ STATE_LOOKUP = {
 }
 
 TEMP_UNIT_LOOKUP = {
-    UNIT_TEMP_CELSIUS: TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT: TEMP_FAHRENHEIT,
+    UNIT_TEMP_CELSIUS: UnitOfTemperature.CELSIUS,
+    UNIT_TEMP_FAHRENHEIT: UnitOfTemperature.FAHRENHEIT,
 }
 
 _LOGGER = logging.getLogger(__name__)
@@ -212,8 +212,8 @@ class LGERefrigeratorDevice(LGEBaseDevice):
         """Return refrigerator temperature unit."""
         if self._api.state:
             unit = self._api.state.temp_unit
-            return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
-        return TEMP_CELSIUS
+            return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
+        return UnitOfTemperature.CELSIUS
 
     @property
     def dooropen_state(self):
@@ -231,7 +231,7 @@ class LGETempDevice(LGEBaseDevice):
     def temp_unit(self):
         """Return device temperature unit."""
         unit = self._api.device.temperature_unit
-        return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
+        return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
 
 
 class LGERangeDevice(LGEBaseDevice):
@@ -272,5 +272,5 @@ class LGERangeDevice(LGEBaseDevice):
         """Oven temperature unit."""
         if self._api.state:
             unit = self._api.state.oven_temp_unit
-            return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
-        return TEMP_CELSIUS
+            return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
+        return UnitOfTemperature.CELSIUS

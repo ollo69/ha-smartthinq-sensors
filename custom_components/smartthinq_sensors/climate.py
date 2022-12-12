@@ -16,7 +16,7 @@ from homeassistant.components.climate.const import (
     HVACMode,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_CELSIUS, TEMP_FAHRENHEIT
+from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -252,8 +252,8 @@ class LGEACClimate(LGEClimate):
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
         if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
-            return TEMP_FAHRENHEIT
-        return TEMP_CELSIUS
+            return UnitOfTemperature.FAHRENHEIT
+        return UnitOfTemperature.CELSIUS
 
     @property
     def hvac_mode(self) -> HVACMode:
@@ -462,8 +462,8 @@ class LGERefrigeratorClimate(LGEClimate):
         """Return the unit of measurement used by the platform."""
         if self._api.state:
             unit = self._api.state.temp_unit
-            return TEMP_UNIT_LOOKUP.get(unit, TEMP_CELSIUS)
-        return TEMP_CELSIUS
+            return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
+        return UnitOfTemperature.CELSIUS
 
     @property
     def current_temperature(self) -> float | None:
