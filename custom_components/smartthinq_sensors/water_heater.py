@@ -11,12 +11,7 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    ATTR_TEMPERATURE,
-    STATE_OFF,
-    TEMP_CELSIUS,
-    TEMP_FAHRENHEIT,
-)
+from homeassistant.const import ATTR_TEMPERATURE, STATE_OFF, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -144,8 +139,8 @@ class LGEWHWaterHeater(LGEWaterHeater):
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
         if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
-            return TEMP_FAHRENHEIT
-        return TEMP_CELSIUS
+            return UnitOfTemperature.FAHRENHEIT
+        return UnitOfTemperature.CELSIUS
 
     @property
     def current_operation(self) -> str | None:
@@ -220,8 +215,8 @@ class LGEACWaterHeater(LGEWaterHeater):
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
         if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
-            return TEMP_FAHRENHEIT
-        return TEMP_CELSIUS
+            return UnitOfTemperature.FAHRENHEIT
+        return UnitOfTemperature.CELSIUS
 
     @property
     def current_operation(self) -> str | None:
