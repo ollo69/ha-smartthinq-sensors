@@ -19,6 +19,12 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from . import LGEAuthentication, is_valid_ha_version
 from .const import (
@@ -142,7 +148,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                     self._user_lang = language[0:2]
 
         if not user_input:
-            # self._get_hass_region_lang() # disabled because default values are not shown in the form (HA bug)
+            self._get_hass_region_lang()
             return self._show_form()
 
         username = user_input.get(CONF_USERNAME)
@@ -299,12 +305,12 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Optional(CONF_USERNAME, default=""): str,
                 vol.Optional(CONF_PASSWORD, default=""): str,
-                vol.Required(CONF_REGION, default=self._region or ""): vol.In(
-                    COUNTRIES
+                vol.Required(CONF_REGION, default=self._region or ""): SelectSelector(
+                    _dict_to_select(COUNTRIES)
                 ),
-                vol.Required(CONF_LANGUAGE, default=self._user_lang or ""): vol.In(
-                    LANGUAGES
-                ),
+                vol.Required(
+                    CONF_LANGUAGE, default=self._user_lang or ""
+                ): SelectSelector(_dict_to_select(LANGUAGES)),
                 vol.Required(CONF_USE_REDIRECT, default=False): bool,
             }
         )
@@ -327,3 +333,11 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors={CONF_BASE: base_err} if base_err else None,
         )
+
+
+def _dict_to_select(opt_dict: dict) -> SelectSelectorConfig:
+    """Covert a dict to a SelectSelectorConfig."""
+    return SelectSelectorConfig(
+        options=[SelectOptionDict(value=str(k), label=v) for k, v in opt_dict.items()],
+        mode=SelectSelectorMode.DROPDOWN,
+    )
