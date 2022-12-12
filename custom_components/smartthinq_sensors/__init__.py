@@ -4,7 +4,6 @@ Support for LG SmartThinQ device.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import timedelta
 import logging
 
@@ -151,18 +150,6 @@ def is_min_ha_version(min_ha_major_ver: int, min_ha_minor_ver: int) -> bool:
     )
 
 
-async def async_setup_entity_platforms(
-    hass: HomeAssistant,
-    config_entry: ConfigEntry,
-    platforms: Iterable[Platform | str],
-) -> None:
-    """Set up entity platforms using new method from HA version 2022.8."""
-    if is_min_ha_version(2022, 8):
-        await hass.config_entries.async_forward_entry_setups(config_entry, platforms)
-    else:
-        hass.config_entries.async_setup_platforms(config_entry, platforms)
-
-
 def is_valid_ha_version() -> bool:
     """Check if HA version is valid for this integration."""
     return is_min_ha_version(MIN_HA_MAJ_VER, MIN_HA_MIN_VER)
@@ -306,7 +293,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         UNSUPPORTED_DEVICES: unsupported_devices,
         DISCOVERED_DEVICES: discovered_devices,
     }
-    await async_setup_entity_platforms(hass, entry, SMARTTHINQ_PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, SMARTTHINQ_PLATFORMS)
 
     start_devices_discovery(hass, entry, client)
 
