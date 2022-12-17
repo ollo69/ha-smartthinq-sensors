@@ -24,6 +24,9 @@ from homeassistant.helpers.selector import (
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 from . import LGEAuthentication, is_valid_ha_version
@@ -296,8 +299,12 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if step_id == "url":
             return vol.Schema(
                 {
-                    vol.Required(CONF_LOGIN, default=self._login_url): str,
-                    vol.Required(CONF_URL): str,
+                    vol.Required(CONF_LOGIN, default=self._login_url): TextSelector(
+                        config=TextSelectorConfig(type=TextSelectorType.URL)
+                    ),
+                    vol.Required(CONF_URL): TextSelector(
+                        config=TextSelectorConfig(type=TextSelectorType.URL)
+                    ),
                 }
             )
 
