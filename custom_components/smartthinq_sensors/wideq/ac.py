@@ -8,6 +8,7 @@ from .const import (
     FEAT_HOT_WATER_TEMP,
     FEAT_HUMIDITY,
     FEAT_LIGHTING_DISPLAY,
+    FEAT_MODE_AIRCLEAN,
     FEAT_MODE_AWHP_SILENT,
     FEAT_MODE_JET,
     FEAT_ROOM_TEMP,
@@ -20,11 +21,24 @@ from .core_exceptions import InvalidRequestError
 from .core_util import TempUnitConversion
 from .device import Device, DeviceStatus
 
-LABEL_VANE_HSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_LEFT_RIGHT_W"
-LABEL_VANE_VSTEP = "@AC_MAIN_WIND_DIRECTION_STEP_UP_DOWN_W"
-LABEL_VANE_HSWING = "@AC_MAIN_WIND_DIRECTION_SWING_LEFT_RIGHT_W"
-LABEL_VANE_VSWING = "@AC_MAIN_WIND_DIRECTION_SWING_UP_DOWN_W"
-LABEL_HOT_WATER = "@HOTWATER"
+SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
+SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
+SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
+SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
+SUPPORT_RAC_MODE = ["SupportRACMode", "support.racMode"]
+SUPPORT_RAC_SUBMODE = ["SupportRACSubMode", "support.racSubMode"]
+
+SUPPORT_VANE_HSTEP = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_STEP_LEFT_RIGHT_W"]
+SUPPORT_VANE_VSTEP = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_STEP_UP_DOWN_W"]
+SUPPORT_VANE_HSWING = [
+    SUPPORT_RAC_SUBMODE,
+    "@AC_MAIN_WIND_DIRECTION_SWING_LEFT_RIGHT_W",
+]
+SUPPORT_VANE_VSWING = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_SWING_UP_DOWN_W"]
+SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
+SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
+SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
+SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
@@ -36,12 +50,6 @@ DUCT_ZONE_V1 = "DuctZone"
 DUCT_ZONE_V1_TYPE = "DuctZoneType"
 STATE_FILTER_V1 = "Filter"
 STATE_POWER_V1 = "InOutInstantPower"
-
-SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
-SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
-SUPPORT_RAC_SUBMODE = ["SupportRACSubMode", "support.racSubMode"]
-SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
-SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
 
 # AC Section
 STATE_OPERATION = ["Operation", "airState.operation"]
@@ -56,6 +64,7 @@ STATE_WDIR_VSWING = ["WDirUpDown", "airState.wDir.upDown"]
 STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
+STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 
@@ -68,6 +77,7 @@ CMD_STATE_WDIR_VSTEP = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSTEP]
 CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
+CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 
@@ -110,9 +120,8 @@ LIGHTING_DISPLAY_ON = "1"
 MODE_OFF = "@OFF"
 MODE_ON = "@ON"
 
-MODE_JET_OFF = MODE_OFF
-MODE_JET_COOL = "@COOL_JET"
-MODE_JET_HEAT = "@HEAT_JET"
+MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
+MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
 
 ZONE_OFF = "0"
 ZONE_ON = "1"
@@ -209,6 +218,16 @@ class ACHStepMode(Enum):
     Swing = "@100"
 
 
+class JetMode(Enum):
+    """Possible JET modes."""
+
+    OFF = MODE_OFF
+    COOL = "@COOL_JET"
+    HEAT = "@HEAT_JET"
+    DRY = "@DRY_JET_W"
+    HIMALAYAS = "@HIMALAYAS_COOL"
+
+
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
@@ -222,6 +241,8 @@ class AirConditionerDevice(Device):
         )
         self._is_air_to_water = None
         self._is_water_heater_supported = None
+        self._is_mode_airclean_supported = None
+        self._is_mode_jet_supported = None
         self._is_duct_zones_supported = None
         self._supported_operation = None
         self._supported_op_modes = None
@@ -260,6 +281,13 @@ class AirConditionerDevice(Device):
             return
         if int(target_temp) != target_temp:
             self._temperature_step = TEMP_STEP_HALF
+
+    def _is_mode_supported(self, key):
+        """Check if a specific mode for support key is supported."""
+        if not isinstance(key, list):
+            return False
+        supp_key = self._get_state_key(key[0])
+        return self.model_info.enum_value(supp_key, key[1]) is not None
 
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
@@ -340,13 +368,6 @@ class AirConditionerDevice(Device):
                 return [AWHP_MIN_TEMP, AWHP_MAX_TEMP]
             self._hot_water_temperature_range = [min_temp, max_temp]
         return self._hot_water_temperature_range
-
-    def _is_vane_mode_supported(self, mode):
-        """Check if a specific vane mode is supported."""
-        supp_key = self._get_state_key(SUPPORT_RAC_SUBMODE)
-        if not self.model_info.enum_value(supp_key, mode):
-            return False
-        return True
 
     @property
     def is_duct_zones_supported(self):
@@ -486,10 +507,7 @@ class AirConditionerDevice(Device):
         if not self.is_air_to_water:
             return False
         if self._is_water_heater_supported is None:
-            supp_key = self._get_state_key(SUPPORT_PAC_MODE)
-            self._is_water_heater_supported = (
-                self.model_info.enum_value(supp_key, LABEL_HOT_WATER) is not None
-            )
+            self._is_water_heater_supported = self._is_mode_supported(SUPPORT_HOT_WATER)
         return self._is_water_heater_supported
 
     @property
@@ -527,7 +545,7 @@ class AirConditionerDevice(Device):
         """Return a list of available horizontal step modes."""
         if self._supported_horizontal_steps is None:
             self._supported_horizontal_steps = []
-            if not self._is_vane_mode_supported(LABEL_VANE_HSTEP):
+            if not self._is_mode_supported(SUPPORT_VANE_HSTEP):
                 return []
 
             key = self._get_state_key(STATE_WDIR_HSTEP)
@@ -547,7 +565,7 @@ class AirConditionerDevice(Device):
         """Return a list of available vertical step modes."""
         if self._supported_vertical_steps is None:
             self._supported_vertical_steps = []
-            if not self._is_vane_mode_supported(LABEL_VANE_VSTEP):
+            if not self._is_mode_supported(SUPPORT_VANE_VSTEP):
                 return []
 
             key = self._get_state_key(STATE_WDIR_VSTEP)
@@ -589,8 +607,26 @@ class AirConditionerDevice(Device):
         return self.conv_temp_unit(temp_range[1])
 
     @property
+    def is_mode_airclean_supported(self):
+        """Return if AirClean mode is supported."""
+        if self._is_mode_airclean_supported is None:
+            self._is_mode_airclean_supported = self._is_mode_supported(SUPPORT_AIRCLEAN)
+        return self._is_mode_airclean_supported
+
+    @property
+    def is_mode_jet_supported(self):
+        """Return if Jet mode is supported."""
+        if self._is_mode_jet_supported is None:
+            self._is_mode_jet_supported = self._is_mode_supported(
+                SUPPORT_JET_COOL
+            ) or self._is_mode_supported(SUPPORT_JET_HEAT)
+        return self._is_mode_jet_supported
+
+    @property
     def is_mode_jet_available(self):
         """Return if JET mode is available."""
+        if not self.is_mode_jet_supported:
+            return False
         return self._status.is_mode_jet_available
 
     @property
@@ -647,7 +683,7 @@ class AirConditionerDevice(Device):
 
     async def horizontal_swing_mode(self, value: bool):
         """Set the horizontal swing on or off."""
-        if not self._is_vane_mode_supported(LABEL_VANE_HSWING):
+        if not self._is_mode_supported(SUPPORT_VANE_HSWING):
             raise ValueError("Horizontal swing mode not supported")
         mode = MODE_ON if value else MODE_OFF
         keys = self._get_cmd_keys(CMD_STATE_WDIR_HSWING)
@@ -665,7 +701,7 @@ class AirConditionerDevice(Device):
 
     async def vertical_swing_mode(self, value: bool):
         """Set the vertical swing on or off."""
-        if not self._is_vane_mode_supported(LABEL_VANE_VSWING):
+        if not self._is_mode_supported(SUPPORT_VANE_VSWING):
             raise ValueError("Vertical swing mode not supported")
         mode = MODE_ON if value else MODE_OFF
         keys = self._get_cmd_keys(CMD_STATE_WDIR_VSWING)
@@ -682,24 +718,40 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
         await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
 
-    async def set_mode_jet(self, status):
-        """Set the mode jet."""
+    async def set_mode_airclean(self, status: bool):
+        """Set the Airclean mode on or off."""
+        if not self.is_mode_airclean_supported:
+            raise ValueError("Airclean mode not supported")
+
+        keys = self._get_cmd_keys(CMD_STATE_MODE_AIRCLEAN)
+        mode_key = MODE_AIRCLEAN_ON if status else MODE_AIRCLEAN_OFF
+        mode = self.model_info.enum_value(keys[2], mode_key)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_mode_jet(self, status: bool):
+        """Set the Jet mode on or off."""
+        if not self.is_mode_jet_supported:
+            raise ValueError("Jet mode not supported")
         if not self.is_mode_jet_available:
             raise ValueError("Invalid device status for jet mode")
 
-        keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
         if status:
             if self._status.operation_mode == ACMode.HEAT.name:
-                jet_key = MODE_JET_HEAT
+                if not self._is_mode_supported(SUPPORT_JET_HEAT):
+                    raise ValueError("Jet mode not supported in heat mode")
+                jet_key = JetMode.HEAT
             else:
-                jet_key = MODE_JET_COOL
+                if not self._is_mode_supported(SUPPORT_JET_COOL):
+                    raise ValueError("Jet mode not supported in current AC mode")
+                jet_key = JetMode.COOL
         else:
-            jet_key = MODE_JET_OFF
-        jet = self.model_info.enum_value(keys[2], jet_key)
+            jet_key = JetMode.OFF
+        keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
+        jet = self.model_info.enum_value(keys[2], jet_key.value)
         await self.set(keys[0], keys[1], key=keys[2], value=jet)
 
-    async def set_lighting_display(self, status):
-        """Set the lighting display."""
+    async def set_lighting_display(self, status: bool):
+        """Set the lighting display on or off."""
         keys = self._get_cmd_keys(CMD_STATE_LIGHTING_DISPLAY)
         lighting = LIGHTING_DISPLAY_ON if status else LIGHTING_DISPLAY_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=lighting)
@@ -979,12 +1031,28 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(FEAT_HUMIDITY, value, False)
 
     @property
+    def mode_airclean(self):
+        """Return AirClean Mode status."""
+        if not self._device.is_mode_airclean_supported:
+            return None
+        key = self._get_state_key(STATE_MODE_AIRCLEAN)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == MODE_AIRCLEAN_ON
+        return self._update_feature(FEAT_MODE_AIRCLEAN, status, False)
+
+    @property
     def mode_jet(self):
         """Return Jet Mode status."""
+        if not self._device.is_mode_jet_supported:
+            return None
         key = self._get_state_key(STATE_MODE_JET)
         if (value := self.lookup_enum(key, True)) is None:
             return None
-        status = value in (MODE_JET_COOL, MODE_JET_HEAT)
+        try:
+            status = JetMode(value) != JetMode.OFF
+        except ValueError:
+            return None
         return self._update_feature(FEAT_MODE_JET, status, False)
 
     @property
@@ -1089,6 +1157,7 @@ class AirConditionerStatus(DeviceStatus):
             self.current_temp,
             self.energy_current,
             self.humidity,
+            self.mode_airclean,
             self.mode_jet,
             self.lighting_display,
             self.water_in_current_temp,

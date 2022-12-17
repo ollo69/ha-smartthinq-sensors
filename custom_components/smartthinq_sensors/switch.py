@@ -32,6 +32,7 @@ from .wideq import (
     FEAT_EXPRESSMODE,
     FEAT_ICEPLUS,
     FEAT_LIGHTING_DISPLAY,
+    FEAT_MODE_AIRCLEAN,
     FEAT_MODE_AWHP_SILENT,
     FEAT_MODE_JET,
     WM_DEVICE_TYPES,
@@ -98,6 +99,13 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ),
 )
 AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key=FEAT_MODE_AIRCLEAN,
+        name="Ionizer",
+        icon="mdi:pine-tree",
+        turn_off_fn=lambda x: x.device.set_mode_airclean(False),
+        turn_on_fn=lambda x: x.device.set_mode_airclean(True),
+    ),
     ThinQSwitchEntityDescription(
         key=FEAT_MODE_JET,
         name="Jet mode",
