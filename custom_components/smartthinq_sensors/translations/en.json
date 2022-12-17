@@ -11,7 +11,7 @@
             "error_url": "Error retrieving login URL from ThinQ.",
             "invalid_region": "Invalid region format.",
             "invalid_language": "Invalid language format.",
-            "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone. You can get support [over here](https://git.io/JTjid).",
+            "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone.",
             "invalid_credentials": "Invalid SmartThinQ credentials. Use the LG App on your mobile device to verify if there are Term of Service to accept. Account based on social network are not supported and in most case do not work with this integration.",
             "invalid_config": "Found invalid configuration, please reconfigure.",
             "no_user_info": "User Name and Password are required.",

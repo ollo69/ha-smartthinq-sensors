@@ -11,7 +11,7 @@
             "error_url": "Errore nel recuperare l'URL di login da ThinQ.",
             "invalid_region": "Formato Paese non valido.",
             "invalid_language": "Formato lingua non valido.",
-            "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone. Puoi richiedere supporto [qui](https://git.io/JTjid).",
+            "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone.",
             "invalid_credentials": "Credenziali SmartThinQ non valide. Utilizza l'applicazione ThinQ sul telefono per verificare che non siano presenti Condizioni di Servizio da accettare. Gli account basati su social network non sono supportati e nella maggior parte dei casi non funzionano con questa integrazione.",
             "invalid_config": "Trovata configurazione non valida, riconfigurare.",
             "no_user_info": "Nome utente e Password sono campi obbligatori.",
