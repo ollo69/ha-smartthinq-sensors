@@ -1,0 +1,4 @@
+*.md
+.strict-typing
+azure-*.yml
+docs/source/_templates/*

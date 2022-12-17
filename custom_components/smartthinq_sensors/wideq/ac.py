@@ -228,6 +228,15 @@ class JetMode(Enum):
     HIMALAYAS = "@HIMALAYAS_COOL"
 
 
+class JetModeSupport(Enum):
+    """Supported JET modes."""
+
+    NONE = 0
+    COOL = 1
+    HEAT = 2
+    BOTH = 3
+
+
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
@@ -242,13 +251,13 @@ class AirConditionerDevice(Device):
         self._is_air_to_water = None
         self._is_water_heater_supported = None
         self._is_mode_airclean_supported = None
-        self._is_mode_jet_supported = None
         self._is_duct_zones_supported = None
         self._supported_operation = None
         self._supported_op_modes = None
         self._supported_fan_speeds = None
         self._supported_horizontal_steps = None
         self._supported_vertical_steps = None
+        self._supported_mode_jet = None
         self._temperature_range = None
         self._hot_water_temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
@@ -614,20 +623,40 @@ class AirConditionerDevice(Device):
         return self._is_mode_airclean_supported
 
     @property
-    def is_mode_jet_supported(self):
+    def supported_mode_jet(self):
         """Return if Jet mode is supported."""
-        if self._is_mode_jet_supported is None:
-            self._is_mode_jet_supported = self._is_mode_supported(
-                SUPPORT_JET_COOL
-            ) or self._is_mode_supported(SUPPORT_JET_HEAT)
-        return self._is_mode_jet_supported
+        if self._supported_mode_jet is None:
+            supported = JetModeSupport.NONE
+            if self._is_mode_supported(SUPPORT_JET_COOL):
+                supported = JetModeSupport.COOL
+            if self._is_mode_supported(SUPPORT_JET_HEAT):
+                if supported == JetModeSupport.COOL:
+                    supported = JetModeSupport.BOTH
+                else:
+                    supported = JetModeSupport.HEAT
+            self._supported_mode_jet = supported
+        return self._supported_mode_jet
 
     @property
     def is_mode_jet_available(self):
         """Return if JET mode is available."""
-        if not self.is_mode_jet_supported:
+        if (supported := self.supported_mode_jet) == JetModeSupport.NONE:
             return False
-        return self._status.is_mode_jet_available
+        if not self._status.is_on:
+            return False
+        if (curr_op_mode := self._status.operation_mode) is None:
+            return False
+        if curr_op_mode == ACMode.HEAT.name and supported in (
+            JetModeSupport.HEAT,
+            JetModeSupport.BOTH,
+        ):
+            return True
+        if curr_op_mode in (ACMode.COOL.name, ACMode.DRY.name) and supported in (
+            JetModeSupport.COOL,
+            JetModeSupport.BOTH,
+        ):
+            return True
+        return False
 
     @property
     def hot_water_target_temperature_step(self):
@@ -730,19 +759,15 @@ class AirConditionerDevice(Device):
 
     async def set_mode_jet(self, status: bool):
         """Set the Jet mode on or off."""
-        if not self.is_mode_jet_supported:
+        if self.supported_mode_jet == JetModeSupport.NONE:
             raise ValueError("Jet mode not supported")
         if not self.is_mode_jet_available:
             raise ValueError("Invalid device status for jet mode")
 
         if status:
             if self._status.operation_mode == ACMode.HEAT.name:
-                if not self._is_mode_supported(SUPPORT_JET_HEAT):
-                    raise ValueError("Jet mode not supported in heat mode")
                 jet_key = JetMode.HEAT
             else:
-                if not self._is_mode_supported(SUPPORT_JET_COOL):
-                    raise ValueError("Jet mode not supported in current AC mode")
                 jet_key = JetMode.COOL
         else:
             jet_key = JetMode.OFF
@@ -1044,7 +1069,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def mode_jet(self):
         """Return Jet Mode status."""
-        if not self._device.is_mode_jet_supported:
+        if self._device.supported_mode_jet == JetModeSupport.NONE:
             return None
         key = self._get_state_key(STATE_MODE_JET)
         if (value := self.lookup_enum(key, True)) is None:
@@ -1052,17 +1077,8 @@ class AirConditionerStatus(DeviceStatus):
         try:
             status = JetMode(value) != JetMode.OFF
         except ValueError:
-            return None
+            status = False
         return self._update_feature(FEAT_MODE_JET, status, False)
-
-    @property
-    def is_mode_jet_available(self):
-        """Return if Jet mode is available."""
-        if not self.is_on:
-            return False
-        if (curr_op_mode := self.operation_mode) is None:
-            return False
-        return curr_op_mode in (ACMode.COOL.name, ACMode.DRY.name, ACMode.HEAT.name)
 
     @property
     def lighting_display(self):

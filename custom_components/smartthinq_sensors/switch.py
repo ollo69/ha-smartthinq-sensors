@@ -314,7 +314,9 @@ class LGEDuctSwitch(LGESwitch):
     async def async_turn_off(self, **kwargs):
         """Turn the entity off."""
         self._wrap_device.device.set_duct_zone(self._zone, False)
+        self._api.async_set_updated()
 
     async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
         self._wrap_device.device.set_duct_zone(self._zone, True)
+        self._api.async_set_updated()
