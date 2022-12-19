@@ -11,7 +11,7 @@ from enum import Enum
 import json
 import logging
 from numbers import Number
-from typing import Any, Optional
+from typing import Any
 
 import aiohttp
 
@@ -54,6 +54,8 @@ MAX_UPDATE_FAIL_ALLOWED = 10
 MAX_INVALID_CREDENTIAL_ERR = 3
 SLEEP_BETWEEN_RETRIES = 2  # seconds
 
+MONITOR_RESTART_SECONDS = 0  # 0 to disable
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -89,7 +91,8 @@ class Monitor:
         self._device_id = device_id
         self._platform_type = platform_type
         self._device_descr = device_name or f"ID[{device_id}]"
-        self._work_id: Optional[str] = None
+        self._work_id: str | None = None
+        self._monitor_start_time: datetime | None = None
         self._disconnected = True
         self._has_error = False
         self._invalid_credential_count = 0
@@ -270,6 +273,7 @@ class Monitor:
         if not self._disconnected:
             return True
 
+        await self.stop()
         await self.start()
         self._disconnected = False
         return True
@@ -278,7 +282,9 @@ class Monitor:
         """Start monitor for ThinQ1 device."""
         if self._platform_type != PlatformType.THINQ1:
             return
+        self._work_id = None
         self._work_id = await self._client.session.monitor_start(self._device_id)
+        self._monitor_start_time = datetime.utcnow()
 
     async def stop(self) -> None:
         """Stop monitor for ThinQ1 device."""
@@ -288,7 +294,7 @@ class Monitor:
         self._work_id = None
         await self._client.session.monitor_stop(self._device_id, work_id)
 
-    async def poll(self, query_device=False) -> Optional[any]:
+    async def poll(self, query_device=False) -> Any | None:
         """
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
@@ -297,15 +303,27 @@ class Monitor:
             return await self._poll_v1()
         return await self._poll_v2(query_device)
 
-    async def _poll_v1(self) -> Optional[bytes]:
+    async def _poll_v1_watch_dog(self) -> None:
+        """Force restart monitor every n seconds to avoid connection lost."""
+        if MONITOR_RESTART_SECONDS <= 0:
+            return
+        if self._monitor_start_time is not None:
+            diff = (datetime.utcnow() - self._monitor_start_time).total_seconds()
+            if diff >= MONITOR_RESTART_SECONDS:
+                await self.stop()
+
+    async def _poll_v1(self) -> bytes | None:
         """
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
         """
+        await self._poll_v1_watch_dog()
+
         if not self._work_id:
             await self.start()
             if not self._work_id:
                 return None
+
         try:
             return await self._client.session.monitor_poll(
                 self._device_id, self._work_id
@@ -315,7 +333,7 @@ class Monitor:
             await self.stop()
             return None
 
-    async def _poll_v2(self, query_device=False) -> Optional[any]:
+    async def _poll_v2(self, query_device=False) -> Any | None:
         """
         Get the current status data (a json str) or None if the
         device is not yet ready.
@@ -338,7 +356,7 @@ class Monitor:
 
         return json.loads(data.decode("utf8"))
 
-    async def poll_json(self) -> Optional[dict[str, Any]]:
+    async def poll_json(self) -> dict[str, Any] | None:
         """For devices where status is reported via JSON data, get the
         decoded status result (or None if status is not available).
         """
@@ -384,7 +402,7 @@ class Device:
         self._should_poll = device.platform_type == PlatformType.THINQ1
         self._mon = Monitor(client, device.id, device.platform_type, device.name)
         self._control_set = 0
-        self._last_additional_poll: Optional[datetime] = None
+        self._last_additional_poll: datetime | None = None
         self._available_features = available_features or {}
 
         # for logging unknown states received
