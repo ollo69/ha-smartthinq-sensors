@@ -54,7 +54,7 @@ MAX_UPDATE_FAIL_ALLOWED = 10
 MAX_INVALID_CREDENTIAL_ERR = 3
 SLEEP_BETWEEN_RETRIES = 2  # seconds
 
-MONITOR_RESTART_SECONDS = 900  # 15 minutes
+MONITOR_RESTART_SECONDS = 0  # 0 to disable
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -273,6 +273,7 @@ class Monitor:
         if not self._disconnected:
             return True
 
+        await self.stop()
         await self.start()
         self._disconnected = False
         return True
@@ -281,6 +282,7 @@ class Monitor:
         """Start monitor for ThinQ1 device."""
         if self._platform_type != PlatformType.THINQ1:
             return
+        self._work_id = None
         self._work_id = await self._client.session.monitor_start(self._device_id)
         self._monitor_start_time = datetime.utcnow()
 
@@ -301,21 +303,27 @@ class Monitor:
             return await self._poll_v1()
         return await self._poll_v2(query_device)
 
+    async def _poll_v1_watch_dog(self) -> None:
+        """Force restart monitor every n seconds to avoid connection lost."""
+        if MONITOR_RESTART_SECONDS <= 0:
+            return
+        if self._monitor_start_time is not None:
+            diff = (datetime.utcnow() - self._monitor_start_time).total_seconds()
+            if diff >= MONITOR_RESTART_SECONDS:
+                await self.stop()
+
     async def _poll_v1(self) -> bytes | None:
         """
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
         """
-        # We force restart monitor every n seconds to avoid connection lost
-        if self._monitor_start_time is not None:
-            diff = (datetime.utcnow() - self._monitor_start_time).total_seconds()
-            if diff >= MONITOR_RESTART_SECONDS:
-                self.stop()
+        await self._poll_v1_watch_dog()
 
         if not self._work_id:
             await self.start()
             if not self._work_id:
                 return None
+
         try:
             return await self._client.session.monitor_poll(
                 self._device_id, self._work_id
