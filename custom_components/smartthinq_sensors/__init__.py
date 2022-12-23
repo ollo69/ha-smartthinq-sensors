@@ -32,7 +32,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import (
     CLIENT,
     CONF_LANGUAGE,
-    CONF_OAUTH_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     DOMAIN,
@@ -98,7 +97,7 @@ class LGEAuthentication:
     async def get_login_url(self) -> str | None:
         """Get an url to login in browser."""
         try:
-            return await ClientAsync.get_oauth_url(
+            return await ClientAsync.get_login_url(
                 self._region, self._language, aiohttp_session=self._client_session
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -135,9 +134,9 @@ class LGEAuthentication:
         """Create a new client using refresh token."""
         return await ClientAsync.from_token(
             token,
-            oauth_url,
             country=self._region,
             language=self._language,
+            oauth_url=oauth_url,
             aiohttp_session=self._client_session,
             # enable_emulation=True,
         )
@@ -188,7 +187,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     refresh_token = entry.data[CONF_TOKEN]
     region = entry.data[CONF_REGION]
     language = entry.data[CONF_LANGUAGE]
-    oauth_url = entry.data.get(CONF_OAUTH_URL)
     use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
     use_ha_session = entry.data.get(CONF_USE_HA_SESSION, False)
 
@@ -218,7 +216,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # raising ConfigEntryNotReady platform setup will be retried
     lge_auth = LGEAuthentication(hass, region, language, use_ha_session)
     try:
-        client = await lge_auth.create_client_from_token(refresh_token, oauth_url)
+        client = await lge_auth.create_client_from_token(refresh_token)
 
     except (AuthenticationError, InvalidCredentialError) as exc:
         if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:

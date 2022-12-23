@@ -32,7 +32,6 @@ from homeassistant.helpers.selector import (
 from . import LGEAuthentication, is_valid_ha_version
 from .const import (
     CONF_LANGUAGE,
-    CONF_OAUTH_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     CONF_USE_REDIRECT,
@@ -75,7 +74,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._region: str | None = None
         self._language: str | None = None
         self._token: str | None = None
-        self._oauth_url: str | None = None
         self._use_ha_session = False
 
         self._user_lang: str | None = None
@@ -178,7 +176,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self._manage_error(result, True)
             auth_info = client.oauth_info
             self._token = auth_info["refresh_token"]
-            self._oauth_url = auth_info["oauth_url"]
             return self._save_config_entry()
 
         lge_auth = LGEAuthentication(
@@ -206,8 +203,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             return self._show_form(errors="invalid_url", step_id="url")
 
         self._token = oauth_info["refresh_token"]
-        self._oauth_url = oauth_info["oauth_url"]
-
         _, result = await self._check_connection()
         if result != RESULT_SUCCESS:
             return await self._manage_error(result)
@@ -225,9 +220,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if username and password:
                 client = await lge_auth.create_client_from_login(username, password)
             else:
-                client = await lge_auth.create_client_from_token(
-                    self._token, self._oauth_url
-                )
+                client = await lge_auth.create_client_from_token(self._token)
         except (AuthenticationError, InvalidCredentialError) as exc:
             msg = (
                 "Invalid ThinQ credential error. Please use the LG App on your"
@@ -273,7 +266,6 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_REGION: self._region,
             CONF_LANGUAGE: self._language,
             CONF_TOKEN: self._token,
-            CONF_OAUTH_URL: self._oauth_url,
             CONF_USE_API_V2: True,
         }
         if self._use_ha_session:
