@@ -269,6 +269,13 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
     ),
+    ThinQSensorEntityDescription(
+        key=FEAT_FILTER_MAIN_LIFE,
+        name="Filter Remaining Life",
+        icon="mdi:air-filter",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
 )
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
