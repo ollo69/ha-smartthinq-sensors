@@ -15,7 +15,6 @@ from homeassistant.const import (
 
 from custom_components.smartthinq_sensors.const import (
     CONF_LANGUAGE,
-    CONF_OAUTH_URL,
     CONF_USE_API_V2,
     CONF_USE_REDIRECT,
     DOMAIN,
@@ -41,7 +40,6 @@ CONFIG_RESULT = {
     CONF_LANGUAGE: "en-US",
     CONF_USE_API_V2: True,
     CONF_TOKEN: TEST_TOKEN,
-    CONF_OAUTH_URL: TEST_URL,
 }
 
 
