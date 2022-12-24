@@ -5,6 +5,7 @@ from typing import Optional
 
 from .const import (
     FEAT_ENERGY_CURRENT,
+    FEAT_FILTER_MAIN_LIFE,
     FEAT_HOT_WATER_TEMP,
     FEAT_HUMIDITY,
     FEAT_LIGHTING_DISPLAY,
@@ -49,6 +50,8 @@ CTRL_MISC = ["Control", "miscCtrl"]
 DUCT_ZONE_V1 = "DuctZone"
 DUCT_ZONE_V1_TYPE = "DuctZoneType"
 STATE_FILTER_V1 = "Filter"
+STATE_FILTER_V1_MAX = "FilterMax"
+STATE_FILTER_V1_USE = "FilterUse"
 STATE_POWER_V1 = "InOutInstantPower"
 
 # AC Section
@@ -67,6 +70,15 @@ STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
+
+FILTER_TYPES = [
+    [
+        FEAT_FILTER_MAIN_LIFE,
+        [STATE_FILTER_V1_USE, "airState.filterMngStates.useTime"],
+        [STATE_FILTER_V1_MAX, "airState.filterMngStates.maxTime"],
+        None,
+    ],
+]
 
 CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
 CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
@@ -127,6 +139,11 @@ ZONE_OFF = "0"
 ZONE_ON = "1"
 ZONE_ST_CUR = "current"
 ZONE_ST_NEW = "new"
+
+FILTER_STATUS_MAP = {
+    STATE_FILTER_V1_USE: "UseTime",
+    STATE_FILTER_V1_MAX: "ChangePeriod",
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -266,7 +283,7 @@ class AirConditionerDevice(Device):
         self._current_power = 0
         self._current_power_supported = True
 
-        self._filter_status = None
+        self._filter_status = {}
         self._filter_status_supported = True
 
         self._unit_conv = TempUnitConversion()
@@ -827,13 +844,13 @@ class AirConditionerDevice(Device):
     async def get_filter_state(self):
         """Get information about the filter."""
         if not self._filter_status_supported:
-            return None
+            return {}
         try:
             return await self._get_config(STATE_FILTER_V1)
         except (ValueError, InvalidRequestError):
             # Device does not support filter status
             self._filter_status_supported = False
-            return None
+            return {}
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -858,6 +875,10 @@ class AirConditionerDevice(Device):
         # this command is to get power usage on V1 device
         if not self.is_air_to_water:
             self._current_power = await self.get_power()
+            filter_status = await self.get_filter_state()
+            self._filter_status = {
+                k: filter_status[v] for k, v in FILTER_STATUS_MAP if v in filter_status
+            }
 
     async def _pre_update_v2(self):
         """Call additional methods before data update for v2 API."""
@@ -875,6 +896,8 @@ class AirConditionerDevice(Device):
             return None
         if self._should_poll and not self.is_air_to_water:
             res[STATE_POWER_V1] = self._current_power
+            if self._filter_status:
+                res.update(self._filter_status)
 
         self._status = AirConditionerStatus(self, res)
         if self._temperature_step == TEMP_STEP_WHOLE:
@@ -1091,6 +1114,19 @@ class AirConditionerStatus(DeviceStatus):
         )
 
     @property
+    def filters_life(self):
+        """Return percentage status for all filters."""
+        result = {}
+
+        for filter_def in FILTER_TYPES:
+            status = self._get_filter_life(filter_def[1], filter_def[2])
+            if status is not None:
+                self._update_feature(filter_def[0], status, False)
+                result[filter_def[0]] = status
+
+        return result
+
+    @property
     def water_in_current_temp(self):
         """Return AWHP in water current temperature."""
         if not self.is_info_v2:
@@ -1172,6 +1208,7 @@ class AirConditionerStatus(DeviceStatus):
         _ = [
             self.current_temp,
             self.energy_current,
+            self.filters_life,
             self.humidity,
             self.mode_airclean,
             self.mode_jet,

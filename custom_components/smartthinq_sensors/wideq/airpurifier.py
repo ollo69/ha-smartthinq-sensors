@@ -345,44 +345,6 @@ class AirPurifierStatus(DeviceStatus):
             return None
         return self._update_feature(FEAT_PM25, value, False)
 
-    def _get_filter_life(
-        self, use_time_status, max_time_status, support_key, filter_types=None
-    ):
-        """Get filter status."""
-        if filter_types:
-            supported = False
-            for filter_type in filter_types:
-                if (
-                    self._device.model_info.enum_value(support_key, filter_type)
-                    is not None
-                ):
-                    supported = True
-                    break
-            if not supported:
-                return None
-
-        key_max_status = self._get_state_key(max_time_status)
-        max_time = self.to_int_or_none(self.lookup_enum(key_max_status, True))
-        if max_time is None:
-            max_time = self.to_int_or_none(self.lookup_range(key_max_status))
-            if max_time is None:
-                return None
-            if max_time < 10:  # because is an enum
-                return None
-
-        use_time = self.to_int_or_none(
-            self.lookup_range(self._get_state_key(use_time_status))
-        )
-        if use_time is None:
-            return None
-        if max_time < use_time:
-            return None
-
-        try:
-            return int((use_time / max_time) * 100)
-        except ValueError:
-            return None
-
     @property
     def filters_life(self):
         """Return percentage status for all filters."""
@@ -393,7 +355,7 @@ class AirPurifierStatus(DeviceStatus):
 
         for filter_def in FILTER_TYPES:
             status = self._get_filter_life(
-                filter_def[1], filter_def[2], support_key, filter_def[3]
+                filter_def[1], filter_def[2], filter_def[3], support_key
             )
             if status is not None:
                 self._update_feature(filter_def[0], status, False)

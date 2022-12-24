@@ -703,6 +703,8 @@ class ModelInfoV2AC(ModelInfoV1):
         #    return EnumValue({"0": "False", "1": "True"})
         if d["data_type"] in ("String", "string"):
             return None
+        if d["data_type"] in ("Number", "number"):
+            return None
         raise ValueError(
             f"ModelInfoV2AC: unsupported value type {d['data_type']} - value: {d}",
         )

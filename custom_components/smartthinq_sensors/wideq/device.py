@@ -786,6 +786,48 @@ class DeviceStatus:
         int_val = int(fl_val)
         return int_val if int_val == fl_val else fl_val
 
+    def _get_filter_life(
+        self,
+        use_time_status: str | list,
+        max_time_status: str | list,
+        filter_types: list | None = None,
+        support_key: str | None = None,
+    ):
+        """Get filter status filtering by type if required."""
+        if filter_types and support_key:
+            supported = False
+            for filter_type in filter_types:
+                if (
+                    self._device.model_info.enum_value(support_key, filter_type)
+                    is not None
+                ):
+                    supported = True
+                    break
+            if not supported:
+                return None
+
+        key_max_status = self._get_state_key(max_time_status)
+        max_time = self.to_int_or_none(self.lookup_enum(key_max_status, True))
+        if max_time is None:
+            max_time = self.to_int_or_none(self.lookup_range(key_max_status))
+            if max_time is None:
+                return None
+            if max_time < 10:  # because is an enum
+                return None
+
+        use_time = self.to_int_or_none(
+            self.lookup_range(self._get_state_key(use_time_status))
+        )
+        if use_time is None:
+            return None
+        if max_time < use_time:
+            return None
+
+        try:
+            return int((use_time / max_time) * 100)
+        except ValueError:
+            return None
+
     @property
     def has_data(self) -> bool:
         """Check if status cointain valid data."""
