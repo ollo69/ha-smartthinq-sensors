@@ -109,7 +109,10 @@ class LGEAuthentication:
         """Retrieve auth info from redirect url."""
         try:
             return await ClientAsync.oauth_info_from_url(
-                callback_url, aiohttp_session=self._client_session
+                callback_url,
+                self._region,
+                self._language,
+                aiohttp_session=self._client_session,
             )
         except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.exception("Error retrieving OAuth info from ThinQ", exc_info=exc)

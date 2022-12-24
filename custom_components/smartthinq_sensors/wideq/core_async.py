@@ -60,6 +60,12 @@ OAUTH_REDIRECT_URI = f"https://kr.m.lgaccount.com/{OAUTH_REDIRECT_PATH}"
 APPLICATION_KEY = "6V1V8H2BN5P9ZQGOI5DAQ92YZBDO3EK9"  # for spx login
 OAUTH_CLIENT_KEY = "LGAO722A02"
 EMP_REDIRECT_URL = "lgaccount.lgsmartthinq:/"
+THIRD_PART_LOGIN = {
+    "GGL": "google",
+    "AMZ": "amazon",
+    "FBK": "facebook",
+    "APPL": "apple",
+}
 
 # orig
 DATA_ROOT = "lgedmRoot"
@@ -93,26 +99,17 @@ _LG_SSL_CIPHERS = (
 _LOGGER = logging.getLogger(__name__)
 
 
-def oauth_info_from_url(url: str) -> dict:
-    """
-    Parse the URL to which an OAuth login redirected to obtain two
-    tokens: an access token for API credentials, and a refresh token for
-    getting updated access tokens.
-    """
-
-    params = parse_qs(urlparse(url).query)
-    result = {k: v[0] for k, v in params.items()}
-    return oauth_info_from_result(result)
-
-
-def oauth_info_from_result(result_info: dict) -> dict:
+def _oauth_info_from_result(result_info: dict) -> dict:
     """Return authentication info using an OAuth callback URL."""
 
+    result = {}
     if "refresh_token" in result_info:
         result = {
             "refresh_token": result_info["refresh_token"],
             "access_token": result_info.get("access_token"),
-            "token_validity": str(DEFAULT_TOKEN_VALIDITY),
+            "token_validity": result_info.get(
+                "expires_in", str(DEFAULT_TOKEN_VALIDITY)
+            ),
             "user_number": None,
         }
     elif "code" in result_info:
@@ -120,9 +117,8 @@ def oauth_info_from_result(result_info: dict) -> dict:
             "auth_code": result_info["code"],
             "user_number": result_info.get("user_number"),
         }
-    else:
-        return {}
-    if "oauth2_backend_url" in result_info:
+
+    if result and "oauth2_backend_url" in result_info:
         result["oauth_url"] = result_info["oauth2_backend_url"]
 
     return result
@@ -401,7 +397,13 @@ class CoreAsync:
         return result
 
     async def auth_user_login(
-        self, login_base_url, emp_base_url, username, encrypted_pwd
+        self,
+        login_base_url: str,
+        emp_base_url: str,
+        username: str,
+        encrypted_pwd: str,
+        *,
+        extra_headers: dict | None = None,
     ):
         """
         Perform a login with username and password.
@@ -445,10 +447,12 @@ class CoreAsync:
         headers["X-Timestamp"] = pre_login["tStamp"]
 
         # try login with username and hashed password
+        extra_data = extra_headers or {}
         data = {
             "user_auth2": pre_login["encrypted_pw"],
             "password_hash_prameter_flag": "Y",
             "svc_list": "SVC202,SVC710",  # SVC202=LG SmartHome, SVC710=EMP OAuth
+            **extra_data,
         }
         emp_login_url = urljoin(
             emp_base_url, "emp/v2.0/account/session/" + quote(username)
@@ -720,7 +724,7 @@ class Gateway:
             "client_id": CLIENT_ID,
             "svc_list": SVC_CODE,
             "svc_integrated": "Y",
-            "show_thirdparty_login": "LGE,MYLG,GGL,AMZ,FBK,APPL",
+            "show_thirdparty_login": ",".join(["LGE", "MYLG", *THIRD_PART_LOGIN]),
             "division": "ha",  # "ha:T20",
             redir_param: url_redirect,
             state_param: state or uuid.uuid1().hex,
@@ -783,13 +787,7 @@ class Auth:
         return self._gateway
 
     @staticmethod
-    async def oauth_info_from_url(url: str, core: CoreAsync) -> dict:
-        """Return authentication info using an OAuth callback URL."""
-        result = oauth_info_from_url(url)
-        return await Auth.oauth_info_from_result(result, core)
-
-    @staticmethod
-    async def oauth_info_from_result(result: dict, core: CoreAsync) -> dict:
+    async def _oauth_info_from_result(result: dict, core: CoreAsync) -> dict:
         """Return authentication info using an OAuth callback URL."""
         if auth_code := result.pop("auth_code", None):
             access_token, token_validity, refresh_token = await core.auth_code_login(
@@ -804,10 +802,47 @@ class Auth:
 
         return result
 
+    @staticmethod
+    async def oauth_info_from_url(
+        url: str, core: CoreAsync, *, gateway: Gateway | None = None
+    ) -> dict:
+        """Return authentication info using an OAuth callback URL."""
+        params = parse_qs(urlparse(url).query)
+        parse_result = {k: v[0] for k, v in params.items()}
+        url_info = _oauth_info_from_result(parse_result)
+
+        # Manage third part login
+        if not url_info:
+            username = parse_result.get("user_id")
+            thirdparty_token = parse_result.get("user_thirdparty_token")
+            id_type = parse_result.get("user_id_type", "")
+
+            if not (username and thirdparty_token) or id_type not in THIRD_PART_LOGIN:
+                return {}
+
+            try:
+                if not gateway:
+                    gateway = await Gateway.discover(core)
+                token_info = await core.auth_user_login(
+                    gateway.login_base_uri,
+                    gateway.emp_base_uri,
+                    username,
+                    thirdparty_token,
+                    extra_headers={
+                        "third_party": THIRD_PART_LOGIN[id_type],
+                    },
+                )
+            except Exception:  # pylint: disable=broad-except
+                return {}
+
+            url_info = _oauth_info_from_result(token_info)
+
+        return await Auth._oauth_info_from_result(url_info, core)
+
     @classmethod
     async def from_url(cls, gateway: Gateway, url: str) -> Auth | None:
         """Create an authentication using an OAuth callback URL."""
-        oauth_info = await cls.oauth_info_from_url(url, gateway.core)
+        oauth_info = await cls.oauth_info_from_url(url, gateway.core, gateway=gateway)
         if not oauth_info:
             return None
 
@@ -838,13 +873,13 @@ class Auth:
         except Exception as ex:
             raise exc.AuthenticationError("User login failed") from ex
 
-        result_info = oauth_info_from_result(token_info)
-        if not (result := await cls.oauth_info_from_result(result_info, gateway.core)):
+        result_info = _oauth_info_from_result(token_info)
+        if not (result := await cls._oauth_info_from_result(result_info, gateway.core)):
             raise exc.AuthenticationError("User login failed")
 
         refresh_token = result["refresh_token"]
         access_token = result["access_token"]
-        token_validity = token_info.get("expires_in")
+        token_validity = result.get("token_validity")
         if not (user_number := result.get("user_number")):
             user_number = await gateway.core.get_user_number(
                 access_token, oauth_url=result.get("oauth_url")
@@ -1388,10 +1423,14 @@ class ClientAsync:
 
     @staticmethod
     async def oauth_info_from_url(
-        url: str, aiohttp_session: aiohttp.ClientSession | None = None
+        url: str,
+        country: str = DEFAULT_COUNTRY,
+        language: str = DEFAULT_LANGUAGE,
+        *,
+        aiohttp_session: aiohttp.ClientSession | None = None,
     ) -> dict:
         """Return authentication info from an OAuth callback URL."""
-        core = CoreAsync(session=aiohttp_session)
+        core = CoreAsync(country, language, session=aiohttp_session)
         result = await Auth.oauth_info_from_url(url, core)
         await core.close()
         return result
