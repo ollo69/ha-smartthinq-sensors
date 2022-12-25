@@ -28,7 +28,7 @@ from .const import (
 )
 from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
-from .model_info import ModelInfoV1, ModelInfoV2, ModelInfoV2AC
+from .model_info import ModelInfo
 
 LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
@@ -396,7 +396,7 @@ class Device:
         self._device_info = device
         self._status = status
         self._model_data = None
-        self._model_info = None
+        self._model_info: ModelInfo | None = None
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._should_poll = device.platform_type == PlatformType.THINQ1
@@ -419,7 +419,7 @@ class Device:
         return self._device_info
 
     @property
-    def model_info(self):
+    def model_info(self) -> ModelInfo | None:
         """Return 'model_info' for this device."""
         return self._model_info
 
@@ -449,38 +449,26 @@ class Device:
                     self._device_info.model_info_url,
                     self._device_info,
                 )
+                if self._model_data is None:
+                    return False
 
-            model_data = self._model_data
-            if "Monitoring" in model_data and "Value" in model_data:
-                if ModelInfoV2AC.valid_value_data(model_data["Value"]):
-                    # this is V2 model with format similar to V1
-                    self._model_info = ModelInfoV2AC(model_data)
-                else:
-                    # this is old V1 model
-                    self._model_info = ModelInfoV1(model_data)
-            elif "MonitoringValue" in model_data:
-                # this is new V2 device
-                self._model_info = ModelInfoV2(model_data)
-            elif "ControlDevice" in model_data and "Value" in model_data:
-                # this is new V2 ac
-                self._model_info = ModelInfoV2AC(model_data)
+            self._model_info = ModelInfo.get_model_info(self._model_data)
+            if self._model_info is None:
+                return False
 
-        if self._model_info is not None:
-            # load model language pack
-            if self._model_lang_pack is None:
-                self._model_lang_pack = await self._client.model_url_info(
-                    self._device_info.model_lang_pack_url
-                )
+        # load model language pack
+        if self._model_lang_pack is None:
+            self._model_lang_pack = await self._client.model_url_info(
+                self._device_info.model_lang_pack_url
+            )
 
-            # load product language pack
-            if self._product_lang_pack is None:
-                self._product_lang_pack = await self._client.model_url_info(
-                    self._device_info.product_lang_pack_url
-                )
+        # load product language pack
+        if self._product_lang_pack is None:
+            self._product_lang_pack = await self._client.model_url_info(
+                self._device_info.product_lang_pack_url
+            )
 
-            return True
-
-        return False
+        return True
 
     def _get_state_key(self, key_name):
         """Get the key used for state from an array based on info type."""
@@ -744,7 +732,7 @@ class DeviceStatus:
 
     def __init__(self, device, data):
         """Initialize devicestatus object."""
-        self._device = device
+        self._device: Device = device
         self._data = {} if data is None else data
         self._device_features: dict[str, Any] = {}
         self._features_updated = False

@@ -4,12 +4,18 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections import namedtuple
 import json
-import logging
 from numbers import Number
 
 from .const import BIT_OFF, BIT_ON
 
-_LOGGER = logging.getLogger(__name__)
+TYPE_BIT = "bit"
+TYPE_BOOL = "boolean"
+TYPE_ENUM = "enum"
+TYPE_NUMBER = "number"
+TYPE_RANGE = "range"
+TYPE_REFERENCE = "reference"
+TYPE_STRING = "string"
+
 
 EnumValue = namedtuple("EnumValue", ["options"])
 RangeValue = namedtuple("RangeValue", ["min", "max", "step"])
@@ -20,6 +26,25 @@ ReferenceValue = namedtuple("ReferenceValue", ["reference"])
 class ModelInfo(ABC):
     """The base abstract class for a device model's capabilities."""
 
+    @staticmethod
+    def get_model_info(model_data: dict) -> ModelInfo | None:
+        """Return the correct model info."""
+        if ModelInfoV2AC.is_valid_model_data(model_data):
+            # this is new V2 model for AC
+            return ModelInfoV2AC(model_data)
+        if ModelInfoV1.is_valid_model_data(model_data):
+            # this is old V1 model
+            return ModelInfoV1(model_data)
+        if ModelInfoV2.is_valid_model_data(model_data):
+            # this is new V2 model
+            return ModelInfoV2(model_data)
+        return None
+
+    @staticmethod
+    @abstractmethod
+    def is_valid_model_data(model_data: dict) -> bool:
+        """Determine if model data is valid for this model."""
+
     def __init__(self, data):
         """Initialize the class."""
         self._data = data
@@ -29,9 +54,11 @@ class ModelInfo(ABC):
     def is_info_v2(self):
         """Return the type of 'model_info' represented."""
 
-    @abstractmethod
     def as_dict(self):
         """Return the data dictionary"""
+        if not self._data:
+            return {}
+        return self._data.copy()
 
     @property
     @abstractmethod
@@ -51,36 +78,76 @@ class ModelInfo(ABC):
         """Check if a value key exist inside model info."""
 
     @abstractmethod
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
+
     def is_enum_type(self, key):
         """Check if specific key is enum type."""
+        if (value_type := self.value_type(key)) is None:
+            return False
+        return value_type == TYPE_ENUM
 
-    @abstractmethod
     def enum_value(self, key, name):
         """Look up the encoded value for a friendly enum name."""
+        if not (values := self.value(key, [TYPE_ENUM, TYPE_BOOL])):
+            return None
 
-    @abstractmethod
+        options = values.options
+        for opt_key, value in options.items():
+            if value == name:
+                return opt_key
+        return None
+
     def enum_name(self, key, value):
         """Look up the friendly enum name for an encoded value."""
+        if not (values := self.value(key, [TYPE_ENUM, TYPE_BOOL])):
+            return None
 
-    @abstractmethod
+        options = values.options
+        return options.get(value, "")
+
     def enum_index(self, key, index):
         """Look up the friendly enum name for an indexed value."""
+        return self.enum_name(key, index)
 
-    @abstractmethod
-    def range_name(self, key):
-        """Look up the value of a RangeValue."""
+    def range_name(self, key) -> str | None:
+        """
+        Look up the value of a RangeValue.
+        Not very useful other than for comprehension.
+        """
+        return key
 
-    @abstractmethod
-    def bit_name(self, key, bit_index, value):
-        """Look up the friendly name for an encoded bit value."""
-
-    @abstractmethod
-    def bit_value(self, key, values):
-        """Look up the bit value for a specific key."""
-
-    @abstractmethod
-    def reference_name(self, key, value, ref_key="_comment"):
+    def reference_name(self, key, value, ref_key="_comment") -> str | None:
         """Look up the friendly name for an encoded reference value."""
+        if not (values := self.value(key, [TYPE_REFERENCE])):
+            return None
+
+        str_value = str(value)
+        reference = values.reference
+        if str_value in reference:
+            ref_value = reference[str_value]
+            for key_id in (ref_key, "label"):
+                if key_id in ref_value:
+                    return ref_value[key_id]
+            return ref_value.get("name")
+        return None
+
+    def bit_name(self, key, bit_index, value) -> str | None:
+        """Look up the friendly name for an encoded bit value."""
+        return None
+
+    def bit_value(self, key, values) -> str | None:
+        """
+        Look up the bit value for a specific key.
+        Not used in model V2.
+        """
+        return None
+
+    def target_key(self, key, value, target) -> str | None:
+        """Look up tarket key inside a value."""
+        return None
 
     @property
     @abstractmethod
@@ -103,6 +170,11 @@ class ModelInfo(ABC):
 class ModelInfoV1(ModelInfo):
     """A description of a device model's capabilities for type V1."""
 
+    @staticmethod
+    def is_valid_model_data(model_data: dict) -> bool:
+        """Determine if model data is valid for this model."""
+        return "Monitoring" in model_data and "Value" in model_data
+
     def __init__(self, data):
         """Initialize the class."""
         super().__init__(data)
@@ -113,12 +185,6 @@ class ModelInfoV1(ModelInfo):
         """Return the type of 'model_info' represented."""
         return False
 
-    def as_dict(self):
-        """Return the data dictionary"""
-        if not self._data:
-            return {}
-        return self._data.copy()
-
     @property
     def model_type(self):
         """Return the model type."""
@@ -128,98 +194,72 @@ class ModelInfoV1(ModelInfo):
         """Get config value for a specific key."""
         return self._data.get("Config", {}).get(key, "")
 
+    def _get_data_type(self, data):
+        """Return data type in specific data."""
+        if "type" in data:
+            return data["type"].casefold()
+        return None
+
     def value_type(self, name):
         """Return the value type for a specific value key."""
-        if name in self._data["Value"]:
-            return self._data["Value"][name].get("type")
+        if value := self._data["Value"].get(name):
+            return self._get_data_type(value)
         return None
 
     def value_exist(self, name):
         """Check if a value key exist inside model info."""
         return name in self._data["Value"]
 
-    def is_enum_type(self, key):
-        """Check if specific key is enum type."""
-        if (value_type := self.value_type(key)) is None:
-            return False
-        return value_type in ("Enum", "enum")
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
+        if not self.value_exist(name):
+            return None
+        data = self._data["Value"][name]
+        if not (data_type := self._get_data_type(data)):
+            return None
+        if req_type:
+            if data_type not in req_type:
+                return None
 
-    def value(self, name):
-        """Look up information about a value.
-
-        Return either an `EnumValue` or a `RangeValue`.
-        """
-        d = self._data["Value"][name]
-        if d["type"] in ("Enum", "enum"):
-            return EnumValue(d["option"])
-        if d["type"] == "Range":
+        if data_type == TYPE_ENUM:
+            return EnumValue(data["option"])
+        if data_type == TYPE_RANGE:
             return RangeValue(
-                d["option"]["min"], d["option"]["max"], d["option"].get("step", 0)
+                data["option"]["min"],
+                data["option"]["max"],
+                data["option"].get("step", 0),
             )
-        if d["type"] == "Bit":
+        if data_type == TYPE_BIT:
             bit_values = {}
-            for bit in d["option"]:
+            for bit in data["option"]:
                 bit_values[bit["startbit"]] = {
                     "value": bit["value"],
                     "length": bit["length"],
                 }
             return BitValue(bit_values)
-        if d["type"] == "Reference":
-            ref = d["option"][0]
+        if data_type == TYPE_REFERENCE:
+            ref = data["option"][0]
             return ReferenceValue(self._data[ref])
-        if d["type"] == "Boolean":
+        if data_type == TYPE_BOOL:
             return EnumValue({"0": BIT_OFF, "1": BIT_ON})
-        if d["type"] == "String":
+        if data_type == TYPE_STRING:
             return None
         raise ValueError(
-            f"ModelInfo: unsupported value type {d['type']} - value: {d}",
+            f"ModelInfo: unsupported value type {data_type} - value: {data}",
         )
 
     def default(self, name):
         """Get the default value, if it exists, for a given value."""
         return self._data.get("Value", {}).get(name, {}).get("default")
 
-    def enum_value(self, key, name):
-        """Look up the encoded value for a friendly enum name."""
-        if not self.value_type(key):
-            return None
-
-        options = self.value(key).options
-        for k, v in options.items():
-            if v == name:
-                return k
-        return None
-
-    def enum_name(self, key, value):
-        """Look up the friendly enum name for an encoded value."""
-        if not self.value_type(key):
-            return None
-
-        values = self.value(key)
-        if not hasattr(values, "options"):
-            return None
-        options = values.options
-        return options.get(value, "")
-
-    def enum_index(self, key, index):
-        """Look up the friendly enum name for an indexed value."""
-        return self.enum_name(key, index)
-
-    def range_name(self, key):
-        """
-        Look up the value of a RangeValue.
-        Not very useful other than for comprehension.
-        """
-
-        return key
-
-    def bit_name(self, key, bit_index, value):
+    def bit_name(self, key, bit_index, value) -> str | None:
         """Look up the friendly name for an encoded bit value."""
-        if not self.value_type(key):
+        if not (values := self.value(key, [TYPE_BIT])):
             return str(value)
 
-        options = self.value(key).options
-
+        options = values.options
         if not self.value_type(options[bit_index]["value"]):
             return str(value)
 
@@ -258,7 +298,7 @@ class ModelInfoV1(ModelInfo):
 
         return bit_key
 
-    def bit_value(self, key, values):
+    def bit_value(self, key, values) -> str | None:
         """Look up the bit value for an specific key."""
         bit_key = self._get_bit_key(key)
         if not bit_key:
@@ -275,21 +315,6 @@ class ModelInfoV1(ModelInfo):
             bit = 1 if bit_value & bit_index else 0
             val += bit * (2**i)
         return str(val)
-
-    def reference_name(self, key, value, ref_key="_comment"):
-        """Look up the friendly name for an encoded reference value."""
-        value = str(value)
-        if not self.value_type(key):
-            return None
-
-        reference = self.value(key).reference
-
-        if value in reference:
-            ref_key_value = reference[value].get(ref_key)
-            if ref_key_value:
-                return ref_key_value
-            return reference[value].get("label")
-        return None
 
     @property
     def binary_control_data(self):
@@ -328,8 +353,8 @@ class ModelInfoV1(ModelInfo):
             start_byte: int = item["startByte"]
             end_byte: int = start_byte + item["length"]
             if total_bytes >= end_byte:
-                for v in data[start_byte:end_byte]:
-                    value = (value << 8) + v
+                for byte_data in data[start_byte:end_byte]:
+                    value = (value << 8) + byte_data
             decoded[key] = str(value)
         return decoded
 
@@ -438,16 +463,15 @@ class ModelInfoV1(ModelInfo):
 class ModelInfoV2(ModelInfo):
     """A description of a device model's capabilities for type V2."""
 
+    @staticmethod
+    def is_valid_model_data(model_data: dict) -> bool:
+        """Determine if model data is valid for this model."""
+        return "MonitoringValue" in model_data
+
     @property
     def is_info_v2(self):
         """Return the type of 'model_info' represented."""
         return True
-
-    def as_dict(self):
-        """Return the data dictionary"""
-        if not self._data:
-            return {}
-        return self._data.copy()
 
     @property
     def model_type(self):
@@ -458,67 +482,61 @@ class ModelInfoV2(ModelInfo):
         """Get config value for a specific key."""
         return self._data.get("Config", {}).get(key, "")
 
-    def value_type(self, name):
-        """Return the value type for a specific value key."""
-        if name in self._data["MonitoringValue"]:
-            return self._data["MonitoringValue"][name].get("dataType")
+    def _get_data_type(self, data):
+        """Return data type in specific data."""
+        if "dataType" in data:
+            return data["dataType"].casefold()
         return None
 
-    def is_enum_type(self, key):
-        """Check if specific key is enum type."""
-        if (value_type := self.value_type(key)) is None:
-            return False
-        return value_type in ("Enum", "enum")
+    def value_type(self, name):
+        """Return the value type for a specific value key."""
+        if value := self._data["MonitoringValue"].get(name):
+            return self._get_data_type(value)
+        return None
 
     def value_exist(self, name):
         """Check if a value key exist inside model info."""
         return name in self._data["MonitoringValue"]
 
-    def data_root(self, name):
+    def _data_root(self, name):
         """Return the data root for a specific value key."""
-        if name in self._data["MonitoringValue"]:
-            if "dataType" in self._data["MonitoringValue"][name]:
-                return self._data["MonitoringValue"][name]
-            ref = self._data["MonitoringValue"][name].get("ref")
-            if ref:
-                return self._data.get(ref)
-
+        if not self.value_exist(name):
+            return None
+        data = self._data["MonitoringValue"][name]
+        if "dataType" in data or "ref" in data:
+            return data
         return None
 
-    def value(self, data):
-        """
-        Look up information about a value.
-        Return either an `EnumValue` or a `RangeValue`.
-        """
-        data_type = data.get("dataType")
-        if not data_type:
-            return data
-        if data_type in ("Enum", "enum"):
-            return data["valueMapping"]
-        if data_type in ("Range", "range"):
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
+        if not (data := self._data_root(name)):
+            return None
+        if not (data_type := self._get_data_type(data)):
+            if "ref" not in data:
+                return None
+            data_type = TYPE_REFERENCE
+
+        if req_type:
+            if data_type not in req_type:
+                return None
+
+        if data_type == TYPE_ENUM:
+            mapping = data["valueMapping"]
+            return EnumValue(
+                {k: v["label"] for k, v in mapping.items() if "label" in v}
+            )
+        if data_type == TYPE_RANGE:
             return RangeValue(
                 data["valueMapping"]["min"], data["valueMapping"]["max"], 1
             )
-        # elif d['dataType'] == 'Bit':
-        #    bit_values = {}
-        #    for bit in d['option']:
-        #        bit_values[bit['startbit']] = {
-        #        'value' : bit['value'],
-        #        'length' : bit['length'],
-        #        }
-        #    return BitValue(
-        #            bit_values
-        #            )
-        # elif d['dataType'] == 'Reference':
-        #    ref =  d['option'][0]
-        #    return ReferenceValue(
-        #            self.data[ref]
-        #            )
-        if data_type in ("Boolean", "boolean"):
-            ret_val = {"BOOL": True}
-            ret_val.update(data["valueMapping"])
-            return ret_val
-        if data_type in ("String", "string"):
+        if data_type == TYPE_REFERENCE:
+            ref = data["ref"]
+            return ReferenceValue(self._data.get(ref))
+        if data_type == TYPE_BOOL:
+            return EnumValue({0: BIT_OFF, 1: BIT_ON})
+        if data_type == TYPE_STRING:
             return None
         raise ValueError(
             f"ModelInfoV2: unsupported value type {data_type} - value: {data}",
@@ -526,90 +544,31 @@ class ModelInfoV2(ModelInfo):
 
     def default(self, name):
         """Get the default value, if it exists, for a given value."""
-        data = self.data_root(name)
-        if data:
+        if data := self._data_root(name):
             return data.get("default")
 
         return None
 
-    def enum_value(self, key, name):
-        """Look up the encoded value for a friendly enum name."""
-        data = self.data_root(key)
-        if not data:
-            return None
-
-        options = self.value(data)
-        for k, v in options.items():
-            if (label := v.get("label")) is None:
-                continue
-            if label == name:
-                return k
-        return None
-
-    def enum_name(self, key, value):
-        """Look up the friendly enum name for an encoded value."""
-        data = self.data_root(key)
-        if not data:
-            return None
-
-        options = self.value(data)
-        item = options.get(value, {})
-        if options.get("BOOL", False):
-            index = item.get("index", 0)
-            return BIT_ON if index == 1 else BIT_OFF
-        return item.get("label", "")
-
-    def enum_index(self, key, index):
+    def enum_index(self, key, index) -> str | None:
         """Look up the friendly enum name for an indexed value."""
-        data = self.data_root(key)
-        if not data:
+        if not (data := self._data_root(key)):
+            return None
+        if not (data_type := self._get_data_type(data)):
+            return None
+        if data_type != TYPE_ENUM:
             return None
 
-        options = self.value(data)
-        for item in options.values():
-            idx = item.get("index", -1)
-            if idx == index:
-                return item.get("label", "")
+        mapping = data["valueMapping"]
+        options = {
+            v["index"]: v["label"]
+            for v in mapping.values()
+            if "index" in v and "label" in v
+        }
+        return options.get(index, "")
 
-        return ""
-
-    def range_name(self, key):
-        """
-        Look up the value of a RangeValue.
-        Not very useful other than for comprehension.
-        """
-        return key
-
-    def bit_name(self, key, bit_index, value):
-        """Look up the friendly name for an encoded bit value."""
-        return None
-
-    def bit_value(self, key, values):
-        """
-        Look up the bit value for a specific key.
-        Not used in model V2.
-        """
-        return None
-
-    def reference_name(self, key, value, ref_key="_comment"):
-        """Look up the friendly name for an encoded reference value."""
-        data = self.data_root(key)
-        if not data:
-            return None
-
-        reference = self.value(data)
-
-        if value in reference:
-            ref_key_value = reference[value].get(ref_key)
-            if ref_key_value:
-                return ref_key_value
-            return reference[value].get("label")
-        return None
-
-    def target_key(self, key, value, target):
-        """Look up the friendly name for an encoded reference value."""
-        data = self.data_root(key)
-        if not data:
+    def target_key(self, key, value, target) -> str | None:
+        """Look up tarket key inside a value."""
+        if not (data := self._data_root(key)):
             return None
 
         return data.get("targetKey", {}).get(target, {}).get(value)
@@ -650,63 +609,65 @@ class ModelInfoV2AC(ModelInfoV1):
     Type V2AC and other models with 'data_type' in Value.
     """
 
+    @staticmethod
+    def is_valid_model_data(model_data: dict) -> bool:
+        """Determine if model data is valid for this model."""
+        if "ControlDevice" in model_data and "Value" in model_data:
+            return True
+        if "Monitoring" in model_data and "Value" in model_data:
+            value_data = model_data["Value"]
+            first_value = list(value_data.values())[0]
+            if "data_type" in first_value and "type" not in first_value:
+                return True
+        return False
+
     def __init__(self, data):
         """Initialize the class."""
         super().__init__(data)
         self._has_monitoring = "Monitoring" in data
-
-    @staticmethod
-    def valid_value_data(value_data):
-        """Determine if valid Value data is in this model."""
-        first_value = list(value_data.values())[0]
-        if "data_type" in first_value:
-            return True
-        return False
 
     @property
     def is_info_v2(self):
         """Return the type of 'model_info' represented."""
         return True
 
-    def value_type(self, name):
-        """Return the value type for a specific value key."""
-        if name in self._data["Value"]:
-            return self._data["Value"][name].get("data_type")
+    def _get_data_type(self, data):
+        """Return data type in specific data."""
+        if "data_type" in data:
+            return data["data_type"].casefold()
         return None
 
-    def value(self, name):
-        """
-        Look up information about a value.
-        Return either an `EnumValue` or a `RangeValue`.
-        """
-        d = self._data["Value"][name]
-        if d["data_type"] in ("Enum", "enum"):
-            return EnumValue(d["value_mapping"])
-        if d["data_type"] in ("Range", "range"):
-            return RangeValue(
-                d["value_validation"]["min"],
-                d["value_validation"]["max"],
-                d["value_validation"].get("step", 0),
-            )
-        # elif d["type"] == "Bit":
-        #    bit_values = {}
-        #    for bit in d["option"]:
-        #        bit_values[bit["startbit"]] = {
-        #            "value": bit["value"],
-        #            "length": bit["length"],
-        #        }
-        #    return BitValue(bit_values)
-        # elif d["type"] == "Reference":
-        #    ref = d["option"][0]
-        #    return ReferenceValue(self._data[ref])
-        # elif d["type"] == "Boolean":
-        #    return EnumValue({"0": "False", "1": "True"})
-        if d["data_type"] in ("String", "string"):
+    def value_type(self, name):
+        """Return the value type for a specific value key."""
+        if value := self._data["Value"].get(name):
+            return self._get_data_type(value)
+        return None
+
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
+        if not self.value_exist(name):
             return None
-        if d["data_type"] in ("Number", "number"):
+        data = self._data["Value"][name]
+        if not (data_type := self._get_data_type(data)):
+            return None
+        if req_type:
+            if data_type not in req_type:
+                return None
+
+        if data_type == TYPE_ENUM:
+            return EnumValue(data["value_mapping"])
+        if data_type == TYPE_RANGE:
+            return RangeValue(
+                data["value_validation"]["min"],
+                data["value_validation"]["max"],
+                data["value_validation"].get("step", 0),
+            )
+        if data_type in (TYPE_STRING, TYPE_NUMBER, TYPE_REFERENCE):
             return None
         raise ValueError(
-            f"ModelInfoV2AC: unsupported value type {d['data_type']} - value: {d}",
+            f"ModelInfoV2AC: unsupported value type {data['data_type']} - value: {data}",
         )
 
     def decode_snapshot(self, data, key):

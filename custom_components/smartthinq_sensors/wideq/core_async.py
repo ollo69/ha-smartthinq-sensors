@@ -1456,7 +1456,13 @@ class ClientAsync:
             str_content = str(content, errors="replace")
 
         enc_resp = str_content.encode()
-        return json.loads(enc_resp)
+        try:
+            return json.loads(enc_resp)
+        except json.JSONDecodeError as ex:
+            _LOGGER.warning(
+                "Failed to load json info file: %s - error: %s", info_url, ex
+            )
+            return None
 
     async def common_lang_pack(self):
         """Load JSON common lang pack from specific url."""
@@ -1483,7 +1489,9 @@ class ClientAsync:
                     device.model_name,
                     url,
                 )
-            self._model_url_info[url] = await self._load_json_info(url)
+            if not (model_url_info := await self._load_json_info(url)):
+                return None
+            self._model_url_info[url] = model_url_info
         return self._model_url_info[url]
 
     def dump(self) -> dict[str, Any]:

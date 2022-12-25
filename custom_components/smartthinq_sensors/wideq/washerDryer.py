@@ -105,8 +105,6 @@ class WMDevice(Device):
         """Get definition for a specific course ID."""
         if course_key is None:
             return None
-        if self.model_info.is_info_v2:
-            return self.model_info.data_root(course_key).get(course_id)
         return self.model_info.value(course_key).reference.get(course_id)
 
     def _update_course_info(self, data, course_id=None):

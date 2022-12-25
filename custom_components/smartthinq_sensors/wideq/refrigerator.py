@@ -16,6 +16,7 @@ from .const import (
     UNIT_TEMP_FAHRENHEIT,
 )
 from .device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
+from .model_info import TYPE_ENUM
 
 FEATURE_DESCR = {
     "@RE_TERM_EXPRESS_FREEZE_W": "express_freeze",
@@ -167,34 +168,27 @@ class RefrigeratorDevice(Device):
         return self._temp_unit
 
     def _get_temps_v1(self, key):
-        """Get valid values for temps for V2 models"""
+        """Get valid values for temps for V1 models"""
         unit = self._get_temp_unit()
         if unit:
             unit_key = "_F" if unit == UNIT_TEMP_FAHRENHEIT else "_C"
             if self.model_info.value_exist(key + unit_key):
                 key = key + unit_key
         value_type = self.model_info.value_type(key)
-        if not value_type or value_type not in ("enum", "Enum"):
+        if not value_type or value_type != TYPE_ENUM:
             return {}
         return self.model_info.value(key).options
 
     def _get_temps_v2(self, key, unit_key=None):
-        """Get valid values for temps for V1 models"""
+        """Get valid values for temps for V2 models"""
         if unit_key:
-            ref_key = self.model_info.target_key(key, unit_key, "tempUnit")
-            key = ref_key or key
+            if ref_key := self.model_info.target_key(key, unit_key, "tempUnit"):
+                key = ref_key
         value_type = self.model_info.value_type(key)
-        if not value_type or value_type not in ("enum", "Enum"):
+        if not value_type or value_type != TYPE_ENUM:
             return {}
-        ret_val = {}
-        data = self.model_info.data_root(key)
-        temp_values = self.model_info.value(data)
-        for key, value in temp_values.items():
-            ref_val = value.get("label")
-            if not ref_val or ref_val == "IGNORE":
-                continue
-            ret_val[key] = ref_val
-        return ret_val
+        temp_values = self.model_info.value(key).options
+        return {k: v for k, v in temp_values.items() if v != "IGNORE"}
 
     @staticmethod
     def _get_temp_ranges(temps):
