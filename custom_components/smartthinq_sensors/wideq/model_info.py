@@ -30,12 +30,13 @@ class ModelInfo(ABC):
     def get_model_info(model_data: dict) -> ModelInfo | None:
         """Return the correct model info."""
         if ModelInfoV2AC.is_valid_model_data(model_data):
+            # this is new V2 model for AC
             return ModelInfoV2AC(model_data)
         if ModelInfoV1.is_valid_model_data(model_data):
             # this is old V1 model
             return ModelInfoV1(model_data)
         if ModelInfoV2.is_valid_model_data(model_data):
-            # this is new V2 device
+            # this is new V2 model
             return ModelInfoV2(model_data)
         return None
 
@@ -77,8 +78,10 @@ class ModelInfo(ABC):
         """Check if a value key exist inside model info."""
 
     @abstractmethod
-    def value(self, name: str, req_type: list | None = None):
-        """Look up information about a value."""
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
 
     def is_enum_type(self, key):
         """Check if specific key is enum type."""
@@ -125,9 +128,9 @@ class ModelInfo(ABC):
         reference = values.reference
         if str_value in reference:
             ref_value = reference[str_value]
-            for key in (ref_key, "label"):
-                if key in ref_value:
-                    return ref_value[key]
+            for key_id in (ref_key, "label"):
+                if key_id in ref_value:
+                    return ref_value[key_id]
             return ref_value.get("name")
         return None
 
@@ -207,11 +210,10 @@ class ModelInfoV1(ModelInfo):
         """Check if a value key exist inside model info."""
         return name in self._data["Value"]
 
-    def value(self, name, req_type: list | None = None):
-        """Look up information about a value.
-
-        Return either an `EnumValue` or a `RangeValue`.
-        """
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
         if not self.value_exist(name):
             return None
         data = self._data["Value"][name]
@@ -505,17 +507,16 @@ class ModelInfoV2(ModelInfo):
             return data
         return None
 
-    def value(self, name, req_type: list | None = None):
-        """
-        Look up information about a value.
-        Return either an `EnumValue` or a `RangeValue`.
-        """
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
         if not (data := self._data_root(name)):
             return None
         if not (data_type := self._get_data_type(data)):
             if "ref" not in data:
                 return None
-            data_type = "Reference"
+            data_type = TYPE_REFERENCE
 
         if req_type:
             if data_type not in req_type:
@@ -616,7 +617,7 @@ class ModelInfoV2AC(ModelInfoV1):
         if "Monitoring" in model_data and "Value" in model_data:
             value_data = model_data["Value"]
             first_value = list(value_data.values())[0]
-            if "data_type" in first_value:
+            if "data_type" in first_value and "type" not in first_value:
                 return True
         return False
 
@@ -642,11 +643,10 @@ class ModelInfoV2AC(ModelInfoV1):
             return self._get_data_type(value)
         return None
 
-    def value(self, name, req_type: list | None = None):
-        """
-        Look up information about a value.
-        Return either an `EnumValue` or a `RangeValue`.
-        """
+    def value(
+        self, name: str, req_type: list | None = None
+    ) -> EnumValue | RangeValue | BitValue | ReferenceValue | None:
+        """Look up information about a name key."""
         if not self.value_exist(name):
             return None
         data = self._data["Value"][name]
@@ -664,7 +664,7 @@ class ModelInfoV2AC(ModelInfoV1):
                 data["value_validation"]["max"],
                 data["value_validation"].get("step", 0),
             )
-        if data_type in (TYPE_STRING, TYPE_NUMBER):
+        if data_type in (TYPE_STRING, TYPE_NUMBER, TYPE_REFERENCE):
             return None
         raise ValueError(
             f"ModelInfoV2AC: unsupported value type {data['data_type']} - value: {data}",

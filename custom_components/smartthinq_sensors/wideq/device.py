@@ -449,6 +449,8 @@ class Device:
                     self._device_info.model_info_url,
                     self._device_info,
                 )
+                if self._model_data is None:
+                    return False
 
             self._model_info = ModelInfo.get_model_info(self._model_data)
             if self._model_info is None:
