@@ -90,8 +90,8 @@ _LOGGER = logging.getLogger(__name__)
 class WMDevice(Device):
     """A higher-level interface for washer and dryer."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, WMStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, WMStatus(self, None))
         self._remote_start_status = None
 
     def _update_status(self, key, value):

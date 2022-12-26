@@ -70,8 +70,8 @@ _LOGGER = logging.getLogger(__name__)
 class RefrigeratorDevice(Device):
     """A higher-level interface for a refrigerator."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, RefrigeratorStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, RefrigeratorStatus(self, None))
         self._temp_unit = None
         self._fridge_temps = None
         self._fridge_ranges = None

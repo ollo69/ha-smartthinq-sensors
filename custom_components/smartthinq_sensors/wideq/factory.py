@@ -1,6 +1,7 @@
 """Factory module for ThinQ library."""
 
 from .const import UNIT_TEMP_CELSIUS
+from .core_async import ClientAsync
 from .device_info import (
     WM_DEVICE_TYPES,
     DeviceInfo,
@@ -20,12 +21,14 @@ from .devices.washerDryer import WMDevice
 from .devices.waterheater import WaterHeaterDevice
 
 
-def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
+def get_lge_device(
+    client: ClientAsync, device_info: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS
+):
     """Return a device based on the device type."""
 
-    device_type = device.type
-    platform_type = device.platform_type
-    network_type = device.network_type
+    device_type = device_info.type
+    platform_type = device_info.platform_type
+    network_type = device_info.network_type
 
     if platform_type == PlatformType.UNKNOWN:
         return None
@@ -33,24 +36,24 @@ def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):
         return None
 
     if device_type == DeviceType.AC:
-        return AirConditionerDevice(client, device, temp_unit)
+        return AirConditionerDevice(client, device_info, temp_unit)
     if device_type == DeviceType.AIR_PURIFIER:
-        return AirPurifierDevice(client, device)
+        return AirPurifierDevice(client, device_info)
     if device_type == DeviceType.DEHUMIDIFIER:
-        return DeHumidifierDevice(client, device)
+        return DeHumidifierDevice(client, device_info)
     if device_type == DeviceType.DISHWASHER:
-        return DishWasherDevice(client, device)
+        return DishWasherDevice(client, device_info)
     if device_type == DeviceType.FAN:
-        return FanDevice(client, device)
+        return FanDevice(client, device_info)
     if device_type == DeviceType.RANGE:
-        return RangeDevice(client, device)
+        return RangeDevice(client, device_info)
     if device_type == DeviceType.REFRIGERATOR:
-        return RefrigeratorDevice(client, device)
+        return RefrigeratorDevice(client, device_info)
     if device_type == DeviceType.STYLER:
-        return StylerDevice(client, device)
+        return StylerDevice(client, device_info)
     if device_type in WM_DEVICE_TYPES:
-        return WMDevice(client, device)
+        return WMDevice(client, device_info)
     if device_type == DeviceType.WATER_HEATER:
-        return WaterHeaterDevice(client, device, temp_unit)
+        return WaterHeaterDevice(client, device_info, temp_unit)
 
     return None

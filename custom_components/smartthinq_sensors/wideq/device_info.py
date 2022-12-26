@@ -119,7 +119,7 @@ class DeviceInfo:
         return self._get_data_value(["modelName", "modelNm"])
 
     @property
-    def id(self) -> str:
+    def device_id(self) -> str:
         """Return the device id."""
         if self._device_id is None:
             self._device_id = self._get_data_value("deviceId")
@@ -162,11 +162,11 @@ class DeviceInfo:
     @property
     def firmware(self) -> Optional[str]:
         """Return the device firmware version."""
-        if fw := self._data.get("fwVer"):
-            return fw
+        if fw_ver := self._data.get("fwVer"):
+            return fw_ver
         if "modemInfo" in self._data:
-            if fw := self._data["modemInfo"].get("appVersion"):
-                return fw
+            if fw_ver := self._data["modemInfo"].get("appVersion"):
+                return fw_ver
         return None
 
     @property
@@ -188,7 +188,9 @@ class DeviceInfo:
                 ret_val = DeviceType(device_type)
             except ValueError:
                 _LOGGER.warning(
-                    "Device %s: unknown device type with id %s", self.id, device_type
+                    "Device %s: unknown device type with id %s",
+                    self.device_id,
+                    device_type,
                 )
                 ret_val = DeviceType.UNKNOWN
             self._device_type = ret_val
@@ -204,7 +206,9 @@ class DeviceInfo:
                 ret_val = PlatformType(plat_type)
             except ValueError:
                 _LOGGER.warning(
-                    "Device %s: unknown platform type with id %s", self.id, plat_type
+                    "Device %s: unknown platform type with id %s",
+                    self.device_id,
+                    plat_type,
                 )
                 ret_val = PlatformType.UNKNOWN
             self._platform_type = ret_val
@@ -220,7 +224,9 @@ class DeviceInfo:
                 ret_val = NetworkType(net_type)
             except ValueError:
                 _LOGGER.warning(
-                    "Device %s: unknown network type with id %s", self.id, net_type
+                    "Device %s: unknown network type with id %s",
+                    self.device_id,
+                    net_type,
                 )
                 # for the moment we set WIFI if unknown
                 ret_val = NetworkType.WIFI

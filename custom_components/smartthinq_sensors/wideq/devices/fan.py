@@ -50,8 +50,8 @@ class FanSpeed(Enum):
 class FanDevice(Device):
     """A higher-level interface for Fan."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, FanStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, FanStatus(self, None))
         self._supported_fan_speeds = None
 
     @property

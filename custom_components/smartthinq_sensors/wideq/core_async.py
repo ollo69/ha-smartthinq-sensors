@@ -1133,7 +1133,7 @@ class Session:
 
         return res
 
-    async def set_device_v2_controls(
+    async def device_v2_controls(
         self,
         device_id,
         ctrl_key,
@@ -1321,7 +1321,7 @@ class ClientAsync:
         if not self._devices:
             return None
         for device in self.devices:
-            if device.id == device_id:
+            if device.device_id == device_id:
                 return device
         return None
 

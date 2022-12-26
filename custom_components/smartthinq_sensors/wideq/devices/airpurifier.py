@@ -106,8 +106,8 @@ class AirPurifierFanPreset(Enum):
 class AirPurifierDevice(Device):
     """A higher-level interface for a Air Purifier."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, AirPurifierStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, AirPurifierStatus(self, None))
         self._supported_op_modes = None
         self._supported_fan_speeds = None
         self._supported_fan_presets = None

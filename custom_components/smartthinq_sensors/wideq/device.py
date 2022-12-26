@@ -383,8 +383,8 @@ class Device:
     def __init__(
         self,
         client: ClientAsync,
-        device: DeviceInfo,
-        status=None,
+        device_info: DeviceInfo,
+        status: DeviceStatus | None = None,
         available_features=None,
     ):
         """
@@ -393,14 +393,16 @@ class Device:
         """
 
         self._client = client
-        self._device_info = device
+        self._device_info = device_info
         self._status = status
         self._model_data = None
         self._model_info: ModelInfo | None = None
         self._model_lang_pack = None
         self._product_lang_pack = None
-        self._should_poll = device.platform_type == PlatformType.THINQ1
-        self._mon = Monitor(client, device.id, device.platform_type, device.name)
+        self._should_poll = device_info.platform_type == PlatformType.THINQ1
+        self._mon = Monitor(
+            client, device_info.device_id, device_info.platform_type, device_info.name
+        )
         self._control_set = 0
         self._last_additional_poll: datetime | None = None
         self._available_features = available_features or {}
@@ -409,12 +411,12 @@ class Device:
         self._unknown_states = []
 
     @property
-    def client(self):
+    def client(self) -> ClientAsync:
         """Return client instance associated to this device."""
         return self._client
 
     @property
-    def device_info(self):
+    def device_info(self) -> DeviceInfo:
         """Return 'device_info' for this device."""
         return self._device_info
 
@@ -429,7 +431,7 @@ class Device:
         return self._available_features
 
     @property
-    def status(self):
+    def status(self) -> DeviceStatus | None:
         """Return status object associated to the device."""
         if not self._model_info:
             return None
@@ -500,7 +502,7 @@ class Device:
 
         if self._should_poll:
             await self._client.session.set_device_controls(
-                self._device_info.id,
+                self._device_info.device_id,
                 ctrl_key,
                 command,
                 {key: value} if key and value else value,
@@ -509,8 +511,8 @@ class Device:
             self._control_set = 2
             return
 
-        await self._client.session.set_device_v2_controls(
-            self._device_info.id,
+        await self._client.session.device_v2_controls(
+            self._device_info.device_id,
             ctrl_key,
             command,
             key,
@@ -534,7 +536,7 @@ class Device:
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s: %s",
-                self._device_info.id,
+                self._device_info.device_id,
                 str(full_key),
             )
             await self._set_control(full_key, ctrl_path=ctrl_path)
@@ -542,7 +544,7 @@ class Device:
             _LOGGER.log(
                 log_level,
                 "Setting new state for device %s:  %s - %s - %s - %s",
-                self._device_info.id,
+                self._device_info.device_id,
                 ctrl_key,
                 command,
                 key,
@@ -559,7 +561,9 @@ class Device:
         """
         if not self._should_poll:
             return
-        data = await self._client.session.get_device_config(self._device_info.id, key)
+        data = await self._client.session.get_device_config(
+            self._device_info.device_id, key
+        )
         if self._control_set == 0:
             self._control_set = 1
         return json.loads(base64.b64decode(data).decode("utf8"))
@@ -569,7 +573,7 @@ class Device:
         if not self._should_poll:
             return
         data = await self._client.session.get_device_config(
-            self._device_info.id,
+            self._device_info.device_id,
             key,
             "Control",
         )
@@ -611,7 +615,7 @@ class Device:
         if self._control_set <= 0:
             return
         if self._control_set == 1:
-            await self._client.session.delete_permission(self._device_info.id)
+            await self._client.session.delete_permission(self._device_info.device_id)
         self._control_set -= 1
 
     async def _get_device_info(self):

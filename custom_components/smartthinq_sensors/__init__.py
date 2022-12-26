@@ -57,6 +57,7 @@ from .wideq.core_exceptions import (
     MonitorUnavailableError,
     NotConnectedError,
 )
+from .wideq.device import Device as ThinQDevice
 
 SMARTTHINQ_PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -317,13 +318,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class LGEDevice:
     """Generic class that represents a LGE device."""
 
-    def __init__(self, device, hass):
+    def __init__(self, device: ThinQDevice, hass: HomeAssistant):
         """initialize a LGE Device."""
 
         self._device = device
         self._hass = hass
         self._name = device.device_info.name
-        self._device_id = device.device_info.id
+        self._device_id = device.device_info.device_id
         self._type = device.device_info.type
         self._mac = None
         if mac := device.device_info.macaddress:
@@ -517,19 +518,19 @@ async def lge_devices_setup(
     if hass.config.units.temperature_unit != UnitOfTemperature.CELSIUS:
         temp_unit = UNIT_TEMP_FAHRENHEIT
 
-    for device in client.devices:
-        device_id = device.id
+    for device_info in client.devices:
+        device_id = device_info.device_id
         new_discovered_devices.append(device_id)
         if device_id in discovered_devices:
             continue
 
-        device_name = device.name
-        device_type = device.type
-        network_type = device.network_type
-        model_name = device.model_name
+        device_name = device_info.name
+        device_type = device_info.type
+        network_type = device_info.network_type
+        model_name = device_info.model_name
         device_count += 1
 
-        lge_dev = get_lge_device(client, device, temp_unit)
+        lge_dev = get_lge_device(client, device_info, temp_unit)
         if not lge_dev:
             _LOGGER.info(
                 "Found unsupported LGE Device. Name: %s - Type: %s - NetworkType: %s",
@@ -537,7 +538,7 @@ async def lge_devices_setup(
                 device_type.name,
                 network_type.name,
             )
-            unsupported_devices.setdefault(device_type, []).append(device)
+            unsupported_devices.setdefault(device_type, []).append(device_info)
             continue
 
         dev = LGEDevice(lge_dev, hass)
@@ -546,7 +547,7 @@ async def lge_devices_setup(
                 "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
                 device_name,
                 device_type.name,
-                device.model_info_url,
+                device_info.model_info_url,
             )
             continue
 
@@ -578,9 +579,9 @@ def cleanup_orphan_lge_devices(
     # get list of valid devices
     valid_lg_dev_ids = []
     for device in client.devices:
-        dev = device_registry.async_get_device({(DOMAIN, device.id)})
+        dev = device_registry.async_get_device({(DOMAIN, device.device_id)})
         if dev is not None:
-            valid_lg_dev_ids.append(dev.id)
+            valid_lg_dev_ids.append(dev.device_id)
 
     # clean-up invalid devices
     for dev_entry in all_lg_dev_entries:
@@ -639,7 +640,7 @@ def start_devices_discovery(
             ]
             new_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = {}
             for dev_type, dev_list in prev_uns_devs.items():
-                new_dev_list = [dev for dev in dev_list if dev.id in new_devs]
+                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
                 if new_dev_list:
                     new_uns_devs[dev_type] = new_dev_list
             for dev_type, dev_list in unsupported_devs.items():

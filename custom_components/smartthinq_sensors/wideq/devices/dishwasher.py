@@ -56,8 +56,8 @@ _LOGGER = logging.getLogger(__name__)
 class DishWasherDevice(Device):
     """A higher-level interface for a dishwasher."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, DishWasherStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, DishWasherStatus(self, None))
 
     def reset_status(self):
         self._status = DishWasherStatus(self, None)

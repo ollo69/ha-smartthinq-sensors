@@ -63,9 +63,9 @@ class WHMode(Enum):
 class WaterHeaterDevice(Device):
     """A higher-level interface for a Water Heater."""
 
-    def __init__(self, client, device, temp_unit=UNIT_TEMP_CELSIUS):
+    def __init__(self, client, device_info, temp_unit=UNIT_TEMP_CELSIUS):
         """Initialize WaterHeaterDevice object."""
-        super().__init__(client, device, WaterHeaterStatus(self, None))
+        super().__init__(client, device_info, WaterHeaterStatus(self, None))
         self._temperature_unit = (
             UNIT_TEMP_FAHRENHEIT
             if temp_unit == UNIT_TEMP_FAHRENHEIT

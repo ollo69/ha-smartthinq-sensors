@@ -35,8 +35,8 @@ _LOGGER = logging.getLogger(__name__)
 class RangeDevice(Device):
     """A higher-level interface for a cooking range."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, RangeStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, RangeStatus(self, None))
 
     def reset_status(self):
         self._status = RangeStatus(self, None)

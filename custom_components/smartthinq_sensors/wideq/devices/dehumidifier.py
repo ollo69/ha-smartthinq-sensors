@@ -72,8 +72,8 @@ class DHumFanSpeed(Enum):
 class DeHumidifierDevice(Device):
     """A higher-level interface for DeHumidifier."""
 
-    def __init__(self, client, device):
-        super().__init__(client, device, DeHumidifierStatus(self, None))
+    def __init__(self, client, device_info):
+        super().__init__(client, device_info, DeHumidifierStatus(self, None))
         self._supported_op_modes = None
         self._supported_fan_speeds = None
         self._humidity_range = None

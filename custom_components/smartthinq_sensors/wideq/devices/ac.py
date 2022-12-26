@@ -257,9 +257,9 @@ class JetModeSupport(Enum):
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
-    def __init__(self, client, device, temp_unit=UNIT_TEMP_CELSIUS):
+    def __init__(self, client, device_info, temp_unit=UNIT_TEMP_CELSIUS):
         """Initialize AirConditionerDevice object."""
-        super().__init__(client, device, AirConditionerStatus(self, None))
+        super().__init__(client, device_info, AirConditionerStatus(self, None))
         self._temperature_unit = (
             UNIT_TEMP_FAHRENHEIT
             if temp_unit == UNIT_TEMP_FAHRENHEIT
