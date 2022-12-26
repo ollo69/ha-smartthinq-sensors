@@ -1,4 +1,5 @@
 """Model Info Classes used to map LG ThinQ device model's capabilities."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

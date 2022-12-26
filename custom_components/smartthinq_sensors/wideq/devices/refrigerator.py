@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Optional
 
-from .const import (
+from ..const import (
     FEAT_ECOFRIENDLY,
     FEAT_EXPRESSFRIDGE,
     FEAT_EXPRESSMODE,
@@ -15,8 +15,8 @@ from .const import (
     STATE_OPTIONITEM_NONE,
     UNIT_TEMP_FAHRENHEIT,
 )
-from .device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
-from .model_info import TYPE_ENUM
+from ..device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
+from ..model_info import TYPE_ENUM
 
 FEATURE_DESCR = {
     "@RE_TERM_EXPRESS_FREEZE_W": "express_freeze",

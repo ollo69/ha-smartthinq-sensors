@@ -3,7 +3,7 @@ from enum import Enum
 import logging
 from typing import Optional
 
-from .const import (
+from ..const import (
     FEAT_FILTER_BOTTOM_LIFE,
     FEAT_FILTER_DUST_LIFE,
     FEAT_FILTER_MAIN_LIFE,
@@ -14,7 +14,7 @@ from .const import (
     FEAT_PM10,
     FEAT_PM25,
 )
-from .device import Device, DeviceStatus
+from ..device import Device, DeviceStatus
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 

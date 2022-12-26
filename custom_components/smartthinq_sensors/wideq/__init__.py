@@ -1,6 +1,4 @@
-"""
-Support for LG SmartThinQ device.
-"""
+"""Support for LG ThinQ."""
 
 # flake8: noqa
 from .const import *
