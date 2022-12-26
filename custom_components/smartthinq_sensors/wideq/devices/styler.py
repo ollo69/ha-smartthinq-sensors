@@ -2,7 +2,7 @@
 import logging
 from typing import Optional
 
-from .const import (
+from ..const import (
     FEAT_CHILDLOCK,
     FEAT_ERROR_MSG,
     FEAT_NIGHTDRY,
@@ -11,7 +11,7 @@ from .const import (
     FEAT_RUN_STATE,
     STATE_OPTIONITEM_NONE,
 )
-from .device import Device, DeviceStatus
+from ..device import Device, DeviceStatus
 
 STATE_STYLER_POWER_OFF = "@ST_STATE_POWER_OFF_W"
 STATE_STYLER_END = [

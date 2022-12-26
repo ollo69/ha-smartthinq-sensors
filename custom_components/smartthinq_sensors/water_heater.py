@@ -20,8 +20,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .wideq import FEAT_HOT_WATER_TEMP, UNIT_TEMP_FAHRENHEIT, DeviceType
-from .wideq.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, AirConditionerDevice
-from .wideq.waterheater import (
+from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, AirConditionerDevice
+from .wideq.devices.waterheater import (
     DEFAULT_MAX_TEMP as WH_MAX_TEMP,
     DEFAULT_MIN_TEMP as WH_MIN_TEMP,
     WaterHeaterDevice,

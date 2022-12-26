@@ -2,7 +2,7 @@
 import logging
 from typing import Optional
 
-from .const import (
+from ..const import (
     FEAT_AUTODOOR,
     FEAT_CHILDLOCK,
     FEAT_DELAYSTART,
@@ -21,7 +21,7 @@ from .const import (
     FEAT_TUBCLEAN_COUNT,
     STATE_OPTIONITEM_NONE,
 )
-from .device import Device, DeviceStatus
+from ..device import Device, DeviceStatus
 
 STATE_DISHWASHER_POWER_OFF = "@DW_STATE_POWER_OFF_W"
 STATE_DISHWASHER_END = [

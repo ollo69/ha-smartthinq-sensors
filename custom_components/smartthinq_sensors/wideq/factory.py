@@ -1,7 +1,6 @@
-from .ac import AirConditionerDevice
-from .airpurifier import AirPurifierDevice
+"""Factory module for ThinQ library."""
+
 from .const import UNIT_TEMP_CELSIUS
-from .dehumidifier import DeHumidifierDevice
 from .device_info import (
     WM_DEVICE_TYPES,
     DeviceInfo,
@@ -9,13 +8,16 @@ from .device_info import (
     NetworkType,
     PlatformType,
 )
-from .dishwasher import DishWasherDevice
-from .fan import FanDevice
-from .range import RangeDevice
-from .refrigerator import RefrigeratorDevice
-from .styler import StylerDevice
-from .washerDryer import WMDevice
-from .waterheater import WaterHeaterDevice
+from .devices.ac import AirConditionerDevice
+from .devices.airpurifier import AirPurifierDevice
+from .devices.dehumidifier import DeHumidifierDevice
+from .devices.dishwasher import DishWasherDevice
+from .devices.fan import FanDevice
+from .devices.range import RangeDevice
+from .devices.refrigerator import RefrigeratorDevice
+from .devices.styler import StylerDevice
+from .devices.washerDryer import WMDevice
+from .devices.waterheater import WaterHeaterDevice
 
 
 def get_lge_device(client, device: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS):

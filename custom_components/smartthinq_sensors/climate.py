@@ -32,7 +32,7 @@ from .wideq import (
     UNIT_TEMP_FAHRENHEIT,
     DeviceType,
 )
-from .wideq.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
+from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
 
 # general ac attributes
 ATTR_FRIDGE = "fridge"

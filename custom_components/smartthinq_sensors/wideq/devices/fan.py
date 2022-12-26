@@ -3,7 +3,7 @@ from enum import Enum
 import logging
 from typing import Optional
 
-from .device import Device, DeviceStatus
+from ..device import Device, DeviceStatus
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 

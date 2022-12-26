@@ -17,7 +17,7 @@ from homeassistant.util.percentage import (
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .wideq import DeviceType
-from .wideq.fan import FanDevice
+from .wideq.devices.fan import FanDevice
 
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
