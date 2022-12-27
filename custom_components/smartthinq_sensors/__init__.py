@@ -45,7 +45,7 @@ from .const import (
 from .wideq import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
-    DeviceInfo as LGDeviceInfo,
+    DeviceInfo as ThinQDeviceInfo,
     DeviceType,
     get_lge_device,
 )
@@ -324,7 +324,7 @@ class LGEDevice:
         self._device = device
         self._hass = hass
         self._name = device.device_info.name
-        self._device_id = device.device_info.device_id
+        self._device_id = device.device_info.unique_id
         self._type = device.device_info.type
         self._mac = None
         if mac := device.device_info.macaddress:
@@ -332,7 +332,7 @@ class LGEDevice:
         self._firmware = device.device_info.firmware
 
         self._model = f"{device.device_info.model_name}"
-        self._id = f"{self._type.name}:{self._device_id}"
+        self._unique_id = f"{self._type.name}:{self._device_id}"
 
         self._state = None
         self._coordinator: DataUpdateCoordinator | None = None
@@ -372,7 +372,7 @@ class LGEDevice:
     @property
     def unique_id(self) -> str:
         """Device unique ID"""
-        return self._id
+        return self._unique_id
 
     @property
     def state(self):
@@ -502,13 +502,15 @@ async def lge_devices_setup(
     client: ClientAsync,
     discovered_devices: list[str] | None = None,
 ) -> tuple[
-    dict[DeviceType, list[LGEDevice]], dict[DeviceType, list[LGDeviceInfo]], list[str]
+    dict[DeviceType, list[LGEDevice]],
+    dict[DeviceType, list[ThinQDeviceInfo]],
+    list[str],
 ]:
     """Query connected devices from LG ThinQ."""
     _LOGGER.debug("Searching LGE ThinQ devices...")
 
     wrapped_devices: dict[DeviceType, list[LGEDevice]] = {}
-    unsupported_devices: dict[DeviceType, list[LGDeviceInfo]] = {}
+    unsupported_devices: dict[DeviceType, list[ThinQDeviceInfo]] = {}
     new_discovered_devices = []
     if discovered_devices is None:
         discovered_devices = []
@@ -519,7 +521,7 @@ async def lge_devices_setup(
         temp_unit = UNIT_TEMP_FAHRENHEIT
 
     for device_info in client.devices:
-        device_id = device_info.device_id
+        device_id = device_info.unique_id
         new_discovered_devices.append(device_id)
         if device_id in discovered_devices:
             continue
@@ -579,9 +581,9 @@ def cleanup_orphan_lge_devices(
     # get list of valid devices
     valid_lg_dev_ids = []
     for device in client.devices:
-        dev = device_registry.async_get_device({(DOMAIN, device.device_id)})
+        dev = device_registry.async_get_device({(DOMAIN, device.unique_id)})
         if dev is not None:
-            valid_lg_dev_ids.append(dev.device_id)
+            valid_lg_dev_ids.append(dev.id)
 
     # clean-up invalid devices
     for dev_entry in all_lg_dev_entries:
@@ -635,12 +637,12 @@ def start_devices_discovery(
             hass.data[DOMAIN][LGE_DEVICES] = new_lge_devs
 
             # Update hass data UNSUPPORTED_DEVICES
-            prev_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = hass.data[DOMAIN][
+            prev_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = hass.data[DOMAIN][
                 UNSUPPORTED_DEVICES
             ]
-            new_uns_devs: dict[DeviceType, list[LGDeviceInfo]] = {}
+            new_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = {}
             for dev_type, dev_list in prev_uns_devs.items():
-                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
+                new_dev_list = [dev for dev in dev_list if dev.unique_id in new_devs]
                 if new_dev_list:
                     new_uns_devs[dev_type] = new_dev_list
             for dev_type, dev_list in unsupported_devs.items():

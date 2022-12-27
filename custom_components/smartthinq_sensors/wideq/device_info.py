@@ -6,6 +6,9 @@ from typing import Any, Optional
 
 from .const import STATE_OPTIONITEM_UNKNOWN
 
+KEY_DEVICE_ID = "deviceId"
+KEY_SUB_DEVICE_ID = "subDeviceId"
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -87,6 +90,7 @@ class DeviceInfo:
         """Initialize the object."""
         self._data = data
         self._device_id = None
+        self._sub_device_id = None
         self._device_type = None
         self._platform_type = None
         self._network_type = None
@@ -122,8 +126,30 @@ class DeviceInfo:
     def device_id(self) -> str:
         """Return the device id."""
         if self._device_id is None:
-            self._device_id = self._get_data_value("deviceId")
+            self._device_id = self._data.get(KEY_DEVICE_ID, STATE_OPTIONITEM_UNKNOWN)
         return self._device_id
+
+    @property
+    def sub_device_id(self) -> str:
+        """Return the subdevice id."""
+        if self._sub_device_id is None:
+            self._sub_device_id = self._data.get(KEY_SUB_DEVICE_ID, "")
+        return self._sub_device_id
+
+    @property
+    def unique_id(self) -> str:
+        """Return the device unique id."""
+        if self.sub_device_id:
+            return f"{self.device_id}-{self.sub_device_id}"
+        return self.device_id
+
+    @property
+    def name(self) -> str:
+        """Return the device name."""
+        name = self._data.get("alias", self.device_id)
+        if self.sub_device_id:
+            return f"{name} {self.sub_device_id.capitalize()}"
+        return name
 
     @property
     def model_info_url(self) -> str:
@@ -143,11 +169,6 @@ class DeviceInfo:
         return self._get_data_value(
             ["langPackProductTypeUrl", "langPackProductTypeUri"], default=None
         )
-
-    @property
-    def name(self) -> str:
-        """Return the device name."""
-        return self._get_data_value("alias")
 
     @property
     def model_name(self) -> str:

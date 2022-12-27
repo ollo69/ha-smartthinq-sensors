@@ -12,7 +12,7 @@ import json
 import logging
 import os
 import ssl
-from typing import Any, Generator, Optional
+from typing import Any, Optional
 from urllib.parse import (
     ParseResult,
     parse_qs,
@@ -31,7 +31,7 @@ import xmltodict
 from . import core_exceptions as exc
 from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
 from .core_util import add_end_slash, as_list, gen_uuid
-from .device_info import DeviceInfo
+from .device_info import KEY_DEVICE_ID, DeviceInfo
 
 # The core version
 CORE_VERSION = "coreAsync"
@@ -1232,7 +1232,7 @@ class ClientAsync:
         # enable emulation mode for debug / test
         self._emulation = enable_emulation
 
-    def _inject_thinq2_device(self):
+    def _load_emul_device(self):
         """This is used only for debug."""
         data_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
@@ -1241,18 +1241,18 @@ class ClientAsync:
             with open(data_file, "r") as f:
                 device_v2 = json.load(f)
         except FileNotFoundError:
-            return
-        for d in device_v2:
-            self._devices.append(d)
-            _LOGGER.debug("Injected debug device: %s", d)
+            return None
+        return device_v2
 
     async def _load_devices(self, force_update: bool = False):
         """Load dict with available devices."""
         if self._session and (self._devices is None or force_update):
-            self._devices = await self._session.get_devices()
+            new_devices = await self._session.get_devices()
             if self.emulation:
                 # for debug
-                self._inject_thinq2_device()
+                if emul_device := self._load_emul_device():
+                    new_devices.extend(emul_device)
+            self._devices = {d[KEY_DEVICE_ID]: d for d in new_devices if KEY_DEVICE_ID in d}
 
     @property
     def api_version(self):
@@ -1279,11 +1279,11 @@ class ClientAsync:
         return bool(self._devices)
 
     @property
-    def devices(self) -> Generator[DeviceInfo, None, None] | None:
+    def devices(self) -> list[DeviceInfo] | None:
         """DeviceInfo objects describing the user's devices."""
         if self._devices is None:
             return None
-        return (DeviceInfo(d) for d in self._devices)
+        return [DeviceInfo(d) for d in self._devices.values()]
 
     @property
     def emulation(self) -> bool:
@@ -1313,16 +1313,15 @@ class ClientAsync:
             await self._load_devices(True)
             self._last_device_update = call_time
 
-    def get_device(self, device_id) -> DeviceInfo | None:
+    def get_device(self, unique_id: str) -> DeviceInfo | None:
         """
-        Look up a DeviceInfo object by device ID.
+        Look up a DeviceInfo object by unique ID.
         Return None if the device does not exist.
         """
         if not self._devices:
             return None
-        for device in self.devices:
-            if device.device_id == device_id:
-                return device
+        if unique_id in self._devices:
+            return DeviceInfo(self._devices[unique_id])
         return None
 
     async def refresh(self, refresh_gateway=False) -> None:
