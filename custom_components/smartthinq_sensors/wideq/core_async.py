@@ -1232,7 +1232,7 @@ class ClientAsync:
         # enable emulation mode for debug / test
         self._emulation = enable_emulation
 
-    def _load_emul_device(self):
+    def _load_emul_devices(self):
         """This is used only for debug."""
         data_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
@@ -1240,7 +1240,7 @@ class ClientAsync:
         try:
             with open(data_file, "r") as f:
                 device_v2 = json.load(f)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             return None
         return device_v2
 
@@ -1250,7 +1250,7 @@ class ClientAsync:
             new_devices = await self._session.get_devices()
             if self.emulation:
                 # for debug
-                if emul_device := self._load_emul_device():
+                if emul_device := self._load_emul_devices():
                     new_devices.extend(emul_device)
             self._devices = {
                 d[KEY_DEVICE_ID]: d for d in new_devices if KEY_DEVICE_ID in d
@@ -1282,10 +1282,18 @@ class ClientAsync:
 
     @property
     def devices(self) -> list[DeviceInfo] | None:
-        """DeviceInfo objects describing the user's devices."""
+        """Return list of DeviceInfo objects describing the user's devices."""
         if self._devices is None:
             return None
         return [DeviceInfo(d) for d in self._devices.values()]
+
+    def get_device(self, device_id: str) -> DeviceInfo | None:
+        """Return a DeviceInfo object by device ID or None if the device id does not exist."""
+        if not self._devices:
+            return None
+        if device_id in self._devices:
+            return DeviceInfo(self._devices[device_id])
+        return None
 
     @property
     def emulation(self) -> bool:
@@ -1314,17 +1322,6 @@ class ClientAsync:
                 return
             await self._load_devices(True)
             self._last_device_update = call_time
-
-    def get_device(self, unique_id: str) -> DeviceInfo | None:
-        """
-        Look up a DeviceInfo object by unique ID.
-        Return None if the device does not exist.
-        """
-        if not self._devices:
-            return None
-        if unique_id in self._devices:
-            return DeviceInfo(self._devices[unique_id])
-        return None
 
     async def refresh(self, refresh_gateway=False) -> None:
         """Refresh client connection."""

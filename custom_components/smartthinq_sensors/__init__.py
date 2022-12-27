@@ -324,7 +324,7 @@ class LGEDevice:
         self._device = device
         self._hass = hass
         self._name = device.device_info.name
-        self._device_id = device.device_info.unique_id
+        self._device_id = device.device_info.device_id
         self._type = device.device_info.type
         self._mac = None
         if mac := device.device_info.macaddress:
@@ -521,7 +521,7 @@ async def lge_devices_setup(
         temp_unit = UNIT_TEMP_FAHRENHEIT
 
     for device_info in client.devices:
-        device_id = device_info.unique_id
+        device_id = device_info.device_id
         new_discovered_devices.append(device_id)
         if device_id in discovered_devices:
             continue
@@ -581,7 +581,7 @@ def cleanup_orphan_lge_devices(
     # get list of valid devices
     valid_lg_dev_ids = []
     for device in client.devices:
-        dev = device_registry.async_get_device({(DOMAIN, device.unique_id)})
+        dev = device_registry.async_get_device({(DOMAIN, device.device_id)})
         if dev is not None:
             valid_lg_dev_ids.append(dev.id)
 
@@ -642,7 +642,7 @@ def start_devices_discovery(
             ]
             new_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = {}
             for dev_type, dev_list in prev_uns_devs.items():
-                new_dev_list = [dev for dev in dev_list if dev.unique_id in new_devs]
+                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
                 if new_dev_list:
                     new_uns_devs[dev_type] = new_dev_list
             for dev_type, dev_list in unsupported_devs.items():

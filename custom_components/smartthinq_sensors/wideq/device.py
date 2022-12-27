@@ -83,7 +83,6 @@ class Monitor:
         """Initialize monitor class."""
         self._client: ClientAsync = client
         self._device_id = device_info.device_id
-        self._unique_id = device_info.unique_id
         self._platform_type = device_info.platform_type
         self._device_descr = device_info.name
         self._work_id: str | None = None
@@ -340,7 +339,7 @@ class Monitor:
             return result.get("snapshot")
 
         await self._client.refresh_devices()
-        device_data = self._client.get_device(self._unique_id)
+        device_data = self._client.get_device(self._device_id)
         if device_data:
             return device_data.snapshot
         return None
