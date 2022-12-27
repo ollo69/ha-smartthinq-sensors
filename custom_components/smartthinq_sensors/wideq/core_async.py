@@ -1252,7 +1252,9 @@ class ClientAsync:
                 # for debug
                 if emul_device := self._load_emul_device():
                     new_devices.extend(emul_device)
-            self._devices = {d[KEY_DEVICE_ID]: d for d in new_devices if KEY_DEVICE_ID in d}
+            self._devices = {
+                d[KEY_DEVICE_ID]: d for d in new_devices if KEY_DEVICE_ID in d
+            }
 
     @property
     def api_version(self):
