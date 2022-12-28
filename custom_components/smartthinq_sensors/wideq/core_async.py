@@ -1373,7 +1373,7 @@ class ClientAsync:
             )
             client._session = auth.start_session()
             await client._load_devices()
-        except:
+        except Exception:  # pylint: disable=broad-except
             await core.close()
             raise
 
@@ -1411,7 +1411,7 @@ class ClientAsync:
                 enable_emulation=enable_emulation,
             )
             await client.refresh()
-        except:
+        except Exception:  # pylint: disable=broad-except
             await core.close()
             raise
 
