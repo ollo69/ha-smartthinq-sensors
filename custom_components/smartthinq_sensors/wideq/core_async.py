@@ -1359,18 +1359,24 @@ class ClientAsync:
         to reload the gateway servers and restart the session.
         """
 
-        gateway = await Gateway.discover(
-            CoreAsync(country, language, oauth_url=oauth_url, session=aiohttp_session)
+        core = CoreAsync(
+            country, language, oauth_url=oauth_url, session=aiohttp_session
         )
-        auth = await Auth.from_user_login(gateway, username, password)
-        client = cls(
-            auth=auth,
-            country=country,
-            language=language,
-            enable_emulation=enable_emulation,
-        )
-        client._session = auth.start_session()
-        await client._load_devices()
+        try:
+            gateway = await Gateway.discover(core)
+            auth = await Auth.from_user_login(gateway, username, password)
+            client = cls(
+                auth=auth,
+                country=country,
+                language=language,
+                enable_emulation=enable_emulation,
+            )
+            client._session = auth.start_session()
+            await client._load_devices()
+        except:
+            await core.close()
+            raise
+
         return client
 
     @classmethod
@@ -1392,17 +1398,23 @@ class ClientAsync:
         to reload the gateway servers and restart the session.
         """
 
-        gateway = await Gateway.discover(
-            CoreAsync(country, language, oauth_url=oauth_url, session=aiohttp_session)
+        core = CoreAsync(
+            country, language, oauth_url=oauth_url, session=aiohttp_session
         )
-        auth = Auth(gateway, refresh_token)
-        client = cls(
-            auth=auth,
-            country=country,
-            language=language,
-            enable_emulation=enable_emulation,
-        )
-        await client.refresh()
+        try:
+            gateway = await Gateway.discover(core)
+            auth = Auth(gateway, refresh_token)
+            client = cls(
+                auth=auth,
+                country=country,
+                language=language,
+                enable_emulation=enable_emulation,
+            )
+            await client.refresh()
+        except:
+            await core.close()
+            raise
+
         return client
 
     @staticmethod
@@ -1413,10 +1425,12 @@ class ClientAsync:
         aiohttp_session: aiohttp.ClientSession | None = None,
     ) -> str:
         """Return an url to use to login in a browser."""
-        gateway = await Gateway.discover(
-            CoreAsync(country, language, session=aiohttp_session)
-        )
-        await gateway.close()
+        core = CoreAsync(country, language, session=aiohttp_session)
+        try:
+            gateway = await Gateway.discover(core)
+        finally:
+            await core.close()
+
         return gateway.oauth_login_url()
 
     @staticmethod
@@ -1429,8 +1443,11 @@ class ClientAsync:
     ) -> dict:
         """Return authentication info from an OAuth callback URL."""
         core = CoreAsync(country, language, session=aiohttp_session)
-        result = await Auth.oauth_info_from_url(url, core)
-        await core.close()
+        try:
+            result = await Auth.oauth_info_from_url(url, core)
+        finally:
+            await core.close()
+
         return result
 
     async def _load_json_info(self, info_url: str):

@@ -276,7 +276,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     # remove device not available anymore
-    cleanup_orphan_lge_devices(hass, entry.entry_id, client)
+    dev_ids = [v for ids in discovered_devices.values() for v in ids]
+    cleanup_orphan_lge_devices(hass, entry.entry_id, dev_ids)
 
     async def _async_call_reload_entry():
         """Reload current entry."""
@@ -323,8 +324,8 @@ class LGEDevice:
 
         self._device = device
         self._hass = hass
-        self._name = device.device_info.name
-        self._device_id = device.device_info.device_id
+        self._name = device.name
+        self._device_id = device.unique_id
         self._type = device.device_info.type
         self._mac = None
         if mac := device.device_info.macaddress:
@@ -500,20 +501,20 @@ class LGEDevice:
 async def lge_devices_setup(
     hass: HomeAssistant,
     client: ClientAsync,
-    discovered_devices: list[str] | None = None,
+    discovered_devices: dict[str, list[str]] | None = None,
 ) -> tuple[
     dict[DeviceType, list[LGEDevice]],
     dict[DeviceType, list[ThinQDeviceInfo]],
-    list[str],
+    dict[str, list[str]],
 ]:
     """Query connected devices from LG ThinQ."""
     _LOGGER.debug("Searching LGE ThinQ devices...")
 
     wrapped_devices: dict[DeviceType, list[LGEDevice]] = {}
     unsupported_devices: dict[DeviceType, list[ThinQDeviceInfo]] = {}
-    new_discovered_devices = []
+    new_devices = {}
     if discovered_devices is None:
-        discovered_devices = []
+        discovered_devices = {}
 
     device_count = 0
     temp_unit = UNIT_TEMP_CELSIUS
@@ -522,18 +523,19 @@ async def lge_devices_setup(
 
     for device_info in client.devices:
         device_id = device_info.device_id
-        new_discovered_devices.append(device_id)
         if device_id in discovered_devices:
+            new_devices[device_id] = discovered_devices[device_id]
             continue
 
+        new_devices[device_id] = []
         device_name = device_info.name
         device_type = device_info.type
         network_type = device_info.network_type
         model_name = device_info.model_name
         device_count += 1
 
-        lge_dev = get_lge_device(client, device_info, temp_unit)
-        if not lge_dev:
+        lge_devs = get_lge_device(client, device_info, temp_unit)
+        if not lge_devs:
             _LOGGER.info(
                 "Found unsupported LGE Device. Name: %s - Type: %s - NetworkType: %s",
                 device_name,
@@ -543,34 +545,36 @@ async def lge_devices_setup(
             unsupported_devices.setdefault(device_type, []).append(device_info)
             continue
 
-        dev = LGEDevice(lge_dev, hass)
-        if not await dev.init_device():
-            _LOGGER.error(
-                "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
-                device_name,
-                device_type.name,
-                device_info.model_info_url,
-            )
-            continue
+        for lge_dev in lge_devs:
+            dev = LGEDevice(lge_dev, hass)
+            if not await dev.init_device():
+                _LOGGER.error(
+                    "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
+                    device_name,
+                    device_type.name,
+                    device_info.model_info_url,
+                )
+                break
 
-        wrapped_devices.setdefault(device_type, []).append(dev)
-        _LOGGER.info(
-            "LGE Device added. Name: %s - Type: %s - Model: %s - ID: %s",
-            device_name,
-            device_type.name,
-            model_name,
-            device_id,
-        )
+            new_devices[device_id].append(dev.device_id)
+            wrapped_devices.setdefault(device_type, []).append(dev)
+            _LOGGER.info(
+                "LGE Device added. Name: %s - Type: %s - Model: %s - ID: %s",
+                dev.name,
+                device_type.name,
+                model_name,
+                dev.device_id,
+            )
 
     if device_count > 0:
         _LOGGER.info("Founds %s LGE device(s)", device_count)
 
-    return wrapped_devices, unsupported_devices, new_discovered_devices
+    return wrapped_devices, unsupported_devices, new_devices
 
 
 @callback
 def cleanup_orphan_lge_devices(
-    hass: HomeAssistant, entry_id: str, client: ClientAsync
+    hass: HomeAssistant, entry_id: str, valid_dev_ids: list[str]
 ) -> None:
     """Delete devices that are not registered in LG client app"""
 
@@ -579,16 +583,16 @@ def cleanup_orphan_lge_devices(
     all_lg_dev_entries = dr.async_entries_for_config_entry(device_registry, entry_id)
 
     # get list of valid devices
-    valid_lg_dev_ids = []
-    for device in client.devices:
-        dev = device_registry.async_get_device({(DOMAIN, device.device_id)})
+    valid_reg_dev_ids = []
+    for device_id in valid_dev_ids:
+        dev = device_registry.async_get_device({(DOMAIN, device_id)})
         if dev is not None:
-            valid_lg_dev_ids.append(dev.id)
+            valid_reg_dev_ids.append(dev.id)
 
     # clean-up invalid devices
     for dev_entry in all_lg_dev_entries:
         dev_id = dev_entry.id
-        if dev_id in valid_lg_dev_ids:
+        if dev_id in valid_reg_dev_ids:
             continue
         device_registry.async_remove_device(dev_id)
 
@@ -618,7 +622,8 @@ def start_devices_discovery(
 
         # remove device not available anymore
         if lge_devs or unsupported_devs or len(old_devs) != len(new_devs):
-            cleanup_orphan_lge_devices(hass, entry.entry_id, client)
+            new_ids = [v for ids in new_devs.values() for v in ids]
+            cleanup_orphan_lge_devices(hass, entry.entry_id, new_ids)
 
             # Update hass data LGE_DEVICES
             prev_lge_devs: dict[DeviceType, list[LGEDevice]] = hass.data[DOMAIN][
@@ -626,7 +631,7 @@ def start_devices_discovery(
             ]
             new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
             for dev_type, dev_list in prev_lge_devs.items():
-                new_dev_list = [dev for dev in dev_list if dev.device_id in new_devs]
+                new_dev_list = [dev for dev in dev_list if dev.device_id in new_ids]
                 if new_dev_list:
                     new_lge_devs[dev_type] = new_dev_list
             for dev_type, dev_list in lge_devs.items():

@@ -413,6 +413,16 @@ class Device:
         return self._device_info
 
     @property
+    def unique_id(self) -> str:
+        """Return unique id for this device."""
+        return self._device_info.device_id
+
+    @property
+    def name(self) -> str:
+        """Return name for this device."""
+        return self._device_info.name
+
+    @property
     def model_info(self) -> ModelInfo | None:
         """Return 'model_info' for this device."""
         return self._model_info
