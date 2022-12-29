@@ -379,12 +379,8 @@ class Device:
         client: ClientAsync,
         device_info: DeviceInfo,
         status: DeviceStatus | None = None,
-        available_features=None,
     ):
-        """
-        Create a wrapper for a `DeviceInfo` object associated with a
-        `Client`.
-        """
+        """Create a wrapper for a `DeviceInfo` object associated with a Client."""
 
         self._client = client
         self._device_info = device_info
@@ -397,7 +393,7 @@ class Device:
         self._mon = Monitor(client, device_info)
         self._control_set = 0
         self._last_additional_poll: datetime | None = None
-        self._available_features = available_features or {}
+        self._available_features = {}
 
         # attributes for properties
         self._attr_unique_id = self._device_info.device_id
