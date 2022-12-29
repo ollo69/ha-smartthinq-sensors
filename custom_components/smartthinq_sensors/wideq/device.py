@@ -60,6 +60,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class UnitTempModes(Enum):
+    """Define possible temperature units."""
+
     Celsius = UNIT_TEMP_CELSIUS
     Fahrenheit = UNIT_TEMP_FAHRENHEIT
 
