@@ -1,8 +1,9 @@
 """------------------for Washer and Dryer"""
+from __future__ import annotations
+
 import base64
 import json
 import logging
-from typing import Optional
 
 from ..const import (
     FEAT_ANTICREASE,
@@ -37,9 +38,10 @@ from ..const import (
     STATE_OPTIONITEM_OFF,
     STATE_OPTIONITEM_ON,
 )
+from ..core_async import ClientAsync
 from ..core_exceptions import InvalidDeviceStatus
 from ..device import Device, DeviceStatus
-from ..device_info import DeviceType
+from ..device_info import DeviceInfo, DeviceType
 
 STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
 STATE_WM_END = [
@@ -91,8 +93,14 @@ _LOGGER = logging.getLogger(__name__)
 class WMDevice(Device):
     """A higher-level interface for washer and dryer."""
 
-    def __init__(self, client, device_info):
-        super().__init__(client, device_info, WMStatus(self, None))
+    def __init__(
+        self, client: ClientAsync, device_info: DeviceInfo, sub_key: str | None = None
+    ):
+        super().__init__(client, device_info, WMStatus(self))
+        self._sub_key = sub_key
+        if sub_key:
+            self._attr_unique_id += f"-{sub_key}"
+            self._attr_name += f" {sub_key.capitalize()}"
         self._remote_start_status = None
 
     def _update_status(self, key, value):
@@ -241,7 +249,7 @@ class WMDevice(Device):
         tcl_count = None
         if self._status:
             tcl_count = self._status.tubclean_count
-        self._status = WMStatus(self, None, tcl_count)
+        self._status = WMStatus(self, tcl_count=tcl_count)
         return self._status
 
     def _set_remote_start_opt(self, res):
@@ -255,10 +263,10 @@ class WMDevice(Device):
         elif not remote_enabled:
             self._remote_start_status = None
 
-    async def poll(self) -> Optional["WMStatus"]:
+    async def poll(self) -> WMStatus | None:
         """Poll the device's current state."""
 
-        res = await self.device_poll(WM_ROOT_DATA)
+        res = await self._device_poll(WM_ROOT_DATA)
         if not res:
             return None
 
@@ -275,13 +283,21 @@ class WMStatus(DeviceStatus):
     :param data: JSON data from the API.
     """
 
-    def __init__(self, device, data, tcl_count: str = None):
+    def __init__(
+        self,
+        device: WMDevice,
+        data: dict | None = None,
+        *,
+        sub_key: str | None = None,
+        tcl_count: str | None = None,
+    ):
         """Initialize device status."""
         super().__init__(device, data)
         self._run_state = None
         self._pre_state = None
         self._process_state = None
         self._error = None
+        self._sub_key = sub_key
         self._tcl_count = tcl_count
 
     def _get_run_state(self):

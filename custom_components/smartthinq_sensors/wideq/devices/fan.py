@@ -1,9 +1,12 @@
 """------------------for Fan"""
+from __future__ import annotations
+
 from enum import Enum
 import logging
-from typing import Optional
 
+from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
+from ..device_info import DeviceInfo
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 
@@ -50,8 +53,8 @@ class FanSpeed(Enum):
 class FanDevice(Device):
     """A higher-level interface for Fan."""
 
-    def __init__(self, client, device_info):
-        super().__init__(client, device_info, FanStatus(self, None))
+    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+        super().__init__(client, device_info, FanStatus(self))
         self._supported_fan_speeds = None
 
     @property
@@ -77,9 +80,9 @@ class FanDevice(Device):
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
-        op = FanOp.ON if turn_on else FanOp.OFF
+        op_mode = FanOp.ON if turn_on else FanOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
-        op_value = self.model_info.enum_value(keys[2], op.value)
+        op_value = self.model_info.enum_value(keys[2], op_mode.value)
         if self._should_poll:
             # different power command for ThinQ1 devices
             cmd = "Start" if turn_on else "Stop"
@@ -113,13 +116,13 @@ class FanDevice(Device):
             self._status.update_status(key, value)
 
     def reset_status(self):
-        self._status = FanStatus(self, None)
+        self._status = FanStatus(self)
         return self._status
 
-    async def poll(self) -> Optional["FanStatus"]:
+    async def poll(self) -> FanStatus | None:
         """Poll the device's current state."""
 
-        res = await self.device_poll()
+        res = await self._device_poll()
         if not res:
             return None
 
@@ -131,7 +134,7 @@ class FanDevice(Device):
 class FanStatus(DeviceStatus):
     """Higher-level information about a Fan's current status."""
 
-    def __init__(self, device, data):
+    def __init__(self, device: FanDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
@@ -160,18 +163,18 @@ class FanStatus(DeviceStatus):
     @property
     def is_on(self):
         """Return if device is on."""
-        op = self._get_operation()
-        if not op:
+        op_mode = self._get_operation()
+        if not op_mode:
             return False
-        return op != FanOp.OFF
+        return op_mode != FanOp.OFF
 
     @property
     def operation(self):
         """Return current device operation."""
-        op = self._get_operation()
-        if not op:
+        op_mode = self._get_operation()
+        if not op_mode:
             return None
-        return op.name
+        return op_mode.name
 
     @property
     def fan_speed(self):

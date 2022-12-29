@@ -1,6 +1,7 @@
 """------------------for Oven"""
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 from ..const import (
     BIT_OFF,
@@ -18,7 +19,9 @@ from ..const import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
+from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus, UnitTempModes
+from ..device_info import DeviceInfo
 
 OVEN_TEMP_UNIT = {
     "0": UnitTempModes.Fahrenheit,
@@ -35,17 +38,17 @@ _LOGGER = logging.getLogger(__name__)
 class RangeDevice(Device):
     """A higher-level interface for a cooking range."""
 
-    def __init__(self, client, device_info):
-        super().__init__(client, device_info, RangeStatus(self, None))
+    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+        super().__init__(client, device_info, RangeStatus(self))
 
     def reset_status(self):
-        self._status = RangeStatus(self, None)
+        self._status = RangeStatus(self)
         return self._status
 
-    async def poll(self) -> Optional["RangeStatus"]:
+    async def poll(self) -> RangeStatus | None:
         """Poll the device's current state."""
 
-        res = await self.device_poll("ovenState")
+        res = await self._device_poll("ovenState")
         if not res:
             return None
 
@@ -61,7 +64,7 @@ class RangeStatus(DeviceStatus):
     :param data: JSON data from the API.
     """
 
-    def __init__(self, device, data):
+    def __init__(self, device: RangeDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._oven_temp_unit = None
@@ -98,8 +101,8 @@ class RangeStatus(DeviceStatus):
             self.cooktop_right_front_state,
             self.cooktop_right_rear_state,
         ]
-        for r in result:
-            if r and r != STATE_OPTIONITEM_OFF:
+        for res in result:
+            if res and res != STATE_OPTIONITEM_OFF:
                 return True
         return False
 
@@ -153,8 +156,8 @@ class RangeStatus(DeviceStatus):
             self.oven_lower_state,
             self.oven_upper_state,
         ]
-        for r in result:
-            if r and r != STATE_OPTIONITEM_OFF:
+        for res in result:
+            if res and res != STATE_OPTIONITEM_OFF:
                 return True
         return False
 

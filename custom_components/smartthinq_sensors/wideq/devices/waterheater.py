@@ -1,6 +1,7 @@
 """------------------for WATER HEATER"""
+from __future__ import annotations
+
 from enum import Enum
-from typing import Optional
 
 from ..const import (
     FEAT_ENERGY_CURRENT,
@@ -8,9 +9,11 @@ from ..const import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
+from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
 from ..device import Device, DeviceStatus
+from ..device_info import DeviceInfo
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 
@@ -63,9 +66,11 @@ class WHMode(Enum):
 class WaterHeaterDevice(Device):
     """A higher-level interface for a Water Heater."""
 
-    def __init__(self, client, device_info, temp_unit=UNIT_TEMP_CELSIUS):
+    def __init__(
+        self, client: ClientAsync, device_info: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS
+    ):
         """Initialize WaterHeaterDevice object."""
-        super().__init__(client, device_info, WaterHeaterStatus(self, None))
+        super().__init__(client, device_info, WaterHeaterStatus(self))
         self._temperature_unit = (
             UNIT_TEMP_FAHRENHEIT
             if temp_unit == UNIT_TEMP_FAHRENHEIT
@@ -192,7 +197,7 @@ class WaterHeaterDevice(Device):
 
     def reset_status(self):
         """Reset the device's status"""
-        self._status = WaterHeaterStatus(self, None)
+        self._status = WaterHeaterStatus(self)
         return self._status
 
     # async def _get_device_info(self):
@@ -209,9 +214,9 @@ class WaterHeaterDevice(Device):
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
         await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
 
-    async def poll(self) -> Optional["WaterHeaterStatus"]:
+    async def poll(self) -> WaterHeaterStatus | None:
         """Poll the device's current state."""
-        res = await self.device_poll(
+        res = await self._device_poll(
             thinq1_additional_poll=0,  # ADD_FEAT_POLL_INTERVAL,
             thinq2_query_device=True,
         )
@@ -228,7 +233,7 @@ class WaterHeaterDevice(Device):
 class WaterHeaterStatus(DeviceStatus):
     """Higher-level information about a Water Heater's current status."""
 
-    def __init__(self, device, data):
+    def __init__(self, device: WaterHeaterDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._operation = None

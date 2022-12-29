@@ -1,8 +1,9 @@
 """------------------for Refrigerator"""
+from __future__ import annotations
+
 import base64
 import json
 import logging
-from typing import Optional
 
 from ..const import (
     FEAT_ECOFRIENDLY,
@@ -15,7 +16,9 @@ from ..const import (
     STATE_OPTIONITEM_NONE,
     UNIT_TEMP_FAHRENHEIT,
 )
+from ..core_async import ClientAsync
 from ..device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
+from ..device_info import DeviceInfo
 from ..model_info import TYPE_ENUM
 
 FEATURE_DESCR = {
@@ -70,8 +73,8 @@ _LOGGER = logging.getLogger(__name__)
 class RefrigeratorDevice(Device):
     """A higher-level interface for a refrigerator."""
 
-    def __init__(self, client, device_info):
-        super().__init__(client, device_info, RefrigeratorStatus(self, None))
+    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+        super().__init__(client, device_info, RefrigeratorStatus(self))
         self._temp_unit = None
         self._fridge_temps = None
         self._fridge_ranges = None
@@ -358,13 +361,13 @@ class RefrigeratorDevice(Device):
         self._status.update_status_feat(status_key, temp_key, False)
 
     def reset_status(self):
-        self._status = RefrigeratorStatus(self, None)
+        self._status = RefrigeratorStatus(self)
         return self._status
 
-    async def poll(self) -> Optional["RefrigeratorStatus"]:
+    async def poll(self) -> RefrigeratorStatus | None:
         """Poll the device's current state."""
 
-        res = await self.device_poll(REFR_ROOT_DATA)
+        res = await self._device_poll(REFR_ROOT_DATA)
         if not res:
             return None
 
@@ -380,7 +383,7 @@ class RefrigeratorStatus(DeviceStatus):
     :param data: JSON data from the API.
     """
 
-    def __init__(self, device, data):
+    def __init__(self, device: RefrigeratorDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._temp_unit = None

@@ -1,7 +1,8 @@
 """------------------for AC"""
+from __future__ import annotations
+
 from enum import Enum
 import logging
-from typing import Optional
 
 from ..const import (
     FEAT_ENERGY_CURRENT,
@@ -18,9 +19,11 @@ from ..const import (
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
+from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
 from ..device import Device, DeviceStatus
+from ..device_info import DeviceInfo
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
@@ -257,9 +260,11 @@ class JetModeSupport(Enum):
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
-    def __init__(self, client, device_info, temp_unit=UNIT_TEMP_CELSIUS):
+    def __init__(
+        self, client: ClientAsync, device_info: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS
+    ):
         """Initialize AirConditionerDevice object."""
-        super().__init__(client, device_info, AirConditionerStatus(self, None))
+        super().__init__(client, device_info, AirConditionerStatus(self))
         self._temperature_unit = (
             UNIT_TEMP_FAHRENHEIT
             if temp_unit == UNIT_TEMP_FAHRENHEIT
@@ -864,7 +869,7 @@ class AirConditionerDevice(Device):
 
     def reset_status(self):
         """Reset the device's status"""
-        self._status = AirConditionerStatus(self, None)
+        self._status = AirConditionerStatus(self)
         return self._status
 
     async def _get_device_info(self):
@@ -886,9 +891,9 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
         await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
 
-    async def poll(self) -> Optional["AirConditionerStatus"]:
+    async def poll(self) -> AirConditionerStatus | None:
         """Poll the device's current state."""
-        res = await self.device_poll(
+        res = await self._device_poll(
             thinq1_additional_poll=ADD_FEAT_POLL_INTERVAL,
             thinq2_query_device=True,
         )
@@ -915,7 +920,7 @@ class AirConditionerDevice(Device):
 class AirConditionerStatus(DeviceStatus):
     """Higher-level information about a AC's current status."""
 
-    def __init__(self, device, data):
+    def __init__(self, device: AirConditionerDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._operation = None

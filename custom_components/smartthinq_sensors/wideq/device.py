@@ -399,6 +399,10 @@ class Device:
         self._last_additional_poll: datetime | None = None
         self._available_features = available_features or {}
 
+        # attributes for properties
+        self._attr_unique_id = self._device_info.device_id
+        self._attr_name = self._device_info.name
+
         # for logging unknown states received
         self._unknown_states = []
 
@@ -415,12 +419,12 @@ class Device:
     @property
     def unique_id(self) -> str:
         """Return unique id for this device."""
-        return self._device_info.device_id
+        return self._attr_unique_id
 
     @property
     def name(self) -> str:
         """Return name for this device."""
-        return self._device_info.name
+        return self._attr_name
 
     @property
     def model_info(self) -> ModelInfo | None:
@@ -643,7 +647,7 @@ class Device:
             self._last_additional_poll = call_time
             await self._get_device_info()
 
-    async def device_poll(
+    async def _device_poll(
         self,
         snapshot_key="",
         *,
@@ -693,6 +697,10 @@ class Device:
 
         return res
 
+    async def poll(self) -> DeviceStatus | None:
+        """Poll the device's current state."""
+        return None
+
     def _get_feature_title(self, feature_name, item_key):
         """Override this function to manage feature title per device type."""
         return feature_name
@@ -736,9 +744,9 @@ class Device:
 class DeviceStatus:
     """A higher-level interface to a specific device status."""
 
-    def __init__(self, device, data):
+    def __init__(self, device: Device, data: dict | None = None) -> None:
         """Initialize devicestatus object."""
-        self._device: Device = device
+        self._device = device
         self._data = {} if data is None else data
         self._device_features: dict[str, Any] = {}
         self._features_updated = False

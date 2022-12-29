@@ -149,7 +149,7 @@ WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=FEAT_RINSEMODE,
         name="Rinse mode",
-        icon="mdi:hand-wash-outline",
+        icon="mdi:waves",
     ),
     ThinQSensorEntityDescription(
         key=FEAT_TEMPCONTROL,

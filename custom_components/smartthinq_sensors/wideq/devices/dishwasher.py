@@ -1,6 +1,7 @@
 """------------------for DishWasher"""
+from __future__ import annotations
+
 import logging
-from typing import Optional
 
 from ..const import (
     FEAT_AUTODOOR,
@@ -21,7 +22,9 @@ from ..const import (
     FEAT_TUBCLEAN_COUNT,
     STATE_OPTIONITEM_NONE,
 )
+from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
+from ..device_info import DeviceInfo
 
 STATE_DISHWASHER_POWER_OFF = "@DW_STATE_POWER_OFF_W"
 STATE_DISHWASHER_END = [
@@ -56,17 +59,17 @@ _LOGGER = logging.getLogger(__name__)
 class DishWasherDevice(Device):
     """A higher-level interface for a dishwasher."""
 
-    def __init__(self, client, device_info):
-        super().__init__(client, device_info, DishWasherStatus(self, None))
+    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+        super().__init__(client, device_info, DishWasherStatus(self))
 
     def reset_status(self):
-        self._status = DishWasherStatus(self, None)
+        self._status = DishWasherStatus(self)
         return self._status
 
-    async def poll(self) -> Optional["DishWasherStatus"]:
+    async def poll(self) -> DishWasherStatus | None:
         """Poll the device's current state."""
 
-        res = await self.device_poll("dishwasher")
+        res = await self._device_poll("dishwasher")
         if not res:
             return None
 
@@ -82,7 +85,7 @@ class DishWasherStatus(DeviceStatus):
     :param data: JSON data from the API.
     """
 
-    def __init__(self, device, data):
+    def __init__(self, device: DishWasherDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._run_state = None

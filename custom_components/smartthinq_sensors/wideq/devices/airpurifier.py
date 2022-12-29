@@ -1,7 +1,8 @@
 """------------------for Air Purifier"""
+from __future__ import annotations
+
 from enum import Enum
 import logging
-from typing import Optional
 
 from ..const import (
     FEAT_FILTER_BOTTOM_LIFE,
@@ -14,7 +15,9 @@ from ..const import (
     FEAT_PM10,
     FEAT_PM25,
 )
+from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
+from ..device_info import DeviceInfo
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 
@@ -106,8 +109,8 @@ class AirPurifierFanPreset(Enum):
 class AirPurifierDevice(Device):
     """A higher-level interface for a Air Purifier."""
 
-    def __init__(self, client, device_info):
-        super().__init__(client, device_info, AirPurifierStatus(self, None))
+    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+        super().__init__(client, device_info, AirPurifierStatus(self))
         self._supported_op_modes = None
         self._supported_fan_speeds = None
         self._supported_fan_presets = None
@@ -159,9 +162,9 @@ class AirPurifierDevice(Device):
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
 
-        op = AirPurifierOp.ON if turn_on else AirPurifierOp.OFF
+        op_mode = AirPurifierOp.ON if turn_on else AirPurifierOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
-        op_value = self.model_info.enum_value(keys[2], op.value)
+        op_value = self.model_info.enum_value(keys[2], op_mode.value)
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
     async def set_op_mode(self, mode):
@@ -206,13 +209,13 @@ class AirPurifierDevice(Device):
             self._status.update_status(key, value)
 
     def reset_status(self):
-        self._status = AirPurifierStatus(self, None)
+        self._status = AirPurifierStatus(self)
         return self._status
 
-    async def poll(self) -> Optional["AirPurifierStatus"]:
+    async def poll(self) -> AirPurifierStatus | None:
         """Poll the device's current state."""
 
-        res = await self.device_poll()
+        res = await self._device_poll()
         if not res:
             return None
 
@@ -223,7 +226,7 @@ class AirPurifierDevice(Device):
 class AirPurifierStatus(DeviceStatus):
     """Higher-level information about a Air Purifier's current status."""
 
-    def __init__(self, device, data):
+    def __init__(self, device: AirPurifierDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
@@ -252,18 +255,18 @@ class AirPurifierStatus(DeviceStatus):
     @property
     def is_on(self):
         """Return if device is on."""
-        op = self._get_operation()
-        if not op:
+        op_mode = self._get_operation()
+        if not op_mode:
             return False
-        return op != AirPurifierOp.OFF
+        return op_mode != AirPurifierOp.OFF
 
     @property
     def operation(self):
         """Return current device operation."""
-        op = self._get_operation()
-        if not op:
+        op_mode = self._get_operation()
+        if not op_mode:
             return None
-        return op.name
+        return op_mode.name
 
     @property
     def operation_mode(self):
