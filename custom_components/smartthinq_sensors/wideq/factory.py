@@ -27,7 +27,7 @@ from .devices.waterheater import WaterHeaterDevice
 def get_lge_device(
     client: ClientAsync, device_info: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS
 ) -> list[Device] | None:
-    """Return a device based on the device type."""
+    """Return a list of device objects based on the device type."""
 
     device_type = device_info.type
     platform_type = device_info.platform_type

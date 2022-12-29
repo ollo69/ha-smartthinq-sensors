@@ -62,6 +62,7 @@ from .wideq import (
     FEAT_PM25,
     FEAT_PRE_STATE,
     FEAT_PROCESS_STATE,
+    FEAT_RINSEMODE,
     FEAT_ROOM_TEMP,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
@@ -144,6 +145,11 @@ WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         key=FEAT_WATERTEMP,
         name="Water temp",
         icon="mdi:thermometer-lines",
+    ),
+    ThinQSensorEntityDescription(
+        key=FEAT_RINSEMODE,
+        name="Rinse mode",
+        icon="mdi:hand-wash-outline",
     ),
     ThinQSensorEntityDescription(
         key=FEAT_TEMPCONTROL,

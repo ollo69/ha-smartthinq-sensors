@@ -21,6 +21,7 @@ from ..const import (
     FEAT_PROCESS_STATE,
     FEAT_REMOTESTART,
     FEAT_RESERVATION,
+    FEAT_RINSEMODE,
     FEAT_RUN_STATE,
     FEAT_SELFCLEAN,
     FEAT_SPINSPEED,
@@ -490,6 +491,16 @@ class WMStatus(DeviceStatus):
         return self._update_feature(FEAT_WATERTEMP, water_temp)
 
     @property
+    def rinse_mode_option_state(self):
+        """Return rinse mode option state."""
+        if not self.key_exist(["RinseOption", "rinse"]):
+            return None
+        rinse_mode = self.lookup_enum(["RinseOption", "rinse"])
+        if not rinse_mode:
+            rinse_mode = STATE_OPTIONITEM_NONE
+        return self._update_feature(FEAT_RINSEMODE, rinse_mode)
+
+    @property
     def dry_level_option_state(self):
         """Return dry level option state."""
         if not self.key_exist(["DryLevel", "dryLevel"]):
@@ -569,6 +580,7 @@ class WMStatus(DeviceStatus):
             self.error_msg,
             self.spin_option_state,
             self.water_temp_option_state,
+            self.rinse_mode_option_state,
             self.dry_level_option_state,
             self.temp_control_option_state,
             # self.time_dry_option_state,
