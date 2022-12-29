@@ -11,6 +11,7 @@ MIN_HA_MIN_VER = 11
 __min_ha_version__ = f"{MIN_HA_MAJ_VER}.{MIN_HA_MIN_VER}.0"
 
 CONF_LANGUAGE = "language"
+CONF_OAUTH2_URL = "oauth2_url"
 CONF_USE_API_V2 = "use_api_v2"
 CONF_USE_HA_SESSION = "use_ha_session"
 CONF_USE_REDIRECT = "use_redirect"

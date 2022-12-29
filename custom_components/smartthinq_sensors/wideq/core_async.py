@@ -541,7 +541,7 @@ class CoreAsync:
         if LOG_AUTH_INFO:
             _LOGGER.debug("auth_user_login - token_data: %s", token_data)
 
-        if token_data["status"] != 1:
+        if token_data.get("status", -1) != 1:
             raise exc.TokenError()
 
         return token_data
@@ -573,11 +573,11 @@ class CoreAsync:
         ) as resp:
             res_data = await resp.json()
 
-        if res_data["status"] != 1 or "account" not in res_data:
+        if res_data.get("status", -1) != 1 or "account" not in res_data:
             _LOGGER.error("get_user_number: invalid response: %s", res_data)
             raise exc.AuthenticationError("Failed to retrieve User Number")
         if LOG_AUTH_INFO:
-            _LOGGER.debug(res_data)
+            _LOGGER.debug("Get user number: %s", res_data)
 
         return res_data["account"]["userNo"]
 
@@ -818,7 +818,7 @@ class Auth:
             id_type = parse_result.get("user_id_type", "")
 
             if not (username and thirdparty_token) or id_type not in THIRD_PART_LOGIN:
-                return {}
+                raise exc.AuthenticationError("Invalid third part login info")
 
             try:
                 if not gateway:
@@ -832,33 +832,23 @@ class Auth:
                         "third_party": THIRD_PART_LOGIN[id_type],
                     },
                 )
-            except Exception:  # pylint: disable=broad-except
-                return {}
-
+            except exc.AuthenticationError:
+                raise
+            except Exception as ex:
+                raise exc.AuthenticationError("Third part login failed") from ex
             url_info = _oauth_info_from_result(token_info)
 
-        return await Auth._oauth_info_from_result(url_info, core)
+        result = await Auth._oauth_info_from_result(url_info, core)
+        if not result:
+            raise exc.AuthenticationError("Url login failed")
 
-    @classmethod
-    async def from_url(cls, gateway: Gateway, url: str) -> Auth | None:
-        """Create an authentication using an OAuth callback URL."""
-        oauth_info = await cls.oauth_info_from_url(url, gateway.core, gateway=gateway)
-        if not oauth_info:
-            return None
+        return result
 
-        return cls(
-            gateway,
-            oauth_info["refresh_token"],
-            oauth_info["access_token"],
-            oauth_info["token_validity"],
-            oauth_info["user_number"],
-        )
-
-    @classmethod
-    async def from_user_login(
-        cls, gateway: Gateway, username: str, password: str
-    ) -> Auth:
-        """Perform authentication, returning a new Auth object."""
+    @staticmethod
+    async def oauth_info_from_user_login(
+        username: str, password: str, gateway: Gateway
+    ) -> dict:
+        """Return authentication info using username and password."""
         hash_pwd = hashlib.sha512()
         hash_pwd.update(password.encode("utf8"))
         try:
@@ -873,19 +863,46 @@ class Auth:
         except Exception as ex:
             raise exc.AuthenticationError("User login failed") from ex
 
-        result_info = _oauth_info_from_result(token_info)
-        if not (result := await cls._oauth_info_from_result(result_info, gateway.core)):
+        login_info = _oauth_info_from_result(token_info)
+        result = await Auth._oauth_info_from_result(login_info, gateway.core)
+        if not result:
             raise exc.AuthenticationError("User login failed")
 
-        refresh_token = result["refresh_token"]
-        access_token = result["access_token"]
-        token_validity = result.get("token_validity")
-        if not (user_number := result.get("user_number")):
-            user_number = await gateway.core.get_user_number(
-                access_token, oauth_url=result.get("oauth_url")
-            )
+        return result
 
-        return cls(gateway, refresh_token, access_token, token_validity, user_number)
+    @classmethod
+    async def from_url(cls, gateway: Gateway, url: str) -> Auth | None:
+        """Create an authentication using an OAuth callback URL."""
+        oauth_info = await cls.oauth_info_from_url(url, gateway.core, gateway=gateway)
+        if not oauth_info:
+            return None
+
+        auth = cls(
+            gateway,
+            oauth_info["refresh_token"],
+            oauth_info["access_token"],
+            oauth_info["token_validity"],
+            oauth_info["user_number"],
+        )
+        return await auth.refresh()
+
+    @classmethod
+    async def from_user_login(
+        cls, gateway: Gateway, username: str, password: str
+    ) -> Auth:
+        """Perform authentication, returning a new Auth object."""
+        oauth_info = await cls.oauth_info_from_user_login(username, password, gateway)
+        if not oauth_info:
+            return None
+
+        auth = cls(
+            gateway,
+            oauth_info["refresh_token"],
+            oauth_info["access_token"],
+            oauth_info["token_validity"],
+            oauth_info["user_number"],
+        )
+        return await auth.refresh()
 
     def start_session(self):
         """
@@ -1340,7 +1357,7 @@ class ClientAsync:
             await self.refresh()
 
     @classmethod
-    async def from_login(
+    async def from_user_login(
         cls,
         username: str,
         password: str,
@@ -1445,6 +1462,25 @@ class ClientAsync:
         core = CoreAsync(country, language, session=aiohttp_session)
         try:
             result = await Auth.oauth_info_from_url(url, core)
+        finally:
+            await core.close()
+
+        return result
+
+    @staticmethod
+    async def oauth_info_from_user_login(
+        username: str,
+        password: str,
+        country: str = DEFAULT_COUNTRY,
+        language: str = DEFAULT_LANGUAGE,
+        *,
+        aiohttp_session: aiohttp.ClientSession | None = None,
+    ) -> dict:
+        """Return authentication info from an OAuth callback URL."""
+        core = CoreAsync(country, language, session=aiohttp_session)
+        try:
+            gateway = await Gateway.discover(core)
+            result = await Auth.oauth_info_from_user_login(username, password, gateway)
         finally:
             await core.close()
 

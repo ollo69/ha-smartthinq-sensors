@@ -32,13 +32,13 @@ from homeassistant.helpers.selector import (
 from . import LGEAuthentication, is_valid_ha_version
 from .const import (
     CONF_LANGUAGE,
+    CONF_OAUTH2_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     CONF_USE_REDIRECT,
     DOMAIN,
     __min_ha_version__,
 )
-from .wideq.core_async import ClientAsync
 from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
 
 CONF_LOGIN = "login_url"
@@ -74,6 +74,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._region: str | None = None
         self._language: str | None = None
         self._token: str | None = None
+        self._oauth2_url: str | None = None
         self._use_ha_session = False
 
         self._user_lang: str | None = None
@@ -170,17 +171,21 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not use_redirect and not (username and password):
             return self._show_form(errors="no_user_info")
 
-        if not use_redirect:
-            client, result = await self._check_connection(username, password)
-            if result != RESULT_SUCCESS:
-                return await self._manage_error(result, True)
-            auth_info = client.oauth_info
-            self._token = auth_info["refresh_token"]
-            return self._save_config_entry()
-
         lge_auth = LGEAuthentication(
             self.hass, self._region, self._language, self._use_ha_session
         )
+        if not use_redirect:
+            oauth_info = await lge_auth.get_oauth_info_from_login(username, password)
+            if not oauth_info:
+                return await self._manage_error(RESULT_CRED_FAIL, True)
+
+            self._token = oauth_info["refresh_token"]
+            self._oauth2_url = oauth_info.get("oauth_url")
+            result = await self._check_connection(lge_auth)
+            if result != RESULT_SUCCESS:
+                return await self._manage_error(result, True)
+            return self._save_config_entry()
+
         self._login_url = await lge_auth.get_login_url()
         if not self._login_url:
             return self._show_form("error_url")
@@ -198,29 +203,24 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         lge_auth = LGEAuthentication(
             self.hass, self._region, self._language, self._use_ha_session
         )
-        oauth_info = await lge_auth.get_auth_info_from_url(url)
+        oauth_info = await lge_auth.get_oauth_info_from_url(url)
         if not oauth_info:
             return self._show_form(errors="invalid_url", step_id="url")
 
         self._token = oauth_info["refresh_token"]
-        _, result = await self._check_connection()
+        self._oauth2_url = oauth_info.get("oauth_url")
+        result = await self._check_connection(lge_auth)
         if result != RESULT_SUCCESS:
             return await self._manage_error(result)
         return self._save_config_entry()
 
-    async def _check_connection(
-        self, username: str | None = None, password: str | None = None
-    ) -> tuple[ClientAsync | None, int]:
+    async def _check_connection(self, lge_auth: LGEAuthentication) -> int:
         """Test the connection to ThinQ."""
 
-        lge_auth = LGEAuthentication(
-            self.hass, self._region, self._language, self._use_ha_session
-        )
         try:
-            if username and password:
-                client = await lge_auth.create_client_from_login(username, password)
-            else:
-                client = await lge_auth.create_client_from_token(self._token)
+            client = await lge_auth.create_client_from_token(
+                self._token, self._oauth2_url
+            )
         except (AuthenticationError, InvalidCredentialError) as exc:
             msg = (
                 "Invalid ThinQ credential error. Please use the LG App on your"
@@ -229,19 +229,19 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 " case do not work with this integration."
             )
             _LOGGER.exception(msg, exc_info=exc)
-            return None, RESULT_CRED_FAIL
+            return RESULT_CRED_FAIL
         except Exception as exc:  # pylint: disable=broad-except
             _LOGGER.exception("Error connecting to ThinQ", exc_info=exc)
-            return None, RESULT_FAIL
+            return RESULT_FAIL
 
         if not client:
-            return None, RESULT_NO_DEV
+            return RESULT_NO_DEV
 
         await client.close()
         if not client.has_devices:
-            return None, RESULT_NO_DEV
+            return RESULT_NO_DEV
 
-        return client, RESULT_SUCCESS
+        return RESULT_SUCCESS
 
     async def _manage_error(self, error_code: int, is_user_step=False) -> FlowResult:
         """Manage the error result."""
@@ -268,6 +268,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_TOKEN: self._token,
             CONF_USE_API_V2: True,
         }
+        if self._oauth2_url:
+            data[CONF_OAUTH2_URL] = self._oauth2_url
         if self._use_ha_session:
             data[CONF_USE_HA_SESSION] = True
 

@@ -15,6 +15,7 @@ from homeassistant.const import (
 
 from custom_components.smartthinq_sensors.const import (
     CONF_LANGUAGE,
+    CONF_OAUTH2_URL,
     CONF_USE_API_V2,
     CONF_USE_REDIRECT,
     DOMAIN,
@@ -40,6 +41,7 @@ CONFIG_RESULT = {
     CONF_LANGUAGE: "en-US",
     CONF_USE_API_V2: True,
     CONF_TOKEN: TEST_TOKEN,
+    CONF_OAUTH2_URL: TEST_URL,
 }
 
 
@@ -54,14 +56,6 @@ class MockClient:
         """Fake close method."""
         return
 
-    @property
-    def oauth_info(self):
-        """Fake oauth info property."""
-        return {
-            "refresh_token": TEST_TOKEN,
-            "oauth_url": TEST_URL,
-        }
-
 
 @pytest.fixture(name="connect")
 def mock_controller_connect():
@@ -69,8 +63,8 @@ def mock_controller_connect():
     with patch(
         "custom_components.smartthinq_sensors.config_flow.LGEAuthentication"
     ) as service_mock:
-        service_mock.return_value.create_client_from_login = AsyncMock(
-            return_value=MockClient()
+        service_mock.return_value.get_oauth_info_from_login = AsyncMock(
+            return_value={"refresh_token": TEST_TOKEN, "oauth_url": TEST_URL}
         )
         service_mock.return_value.create_client_from_token = AsyncMock(
             return_value=MockClient()
@@ -113,7 +107,7 @@ async def test_form(hass, connect):
 )
 async def test_form_errors(hass, connect, error, reason):
     """Test we handle cannot connect error."""
-    connect.return_value.create_client_from_login = AsyncMock(side_effect=error)
+    connect.return_value.create_client_from_token = AsyncMock(side_effect=error)
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
@@ -131,7 +125,7 @@ async def test_form_errors(hass, connect, error, reason):
 )
 async def test_form_response_nodev(hass, connect, login_result):
     """Test we handle response errors."""
-    connect.return_value.create_client_from_login = AsyncMock(return_value=login_result)
+    connect.return_value.create_client_from_token = AsyncMock(return_value=login_result)
 
     result = await hass.config_entries.flow.async_init(
         DOMAIN,
