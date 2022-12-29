@@ -108,7 +108,7 @@ class LGEAuthentication:
         return None
 
     async def get_oauth_info_from_url(self, callback_url: str) -> dict[str, str] | None:
-        """Retrieve auth info from redirect url."""
+        """Retrieve oauth info from redirect url."""
         try:
             return await ClientAsync.oauth_info_from_url(
                 callback_url,
@@ -124,7 +124,7 @@ class LGEAuthentication:
     async def get_oauth_info_from_login(
         self, username: str, password: str
     ) -> dict[str, str] | None:
-        """Retrieve auth info from redirect url."""
+        """Retrieve oauth info from user login credential."""
         try:
             return await ClientAsync.oauth_info_from_user_login(
                 username,
