@@ -33,6 +33,7 @@ from .sensor import ATTR_DOOR_OPEN, ATTR_ERROR_STATE, ATTR_RUN_COMPLETED
 from .wideq import (
     FEAT_AUTODOOR,
     FEAT_CHILDLOCK,
+    FEAT_DETERGENT,
     FEAT_DOORCLOSE,
     FEAT_DOORLOCK,
     FEAT_DOOROPEN,
@@ -43,6 +44,7 @@ from .wideq import (
     FEAT_REMOTESTART,
     FEAT_RINSEREFILL,
     FEAT_SALTREFILL,
+    FEAT_SOFTENER,
     FEAT_STANDBY,
     FEAT_WATER_TANK_FULL,
     DeviceType,
@@ -154,6 +156,18 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=FEAT_NIGHTDRY,
         name="Night dry",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=FEAT_DETERGENT,
+        name="Detergent",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=FEAT_SOFTENER,
+        name="Softener",
+        device_class=BinarySensorDeviceClass.PROBLEM,
         entity_registry_enabled_default=False,
     ),
 )

@@ -20,7 +20,7 @@ from .devices.fan import FanDevice
 from .devices.range import RangeDevice
 from .devices.refrigerator import RefrigeratorDevice
 from .devices.styler import StylerDevice
-from .devices.washerDryer import WMDevice
+from .devices.washerDryer import WMDevice, get_sub_devices
 from .devices.waterheater import WaterHeaterDevice
 
 
@@ -57,6 +57,9 @@ def get_lge_device(
     if device_type == DeviceType.WATER_HEATER:
         return [WaterHeaterDevice(client, device_info, temp_unit)]
     if device_type in WM_DEVICE_TYPES:
-        return [WMDevice(client, device_info)]
-
+        main_dev = [WMDevice(client, device_info)]
+        return main_dev + [
+            WMDevice(client, device_info, sub_key=key)
+            for key in get_sub_devices(device_info)
+        ]
     return None

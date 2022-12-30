@@ -10,6 +10,7 @@ from ..const import (
     FEAT_CHILDLOCK,
     FEAT_CREASECARE,
     FEAT_DAMPDRYBEEP,
+    FEAT_DETERGENT,
     FEAT_DOORCLOSE,
     FEAT_DOORLOCK,
     FEAT_DRYLEVEL,
@@ -25,6 +26,7 @@ from ..const import (
     FEAT_RINSEMODE,
     FEAT_RUN_STATE,
     FEAT_SELFCLEAN,
+    FEAT_SOFTENER,
     FEAT_SPINSPEED,
     FEAT_STANDBY,
     FEAT_STEAM,
@@ -57,11 +59,12 @@ STATE_WM_ERROR_NO_ERROR = [
 ]
 
 WM_ROOT_DATA = "washerDryer"
+WM_SUB_DEV = {"mini": "miniState"}
 
 POWER_STATUS_KEY = ["State", "state"]
 REMOTE_START_KEY = ["RemoteStart", "remoteStart"]
 
-CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
+CMD_POWER_OFF = [["Control", "WMOff"], ["Power", "WMOff"], ["Off", None]]
 CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
 CMD_REMOTE_START = [
     ["Control", "WMStart"],
@@ -74,6 +77,7 @@ BIT_FEATURES = {
     FEAT_CHILDLOCK: ["ChildLock", "childLock"],
     FEAT_CREASECARE: ["CreaseCare", "creaseCare"],
     FEAT_DAMPDRYBEEP: ["DampDryBeep", "dampDryBeep"],
+    FEAT_DETERGENT: ["DetergentRemaining", "detergentRemaining"],
     FEAT_DOORCLOSE: ["DoorClose", "doorClose"],
     FEAT_DOORLOCK: ["DoorLock", "doorLock"],
     FEAT_HANDIRON: ["HandIron", "handIron"],
@@ -82,6 +86,7 @@ BIT_FEATURES = {
     FEAT_REMOTESTART: REMOTE_START_KEY,
     FEAT_RESERVATION: ["Reservation", "reservation"],
     FEAT_SELFCLEAN: ["SelfClean", "selfClean"],
+    FEAT_SOFTENER: ["SoftenerRemaining", "softenerRemaining"],
     FEAT_STEAM: ["Steam", "steam"],
     FEAT_STEAMSOFTENER: ["SteamSoftener", "steamSoftener"],
     FEAT_TURBOWASH: ["TurboWash", "turboWash"],
@@ -90,18 +95,39 @@ BIT_FEATURES = {
 _LOGGER = logging.getLogger(__name__)
 
 
+def get_sub_devices(device_info: DeviceInfo) -> list[str]:
+    """Search for valid sub devices and return related sub keys."""
+    if not (snapshot := device_info.snapshot):
+        return []
+    if not (payload := snapshot.get(WM_ROOT_DATA)):
+        return []
+    return [k for k, s in WM_SUB_DEV.items() if s in payload]
+
+
 class WMDevice(Device):
     """A higher-level interface for washer and dryer."""
 
     def __init__(
         self, client: ClientAsync, device_info: DeviceInfo, sub_key: str | None = None
     ):
-        super().__init__(client, device_info, WMStatus(self, sub_key=sub_key))
+        super().__init__(client, device_info, WMStatus(self))
         self._sub_key = sub_key
         if sub_key:
             self._attr_unique_id += f"-{sub_key}"
             self._attr_name += f" {sub_key.capitalize()}"
         self._remote_start_status = None
+
+    def getkey(self, key: str | None) -> str | None:
+        """Add subkey prefix to a key if required."""
+        if not (key and self._sub_key):
+            return key
+        return f"{self._sub_key}{key[0].upper()}{key[1:]}"
+
+    def _getcmdkey(self, key: str | None) -> str | None:
+        """Add subkey prefix to a command key if required."""
+        if not (key and self._sub_key):
+            return key
+        return f"{self._sub_key.capitalize()}{key}"
 
     def _update_status(self, key, value):
         if self._status:
@@ -123,9 +149,11 @@ class WMDevice(Device):
         """
         ret_data = data.copy()
         if self.model_info.is_info_v2:
-            n_course_key = self.model_info.config_value("courseType")
-            s_course_key = self.model_info.config_value("smartCourseType")
-            def_course_id = self.model_info.config_value("defaultCourse")
+            n_course_key = self.model_info.config_value(self.getkey("courseType"))
+            s_course_key = self.model_info.config_value(self.getkey("smartCourseType"))
+            def_course_id = self.model_info.config_value(
+                f"default{self._getcmdkey('Course')}"
+            )
         else:
             n_course_key = (
                 "APCourse" if self.model_info.value_exist("APCourse") else "Course"
@@ -173,16 +201,16 @@ class WMDevice(Device):
             cmd["data"] = str_data
         return cmd
 
-    def _prepare_command_v2(self, cmd, key):
+    def _prepare_command_v2(self, cmd, key: str):
         """Prepare command for specific ThinQ2 device."""
         data_set = cmd.pop("data", None)
         if not data_set:
             return cmd
 
-        if key and key == "WMStart":
+        if key and key.find("WMStart") >= 0:
             status_data = self._update_course_info(self._remote_start_status)
-            n_course_key = self.model_info.config_value("courseType")
-            s_course_key = self.model_info.config_value("smartCourseType")
+            n_course_key = self.model_info.config_value(self.getkey("courseType"))
+            s_course_key = self.model_info.config_value(self.getkey("smartCourseType"))
             cmd_data_set = {}
 
             for cmd_key, cmd_value in data_set[WM_ROOT_DATA].items():
@@ -206,7 +234,7 @@ class WMDevice(Device):
                         cmd_data_set["courseType"] = course_type
                     else:
                         cmd_data_set[s_course_key] = "NOT_SELECTED"
-                elif cmd_key == "initialBit":
+                elif cmd_key == self.getkey("initialBit"):
                     cmd_data_set[cmd_key] = "INITIAL_BIT_ON"
                 else:
                     cmd_data_set[cmd_key] = status_data.get(cmd_key, cmd_value)
@@ -245,17 +273,30 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
 
+    async def set(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
+        """Set a device's control for `key` to `value`."""
+        await super().set(
+            self._getcmdkey(ctrl_key),
+            self._getcmdkey(command),
+            key=self._getcmdkey(key),
+            value=value,
+            data=data,
+            ctrl_path=ctrl_path,
+        )
+
     def reset_status(self):
         tcl_count = None
         if self._status:
             tcl_count = self._status.tubclean_count
-        self._status = WMStatus(self, sub_key=self._sub_key, tcl_count=tcl_count)
+        self._status = WMStatus(self, tcl_count=tcl_count)
         return self._status
 
     def _set_remote_start_opt(self, res):
         """Save the status to use for remote start."""
 
-        status_key = self._get_state_key(REMOTE_START_KEY)
+        status_key = self.getkey(self._get_state_key(REMOTE_START_KEY))
         remote_enabled = self._status.lookup_bit(status_key) == STATE_OPTIONITEM_ON
         if not self._remote_start_status:
             if remote_enabled:
@@ -270,7 +311,7 @@ class WMDevice(Device):
         if not res:
             return None
 
-        self._status = WMStatus(self, res, sub_key=self._sub_key)
+        self._status = WMStatus(self, res)
         self._set_remote_start_opt(res)
         return self._status
 
@@ -288,7 +329,6 @@ class WMStatus(DeviceStatus):
         device: WMDevice,
         data: dict | None = None,
         *,
-        sub_key: str | None = None,
         tcl_count: str | None = None,
     ):
         """Initialize device status."""
@@ -297,20 +337,13 @@ class WMStatus(DeviceStatus):
         self._pre_state = None
         self._process_state = None
         self._error = None
-        self._sub_key = sub_key
         self._tcl_count = tcl_count
 
     def _getkeys(self, keys: str | list[str]) -> str | list[str]:
         """Add subkey prefix to a key or a list of keys if required."""
-        if not self._sub_key:
-            return keys
-
-        def addsubkey(key: str) -> str:
-            return f"{self._sub_key}{key[0].upper()}{key[1:]}"
-
         if isinstance(keys, list):
-            return [addsubkey(key) for key in keys]
-        return addsubkey(keys)
+            return [self._device.getkey(key) for key in keys]
+        return self._device.getkey(keys)
 
     def _get_run_state(self):
         """Get current run state."""
@@ -361,7 +394,7 @@ class WMStatus(DeviceStatus):
 
     def update_status(self, key, value):
         """Update device status."""
-        if not super().update_status(key, value):
+        if not super().update_status(self._getkeys(key), value):
             return False
         self._run_state = None
         return True
@@ -587,15 +620,16 @@ class WMStatus(DeviceStatus):
     @property
     def tubclean_count(self):
         """Return tub clean counter."""
-        keys = self._getkeys("TCLCount")
-        if not (key := self.get_model_info_key(keys)):
-            return None
+        key = self._getkeys("TCLCount")
         if self.is_info_v2:
-            result = self.int_or_none(self._data.get(key))
+            if (result := self.int_or_none(self._data.get(key))) is None:
+                return None
         else:
+            if not self.get_model_info_key(key):
+                return None
             result = self._data.get(key)
-        if result is None:
-            result = self._tcl_count or "N/A"
+            if result is None:
+                result = self._tcl_count or "N/A"
         return self._update_feature(FEAT_TUBCLEAN_COUNT, result, False)
 
     @property
