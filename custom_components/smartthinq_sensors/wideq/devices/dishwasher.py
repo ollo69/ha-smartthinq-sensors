@@ -176,42 +176,42 @@ class DishWasherStatus(DeviceStatus):
     def initialtime_hour(self):
         """Return hour initial time."""
         if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("initialTimeHour"))
+            return self.int_or_none(self._data.get("initialTimeHour"))
         return self._data.get("Initial_Time_H")
 
     @property
     def initialtime_min(self):
         """Return minute initial time."""
         if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("initialTimeMinute"))
+            return self.int_or_none(self._data.get("initialTimeMinute"))
         return self._data.get("Initial_Time_M")
 
     @property
     def remaintime_hour(self):
         """Return hour remaining time."""
         if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("remainTimeHour"))
+            return self.int_or_none(self._data.get("remainTimeHour"))
         return self._data.get("Remain_Time_H")
 
     @property
     def remaintime_min(self):
         """Return minute remaining time."""
         if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("remainTimeMinute"))
+            return self.int_or_none(self._data.get("remainTimeMinute"))
         return self._data.get("Remain_Time_M")
 
     @property
     def reservetime_hour(self):
         """Return hour reserved time."""
         if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("reserveTimeHour"))
+            return self.int_or_none(self._data.get("reserveTimeHour"))
         return self._data.get("Reserve_Time_H")
 
     @property
     def reservetime_min(self):
         """Return minute reserved time."""
         if self.is_info_v2:
-            return DeviceStatus.int_or_none(self._data.get("reserveTimeMinute"))
+            return self.int_or_none(self._data.get("reserveTimeMinute"))
         return self._data.get("Reserve_Time_M")
 
     @property

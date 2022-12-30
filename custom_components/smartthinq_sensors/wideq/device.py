@@ -745,7 +745,7 @@ class DeviceStatus:
     def __init__(self, device: Device, data: dict | None = None) -> None:
         """Initialize devicestatus object."""
         self._device = device
-        self._data = {} if data is None else data
+        self._data = data or {}
         self._device_features: dict[str, Any] = {}
         self._features_updated = False
 
@@ -844,18 +844,18 @@ class DeviceStatus:
         return False
 
     @property
-    def is_info_v2(self):
+    def is_info_v2(self) -> bool:
         """Return type of associated model info."""
         return self._device.model_info.is_info_v2
 
-    def _get_state_key(self, key_name):
-        """Return the key name based on model info."""
+    def _get_state_key(self, key_name: str | list[str]) -> str:
+        """Return the key name based on model info type."""
         if isinstance(key_name, list):
             return key_name[1 if self.is_info_v2 else 0]
         return key_name
 
-    def _get_data_key(self, keys):
-        """Return the raw data for a specific key."""
+    def _get_data_key(self, keys: str | list[str]) -> str:
+        """Return the key inside status data if match one of provided keys."""
         if not self._data:
             return ""
         if isinstance(keys, list):
@@ -882,7 +882,7 @@ class DeviceStatus:
 
         return STATE_OPTIONITEM_UNKNOWN
 
-    def update_status(self, key, value):
+    def update_status(self, key, value) -> bool:
         """Update the status key to a specific value."""
         if key in self._data:
             self._data[key] = value
@@ -890,7 +890,7 @@ class DeviceStatus:
             return True
         return False
 
-    def update_status_feat(self, key, value, upd_features=False):
+    def update_status_feat(self, key, value, upd_features=False) -> bool:
         """Update device status and features."""
         if not self.update_status(key, value):
             return False
@@ -898,14 +898,19 @@ class DeviceStatus:
             self._update_features()
         return True
 
-    def key_exist(self, keys):
-        """Chek if a secific key exists inside the status."""
+    def get_model_info_key(self, keys: str | list[str]) -> str | None:
+        """Return a key if one of provided keys exists in associated model info."""
         if isinstance(keys, list):
             for key in keys:
                 if self._device.model_info.value_exist(key):
-                    return True
-            return False
-        return self._device.model_info.value_exist(keys)
+                    return key
+        elif self._device.model_info.value_exist(keys):
+            return keys
+        return None
+
+    def key_exist(self, keys: str | list[str]) -> bool:
+        """Check if one of provided keys exists in associated model info."""
+        return bool(self.get_model_info_key(keys))
 
     def lookup_enum(self, key, data_is_num=False):
         """Lookup value for a specific key of type enum."""
