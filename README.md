@@ -186,108 +186,17 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 
 You can substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer, for example.
 
-- Custom card for dryer and washer (![Screenshot of laundry card](https://user-images.githubusercontent.com/10727862/135772833-de1a555a-3a88-4319-a82c-33dbe80fa4c5.png))
-
-<details>
-  <summary>
-    Hidden, click to expand
-  </summary>
-
-Place this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
-
-```js
-class LaundryCard extends HTMLElement {
-  // Whenever states are updated
-  set hass(hass) {
-    const entityId = this.config.entity;
-    const state = hass.states[entityId];
-    // Set data definitions
-    const friendlyName = state.attributes["friendly_name"] || state.entity_id;
-    const icon = state.attributes["icon"];
-    if (!this.content) {
-      this.innerHTML = `
-        <ha-card header="${friendlyName}">
-          <div class="main">
-            <ha-icon icon="${icon}"></ha-icon>
-            <span></span>
-          </div>
-        </ha-card>
-      `;
-      this.querySelector(".main").style.display = "grid";
-      this.querySelector(".main").style.gridTemplateColumns = "33% 66%";
-      this.querySelector("ha-icon").style.setProperty("--mdc-icon-size", "100%");
-    }
-    if (state.state == "on") {
-      const totalTime = state.attributes["initial_time"];
-      const remainTime = state.attributes["remain_time"];
-      const totalMinutes = (parseInt(totalTime.split(":")[0]) * 60) + parseInt(totalTime.split(":")[1]);
-      const remainMinutes = (parseInt(remainTime.split(":")[0]) * 60) + parseInt(remainTime.split(":")[1]);
-      this.querySelector("ha-icon").style.color = "var(--paper-item-icon-active-color)";
-      this.querySelector("span").innerHTML = `
-${friendlyName} is running ${state.attributes["current_course"]}<br>
-Currently ${state.attributes["run_state"]}<br>
-${state.attributes["initial_time"]} total, ${state.attributes["remain_time"]} to go
-<div class="progress-wrapper" style="height: 20px; width: 100%;">
-  <div class="progress" style="display: inline-block; height: 20px;">
-  </div>
-  <span style="color: var(--paper-item-icon-color); position: absolute; right: 33%;">50%</span>
-</div>
-`;
-      this.querySelector(".progress-wrapper").style.backgroundColor = "var(--paper-item-icon-color)";
-      this.querySelector(".progress").style.backgroundColor = "var(--paper-item-icon-active-color)";
-      this.querySelector(".progress").style.width = (totalMinutes - remainMinutes) / totalMinutes * 100 + "%";
-      this.querySelector(".progress-wrapper span").innerHTML = Math.round((totalMinutes - remainMinutes) / totalMinutes * 100) + "%";
-    } else {
-      this.querySelector("ha-icon").style.color = "var(--paper-item-icon-color)";
-      this.querySelector("span").innerHTML = `${friendlyName} is off`;
-    }
-  }
-
-  // On updated config
-  setConfig(config) {
-    const states = document.querySelector("home-assistant").hass.states;
-    if (!config.entity || !states[config.entity] || !states[config.entity].state) {
-      throw new Error("You need to define an valid entity (eg sensor.my_washing_machine)");
-    }
-    this.config = config;
-  }
-
-  // HA card size to distribute cards across columns, 50px
-  getCardSize() {
-    return 3;
-  }
-
-  // Return default config
-  static getStubConfig() {
-    for (var state of Object.values(document.querySelector("home-assistant").hass.states)) {
-      if (state.attributes["run_state"] !== undefined) {
-        return { entity: state.entity_id };
-      }
-    }
-    return { entity: "sensor.my_washing_machine" };
-  }
-}
-
-customElements.define('laundry-card', LaundryCard);
-window.customCards.push(
-  {
-    type: "laundry-card",
-    name: "Laundry Card",
-    preview: true
-  }
-);
-```
-
-Lovelace:
+- Timer Bar Card now supports this integration. If you like to show a progress bar for your washer/dryer go to https://github.com/rianadon/timer-bar-card and replace 'sensor.my_washer' with your sensor name.
 
 ```yaml
-type: 'custom:laundry-card'
-entity: 'sensor.the_dryer_dryer' # Washers work too!
+type: custom:timer-bar-card
+entity: sensor.your-washer
+duration:
+  attribute: initial_time
 ```
 
-</details>
-
-- Alternative: Template (requires mushroom-card, <img src="https://user-images.githubusercontent.com/10727862/174490941-c0148343-e31b-42fe-a856-376428ee53a5.png" width="500px"/>)
+- Template for mushroom-card<br><br>
+  <img src="https://user-images.githubusercontent.com/10727862/174490941-c0148343-e31b-42fe-a856-376428ee53a5.png" width="500px"/>
 
 <details>
   <summary>
