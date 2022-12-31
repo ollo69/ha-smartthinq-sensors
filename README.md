@@ -214,15 +214,15 @@ class LaundryCard extends HTMLElement {
         </ha-card>
       `;
       this.querySelector(".main").style.display = "grid";
-      this.querySelector(".main").style.gridTemplateColumns = "33% 66%";
-      this.querySelector("ha-icon").style.setProperty("--mdc-icon-size", "100%");
+      this.querySelector(".main").style.gridTemplateColumns = "33% 64%";
+      this.querySelector("ha-icon").style.setProperty("--mdc-icon-size", "95%");
     }
     if (state.state == "on") {
       const totalTime = state.attributes["initial_time"];
       const remainTime = state.attributes["remain_time"];
       const totalMinutes = (parseInt(totalTime.split(":")[0]) * 60) + parseInt(totalTime.split(":")[1]);
       const remainMinutes = (parseInt(remainTime.split(":")[0]) * 60) + parseInt(remainTime.split(":")[1]);
-      this.querySelector("ha-icon").style.color = "var(--paper-item-icon-active-color)";
+      this.querySelector("ha-icon").style.color = "#FDD835";
       this.querySelector("span").innerHTML = `
 ${friendlyName} is running ${state.attributes["current_course"]}<br>
 Currently ${state.attributes["run_state"]}<br>
@@ -230,15 +230,15 @@ ${state.attributes["initial_time"]} total, ${state.attributes["remain_time"]} to
 <div class="progress-wrapper" style="height: 20px; width: 100%;">
   <div class="progress" style="display: inline-block; height: 20px;">
   </div>
-  <span style="color: var(--paper-item-icon-color); position: absolute; right: 33%;">50%</span>
+  <span style="color: #FFFFFF; position: absolute; right: 33%;">50%</span>
 </div>
 `;
-      this.querySelector(".progress-wrapper").style.backgroundColor = "var(--paper-item-icon-color)";
-      this.querySelector(".progress").style.backgroundColor = "var(--paper-item-icon-active-color)";
+      this.querySelector(".progress-wrapper").style.backgroundColor = "#44739E";
+      this.querySelector(".progress").style.backgroundColor = "#FDD835";
       this.querySelector(".progress").style.width = (totalMinutes - remainMinutes) / totalMinutes * 100 + "%";
       this.querySelector(".progress-wrapper span").innerHTML = Math.round((totalMinutes - remainMinutes) / totalMinutes * 100) + "%";
     } else {
-      this.querySelector("ha-icon").style.color = "var(--paper-item-icon-color)";
+      this.querySelector("ha-icon").style.color = "#44739E";
       this.querySelector("span").innerHTML = `${friendlyName} is off`;
     }
   }
