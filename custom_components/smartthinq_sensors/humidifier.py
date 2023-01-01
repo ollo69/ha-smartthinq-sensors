@@ -99,7 +99,14 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         self._attr_name = api.name
         self._attr_unique_id = f"{api.unique_id}-DEHUM"
         self._attr_device_class = HumidifierDeviceClass.DEHUMIDIFIER
-        self._attr_available_modes = self._device.op_modes
+
+        self._use_fan_modes = False
+        self._attr_available_modes = None
+        if len(self._device.op_modes) > 1:
+            self._attr_available_modes = self._device.op_modes
+        elif len(self._device.fan_speeds) > 1:
+            self._attr_available_modes = self._device.fan_speeds
+            self._use_fan_modes = True
 
     @property
     def supported_features(self) -> int:
@@ -129,13 +136,20 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     @property
     def mode(self) -> str | None:
         """Return current operation."""
+        if self._use_fan_modes:
+            return self._api.state.fan_speed
         return self._api.state.operation_mode
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new target mode."""
+        if not self.available_modes:
+            raise NotImplementedError()
         if mode not in self.available_modes:
             raise ValueError(f"Invalid mode [{mode}]")
-        await self._device.set_op_mode(mode)
+        if self._use_fan_modes:
+            await self._device.set_fan_speed(mode)
+        else:
+            await self._device.set_op_mode(mode)
         self._api.async_set_updated()
 
     @property
@@ -165,7 +179,6 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         """Return the minimum humidity."""
         if (min_value := self._device.target_humidity_min) is not None:
             return min_value
-
         return DEFAULT_MIN_HUMIDITY
 
     @property
@@ -173,7 +186,6 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         """Return the maximum humidity."""
         if (max_value := self._device.target_humidity_max) is not None:
             return max_value
-
         return DEFAULT_MAX_HUMIDITY
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
