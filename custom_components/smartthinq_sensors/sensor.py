@@ -685,25 +685,6 @@ class LGEWashDeviceSensor(LGESensor):
         """Initialize the sensor."""
         super().__init__(api, description, LGEWashDevice(api))
 
-    @property
-    def extra_state_attributes(self):
-        """Return the optional state attributes."""
-        if not self._is_default:
-            return None
-
-        data = {
-            ATTR_RUN_COMPLETED: self._wrap_device.run_completed,
-            ATTR_ERROR_STATE: self._wrap_device.error_state,
-            ATTR_INITIAL_TIME: self._wrap_device.initial_time,
-            ATTR_REMAIN_TIME: self._wrap_device.remain_time,
-            ATTR_RESERVE_TIME: self._wrap_device.reserve_time,
-            ATTR_CURRENT_COURSE: self._wrap_device.current_course,
-        }
-        features = self._wrap_device.get_features_attributes()
-        data.update(features)
-
-        return data
-
 
 class LGERefrigeratorSensor(LGESensor):
     """A sensor to monitor LGE Refrigerator devices"""
@@ -716,25 +697,6 @@ class LGERefrigeratorSensor(LGESensor):
         """Initialize the sensor."""
         super().__init__(api, description, LGERefrigeratorDevice(api))
 
-    @property
-    def extra_state_attributes(self):
-        """Return the optional state attributes."""
-        if not self._is_default:
-            return None
-
-        data = {
-            ATTR_FRIDGE_TEMP: self._wrap_device.temp_fridge,
-            ATTR_FREEZER_TEMP: self._wrap_device.temp_freezer,
-            ATTR_TEMP_UNIT: self._wrap_device.temp_unit,
-            ATTR_DOOR_OPEN: self._wrap_device.dooropen_state,
-        }
-
-        if self._api.state:
-            features = self._wrap_device.get_features_attributes()
-            data.update(features)
-
-        return data
-
 
 class LGERangeSensor(LGESensor):
     """A sensor to monitor LGE range devices"""
@@ -746,19 +708,3 @@ class LGERangeSensor(LGESensor):
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGERangeDevice(api))
-
-    @property
-    def extra_state_attributes(self):
-        """Return the optional state attributes."""
-        if not self._is_default:
-            return None
-
-        data = {
-            ATTR_OVEN_LOWER_TARGET_TEMP: self._wrap_device.oven_lower_target_temp,
-            ATTR_OVEN_UPPER_TARGET_TEMP: self._wrap_device.oven_upper_target_temp,
-            ATTR_OVEN_TEMP_UNIT: self._wrap_device.oven_temp_unit,
-        }
-        features = self._wrap_device.get_features_attributes()
-        data.update(features)
-
-        return data
