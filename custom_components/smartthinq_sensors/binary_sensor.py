@@ -343,18 +343,12 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Return True if unable to access real state of the entity."""
         return self._api.assumed_state
 
-    def _get_on_state(self):
+    def _get_on_state(self) -> bool:
         """Return true if the binary sensor is on."""
-        ret_val = self._get_sensor_state()
-        if ret_val is None:
-            return False
-        if isinstance(ret_val, bool):
-            return ret_val
-        ret_val = ret_val.lower()
-        if ret_val == STATE_ON:
-            return True
-        state = STATE_LOOKUP.get(ret_val, STATE_OFF)
-        return state == STATE_ON
+        sensor_state = self._get_sensor_state()
+        if isinstance(sensor_state, bool):
+            return sensor_state
+        return sensor_state.lower() in (STATE_ON, 'on')
 
     def _get_sensor_state(self):
         if self._wrap_device and self.entity_description.value_fn is not None:
