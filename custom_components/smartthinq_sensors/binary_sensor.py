@@ -11,7 +11,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -21,7 +21,6 @@ from . import LGEDevice
 from .const import DEFAULT_ICON, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import (
     DEVICE_ICONS,
-    STATE_LOOKUP,
     WASH_DEVICE_TYPES,
     LGERangeDevice,
     LGERefrigeratorDevice,
