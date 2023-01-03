@@ -347,7 +347,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         sensor_state = self._get_sensor_state()
         if isinstance(sensor_state, bool):
             return sensor_state
-        return sensor_state.lower() in (STATE_ON, 'on')
+        return sensor_state.lower() in (STATE_ON, "on")
 
     def _get_sensor_state(self):
         if self._wrap_device and self.entity_description.value_fn is not None:
