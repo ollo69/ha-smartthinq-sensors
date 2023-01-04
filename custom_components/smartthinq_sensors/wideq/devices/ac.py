@@ -47,6 +47,8 @@ SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
 CTRL_BASIC = ["Control", "basicCtrl"]
 CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
 CTRL_MISC = ["Control", "miscCtrl"]
+
+CTRL_FILTER_V2 = "filterMngStateCtrl"
 # CTRL_SETTING = "settingInfo"
 # CTRL_WIND_MODE = "wModeCtrl"
 
@@ -285,7 +287,7 @@ class AirConditionerDevice(Device):
         self._temperature_step = TEMP_STEP_WHOLE
         self._duct_zones = {}
 
-        self._current_power = 0
+        self._current_power = None
         self._current_power_supported = True
 
         self._filter_status = {}
@@ -837,14 +839,14 @@ class AirConditionerDevice(Device):
     async def get_power(self):
         """Get the instant power usage in watts of the whole unit."""
         if not self._current_power_supported:
-            return 0
+            return None
         try:
             value = await self._get_config(STATE_POWER_V1)
             return value[STATE_POWER_V1]
         except (ValueError, InvalidRequestError):
             # Device does not support whole unit instant power usage
             self._current_power_supported = False
-            return 0
+            return None
 
     async def get_filter_state(self):
         """Get information about the filter."""
@@ -854,6 +856,21 @@ class AirConditionerDevice(Device):
             return await self._get_config(STATE_FILTER_V1)
         except (ValueError, InvalidRequestError):
             # Device does not support filter status
+            self._filter_status_supported = False
+            return {}
+
+    async def get_filter_state_v2(self):
+        """Get information about the filter."""
+        if not self._filter_status_supported:
+            return {}
+        try:
+            _LOGGER.info("Entering GetFilerStatus V2")
+            result = await self._get_config_v2(CTRL_FILTER_V2, "Get")
+            _LOGGER.info("GetFilerStatus V2: %s", result)
+            return result
+        except (ValueError, InvalidRequestError) as ex:
+            # Device does not support filter status
+            _LOGGER.info("GetFilerStatus V2 error: %s", ex)
             self._filter_status_supported = False
             return {}
 
@@ -872,35 +889,45 @@ class AirConditionerDevice(Device):
         self._status = AirConditionerStatus(self)
         return self._status
 
-    async def _get_device_info(self):
-        """
-        Call additional method to get device information for API v1.
-        Called by 'device_poll' method using a lower poll rate.
-        """
-        # this command is to get power usage on V1 device
-        if not self.is_air_to_water:
-            self._current_power = await self.get_power()
-            filter_status = await self.get_filter_state()
-            self._filter_status = {
-                k: filter_status[v] for k, v in FILTER_STATUS_MAP if v in filter_status
-            }
-
     async def _pre_update_v2(self):
         """Call additional methods before data update for v2 API."""
         # this command is to get power and temp info on V2 device
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
         await self.set(keys[0], keys[1], key=keys[2], value="70", ctrl_path="control")
 
+    async def _get_device_info(self):
+        """
+        Call additional method to get device information for API v1.
+        Called by 'device_poll' method using a lower poll rate.
+        """
+        # this commands is to get power usage and filter status on V1 device
+        if not self.is_air_to_water:
+            self._current_power = await self.get_power()
+            if filter_status := await self.get_filter_state():
+                self._filter_status = {
+                    k: filter_status.get(v, 0) for k, v in FILTER_STATUS_MAP.items()
+                }
+
+    async def _get_device_info_v2(self):
+        """
+        Call additional method to get device information for V2 API.
+        Override in specific device to call requested methods.
+        """
+        # this commands is to get filter status on V2 device
+        await self.get_filter_state_v2()
+
     async def poll(self) -> AirConditionerStatus | None:
         """Poll the device's current state."""
         res = await self._device_poll(
-            thinq1_additional_poll=ADD_FEAT_POLL_INTERVAL,
+            additional_poll_interval_v1=ADD_FEAT_POLL_INTERVAL,
+            additional_poll_interval_v2=ADD_FEAT_POLL_INTERVAL,
             thinq2_query_device=True,
         )
         if not res:
             return None
         if self._should_poll and not self.is_air_to_water:
-            res[STATE_POWER_V1] = self._current_power
+            if self._current_power is not None:
+                res[STATE_POWER_V1] = self._current_power
             if self._filter_status:
                 res.update(self._filter_status)
 

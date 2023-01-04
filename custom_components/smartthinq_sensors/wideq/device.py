@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 import json
 import logging
@@ -558,6 +558,24 @@ class Device:
                 ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
             )
 
+    async def _get_config_v2(
+        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+    ):
+        """
+        Look up a device's V2 configuration for a given value.
+        """
+        if self._should_poll or self.client.emulation:
+            return None
+
+        return await self._client.session.device_v2_controls(
+            self._device_info.device_id,
+            ctrl_key,
+            command,
+            key,
+            value,
+            ctrl_path=ctrl_path,
+        )
+
     async def _get_config(self, key):
         """
         Look up a device's configuration for a given value.
@@ -588,9 +606,33 @@ class Device:
         _, value = data[1:-1].split(":")
         return value
 
+    async def _delete_permission(self):
+        """Remove permission acquired in set command."""
+        if not self._should_poll:
+            return
+        if self._control_set <= 0:
+            return
+        if self._control_set == 1:
+            await self._client.session.delete_permission(self._device_info.device_id)
+        self._control_set -= 1
+
     async def _pre_update_v2(self):
         """
         Call additional methods before data update for v2 API.
+        Override in specific device to call requested methods.
+        """
+        return
+
+    async def _get_device_info(self):
+        """
+        Call additional method to get device information for V1 API.
+        Override in specific device to call requested methods.
+        """
+        return
+
+    async def _get_device_info_v2(self):
+        """
+        Call additional method to get device information for V2 API.
         Override in specific device to call requested methods.
         """
         return
@@ -612,44 +654,35 @@ class Device:
 
         return await self._mon.refresh(query_device)
 
-    async def _delete_permission(self):
-        """Remove permission acquired in set command."""
-        if not self._should_poll:
-            return
-        if self._control_set <= 0:
-            return
-        if self._control_set == 1:
-            await self._client.session.delete_permission(self._device_info.device_id)
-        self._control_set -= 1
-
-    async def _get_device_info(self):
-        """
-        Call additional method to get device information for V1 API.
-        Override in specific device to call requested methods.
-        """
-        return
-
     async def _additional_poll(self, poll_interval: int):
         """Perform dedicated additional device poll with a slower rate."""
-        if not self._should_poll:
-            return
-        if poll_interval <= 0:
+        if poll_interval <= 0 or self.client.emulation:
             return
         call_time = datetime.utcnow()
         if self._last_additional_poll is None:
-            self._last_additional_poll = call_time - timedelta(
-                seconds=max(poll_interval - 10, 1)
-            )
-        difference = (call_time - self._last_additional_poll).total_seconds()
-        if difference >= poll_interval:
-            self._last_additional_poll = call_time
-            await self._get_device_info()
+            difference = poll_interval
+        else:
+            difference = (call_time - self._last_additional_poll).total_seconds()
+        if difference < poll_interval:
+            return
+        self._last_additional_poll = call_time
+        if self._should_poll:
+            try:
+                await self._get_device_info()
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.debug("Error %s calling additional poll V1 methods", exc)
+        else:
+            try:
+                await self._get_device_info_v2()
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.debug("Error %s calling additional poll V2 methods", exc)
 
     async def _device_poll(
         self,
         snapshot_key="",
         *,
-        thinq1_additional_poll=0,
+        additional_poll_interval_v1=0,
+        additional_poll_interval_v2=0,
         thinq2_query_device=False,
     ):
         """
@@ -659,7 +692,9 @@ class Device:
         Return either a `Status` object or `None` if the status is not yet available.
 
         :param snapshot_key: the key used to extract the thinq2 snapshot from payload.
-        :param thinq1_additional_poll: run an additional poll command for thinq1 devices
+        :param additional_poll_interval_v1: run an additional poll command for V1 devices
+            at specified rate (0 means disabled).
+        :param additional_poll_interval_v2: run an additional poll command for V2 devices
             at specified rate (0 means disabled).
         :param thinq2_query_device: if True query thinq2 devices with dedicated command
             instead using dashboard.
@@ -675,6 +710,9 @@ class Device:
             snapshot = await self._get_device_snapshot(thinq2_query_device)
             if not snapshot:
                 return None
+            # do additional poll
+            if additional_poll_interval_v2 > 0:
+                await self._additional_poll(additional_poll_interval_v2)
             return self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
@@ -684,11 +722,8 @@ class Device:
 
         res = self._model_info.decode_monitor(data)
         # do additional poll
-        if res and thinq1_additional_poll > 0:
-            try:
-                await self._additional_poll(thinq1_additional_poll)
-            except Exception as exc:  # pylint: disable=broad-except
-                _LOGGER.debug("Error %s calling additional poll methods", exc)
+        if res and additional_poll_interval_v1 > 0:
+            await self._additional_poll(additional_poll_interval_v1)
 
         # remove control permission if previously set
         await self._delete_permission()

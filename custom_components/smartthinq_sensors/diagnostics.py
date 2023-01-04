@@ -9,6 +9,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from . import UNSUPPORTED_DEVICES
 from .const import DOMAIN, LGE_DEVICES
+from .wideq.device import Device as ThinQDevice
 
 TO_REDACT = {CONF_TOKEN}
 TO_REDACT_DEV = {"macAddress", "ssid", "userNo"}
@@ -73,8 +74,8 @@ def _async_devices_as_dict(
     for dev_type, devices in lge_devices.items():
         lge_devs = {}
         for lge_device in devices:
-            device = lge_device.device
-            if lg_device_id and device.device_info.id != lg_device_id:
+            device: ThinQDevice = lge_device.device
+            if lg_device_id and device.device_info.device_id != lg_device_id:
                 continue
 
             lge_devs[lge_device.unique_id] = {
@@ -83,7 +84,9 @@ def _async_devices_as_dict(
                 ),
                 "model_info": device.model_info.as_dict(),
                 "device_status": device.status.data if device.status else None,
-                "home_assistant": _async_device_ha_info(hass, device.device_info.id),
+                "home_assistant": _async_device_ha_info(
+                    hass, device.device_info.device_id
+                ),
             }
             if lg_device_id:
                 return {dev_type.name: lge_devs}
