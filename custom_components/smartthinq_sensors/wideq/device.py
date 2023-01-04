@@ -567,7 +567,7 @@ class Device:
         if self._should_poll or self.client.emulation:
             return None
 
-        return await self._client.session.device_v2_controls(
+        payload = await self._client.session.device_v2_controls(
             self._device_info.device_id,
             ctrl_key,
             command,
@@ -576,13 +576,19 @@ class Device:
             ctrl_path=ctrl_path,
         )
 
+        result = payload.get("result")
+        if not result or "data" not in result:
+            return None
+        return result["data"]
+
     async def _get_config(self, key):
         """
         Look up a device's configuration for a given value.
         The response is parsed as base64-encoded JSON.
         """
         if not self._should_poll:
-            return
+            return None
+
         data = await self._client.session.get_device_config(
             self._device_info.device_id, key
         )
@@ -593,7 +599,8 @@ class Device:
     async def _get_control(self, key):
         """Look up a device's control value."""
         if not self._should_poll:
-            return
+            return None
+
         data = await self._client.session.get_device_config(
             self._device_info.device_id,
             key,
@@ -650,13 +657,13 @@ class Device:
             try:
                 await self._pre_update_v2()
             except Exception as exc:  # pylint: disable=broad-except
-                _LOGGER.debug("Error %s calling pre_update function", exc)
+                _LOGGER.debug("Error calling pre_update function: %s", exc)
 
         return await self._mon.refresh(query_device)
 
     async def _additional_poll(self, poll_interval: int):
         """Perform dedicated additional device poll with a slower rate."""
-        if poll_interval <= 0 or self.client.emulation:
+        if poll_interval <= 0:
             return
         call_time = datetime.utcnow()
         if self._last_additional_poll is None:
@@ -670,12 +677,12 @@ class Device:
             try:
                 await self._get_device_info()
             except Exception as exc:  # pylint: disable=broad-except
-                _LOGGER.debug("Error %s calling additional poll V1 methods", exc)
+                _LOGGER.debug("Error calling additional poll V1 methods: %s", exc)
         else:
             try:
                 await self._get_device_info_v2()
             except Exception as exc:  # pylint: disable=broad-except
-                _LOGGER.debug("Error %s calling additional poll V2 methods", exc)
+                _LOGGER.debug("Error calling additional poll V2 methods: %s", exc)
 
     async def _device_poll(
         self,
@@ -859,7 +866,7 @@ class DeviceStatus:
             return None
 
         try:
-            return int((use_time / max_time) * 100)
+            return [int((use_time / max_time) * 100), use_time, max_time]
         except ValueError:
             return None
 

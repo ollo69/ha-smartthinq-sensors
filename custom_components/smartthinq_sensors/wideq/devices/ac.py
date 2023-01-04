@@ -7,6 +7,8 @@ import logging
 from ..const import (
     FEAT_ENERGY_CURRENT,
     FEAT_FILTER_MAIN_LIFE,
+    FEAT_FILTER_MAIN_MAX,
+    FEAT_FILTER_MAIN_USE,
     FEAT_HOT_WATER_TEMP,
     FEAT_HUMIDITY,
     FEAT_LIGHTING_DISPLAY,
@@ -78,7 +80,7 @@ STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayContr
 
 FILTER_TYPES = [
     [
-        FEAT_FILTER_MAIN_LIFE,
+        [FEAT_FILTER_MAIN_LIFE, FEAT_FILTER_MAIN_USE, FEAT_FILTER_MAIN_MAX],
         [STATE_FILTER_V1_USE, "airState.filterMngStates.useTime"],
         [STATE_FILTER_V1_MAX, "airState.filterMngStates.maxTime"],
         None,
@@ -290,7 +292,7 @@ class AirConditionerDevice(Device):
         self._current_power = None
         self._current_power_supported = True
 
-        self._filter_status = {}
+        self._filter_status = None
         self._filter_status_supported = True
 
         self._unit_conv = TempUnitConversion()
@@ -843,36 +845,35 @@ class AirConditionerDevice(Device):
         try:
             value = await self._get_config(STATE_POWER_V1)
             return value[STATE_POWER_V1]
-        except (ValueError, InvalidRequestError):
+        except (ValueError, InvalidRequestError) as exc:
             # Device does not support whole unit instant power usage
+            _LOGGER.debug("Error calling get_power methods: %s", exc)
             self._current_power_supported = False
             return None
 
     async def get_filter_state(self):
         """Get information about the filter."""
         if not self._filter_status_supported:
-            return {}
+            return None
         try:
             return await self._get_config(STATE_FILTER_V1)
-        except (ValueError, InvalidRequestError):
+        except (ValueError, InvalidRequestError) as exc:
             # Device does not support filter status
+            _LOGGER.debug("Error calling get_filter_state methods: %s", exc)
             self._filter_status_supported = False
-            return {}
+            return None
 
     async def get_filter_state_v2(self):
         """Get information about the filter."""
         if not self._filter_status_supported:
-            return {}
+            return None
         try:
-            _LOGGER.info("Entering GetFilerStatus V2")
-            result = await self._get_config_v2(CTRL_FILTER_V2, "Get")
-            _LOGGER.info("GetFilerStatus V2: %s", result)
-            return result
-        except (ValueError, InvalidRequestError) as ex:
+            return await self._get_config_v2(CTRL_FILTER_V2, "Get")
+        except (ValueError, InvalidRequestError) as exc:
             # Device does not support filter status
-            _LOGGER.info("GetFilerStatus V2 error: %s", ex)
+            _LOGGER.debug("Error calling get_filter_state_v2 methods: %s", exc)
             self._filter_status_supported = False
-            return {}
+            return None
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -914,7 +915,7 @@ class AirConditionerDevice(Device):
         Override in specific device to call requested methods.
         """
         # this commands is to get filter status on V2 device
-        await self.get_filter_state_v2()
+        self._filter_status = await self.get_filter_state_v2()
 
     async def poll(self) -> AirConditionerStatus | None:
         """Poll the device's current state."""
@@ -925,11 +926,15 @@ class AirConditionerDevice(Device):
         )
         if not res:
             return None
+
+        # update power for ACv1
         if self._should_poll and not self.is_air_to_water:
             if self._current_power is not None:
                 res[STATE_POWER_V1] = self._current_power
-            if self._filter_status:
-                res.update(self._filter_status)
+
+        # update filter status
+        if self._filter_status:
+            res.update(self._filter_status)
 
         self._status = AirConditionerStatus(self, res)
         if self._temperature_step == TEMP_STEP_WHOLE:
@@ -1153,8 +1158,11 @@ class AirConditionerStatus(DeviceStatus):
         for filter_def in FILTER_TYPES:
             status = self._get_filter_life(filter_def[1], filter_def[2])
             if status is not None:
-                self._update_feature(filter_def[0], status, False)
-                result[filter_def[0]] = status
+                for index, feat in enumerate(filter_def[0]):
+                    if index >= len(status):
+                        break
+                    self._update_feature(feat, status[index], False)
+                    result[feat] = status[index]
 
         return result
 
