@@ -8,6 +8,8 @@ from ..const import (
     FEAT_FILTER_BOTTOM_LIFE,
     FEAT_FILTER_DUST_LIFE,
     FEAT_FILTER_MAIN_LIFE,
+    FEAT_FILTER_MAIN_MAX,
+    FEAT_FILTER_MAIN_USE,
     FEAT_FILTER_MID_LIFE,
     FEAT_FILTER_TOP_LIFE,
     FEAT_HUMIDITY,
@@ -41,31 +43,31 @@ CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 
 FILTER_TYPES = [
     [
-        FEAT_FILTER_MAIN_LIFE,
+        [FEAT_FILTER_MAIN_LIFE, FEAT_FILTER_MAIN_USE, FEAT_FILTER_MAIN_MAX],
         ["FilterUse", "airState.filterMngStates.useTime"],
         ["FilterMax", "airState.filterMngStates.maxTime"],
         None,
     ],
     [
-        FEAT_FILTER_TOP_LIFE,
+        [FEAT_FILTER_TOP_LIFE],
         ["FilterUseTop", "airState.filterMngStates.useTimeTop"],
         ["FilterMaxTop", "airState.filterMngStates.maxTimeTop"],
         ["@SUPPORT_TOP_HUMIDIFILTER", "@SUPPORT_D_PLUS_TOP"],
     ],
     [
-        FEAT_FILTER_MID_LIFE,
+        [FEAT_FILTER_MID_LIFE],
         ["FilterUseMiddle", "airState.filterMngStates.useTimeMiddle"],
         ["FilterMaxMiddle", "airState.filterMngStates.maxTimeMiddle"],
         ["@SUPPORT_MID_HUMIDIFILTER"],
     ],
     [
-        FEAT_FILTER_BOTTOM_LIFE,
+        [FEAT_FILTER_BOTTOM_LIFE],
         ["FilterUseBottom", "airState.filterMngStates.useTimeBottom"],
         ["FilterMaxBottom", "airState.filterMngStates.maxTimeBottom"],
         ["@SUPPORT_BOTTOM_PREFILTER"],
     ],
     [
-        FEAT_FILTER_DUST_LIFE,
+        [FEAT_FILTER_DUST_LIFE],
         ["FilterUseDeodor", "airState.filterMngStates.useTimeDeodor"],
         ["FilterMaxDeodor", "airState.filterMngStates.maxTimeDeodor"],
         ["@SUPPORT_BOTTOM_DUSTCOLLECTION"],
@@ -361,8 +363,11 @@ class AirPurifierStatus(DeviceStatus):
                 filter_def[1], filter_def[2], filter_def[3], support_key
             )
             if status is not None:
-                self._update_feature(filter_def[0], status, False)
-                result[filter_def[0]] = status
+                for index, feat in enumerate(filter_def[0]):
+                    if index >= len(status):
+                        break
+                    self._update_feature(feat, status[index], False)
+                    result[feat] = status[index]
 
         return result
 

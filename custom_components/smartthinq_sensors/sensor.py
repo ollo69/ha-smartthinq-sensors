@@ -29,6 +29,7 @@ from .const import DEFAULT_ICON, DEFAULT_SENSOR, DOMAIN, LGE_DEVICES, LGE_DISCOV
 from .device_helpers import (
     DEVICE_ICONS,
     WASH_DEVICE_TYPES,
+    LGEBaseDevice,
     LGERangeDevice,
     LGERefrigeratorDevice,
     LGETempDevice,
@@ -48,6 +49,8 @@ from .wideq import (
     FEAT_FILTER_BOTTOM_LIFE,
     FEAT_FILTER_DUST_LIFE,
     FEAT_FILTER_MAIN_LIFE,
+    FEAT_FILTER_MAIN_MAX,
+    FEAT_FILTER_MAIN_USE,
     FEAT_FILTER_MID_LIFE,
     FEAT_FILTER_TOP_LIFE,
     FEAT_HALFLOAD,
@@ -112,6 +115,7 @@ class ThinQSensorEntityDescription(SensorEntityDescription):
 
     unit_fn: Callable[[Any], str] | None = None
     value_fn: Callable[[Any], float | str] | None = None
+    feature_attributes: dict[str, str] | None = None
 
 
 WASH_DEV_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
@@ -281,6 +285,10 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        feature_attributes={
+            "use_time": FEAT_FILTER_MAIN_USE,
+            "max_time": FEAT_FILTER_MAIN_MAX,
+        },
     ),
 )
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
@@ -395,6 +403,10 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        feature_attributes={
+            "use_time": FEAT_FILTER_MAIN_USE,
+            "max_time": FEAT_FILTER_MAIN_MAX,
+        },
     ),
     ThinQSensorEntityDescription(
         key=FEAT_FILTER_BOTTOM_LIFE,
@@ -598,7 +610,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         self,
         api: LGEDevice,
         description: ThinQSensorEntityDescription,
-        wrapped_device=None,
+        wrapped_device: LGEBaseDevice | None = None,
     ):
         """Initialize the sensor."""
         super().__init__(api.coordinator)
@@ -650,6 +662,18 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         """Return True if unable to access real state of the entity."""
         return self._api.assumed_state
 
+    @property
+    def extra_state_attributes(self):
+        """Return the optional state attributes."""
+        features = self.entity_description.feature_attributes
+        if not (features and self._api.state):
+            return None
+        data = {}
+        for key, feat in features.items():
+            if val := self._api.state.device_features.get(feat):
+                data[key] = val
+        return data
+
     def _get_sensor_state(self):
         """Get current sensor state"""
         if self._wrap_device and self.entity_description.value_fn is not None:
@@ -689,7 +713,7 @@ class LGEWashDeviceSensor(LGESensor):
     def extra_state_attributes(self):
         """Return the optional state attributes."""
         if not self._is_default:
-            return None
+            return super().extra_state_attributes
 
         data = {
             ATTR_RUN_COMPLETED: self._wrap_device.run_completed,
@@ -720,7 +744,7 @@ class LGERefrigeratorSensor(LGESensor):
     def extra_state_attributes(self):
         """Return the optional state attributes."""
         if not self._is_default:
-            return None
+            return super().extra_state_attributes
 
         data = {
             ATTR_FRIDGE_TEMP: self._wrap_device.temp_fridge,
@@ -751,7 +775,7 @@ class LGERangeSensor(LGESensor):
     def extra_state_attributes(self):
         """Return the optional state attributes."""
         if not self._is_default:
-            return None
+            return super().extra_state_attributes
 
         data = {
             ATTR_OVEN_LOWER_TARGET_TEMP: self._wrap_device.oven_lower_target_temp,
