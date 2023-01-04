@@ -865,7 +865,7 @@ class DeviceStatus:
 
         try:
             return [
-                int(((max_time - min(use_time, max_time) / max_time) * 100)),
+                int(((max_time - min(use_time, max_time)) / max_time) * 100),
                 use_time,
                 max_time,
             ]
