@@ -862,11 +862,13 @@ class DeviceStatus:
         )
         if use_time is None:
             return None
-        if max_time < use_time:
-            return None
 
         try:
-            return [int((use_time / max_time) * 100), use_time, max_time]
+            return [
+                int(((max_time - min(use_time, max_time) / max_time) * 100)),
+                use_time,
+                max_time,
+            ]
         except ValueError:
             return None
 
