@@ -559,7 +559,7 @@ class Device:
             )
 
     async def _get_config_v2(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+        self, ctrl_key, command, *, key=None, value=None, ctrl_path=None
     ):
         """
         Look up a device's V2 configuration for a given value.
