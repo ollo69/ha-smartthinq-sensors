@@ -23,6 +23,7 @@ from .device_helpers import (
     DEVICE_ICONS,
     STATE_LOOKUP,
     WASH_DEVICE_TYPES,
+    LGEBaseDevice,
     LGERangeDevice,
     LGERefrigeratorDevice,
     LGEWashDevice,
@@ -298,13 +299,13 @@ def get_binary_sensor_name(device, ent_key, ent_name) -> str:
 class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Class to monitor binary sensors for LGE device"""
 
-    entity_description = ThinQBinarySensorEntityDescription
+    entity_description: ThinQBinarySensorEntityDescription
 
     def __init__(
         self,
         api: LGEDevice,
         description: ThinQBinarySensorEntityDescription,
-        wrapped_device=None,
+        wrapped_device: LGEBaseDevice | None = None,
     ):
         """Initialize the binary sensor."""
         super().__init__(api.coordinator)

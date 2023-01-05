@@ -429,7 +429,7 @@ class LGEACClimate(LGEClimate):
 class LGERefrigeratorClimate(LGEClimate):
     """Refrigerator climate device."""
 
-    entity_description = ThinQRefClimateEntityDescription
+    entity_description: ThinQRefClimateEntityDescription
 
     def __init__(
         self,

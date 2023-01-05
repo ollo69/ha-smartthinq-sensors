@@ -604,7 +604,7 @@ async def async_setup_entry(
 class LGESensor(CoordinatorEntity, SensorEntity):
     """Class to monitor sensors for LGE device"""
 
-    entity_description = ThinQSensorEntityDescription
+    entity_description: ThinQSensorEntityDescription
 
     def __init__(
         self,
