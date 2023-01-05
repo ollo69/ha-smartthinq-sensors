@@ -71,6 +71,20 @@ class DehumidifierFeatures(StrEnum):
     WATER_TANK_FULL = "water_tank_full"
 
 
+class RangeFeatures(StrEnum):
+    """Features for LG Range devices."""
+
+    COOKTOP_LEFT_FRONT_STATE = "cooktop_left_front_state"
+    COOKTOP_LEFT_REAR_STATE = "cooktop_left_rear_state"
+    COOKTOP_CENTER_STATE = "cooktop_center_state"
+    COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
+    COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
+    OVEN_LOWER_CURRENT_TEMP = "oven_lower_current_temp"
+    OVEN_LOWER_STATE = "oven_lower_state"
+    OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
+    OVEN_UPPER_STATE = "oven_upper_state"
+
+
 class WaterHeaterFeatures(StrEnum):
     """Features for LG Water Heater devices."""
 
@@ -133,14 +147,3 @@ FEAT_ICEPLUS = "ice_plus"
 FEAT_SMARTSAVINGMODE = "smart_saving_mode"
 # FEAT_SMARTSAVING_STATE = "smart_saving_state"
 FEAT_WATERFILTERUSED_MONTH = "water_filter_used_month"
-
-# range device features
-FEAT_COOKTOP_LEFT_FRONT_STATE = "cooktop_left_front_state"
-FEAT_COOKTOP_LEFT_REAR_STATE = "cooktop_left_rear_state"
-FEAT_COOKTOP_CENTER_STATE = "cooktop_center_state"
-FEAT_COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
-FEAT_COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
-FEAT_OVEN_LOWER_CURRENT_TEMP = "oven_lower_current_temp"
-FEAT_OVEN_LOWER_STATE = "oven_lower_state"
-FEAT_OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
-FEAT_OVEN_UPPER_STATE = "oven_upper_state"
