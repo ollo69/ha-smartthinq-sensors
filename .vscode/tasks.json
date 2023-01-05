@@ -11,12 +11,8 @@
             "label": "Run Home Assistant on port 9123 (with emulation)",
             "type": "shell",
             "command": "container start",
-            "problemMatcher": []
-			"options": {
-                "env": {
-                    "thinq2_emulation": "ENABLED"
-                }
-            }			
+            "problemMatcher": [],
+            "options": {"env": {"thinq2_emulation": "ENABLED"}}
         },
         {
             "label": "Run Home Assistant configuration against /config",
