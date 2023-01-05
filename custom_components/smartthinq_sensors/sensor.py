@@ -47,12 +47,20 @@ from .wideq import (
     FEAT_ENERGY_CURRENT,
     FEAT_ERROR_MSG,
     FEAT_FILTER_BOTTOM_LIFE,
+    FEAT_FILTER_BOTTOM_MAX,
+    FEAT_FILTER_BOTTOM_USE,
     FEAT_FILTER_DUST_LIFE,
+    FEAT_FILTER_DUST_MAX,
+    FEAT_FILTER_DUST_USE,
     FEAT_FILTER_MAIN_LIFE,
     FEAT_FILTER_MAIN_MAX,
     FEAT_FILTER_MAIN_USE,
     FEAT_FILTER_MID_LIFE,
+    FEAT_FILTER_MID_MAX,
+    FEAT_FILTER_MID_USE,
     FEAT_FILTER_TOP_LIFE,
+    FEAT_FILTER_TOP_MAX,
+    FEAT_FILTER_TOP_USE,
     FEAT_HALFLOAD,
     FEAT_HOT_WATER_TEMP,
     FEAT_HUMIDITY,
@@ -414,6 +422,10 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        feature_attributes={
+            "use_time": FEAT_FILTER_BOTTOM_USE,
+            "max_time": FEAT_FILTER_BOTTOM_MAX,
+        },
     ),
     ThinQSensorEntityDescription(
         key=FEAT_FILTER_DUST_LIFE,
@@ -421,6 +433,10 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        feature_attributes={
+            "use_time": FEAT_FILTER_DUST_USE,
+            "max_time": FEAT_FILTER_DUST_MAX,
+        },
     ),
     ThinQSensorEntityDescription(
         key=FEAT_FILTER_MID_LIFE,
@@ -428,6 +444,10 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        feature_attributes={
+            "use_time": FEAT_FILTER_MID_USE,
+            "max_time": FEAT_FILTER_MID_MAX,
+        },
     ),
     ThinQSensorEntityDescription(
         key=FEAT_FILTER_TOP_LIFE,
@@ -435,6 +455,10 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
+        feature_attributes={
+            "use_time": FEAT_FILTER_TOP_USE,
+            "max_time": FEAT_FILTER_TOP_MAX,
+        },
     ),
 )
 DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
