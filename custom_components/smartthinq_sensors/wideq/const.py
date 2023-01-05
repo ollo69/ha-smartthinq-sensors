@@ -22,7 +22,7 @@ UNIT_TEMP_FAHRENHEIT = "fahrenheit"
 
 
 class AirConditionerFeatures(StrEnum):
-    """Features for LG AC devices."""
+    """Features for LG Air Conditioner devices."""
 
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
@@ -39,17 +39,34 @@ class AirConditionerFeatures(StrEnum):
     WATER_OUT_TEMP = "water_out_temperature"
 
 
+class AirPurifierFeatures(StrEnum):
+    """Features for LG Air Purifier devices."""
+
+    FILTER_BOTTOM_LIFE = "filter_bottom_life"
+    FILTER_BOTTOM_MAX = "filter_bottom_max"
+    FILTER_BOTTOM_USE = "filter_bottom_use"
+    FILTER_DUST_LIFE = "filter_dust_life"
+    FILTER_DUST_MAX = "filter_dust_max"
+    FILTER_DUST_USE = "filter_dust_use"
+    FILTER_MAIN_LIFE = "filter_main_life"
+    FILTER_MAIN_MAX = "filter_main_max"
+    FILTER_MAIN_USE = "filter_main_use"
+    FILTER_MID_LIFE = "filter_mid_life"
+    FILTER_MID_MAX = "filter_mid_max"
+    FILTER_MID_USE = "filter_mid_use"
+    FILTER_TOP_LIFE = "filter_top_life"
+    FILTER_TOP_MAX = "filter_top_max"
+    FILTER_TOP_USE = "filter_top_use"
+    HUMIDITY = "humidity"
+    PM1 = "pm1"
+    PM10 = "pm10"
+    PM25 = "pm25"
+
+
 # ac devices features
 FEAT_ENERGY_CURRENT = "energy_current"
 FEAT_HOT_WATER_TEMP = "hot_water_temperature"
 FEAT_HUMIDITY = "humidity"
-FEAT_LIGHTING_DISPLAY = "lighting_display"
-FEAT_MODE_AIRCLEAN = "mode_airclean"
-FEAT_MODE_AWHP_SILENT = "mode_awhp_silent"
-FEAT_MODE_JET = "mode_jet"
-FEAT_ROOM_TEMP = "room_temperature"
-FEAT_WATER_IN_TEMP = "water_in_temperature"
-FEAT_WATER_OUT_TEMP = "water_out_temperature"
 
 # wash devices features
 FEAT_DRYLEVEL = "dry_level"
@@ -118,26 +135,6 @@ FEAT_OVEN_LOWER_STATE = "oven_lower_state"
 FEAT_OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
 FEAT_OVEN_UPPER_STATE = "oven_upper_state"
 
-# air purifier and ac device filters features
-FEAT_FILTER_BOTTOM_LIFE = "filter_bottom_life"
-FEAT_FILTER_BOTTOM_MAX = "filter_bottom_max"
-FEAT_FILTER_BOTTOM_USE = "filter_bottom_use"
-FEAT_FILTER_DUST_LIFE = "filter_dust_life"
-FEAT_FILTER_DUST_MAX = "filter_dust_max"
-FEAT_FILTER_DUST_USE = "filter_dust_use"
-FEAT_FILTER_MAIN_LIFE = "filter_main_life"
-FEAT_FILTER_MAIN_MAX = "filter_main_max"
-FEAT_FILTER_MAIN_USE = "filter_main_use"
-FEAT_FILTER_MID_LIFE = "filter_mid_life"
-FEAT_FILTER_MID_MAX = "filter_mid_max"
-FEAT_FILTER_MID_USE = "filter_mid_use"
-FEAT_FILTER_TOP_LIFE = "filter_top_life"
-FEAT_FILTER_TOP_MAX = "filter_top_max"
-FEAT_FILTER_TOP_USE = "filter_top_use"
-
 # air purifier and dehumidifier device features
-FEAT_PM1 = "pm1"
-FEAT_PM10 = "pm10"
-FEAT_PM25 = "pm25"
 FEAT_TARGET_HUMIDITY = "target_humidity"
 FEAT_WATER_TANK_FULL = "water_tank_full"

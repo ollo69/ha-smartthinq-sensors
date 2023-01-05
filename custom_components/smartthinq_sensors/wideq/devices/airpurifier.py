@@ -2,29 +2,8 @@
 from __future__ import annotations
 
 from enum import Enum
-import logging
 
-from ..const import (
-    FEAT_FILTER_BOTTOM_LIFE,
-    FEAT_FILTER_BOTTOM_MAX,
-    FEAT_FILTER_BOTTOM_USE,
-    FEAT_FILTER_DUST_LIFE,
-    FEAT_FILTER_DUST_MAX,
-    FEAT_FILTER_DUST_USE,
-    FEAT_FILTER_MAIN_LIFE,
-    FEAT_FILTER_MAIN_MAX,
-    FEAT_FILTER_MAIN_USE,
-    FEAT_FILTER_MID_LIFE,
-    FEAT_FILTER_MID_MAX,
-    FEAT_FILTER_MID_USE,
-    FEAT_FILTER_TOP_LIFE,
-    FEAT_FILTER_TOP_MAX,
-    FEAT_FILTER_TOP_USE,
-    FEAT_HUMIDITY,
-    FEAT_PM1,
-    FEAT_PM10,
-    FEAT_PM25,
-)
+from ..const import AirPurifierFeatures
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
@@ -51,39 +30,56 @@ CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 
 FILTER_TYPES = [
     [
-        [FEAT_FILTER_MAIN_LIFE, FEAT_FILTER_MAIN_USE, FEAT_FILTER_MAIN_MAX],
+        [
+            AirPurifierFeatures.FILTER_MAIN_LIFE,
+            AirPurifierFeatures.FILTER_MAIN_USE,
+            AirPurifierFeatures.FILTER_MAIN_MAX,
+        ],
         ["FilterUse", "airState.filterMngStates.useTime"],
         ["FilterMax", "airState.filterMngStates.maxTime"],
         None,
     ],
     [
-        [FEAT_FILTER_TOP_LIFE, FEAT_FILTER_TOP_USE, FEAT_FILTER_TOP_MAX],
+        [
+            AirPurifierFeatures.FILTER_TOP_LIFE,
+            AirPurifierFeatures.FILTER_TOP_USE,
+            AirPurifierFeatures.FILTER_TOP_MAX,
+        ],
         ["FilterUseTop", "airState.filterMngStates.useTimeTop"],
         ["FilterMaxTop", "airState.filterMngStates.maxTimeTop"],
         ["@SUPPORT_TOP_HUMIDIFILTER", "@SUPPORT_D_PLUS_TOP"],
     ],
     [
-        [FEAT_FILTER_MID_LIFE, FEAT_FILTER_MID_USE, FEAT_FILTER_MID_MAX],
+        [
+            AirPurifierFeatures.FILTER_MID_LIFE,
+            AirPurifierFeatures.FILTER_MID_USE,
+            AirPurifierFeatures.FILTER_MID_MAX,
+        ],
         ["FilterUseMiddle", "airState.filterMngStates.useTimeMiddle"],
         ["FilterMaxMiddle", "airState.filterMngStates.maxTimeMiddle"],
         ["@SUPPORT_MID_HUMIDIFILTER"],
     ],
     [
-        [FEAT_FILTER_BOTTOM_LIFE, FEAT_FILTER_BOTTOM_USE, FEAT_FILTER_BOTTOM_MAX],
+        [
+            AirPurifierFeatures.FILTER_BOTTOM_LIFE,
+            AirPurifierFeatures.FILTER_BOTTOM_USE,
+            AirPurifierFeatures.FILTER_BOTTOM_MAX,
+        ],
         ["FilterUseBottom", "airState.filterMngStates.useTimeBottom"],
         ["FilterMaxBottom", "airState.filterMngStates.maxTimeBottom"],
         ["@SUPPORT_BOTTOM_PREFILTER"],
     ],
     [
-        [FEAT_FILTER_DUST_LIFE, FEAT_FILTER_DUST_USE, FEAT_FILTER_DUST_MAX],
+        [
+            AirPurifierFeatures.FILTER_DUST_LIFE,
+            AirPurifierFeatures.FILTER_DUST_USE,
+            AirPurifierFeatures.FILTER_DUST_MAX,
+        ],
         ["FilterUseDeodor", "airState.filterMngStates.useTimeDeodor"],
         ["FilterMaxDeodor", "airState.filterMngStates.maxTimeDeodor"],
         ["@SUPPORT_BOTTOM_DUSTCOLLECTION"],
     ],
 ]
-
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class AirPurifierOp(Enum):
@@ -323,7 +319,7 @@ class AirPurifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_HUMIDITY)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
-        return self._update_feature(FEAT_HUMIDITY, value, False)
+        return self._update_feature(AirPurifierFeatures.HUMIDITY, value, False)
 
     @property
     def pm1(self):
@@ -334,7 +330,7 @@ class AirPurifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_PM1)
         if (value := self.lookup_range(key)) is None:
             return None
-        return self._update_feature(FEAT_PM1, value, False)
+        return self._update_feature(AirPurifierFeatures.PM1, value, False)
 
     @property
     def pm10(self):
@@ -345,7 +341,7 @@ class AirPurifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_PM10)
         if (value := self.lookup_range(key)) is None:
             return None
-        return self._update_feature(FEAT_PM10, value, False)
+        return self._update_feature(AirPurifierFeatures.PM10, value, False)
 
     @property
     def pm25(self):
@@ -356,7 +352,7 @@ class AirPurifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_PM25)
         if (value := self.lookup_range(key)) is None:
             return None
-        return self._update_feature(FEAT_PM25, value, False)
+        return self._update_feature(AirPurifierFeatures.PM25, value, False)
 
     @property
     def filters_life(self):
