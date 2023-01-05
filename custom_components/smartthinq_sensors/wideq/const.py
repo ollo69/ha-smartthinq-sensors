@@ -1,4 +1,5 @@
 """LG SmartThinQ constants."""
+
 from .core_enum import StrEnum
 
 # default core settings
@@ -74,9 +75,9 @@ class DehumidifierFeatures(StrEnum):
 class RangeFeatures(StrEnum):
     """Features for LG Range devices."""
 
+    COOKTOP_CENTER_STATE = "cooktop_center_state"
     COOKTOP_LEFT_FRONT_STATE = "cooktop_left_front_state"
     COOKTOP_LEFT_REAR_STATE = "cooktop_left_rear_state"
-    COOKTOP_CENTER_STATE = "cooktop_center_state"
     COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
     COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
     OVEN_LOWER_CURRENT_TEMP = "oven_lower_current_temp"
@@ -97,55 +98,54 @@ class RefrigeratorFeatures(StrEnum):
     WATERFILTERUSED_MONTH = "water_filter_used_month"
 
 
+class WashDeviceFeatures(StrEnum):
+    """Features for LG Wash devices."""
+
+    ANTICREASE = "anti_crease"
+    AUTODOOR = "auto_door"
+    CHILDLOCK = "child_lock"
+    CREASECARE = "crease_care"
+    DAMPDRYBEEP = "damp_dry_beep"
+    DELAYSTART = "delay_start"
+    DETERGENT = "detergent"
+    DOORCLOSE = "door_close"
+    DOORLOCK = "door_lock"
+    DOOROPEN = "door_open"
+    DRYLEVEL = "dry_level"
+    DUALZONE = "dual_zone"
+    ECOHYBRID = "eco_hybrid"
+    ENERGYSAVER = "energy_saver"
+    ERROR_MSG = "error_message"
+    EXTRADRY = "extra_dry"
+    HALFLOAD = "half_load"
+    HANDIRON = "hand_iron"
+    HIGHTEMP = "high_temp"
+    MEDICRINSE = "medic_rinse"
+    NIGHTDRY = "night_dry"
+    PREWASH = "pre_wash"
+    PRE_STATE = "pre_state"
+    PROCESS_STATE = "process_state"
+    REMOTESTART = "remote_start"
+    RESERVATION = "reservation"
+    RINSEMODE = "rinse_mode"
+    RINSEREFILL = "rinse_refill"
+    RUN_STATE = "run_state"
+    SALTREFILL = "salt_refill"
+    SELFCLEAN = "self_clean"
+    SOFTENER = "softener"
+    SPINSPEED = "spin_speed"
+    STANDBY = "standby"
+    STEAM = "steam"
+    STEAMSOFTENER = "steam_softener"
+    TEMPCONTROL = "temp_control"
+    TIMEDRY = "time_dry"
+    TUBCLEAN_COUNT = "tubclean_count"
+    TURBOWASH = "turbo_wash"
+    WATERTEMP = "water_temp"
+
+
 class WaterHeaterFeatures(StrEnum):
     """Features for LG Water Heater devices."""
 
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
-
-
-# wash devices features
-FEAT_DRYLEVEL = "dry_level"
-FEAT_ERROR_MSG = "error_message"
-FEAT_PRE_STATE = "pre_state"
-FEAT_PROCESS_STATE = "process_state"
-FEAT_RINSEMODE = "rinse_mode"
-FEAT_RUN_STATE = "run_state"
-FEAT_SPINSPEED = "spin_speed"
-FEAT_TEMPCONTROL = "temp_control"
-FEAT_TIMEDRY = "time_dry"
-FEAT_TUBCLEAN_COUNT = "tubclean_count"
-FEAT_WATERTEMP = "water_temp"
-
-FEAT_AUTODOOR = "auto_door"
-FEAT_CHILDLOCK = "child_lock"
-FEAT_CREASECARE = "crease_care"
-FEAT_DELAYSTART = "delay_start"
-FEAT_DETERGENT = "detergent"
-FEAT_DOORCLOSE = "door_close"
-FEAT_DOORLOCK = "door_lock"
-FEAT_DOOROPEN = "door_open"
-FEAT_DUALZONE = "dual_zone"
-FEAT_ENERGYSAVER = "energy_saver"
-FEAT_EXTRADRY = "extra_dry"
-FEAT_HALFLOAD = "half_load"
-FEAT_HIGHTEMP = "high_temp"
-FEAT_MEDICRINSE = "medic_rinse"
-FEAT_NIGHTDRY = "night_dry"
-FEAT_PREWASH = "pre_wash"
-FEAT_REMOTESTART = "remote_start"
-FEAT_RINSEREFILL = "rinse_refill"
-FEAT_SALTREFILL = "salt_refill"
-FEAT_SOFTENER = "softener"
-FEAT_STANDBY = "standby"
-FEAT_STEAM = "steam"
-FEAT_STEAMSOFTENER = "steam_softener"
-FEAT_TURBOWASH = "turbo_wash"
-
-# SPECIALS GTI
-FEAT_ANTICREASE = "anti_crease"
-FEAT_DAMPDRYBEEP = "damp_dry_beep"
-FEAT_ECOHYBRID = "eco_hybrid"
-FEAT_HANDIRON = "hand_iron"
-FEAT_RESERVATION = "reservation"
-FEAT_SELFCLEAN = "self_clean"

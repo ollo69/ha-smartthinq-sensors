@@ -3,25 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from ..const import (
-    FEAT_AUTODOOR,
-    FEAT_CHILDLOCK,
-    FEAT_DELAYSTART,
-    FEAT_DOOROPEN,
-    FEAT_DUALZONE,
-    FEAT_ENERGYSAVER,
-    FEAT_ERROR_MSG,
-    FEAT_EXTRADRY,
-    FEAT_HALFLOAD,
-    FEAT_HIGHTEMP,
-    FEAT_NIGHTDRY,
-    FEAT_PROCESS_STATE,
-    FEAT_RINSEREFILL,
-    FEAT_RUN_STATE,
-    FEAT_SALTREFILL,
-    FEAT_TUBCLEAN_COUNT,
-    STATE_OPTIONITEM_NONE,
-)
+from ..const import STATE_OPTIONITEM_NONE, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
@@ -40,17 +22,17 @@ STATE_DISHWASHER_ERROR_NO_ERROR = [
 ]
 
 BIT_FEATURES = {
-    FEAT_AUTODOOR: ["AutoDoor", "autoDoor"],
-    FEAT_CHILDLOCK: ["ChildLock", "childLock"],
-    FEAT_DELAYSTART: ["DelayStart", "delayStart"],
-    FEAT_DOOROPEN: ["Door", "door"],
-    FEAT_DUALZONE: ["DualZone", "dualZone"],
-    FEAT_ENERGYSAVER: ["EnergySaver", "energySaver"],
-    FEAT_EXTRADRY: ["ExtraDry", "extraDry"],
-    FEAT_HIGHTEMP: ["HighTemp", "highTemp"],
-    FEAT_NIGHTDRY: ["NightDry", "nightDry"],
-    FEAT_RINSEREFILL: ["RinseRefill", "rinseRefill"],
-    FEAT_SALTREFILL: ["SaltRefill", "saltRefill"],
+    WashDeviceFeatures.AUTODOOR: ["AutoDoor", "autoDoor"],
+    WashDeviceFeatures.CHILDLOCK: ["ChildLock", "childLock"],
+    WashDeviceFeatures.DELAYSTART: ["DelayStart", "delayStart"],
+    WashDeviceFeatures.DOOROPEN: ["Door", "door"],
+    WashDeviceFeatures.DUALZONE: ["DualZone", "dualZone"],
+    WashDeviceFeatures.ENERGYSAVER: ["EnergySaver", "energySaver"],
+    WashDeviceFeatures.EXTRADRY: ["ExtraDry", "extraDry"],
+    WashDeviceFeatures.HIGHTEMP: ["HighTemp", "highTemp"],
+    WashDeviceFeatures.NIGHTDRY: ["NightDry", "nightDry"],
+    WashDeviceFeatures.RINSEREFILL: ["RinseRefill", "rinseRefill"],
+    WashDeviceFeatures.SALTREFILL: ["SaltRefill", "saltRefill"],
 }
 
 _LOGGER = logging.getLogger(__name__)
@@ -220,13 +202,13 @@ class DishWasherStatus(DeviceStatus):
         run_state = self._get_run_state()
         if run_state == STATE_DISHWASHER_POWER_OFF:
             run_state = STATE_OPTIONITEM_NONE
-        return self._update_feature(FEAT_RUN_STATE, run_state)
+        return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
     @property
     def process_state(self):
         """Return current process state."""
         process = self._get_process()
-        return self._update_feature(FEAT_PROCESS_STATE, process)
+        return self._update_feature(WashDeviceFeatures.PROCESS_STATE, process)
 
     @property
     def halfload_state(self):
@@ -237,7 +219,7 @@ class DishWasherStatus(DeviceStatus):
             half_load = self.lookup_bit_enum("HalfLoad")
         if not half_load:
             half_load = STATE_OPTIONITEM_NONE
-        return self._update_feature(FEAT_HALFLOAD, half_load)
+        return self._update_feature(WashDeviceFeatures.HALFLOAD, half_load)
 
     @property
     def error_msg(self):
@@ -246,7 +228,7 @@ class DishWasherStatus(DeviceStatus):
             error = STATE_OPTIONITEM_NONE
         else:
             error = self._get_error()
-        return self._update_feature(FEAT_ERROR_MSG, error)
+        return self._update_feature(WashDeviceFeatures.ERROR_MSG, error)
 
     @property
     def tubclean_count(self):
@@ -257,7 +239,7 @@ class DishWasherStatus(DeviceStatus):
             result = self._data.get("TclCount")
         if result is None:
             result = "N/A"
-        return self._update_feature(FEAT_TUBCLEAN_COUNT, result, False)
+        return self._update_feature(WashDeviceFeatures.TUBCLEAN_COUNT, result, False)
 
     def _update_bit_features(self):
         """Update features related to bit status."""
