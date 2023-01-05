@@ -47,7 +47,7 @@ from .wideq import (
     FEAT_SALTREFILL,
     FEAT_SOFTENER,
     FEAT_STANDBY,
-    FEAT_WATER_TANK_FULL,
+    DehumidifierFeatures,
     DeviceType,
 )
 
@@ -196,7 +196,7 @@ RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
 )
 DEHUMIDIFIER_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
-        key=FEAT_WATER_TANK_FULL,
+        key=DehumidifierFeatures.WATER_TANK_FULL,
         name="Water Tank Full",
     ),
 )

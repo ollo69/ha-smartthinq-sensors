@@ -63,10 +63,20 @@ class AirPurifierFeatures(StrEnum):
     PM25 = "pm25"
 
 
-# ac devices features
-FEAT_ENERGY_CURRENT = "energy_current"
-FEAT_HOT_WATER_TEMP = "hot_water_temperature"
-FEAT_HUMIDITY = "humidity"
+class DehumidifierFeatures(StrEnum):
+    """Features for LG Dehumidifier devices."""
+
+    HUMIDITY = "humidity"
+    TARGET_HUMIDITY = "target_humidity"
+    WATER_TANK_FULL = "water_tank_full"
+
+
+class WaterHeaterFeatures(StrEnum):
+    """Features for LG Water Heater devices."""
+
+    ENERGY_CURRENT = "energy_current"
+    HOT_WATER_TEMP = "hot_water_temperature"
+
 
 # wash devices features
 FEAT_DRYLEVEL = "dry_level"
@@ -134,7 +144,3 @@ FEAT_OVEN_LOWER_CURRENT_TEMP = "oven_lower_current_temp"
 FEAT_OVEN_LOWER_STATE = "oven_lower_state"
 FEAT_OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
 FEAT_OVEN_UPPER_STATE = "oven_upper_state"
-
-# air purifier and dehumidifier device features
-FEAT_TARGET_HUMIDITY = "target_humidity"
-FEAT_WATER_TANK_FULL = "water_tank_full"

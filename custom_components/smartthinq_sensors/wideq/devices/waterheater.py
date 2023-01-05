@@ -3,12 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ..const import (
-    FEAT_ENERGY_CURRENT,
-    FEAT_HOT_WATER_TEMP,
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-)
+from ..const import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, WaterHeaterFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
@@ -296,7 +291,7 @@ class WaterHeaterStatus(DeviceStatus):
         """Return current temperature."""
         key = self._get_state_key(STATE_CURRENT_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_HOT_WATER_TEMP, value, False)
+        return self._update_feature(WaterHeaterFeatures.HOT_WATER_TEMP, value, False)
 
     @property
     def target_temp(self):
@@ -314,7 +309,7 @@ class WaterHeaterStatus(DeviceStatus):
             new_value = self.to_int_or_none(value)
             if new_value and new_value <= 50:
                 value = 5.0
-        return self._update_feature(FEAT_ENERGY_CURRENT, value, False)
+        return self._update_feature(WaterHeaterFeatures.ENERGY_CURRENT, value, False)
 
     def _update_features(self):
         _ = [

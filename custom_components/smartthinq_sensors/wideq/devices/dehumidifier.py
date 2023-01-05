@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from enum import Enum
-import logging
 
-from ..const import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, FEAT_WATER_TANK_FULL
+from ..const import DehumidifierFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..device import Device, DeviceStatus
@@ -42,8 +41,6 @@ DEFAULT_MAX_HUM = 70
 DEFAULT_STEP_HUM = 5
 
 ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class DHumOp(Enum):
@@ -329,7 +326,7 @@ class DeHumidifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_CURRENT_HUM)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
-        return self._update_feature(FEAT_HUMIDITY, value, False)
+        return self._update_feature(DehumidifierFeatures.HUMIDITY, value, False)
 
     @property
     def target_humidity(self):
@@ -337,7 +334,7 @@ class DeHumidifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_TARGET_HUM)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
-        return self._update_feature(FEAT_TARGET_HUMIDITY, value, False)
+        return self._update_feature(DehumidifierFeatures.TARGET_HUMIDITY, value, False)
 
     @property
     def water_tank_full(self):
@@ -345,7 +342,7 @@ class DeHumidifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_TANK_LIGHT)
         if (value := self.lookup_enum(key)) is None:
             return None
-        return self._update_feature(FEAT_WATER_TANK_FULL, value)
+        return self._update_feature(DehumidifierFeatures.WATER_TANK_FULL, value)
 
     def _update_features(self):
         _ = [

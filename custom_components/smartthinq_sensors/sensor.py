@@ -44,11 +44,8 @@ from .wideq import (
     FEAT_COOKTOP_RIGHT_FRONT_STATE,
     FEAT_COOKTOP_RIGHT_REAR_STATE,
     FEAT_DRYLEVEL,
-    FEAT_ENERGY_CURRENT,
     FEAT_ERROR_MSG,
     FEAT_HALFLOAD,
-    FEAT_HOT_WATER_TEMP,
-    FEAT_HUMIDITY,
     FEAT_OVEN_LOWER_CURRENT_TEMP,
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_CURRENT_TEMP,
@@ -58,14 +55,15 @@ from .wideq import (
     FEAT_RINSEMODE,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
-    FEAT_TARGET_HUMIDITY,
     FEAT_TEMPCONTROL,
     FEAT_TUBCLEAN_COUNT,
     FEAT_WATERTEMP,
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     AirPurifierFeatures,
+    DehumidifierFeatures,
     DeviceType,
+    WaterHeaterFeatures,
 )
 
 # service definition
@@ -444,14 +442,14 @@ AIR_PURIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
-        key=FEAT_HUMIDITY,
+        key=DehumidifierFeatures.HUMIDITY,
         name="Current Humidity",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_TARGET_HUMIDITY,
+        key=DehumidifierFeatures.TARGET_HUMIDITY,
         name="Target Humidity",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.HUMIDITY,
@@ -461,7 +459,7 @@ DEHUMIDIFIER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 WATER_HEATER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
-        key=FEAT_HOT_WATER_TEMP,
+        key=WaterHeaterFeatures.HOT_WATER_TEMP,
         name="Hot water temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -469,7 +467,7 @@ WATER_HEATER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_ENERGY_CURRENT,
+        key=WaterHeaterFeatures.ENERGY_CURRENT,
         name="Energy current",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,

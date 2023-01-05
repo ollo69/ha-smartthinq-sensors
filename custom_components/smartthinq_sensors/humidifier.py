@@ -20,7 +20,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import FEAT_HUMIDITY, FEAT_TARGET_HUMIDITY, DeviceType
+from .wideq import DehumidifierFeatures, DeviceType
 from .wideq.devices.dehumidifier import DeHumidifierDevice
 
 ATTR_CURRENT_HUMIDITY = "current_humidity"
@@ -119,7 +119,9 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     def extra_state_attributes(self):
         """Return the optional state attributes with device specific additions."""
         state = {}
-        if humidity := self._api.state.device_features.get(FEAT_HUMIDITY):
+        if humidity := self._api.state.device_features.get(
+            DehumidifierFeatures.HUMIDITY
+        ):
             state[ATTR_CURRENT_HUMIDITY] = humidity
         if fan_modes := self._device.fan_speeds:
             state[ATTR_FAN_MODES] = fan_modes
@@ -155,7 +157,7 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     @property
     def target_humidity(self) -> int | None:
         """Return the humidity we try to reach."""
-        return self._api.state.device_features.get(FEAT_TARGET_HUMIDITY)
+        return self._api.state.device_features.get(DehumidifierFeatures.TARGET_HUMIDITY)
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
