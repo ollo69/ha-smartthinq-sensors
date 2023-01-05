@@ -27,13 +27,10 @@ from .device_helpers import (
     get_multiple_devices_types,
 )
 from .wideq import (
-    FEAT_ECOFRIENDLY,
-    FEAT_EXPRESSFRIDGE,
-    FEAT_EXPRESSMODE,
-    FEAT_ICEPLUS,
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     DeviceType,
+    RefrigeratorFeatures,
 )
 
 # general sensor attributes
@@ -63,7 +60,7 @@ WASH_DEV_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
 )
 REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
-        key=FEAT_ECOFRIENDLY,
+        key=RefrigeratorFeatures.ECOFRIENDLY,
         name="Eco friendly",
         icon="mdi:gauge-empty",
         turn_off_fn=lambda x: x.device.set_eco_friendly(False),
@@ -71,7 +68,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_EXPRESSFRIDGE,
+        key=RefrigeratorFeatures.EXPRESSFRIDGE,
         name="Express fridge",
         icon="mdi:coolant-temperature",
         turn_off_fn=lambda x: x.device.set_express_fridge(False),
@@ -79,7 +76,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_EXPRESSMODE,
+        key=RefrigeratorFeatures.EXPRESSMODE,
         name="Express mode",
         icon="mdi:snowflake",
         turn_off_fn=lambda x: x.device.set_express_mode(False),
@@ -87,7 +84,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_ICEPLUS,
+        key=RefrigeratorFeatures.ICEPLUS,
         name="Ice plus",
         icon="mdi:snowflake",
         turn_off_fn=lambda x: x.device.set_ice_plus(False),

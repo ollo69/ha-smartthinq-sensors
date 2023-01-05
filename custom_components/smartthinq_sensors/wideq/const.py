@@ -85,6 +85,18 @@ class RangeFeatures(StrEnum):
     OVEN_UPPER_STATE = "oven_upper_state"
 
 
+class RefrigeratorFeatures(StrEnum):
+    """Features for LG Refrigerator devices."""
+
+    ECOFRIENDLY = "eco_friendly"
+    EXPRESSMODE = "express_mode"
+    EXPRESSFRIDGE = "express_fridge"
+    FRESHAIRFILTER = "fresh_air_filter"
+    ICEPLUS = "ice_plus"
+    SMARTSAVINGMODE = "smart_saving_mode"
+    WATERFILTERUSED_MONTH = "water_filter_used_month"
+
+
 class WaterHeaterFeatures(StrEnum):
     """Features for LG Water Heater devices."""
 
@@ -137,13 +149,3 @@ FEAT_ECOHYBRID = "eco_hybrid"
 FEAT_HANDIRON = "hand_iron"
 FEAT_RESERVATION = "reservation"
 FEAT_SELFCLEAN = "self_clean"
-
-# refrigerator device features
-FEAT_ECOFRIENDLY = "eco_friendly"
-FEAT_EXPRESSMODE = "express_mode"
-FEAT_EXPRESSFRIDGE = "express_fridge"
-FEAT_FRESHAIRFILTER = "fresh_air_filter"
-FEAT_ICEPLUS = "ice_plus"
-FEAT_SMARTSAVINGMODE = "smart_saving_mode"
-# FEAT_SMARTSAVING_STATE = "smart_saving_state"
-FEAT_WATERFILTERUSED_MONTH = "water_filter_used_month"
