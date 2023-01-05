@@ -4,23 +4,7 @@ from __future__ import annotations
 from enum import Enum
 import logging
 
-from ..const import (
-    FEAT_ENERGY_CURRENT,
-    FEAT_FILTER_MAIN_LIFE,
-    FEAT_FILTER_MAIN_MAX,
-    FEAT_FILTER_MAIN_USE,
-    FEAT_HOT_WATER_TEMP,
-    FEAT_HUMIDITY,
-    FEAT_LIGHTING_DISPLAY,
-    FEAT_MODE_AIRCLEAN,
-    FEAT_MODE_AWHP_SILENT,
-    FEAT_MODE_JET,
-    FEAT_ROOM_TEMP,
-    FEAT_WATER_IN_TEMP,
-    FEAT_WATER_OUT_TEMP,
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-)
+from ..const import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, AirConditionerFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
@@ -80,7 +64,11 @@ STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayContr
 
 FILTER_TYPES = [
     [
-        [FEAT_FILTER_MAIN_LIFE, FEAT_FILTER_MAIN_USE, FEAT_FILTER_MAIN_MAX],
+        [
+            AirConditionerFeatures.FILTER_MAIN_LIFE,
+            AirConditionerFeatures.FILTER_MAIN_USE,
+            AirConditionerFeatures.FILTER_MAIN_MAX,
+        ],
         [STATE_FILTER_V1_USE, "airState.filterMngStates.useTime"],
         [STATE_FILTER_V1_MAX, "airState.filterMngStates.maxTime"],
         None,
@@ -1072,7 +1060,7 @@ class AirConditionerStatus(DeviceStatus):
         """Return current temperature."""
         key = self._get_state_key(STATE_CURRENT_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_ROOM_TEMP, value, False)
+        return self._update_feature(AirConditionerFeatures.ROOM_TEMP, value, False)
 
     @property
     def target_temp(self):
@@ -1103,7 +1091,7 @@ class AirConditionerStatus(DeviceStatus):
             new_value = self.to_int_or_none(value)
             if new_value and new_value <= 50:
                 value = 5.0
-        return self._update_feature(FEAT_ENERGY_CURRENT, value, False)
+        return self._update_feature(AirConditionerFeatures.ENERGY_CURRENT, value, False)
 
     @property
     def humidity(self):
@@ -1113,7 +1101,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         if value >= 100:
             value = value / 10
-        return self._update_feature(FEAT_HUMIDITY, value, False)
+        return self._update_feature(AirConditionerFeatures.HUMIDITY, value, False)
 
     @property
     def mode_airclean(self):
@@ -1124,7 +1112,7 @@ class AirConditionerStatus(DeviceStatus):
         if (value := self.lookup_enum(key, True)) is None:
             return None
         status = value == MODE_AIRCLEAN_ON
-        return self._update_feature(FEAT_MODE_AIRCLEAN, status, False)
+        return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
     @property
     def mode_jet(self):
@@ -1138,7 +1126,7 @@ class AirConditionerStatus(DeviceStatus):
             status = JetMode(value) != JetMode.OFF
         except ValueError:
             status = False
-        return self._update_feature(FEAT_MODE_JET, status, False)
+        return self._update_feature(AirConditionerFeatures.MODE_JET, status, False)
 
     @property
     def lighting_display(self):
@@ -1147,7 +1135,9 @@ class AirConditionerStatus(DeviceStatus):
         if (value := self.to_int_or_none(self._data.get(key))) is None:
             return None
         return self._update_feature(
-            FEAT_LIGHTING_DISPLAY, str(value) == LIGHTING_DISPLAY_ON, False
+            AirConditionerFeatures.LIGHTING_DISPLAY,
+            str(value) == LIGHTING_DISPLAY_ON,
+            False,
         )
 
     @property
@@ -1173,7 +1163,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         key = self._get_state_key(STATE_WATER_IN_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_WATER_IN_TEMP, value, False)
+        return self._update_feature(AirConditionerFeatures.WATER_IN_TEMP, value, False)
 
     @property
     def water_out_current_temp(self):
@@ -1182,7 +1172,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         key = self._get_state_key(STATE_WATER_OUT_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_WATER_OUT_TEMP, value, False)
+        return self._update_feature(AirConditionerFeatures.WATER_OUT_TEMP, value, False)
 
     @property
     def water_target_min_temp(self):
@@ -1209,7 +1199,9 @@ class AirConditionerStatus(DeviceStatus):
         if (value := self.lookup_enum(key, True)) is None:
             return None
         status = value == MODE_ON
-        return self._update_feature(FEAT_MODE_AWHP_SILENT, status, False)
+        return self._update_feature(
+            AirConditionerFeatures.MODE_AWHP_SILENT, status, False
+        )
 
     @property
     def hot_water_current_temp(self):
@@ -1218,7 +1210,7 @@ class AirConditionerStatus(DeviceStatus):
             return None
         key = self._get_state_key(STATE_HOT_WATER_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(FEAT_HOT_WATER_TEMP, value, False)
+        return self._update_feature(AirConditionerFeatures.HOT_WATER_TEMP, value, False)
 
     @property
     def hot_water_target_temp(self):

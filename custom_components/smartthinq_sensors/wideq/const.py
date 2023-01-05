@@ -1,4 +1,5 @@
 """LG SmartThinQ constants."""
+from .core_enum import StrEnum
 
 # default core settings
 DEFAULT_COUNTRY = "US"
@@ -18,6 +19,25 @@ STATE_OPTIONITEM_UNKNOWN = "unknown"
 # unit temp
 UNIT_TEMP_CELSIUS = "celsius"
 UNIT_TEMP_FAHRENHEIT = "fahrenheit"
+
+
+class AirConditionerFeatures(StrEnum):
+    """Features for LG AC devices."""
+
+    ENERGY_CURRENT = "energy_current"
+    HOT_WATER_TEMP = "hot_water_temperature"
+    HUMIDITY = "humidity"
+    FILTER_MAIN_LIFE = "filter_main_life"
+    FILTER_MAIN_MAX = "filter_main_max"
+    FILTER_MAIN_USE = "filter_main_use"
+    LIGHTING_DISPLAY = "lighting_display"
+    MODE_AIRCLEAN = "mode_airclean"
+    MODE_AWHP_SILENT = "mode_awhp_silent"
+    MODE_JET = "mode_jet"
+    ROOM_TEMP = "room_temperature"
+    WATER_IN_TEMP = "water_in_temperature"
+    WATER_OUT_TEMP = "water_out_temperature"
+
 
 # ac devices features
 FEAT_ENERGY_CURRENT = "energy_current"

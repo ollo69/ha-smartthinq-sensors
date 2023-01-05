@@ -74,16 +74,14 @@ from .wideq import (
     FEAT_PRE_STATE,
     FEAT_PROCESS_STATE,
     FEAT_RINSEMODE,
-    FEAT_ROOM_TEMP,
     FEAT_RUN_STATE,
     FEAT_SPINSPEED,
     FEAT_TARGET_HUMIDITY,
     FEAT_TEMPCONTROL,
     FEAT_TUBCLEAN_COUNT,
-    FEAT_WATER_IN_TEMP,
-    FEAT_WATER_OUT_TEMP,
     FEAT_WATERTEMP,
     WM_DEVICE_TYPES,
+    AirConditionerFeatures,
     DeviceType,
 )
 
@@ -243,7 +241,7 @@ REFRIGERATOR_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
 )
 AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
-        key=FEAT_ROOM_TEMP,
+        key=AirConditionerFeatures.ROOM_TEMP,
         name="Room temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -251,7 +249,7 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_HOT_WATER_TEMP,
+        key=AirConditionerFeatures.HOT_WATER_TEMP,
         name="Hot water temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -259,14 +257,14 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_WATER_IN_TEMP,
+        key=AirConditionerFeatures.WATER_IN_TEMP,
         name="In water temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.temp_unit,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_WATER_OUT_TEMP,
+        key=AirConditionerFeatures.WATER_OUT_TEMP,
         name="Out water temperature",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -274,28 +272,28 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_ENERGY_CURRENT,
+        key=AirConditionerFeatures.ENERGY_CURRENT,
         name="Energy current",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_HUMIDITY,
+        key=AirConditionerFeatures.HUMIDITY,
         name="Humidity",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
     ),
     ThinQSensorEntityDescription(
-        key=FEAT_FILTER_MAIN_LIFE,
+        key=AirConditionerFeatures.FILTER_MAIN_LIFE,
         name="Filter Remaining Life",
         icon="mdi:air-filter",
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=PERCENTAGE,
         feature_attributes={
-            "use_time": FEAT_FILTER_MAIN_USE,
-            "max_time": FEAT_FILTER_MAIN_MAX,
+            "use_time": AirConditionerFeatures.FILTER_MAIN_USE,
+            "max_time": AirConditionerFeatures.FILTER_MAIN_MAX,
         },
     ),
 )
