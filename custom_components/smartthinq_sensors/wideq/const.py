@@ -1,5 +1,7 @@
 """LG SmartThinQ constants."""
 
+from strenum import StrEnum
+
 # default core settings
 DEFAULT_COUNTRY = "US"
 DEFAULT_LANGUAGE = "en-US"
@@ -9,11 +11,14 @@ DEFAULT_TIMEOUT = 10  # seconds
 BIT_OFF = "OFF"
 BIT_ON = "ON"
 
-# state options
-STATE_OPTIONITEM_OFF = "off"
-STATE_OPTIONITEM_ON = "on"
-STATE_OPTIONITEM_NONE = "-"
-STATE_OPTIONITEM_UNKNOWN = "unknown"
+
+class StateOption(StrEnum):
+    """State options."""
+    Off = "off"
+    On = "on"
+    NONE = "-"
+    Unknown = "unknown"
+
 
 # unit temp
 UNIT_TEMP_CELSIUS = "celsius"

@@ -17,12 +17,9 @@ import aiohttp
 
 from . import core_exceptions as core_exc
 from .const import (
+    StateOption,
     BIT_OFF,
     BIT_ON,
-    STATE_OPTIONITEM_NONE,
-    STATE_OPTIONITEM_OFF,
-    STATE_OPTIONITEM_ON,
-    STATE_OPTIONITEM_UNKNOWN,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
@@ -34,17 +31,17 @@ LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
 
 LOCAL_LANG_PACK = {
-    BIT_OFF: STATE_OPTIONITEM_OFF,
-    BIT_ON: STATE_OPTIONITEM_ON,
-    LABEL_BIT_OFF: STATE_OPTIONITEM_OFF,
-    LABEL_BIT_ON: STATE_OPTIONITEM_ON,
-    "CLOSE": STATE_OPTIONITEM_OFF,
-    "OPEN": STATE_OPTIONITEM_ON,
-    "UNLOCK": STATE_OPTIONITEM_OFF,
-    "LOCK": STATE_OPTIONITEM_ON,
-    "INITIAL_BIT_OFF": STATE_OPTIONITEM_OFF,
-    "INITIAL_BIT_ON": STATE_OPTIONITEM_ON,
-    "IGNORE": STATE_OPTIONITEM_NONE,
+    BIT_OFF: StateOption.Off,
+    BIT_ON: StateOption.On,
+    LABEL_BIT_OFF: StateOption.Off,
+    LABEL_BIT_ON: StateOption.On,
+    "CLOSE": StateOption.Off,
+    "OPEN": StateOption.On,
+    "UNLOCK": StateOption.Off,
+    "LOCK": StateOption.On,
+    "INITIAL_BIT_OFF": StateOption.Off,
+    "INITIAL_BIT_ON": StateOption.On,
+    "IGNORE": StateOption.NONE,
     "NOT_USE": "Not Used",
 }
 
@@ -760,7 +757,7 @@ class Device:
     def get_enum_text(self, enum_name):
         """Get the text associated to an enum value from language pack."""
         if not enum_name:
-            return STATE_OPTIONITEM_NONE
+            return StateOption.NONE
 
         text_value = LOCAL_LANG_PACK.get(enum_name)
         if not text_value and self._model_lang_pack:
@@ -924,7 +921,7 @@ class DeviceStatus:
                 status_type,
             )
 
-        return STATE_OPTIONITEM_UNKNOWN
+        return StateOption.Unknown
 
     def update_status(self, key, value) -> bool:
         """Update the status key to a specific value."""
@@ -1010,10 +1007,10 @@ class DeviceStatus:
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
             return None
-        bit_val = LOCAL_LANG_PACK.get(enum_val, STATE_OPTIONITEM_OFF)
-        if bit_val == STATE_OPTIONITEM_ON:
-            return STATE_OPTIONITEM_ON
-        return STATE_OPTIONITEM_OFF
+        bit_val = LOCAL_LANG_PACK.get(enum_val, StateOption.Off)
+        if bit_val == StateOption.On:
+            return StateOption.On
+        return StateOption.Off
 
     def _update_feature(
         self, key, status, get_text=True, item_key=None, *, allow_none=False
@@ -1023,9 +1020,9 @@ class DeviceStatus:
             return None
 
         if status is None and not allow_none:
-            status = STATE_OPTIONITEM_NONE
+            status = StateOption.NONE
 
-        if status == STATE_OPTIONITEM_NONE:
+        if status == StateOption.NONE:
             get_text = False
 
         if status is None or not get_text:

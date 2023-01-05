@@ -6,8 +6,7 @@ from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 
 from .const import DEFAULT_SENSOR
 from .wideq import (
-    STATE_OPTIONITEM_OFF,
-    STATE_OPTIONITEM_ON,
+    StateOption,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
     WM_DEVICE_TYPES,
@@ -15,8 +14,8 @@ from .wideq import (
 )
 
 STATE_LOOKUP = {
-    STATE_OPTIONITEM_OFF: STATE_OFF,
-    STATE_OPTIONITEM_ON: STATE_ON,
+    StateOption.Off: STATE_OFF,
+    StateOption.On: STATE_ON,
 }
 
 TEMP_UNIT_LOOKUP = {

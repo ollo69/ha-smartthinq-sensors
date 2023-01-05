@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 
 from ..const import (
+    StateOption,
     BIT_OFF,
     FEAT_COOKTOP_CENTER_STATE,
     FEAT_COOKTOP_LEFT_FRONT_STATE,
@@ -14,8 +15,6 @@ from ..const import (
     FEAT_OVEN_LOWER_STATE,
     FEAT_OVEN_UPPER_CURRENT_TEMP,
     FEAT_OVEN_UPPER_STATE,
-    STATE_OPTIONITEM_NONE,
-    STATE_OPTIONITEM_OFF,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
 )
@@ -74,7 +73,7 @@ class RangeStatus(DeviceStatus):
         if not self._oven_temp_unit:
             oven_temp_unit = self.lookup_enum("MonTempUnit")
             if not oven_temp_unit:
-                self._oven_temp_unit = STATE_OPTIONITEM_NONE
+                self._oven_temp_unit = StateOption.NONE
             else:
                 self._oven_temp_unit = (
                     OVEN_TEMP_UNIT.get(oven_temp_unit, UnitTempModes.Celsius)
@@ -102,7 +101,7 @@ class RangeStatus(DeviceStatus):
             self.cooktop_right_rear_state,
         ]
         for res in result:
-            if res and res != STATE_OPTIONITEM_OFF:
+            if res and res != StateOption.Off:
                 return True
         return False
 
@@ -157,7 +156,7 @@ class RangeStatus(DeviceStatus):
             self.oven_upper_state,
         ]
         for res in result:
-            if res and res != STATE_OPTIONITEM_OFF:
+            if res and res != StateOption.Off:
                 return True
         return False
 
