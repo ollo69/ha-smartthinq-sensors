@@ -148,7 +148,6 @@ class LGEAuthentication:
             language=self._language,
             oauth_url=oauth_url,
             aiohttp_session=self._client_session,
-            # enable_emulation=True,
         )
 
 

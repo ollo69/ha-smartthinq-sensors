@@ -1247,7 +1247,8 @@ class ClientAsync:
         self._language = language
 
         # enable emulation mode for debug / test
-        self._emulation = enable_emulation
+        env_emulation = os.environ.get("thinq2_emulation", "") == "ENABLED"
+        self._emulation = env_emulation or enable_emulation
 
     def _load_emul_devices(self):
         """This is used only for debug."""
@@ -1255,9 +1256,10 @@ class ClientAsync:
             os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
         )
         try:
-            with open(data_file, "r") as f:
-                device_v2 = json.load(f)
+            with open(data_file, "r", encoding="utf-8") as emu_dev:
+                device_v2 = json.load(emu_dev)
         except (FileNotFoundError, json.JSONDecodeError):
+            self._emulation = False
             return None
         return device_v2
 

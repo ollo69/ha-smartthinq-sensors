@@ -300,6 +300,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Class to monitor binary sensors for LGE device"""
 
     entity_description: ThinQBinarySensorEntityDescription
+    _wrap_device: LGEBaseDevice | None
 
     def __init__(
         self,

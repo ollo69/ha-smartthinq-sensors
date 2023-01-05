@@ -629,6 +629,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     """Class to monitor sensors for LGE device"""
 
     entity_description: ThinQSensorEntityDescription
+    _wrap_device: LGEBaseDevice | None
 
     def __init__(
         self,
@@ -725,6 +726,8 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 class LGEWashDeviceSensor(LGESensor):
     """A sensor to monitor LGE Wash devices"""
 
+    _wrap_device: LGEWashDevice
+
     def __init__(
         self,
         api: LGEDevice,
@@ -756,6 +759,8 @@ class LGEWashDeviceSensor(LGESensor):
 class LGERefrigeratorSensor(LGESensor):
     """A sensor to monitor LGE Refrigerator devices"""
 
+    _wrap_device: LGERefrigeratorDevice
+
     def __init__(
         self,
         api: LGEDevice,
@@ -786,6 +791,8 @@ class LGERefrigeratorSensor(LGESensor):
 
 class LGERangeSensor(LGESensor):
     """A sensor to monitor LGE range devices"""
+
+    _wrap_device: LGERangeDevice
 
     def __init__(
         self,
