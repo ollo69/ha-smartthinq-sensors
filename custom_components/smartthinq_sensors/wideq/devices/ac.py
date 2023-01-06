@@ -903,7 +903,8 @@ class AirConditionerDevice(Device):
         Override in specific device to call requested methods.
         """
         # this commands is to get filter status on V2 device
-        self._filter_status = await self.get_filter_state_v2()
+        if not self.is_air_to_water:
+            self._filter_status = await self.get_filter_state_v2()
 
     async def poll(self) -> AirConditionerStatus | None:
         """Poll the device's current state."""
@@ -920,13 +921,15 @@ class AirConditionerDevice(Device):
             if self._current_power is not None:
                 res[STATE_POWER_V1] = self._current_power
 
-        # update filter status
-        if self._filter_status:
-            res.update(self._filter_status)
-
         self._status = AirConditionerStatus(self, res)
+        # adjust temperature step
         if self._temperature_step == TEMP_STEP_WHOLE:
             self._adjust_temperature_step(self._status.target_temp)
+        # update filter status
+        if self._filter_status:
+            if not self._status.update_filter_status(self._filter_status):
+                self._filter_status = None
+                self._filter_status_supported = False
 
         # manage duct devices, does nothing if not ducted
         try:
@@ -964,6 +967,27 @@ class AirConditionerStatus(DeviceStatus):
             return ACOp(self._operation)
         except ValueError:
             return None
+
+    def update_filter_status(self, values: dict) -> bool:
+        """Update device filter status."""
+        if not self.is_info_v2:
+            self._data.update(values)
+            return True
+
+        # ACv2 could return filter value in the payload
+        # if max_time key is in the payload <> 0, we don't update
+        updated = False
+        for filters in FILTER_TYPES:
+            max_key = self._get_state_key(filters[2])  # this is the max_time key
+            cur_val = self.to_int_or_none(self._data.get(max_key, 0))
+            if cur_val:
+                continue
+            for index in range(1, 3):
+                upd_key = self._get_state_key(filters[index])
+                if upd_key in values:
+                    self._data[upd_key] = values[upd_key]
+                    updated = True
+        return updated
 
     def update_status(self, key, value):
         """Update device status."""
