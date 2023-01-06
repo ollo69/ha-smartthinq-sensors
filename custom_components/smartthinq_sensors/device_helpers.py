@@ -3,13 +3,7 @@
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 
 from .const import DEFAULT_SENSOR
-from .wideq import (
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-    WM_DEVICE_TYPES,
-    DeviceType,
-    StateOptions,
-)
+from .wideq import WM_DEVICE_TYPES, DeviceType, StateOptions, TemperatureUnit
 
 STATE_LOOKUP = {
     StateOptions.OFF: STATE_OFF,
@@ -17,8 +11,8 @@ STATE_LOOKUP = {
 }
 
 TEMP_UNIT_LOOKUP = {
-    UNIT_TEMP_CELSIUS: UnitOfTemperature.CELSIUS,
-    UNIT_TEMP_FAHRENHEIT: UnitOfTemperature.FAHRENHEIT,
+    TemperatureUnit.CELSIUS: UnitOfTemperature.CELSIUS,
+    TemperatureUnit.FAHRENHEIT: UnitOfTemperature.FAHRENHEIT,
 }
 
 DEVICE_ICONS = {

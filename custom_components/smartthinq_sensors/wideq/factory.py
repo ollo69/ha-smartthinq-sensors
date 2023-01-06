@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .const import UNIT_TEMP_CELSIUS
+from .const import TemperatureUnit
 from .core_async import ClientAsync
 from .device import Device
 from .device_info import (
@@ -25,7 +25,7 @@ from .devices.waterheater import WaterHeaterDevice
 
 
 def get_lge_device(
-    client: ClientAsync, device_info: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS
+    client: ClientAsync, device_info: DeviceInfo, temp_unit=TemperatureUnit.CELSIUS
 ) -> list[Device] | None:
     """Return a list of device objects based on the device type."""
 

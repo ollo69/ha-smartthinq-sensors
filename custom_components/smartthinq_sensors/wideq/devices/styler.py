@@ -1,8 +1,6 @@
 """------------------for Styler"""
 from __future__ import annotations
 
-import logging
-
 from ..const import StateOptions, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
@@ -26,8 +24,6 @@ BIT_FEATURES = {
     WashDeviceFeatures.NIGHTDRY: ["NightDry", "nightDry"],
     WashDeviceFeatures.REMOTESTART: ["RemoteStart", "remoteStart"],
 }
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class StylerDevice(Device):

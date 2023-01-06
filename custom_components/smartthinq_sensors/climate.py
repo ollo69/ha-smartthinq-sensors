@@ -25,7 +25,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, get_entity_name
-from .wideq import UNIT_TEMP_FAHRENHEIT, AirConditionerFeatures, DeviceType
+from .wideq import AirConditionerFeatures, DeviceType, TemperatureUnit
 from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
 
 # general ac attributes
@@ -245,7 +245,7 @@ class LGEACClimate(LGEClimate):
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
+        if self._device.temperature_unit == TemperatureUnit.FAHRENHEIT:
             return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 

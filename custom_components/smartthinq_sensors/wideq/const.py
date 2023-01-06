@@ -11,9 +11,12 @@ DEFAULT_TIMEOUT = 10  # seconds
 BIT_OFF = "OFF"
 BIT_ON = "ON"
 
-# unit temp
-UNIT_TEMP_CELSIUS = "celsius"
-UNIT_TEMP_FAHRENHEIT = "fahrenheit"
+
+class TemperatureUnit(StrEnum):
+    """LG ThinQ valid temperature unit."""
+
+    CELSIUS = "celsius"
+    FAHRENHEIT = "fahrenheit"
 
 
 class StateOptions(StrEnum):
