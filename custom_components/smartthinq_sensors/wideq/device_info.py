@@ -4,7 +4,7 @@ from enum import Enum
 import logging
 from typing import Any, Optional
 
-from .const import STATE_OPTIONITEM_UNKNOWN
+from .const import StateOptions
 
 KEY_DEVICE_ID = "deviceId"
 
@@ -51,7 +51,7 @@ class DeviceType(Enum):
     PURICARE_AIR_DETECTOR = 4004
     V2PHONE = 6001
     HOMEROBOT = 9000
-    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
+    UNKNOWN = StateOptions.UNKNOWN
 
 
 WM_DEVICE_TYPES = [
@@ -67,7 +67,7 @@ class PlatformType(Enum):
 
     THINQ1 = "thinq1"
     THINQ2 = "thinq2"
-    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
+    UNKNOWN = StateOptions.UNKNOWN
 
 
 class NetworkType(Enum):
@@ -76,7 +76,7 @@ class NetworkType(Enum):
     WIFI = "02"
     NFC3 = "03"
     NFC4 = "04"
-    UNKNOWN = STATE_OPTIONITEM_UNKNOWN
+    UNKNOWN = StateOptions.UNKNOWN
 
 
 class DeviceInfo:
@@ -106,7 +106,7 @@ class DeviceInfo:
                 return key
         return ""
 
-    def _get_data_value(self, key, default: Any = STATE_OPTIONITEM_UNKNOWN):
+    def _get_data_value(self, key, default: Any = StateOptions.UNKNOWN):
         """Get data value for a specific key or list of keys."""
         if isinstance(key, list):
             vkey = self._get_data_key(key)
@@ -124,7 +124,7 @@ class DeviceInfo:
     def device_id(self) -> str:
         """Return the device id."""
         if self._device_id is None:
-            self._device_id = self._data.get(KEY_DEVICE_ID, STATE_OPTIONITEM_UNKNOWN)
+            self._device_id = self._data.get(KEY_DEVICE_ID, StateOptions.UNKNOWN)
         return self._device_id
 
     @property

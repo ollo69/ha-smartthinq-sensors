@@ -11,15 +11,18 @@ DEFAULT_TIMEOUT = 10  # seconds
 BIT_OFF = "OFF"
 BIT_ON = "ON"
 
-# state options
-STATE_OPTIONITEM_OFF = "off"
-STATE_OPTIONITEM_ON = "on"
-STATE_OPTIONITEM_NONE = "-"
-STATE_OPTIONITEM_UNKNOWN = "unknown"
-
 # unit temp
 UNIT_TEMP_CELSIUS = "celsius"
 UNIT_TEMP_FAHRENHEIT = "fahrenheit"
+
+
+class StateOptions(StrEnum):
+    """LG ThinQ valid states."""
+
+    NONE = "-"
+    OFF = "off"
+    ON = "on"
+    UNKNOWN = "unknown"
 
 
 class AirConditionerFeatures(StrEnum):

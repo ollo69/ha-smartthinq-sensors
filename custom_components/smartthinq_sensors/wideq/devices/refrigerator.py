@@ -5,7 +5,7 @@ import base64
 import json
 import logging
 
-from ..const import STATE_OPTIONITEM_NONE, UNIT_TEMP_FAHRENHEIT, RefrigeratorFeatures
+from ..const import UNIT_TEMP_FAHRENHEIT, RefrigeratorFeatures, StateOptions
 from ..core_async import ClientAsync
 from ..device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
 from ..device_info import DeviceInfo
@@ -147,7 +147,7 @@ class RefrigeratorDevice(Device):
 
     def _set_temp_unit(self, unit=None):
         """Set the configured temperature unit."""
-        if unit and unit != STATE_OPTIONITEM_NONE:
+        if unit and unit != StateOptions.NONE:
             if not self._temp_unit or unit != self._temp_unit:
                 self._temp_unit = unit
                 self._fridge_temps = None
@@ -249,7 +249,7 @@ class RefrigeratorDevice(Device):
     def fridge_target_temp_range(self):
         """Return range value for fridge target temperature."""
         if self._fridge_ranges is None:
-            unit = self._get_temp_unit() or STATE_OPTIONITEM_NONE
+            unit = self._get_temp_unit() or StateOptions.NONE
             if unit == UNIT_TEMP_FAHRENHEIT:
                 return DEFAULT_FRIDGE_RANGE_F
             return DEFAULT_FRIDGE_RANGE_C
@@ -259,7 +259,7 @@ class RefrigeratorDevice(Device):
     def freezer_target_temp_range(self):
         """Return range value for freezer target temperature."""
         if self._freezer_ranges is None:
-            unit = self._get_temp_unit() or STATE_OPTIONITEM_NONE
+            unit = self._get_temp_unit() or StateOptions.NONE
             if unit == UNIT_TEMP_FAHRENHEIT:
                 return DEFAULT_FREEZER_RANGE_F
             return DEFAULT_FREEZER_RANGE_C
@@ -419,7 +419,7 @@ class RefrigeratorStatus(DeviceStatus):
         config = self._get_default_index(key_mode, key_index)
         if not config or not isinstance(config, dict):
             return None
-        unit = self._get_temp_unit() or STATE_OPTIONITEM_NONE
+        unit = self._get_temp_unit() or StateOptions.NONE
         unit_key = "tempUnit_F" if unit == UNIT_TEMP_FAHRENHEIT else "tempUnit_C"
         return config.get(unit_key)
 
@@ -468,7 +468,7 @@ class RefrigeratorStatus(DeviceStatus):
             index = 1
         temp_key = self._get_temp_key(STATE_FRIDGE_TEMP[index])
         if temp_key is None:
-            return STATE_OPTIONITEM_NONE
+            return StateOptions.NONE
         temp_lists = self._device.get_fridge_temps(self._get_temp_unit(), unit_key)
         return temp_lists.get(temp_key, temp_key)
 
@@ -482,14 +482,14 @@ class RefrigeratorStatus(DeviceStatus):
             index = 1
         temp_key = self._get_temp_key(STATE_FREEZER_TEMP[index])
         if temp_key is None:
-            return STATE_OPTIONITEM_NONE
+            return StateOptions.NONE
         temp_lists = self._device.get_freezer_temps(self._get_temp_unit(), unit_key)
         return temp_lists.get(temp_key, temp_key)
 
     @property
     def temp_unit(self):
         """Return used temperature unit."""
-        return self._get_temp_unit() or STATE_OPTIONITEM_NONE
+        return self._get_temp_unit() or StateOptions.NONE
 
     @property
     def door_opened_state(self):
@@ -499,7 +499,7 @@ class RefrigeratorStatus(DeviceStatus):
         else:
             state = self.lookup_enum("DoorOpenState")
         if not state:
-            return STATE_OPTIONITEM_NONE
+            return StateOptions.NONE
         return self._device.get_enum_text(state)
 
     @property
@@ -551,7 +551,7 @@ class RefrigeratorStatus(DeviceStatus):
         """Return current smart saving state."""
         state = self.lookup_enum(["SmartSavingModeStatus", "smartSavingRun"])
         if not state:
-            return STATE_OPTIONITEM_NONE
+            return StateOptions.NONE
         return self._device.get_enum_text(state)
 
     @property
@@ -605,7 +605,7 @@ class RefrigeratorStatus(DeviceStatus):
         """Return current locked state."""
         state = self.lookup_enum("LockingStatus")
         if not state:
-            return STATE_OPTIONITEM_NONE
+            return StateOptions.NONE
         return self._device.get_enum_text(state)
 
     @property

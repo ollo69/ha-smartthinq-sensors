@@ -3,11 +3,10 @@ from __future__ import annotations
 
 from ..const import (
     BIT_OFF,
-    STATE_OPTIONITEM_NONE,
-    STATE_OPTIONITEM_OFF,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
     RangeFeatures,
+    StateOptions,
 )
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus, UnitTempModes
@@ -62,7 +61,7 @@ class RangeStatus(DeviceStatus):
         if not self._oven_temp_unit:
             oven_temp_unit = self.lookup_enum("MonTempUnit")
             if not oven_temp_unit:
-                self._oven_temp_unit = STATE_OPTIONITEM_NONE
+                self._oven_temp_unit = StateOptions.NONE
             else:
                 self._oven_temp_unit = (
                     OVEN_TEMP_UNIT.get(oven_temp_unit, UnitTempModes.Celsius)
@@ -90,7 +89,7 @@ class RangeStatus(DeviceStatus):
             self.cooktop_right_rear_state,
         ]
         for res in result:
-            if res and res != STATE_OPTIONITEM_OFF:
+            if res and res != StateOptions.OFF:
                 return True
         return False
 
@@ -145,7 +144,7 @@ class RangeStatus(DeviceStatus):
             self.oven_upper_state,
         ]
         for res in result:
-            if res and res != STATE_OPTIONITEM_OFF:
+            if res and res != StateOptions.OFF:
                 return True
         return False
 

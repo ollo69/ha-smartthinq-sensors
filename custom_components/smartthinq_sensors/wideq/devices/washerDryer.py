@@ -5,12 +5,7 @@ import base64
 import json
 import logging
 
-from ..const import (
-    STATE_OPTIONITEM_NONE,
-    STATE_OPTIONITEM_OFF,
-    STATE_OPTIONITEM_ON,
-    WashDeviceFeatures,
-)
+from ..const import StateOptions, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidDeviceStatus
 from ..device import Device, DeviceStatus
@@ -268,7 +263,7 @@ class WMDevice(Device):
         """Save the status to use for remote start."""
 
         status_key = self.getkey(self._get_state_key(REMOTE_START_KEY))
-        remote_enabled = self._status.lookup_bit(status_key) == STATE_OPTIONITEM_ON
+        remote_enabled = self._status.lookup_bit(status_key) == StateOptions.ON
         if not self._remote_start_status:
             if remote_enabled:
                 self._remote_start_status = res
@@ -347,7 +342,7 @@ class WMStatus(DeviceStatus):
                 return None
             state = self.lookup_enum(key)
             if not state:
-                self._process_state = STATE_OPTIONITEM_NONE
+                self._process_state = StateOptions.NONE
             else:
                 self._process_state = state
         return self._process_state
@@ -389,7 +384,7 @@ class WMStatus(DeviceStatus):
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
         if pre_state is None:
-            pre_state = self._get_process_state() or STATE_OPTIONITEM_NONE
+            pre_state = self._get_process_state() or StateOptions.NONE
         if run_state in STATE_WM_END or (
             run_state == STATE_WM_POWER_OFF and pre_state in STATE_WM_END
         ):
@@ -477,7 +472,7 @@ class WMStatus(DeviceStatus):
         """Return current run state."""
         run_state = self._get_run_state()
         if run_state == STATE_WM_POWER_OFF:
-            run_state = STATE_OPTIONITEM_NONE
+            run_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
     @property
@@ -487,7 +482,7 @@ class WMStatus(DeviceStatus):
         if pre_state is None:
             return None
         if pre_state == STATE_WM_POWER_OFF:
-            pre_state = STATE_OPTIONITEM_NONE
+            pre_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.PRE_STATE, pre_state)
 
     @property
@@ -502,7 +497,7 @@ class WMStatus(DeviceStatus):
     def error_msg(self):
         """Return current error message."""
         if not self.is_error:
-            error = STATE_OPTIONITEM_NONE
+            error = StateOptions.NONE
         else:
             error = self._get_error()
         return self._update_feature(WashDeviceFeatures.ERROR_MSG, error)
@@ -515,7 +510,7 @@ class WMStatus(DeviceStatus):
             return None
         spin_speed = self.lookup_enum(key)
         if not spin_speed:
-            spin_speed = STATE_OPTIONITEM_NONE
+            spin_speed = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.SPINSPEED, spin_speed)
 
     @property
@@ -528,7 +523,7 @@ class WMStatus(DeviceStatus):
             return None
         water_temp = self.lookup_enum(key)
         if not water_temp:
-            water_temp = STATE_OPTIONITEM_NONE
+            water_temp = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.WATERTEMP, water_temp)
 
     @property
@@ -539,7 +534,7 @@ class WMStatus(DeviceStatus):
             return None
         rinse_mode = self.lookup_enum(key)
         if not rinse_mode:
-            rinse_mode = STATE_OPTIONITEM_NONE
+            rinse_mode = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.RINSEMODE, rinse_mode)
 
     @property
@@ -550,7 +545,7 @@ class WMStatus(DeviceStatus):
             return None
         dry_level = self.lookup_enum(key)
         if not dry_level:
-            dry_level = STATE_OPTIONITEM_NONE
+            dry_level = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.DRYLEVEL, dry_level)
 
     @property
@@ -563,7 +558,7 @@ class WMStatus(DeviceStatus):
             return None
         temp_control = self.lookup_enum(key)
         if not temp_control:
-            temp_control = STATE_OPTIONITEM_NONE
+            temp_control = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.TEMPCONTROL, temp_control)
 
     @property
@@ -574,7 +569,7 @@ class WMStatus(DeviceStatus):
             return None
         time_dry = self.lookup_enum(key)
         if not time_dry:
-            time_dry = STATE_OPTIONITEM_NONE
+            time_dry = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.TIMEDRY, time_dry, False)
 
     @property
@@ -585,7 +580,7 @@ class WMStatus(DeviceStatus):
             return None
         eco_hybrid = self.lookup_enum(key)
         if not eco_hybrid:
-            eco_hybrid = STATE_OPTIONITEM_NONE
+            eco_hybrid = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.ECOHYBRID, eco_hybrid)
 
     @property
@@ -611,7 +606,7 @@ class WMStatus(DeviceStatus):
             return None
         status = self.lookup_enum(key)
         if not status:
-            status = STATE_OPTIONITEM_OFF
+            status = StateOptions.OFF
         return self._update_feature(WashDeviceFeatures.STANDBY, status)
 
     def _update_bit_features(self):

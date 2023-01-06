@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from ..const import STATE_OPTIONITEM_NONE, WashDeviceFeatures
+from ..const import StateOptions, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
@@ -89,7 +89,7 @@ class DishWasherStatus(DeviceStatus):
         if not self._process:
             process = self.lookup_enum(["Process", "process"])
             if not process:
-                self._process = STATE_OPTIONITEM_NONE
+                self._process = StateOptions.NONE
             else:
                 self._process = process
         return self._process
@@ -201,7 +201,7 @@ class DishWasherStatus(DeviceStatus):
         """Return current run state."""
         run_state = self._get_run_state()
         if run_state == STATE_DISHWASHER_POWER_OFF:
-            run_state = STATE_OPTIONITEM_NONE
+            run_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
     @property
@@ -218,14 +218,14 @@ class DishWasherStatus(DeviceStatus):
         else:
             half_load = self.lookup_bit_enum("HalfLoad")
         if not half_load:
-            half_load = STATE_OPTIONITEM_NONE
+            half_load = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.HALFLOAD, half_load)
 
     @property
     def error_msg(self):
         """Return current error message."""
         if not self.is_error:
-            error = STATE_OPTIONITEM_NONE
+            error = StateOptions.NONE
         else:
             error = self._get_error()
         return self._update_feature(WashDeviceFeatures.ERROR_MSG, error)
