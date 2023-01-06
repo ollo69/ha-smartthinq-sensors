@@ -19,12 +19,9 @@ from . import core_exceptions as core_exc
 from .const import (
     BIT_OFF,
     BIT_ON,
-    STATE_OPTIONITEM_NONE,
-    STATE_OPTIONITEM_OFF,
-    STATE_OPTIONITEM_ON,
-    STATE_OPTIONITEM_UNKNOWN,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
+    StateOptions,
 )
 from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
@@ -34,17 +31,17 @@ LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
 
 LOCAL_LANG_PACK = {
-    BIT_OFF: STATE_OPTIONITEM_OFF,
-    BIT_ON: STATE_OPTIONITEM_ON,
-    LABEL_BIT_OFF: STATE_OPTIONITEM_OFF,
-    LABEL_BIT_ON: STATE_OPTIONITEM_ON,
-    "CLOSE": STATE_OPTIONITEM_OFF,
-    "OPEN": STATE_OPTIONITEM_ON,
-    "UNLOCK": STATE_OPTIONITEM_OFF,
-    "LOCK": STATE_OPTIONITEM_ON,
-    "INITIAL_BIT_OFF": STATE_OPTIONITEM_OFF,
-    "INITIAL_BIT_ON": STATE_OPTIONITEM_ON,
-    "IGNORE": STATE_OPTIONITEM_NONE,
+    BIT_OFF: StateOptions.OFF,
+    BIT_ON: StateOptions.ON,
+    LABEL_BIT_OFF: StateOptions.OFF,
+    LABEL_BIT_ON: StateOptions.ON,
+    "CLOSE": StateOptions.OFF,
+    "OPEN": StateOptions.ON,
+    "UNLOCK": StateOptions.OFF,
+    "LOCK": StateOptions.ON,
+    "INITIAL_BIT_OFF": StateOptions.OFF,
+    "INITIAL_BIT_ON": StateOptions.ON,
+    "IGNORE": StateOptions.NONE,
     "NOT_USE": "Not Used",
 }
 
@@ -559,7 +556,7 @@ class Device:
             )
 
     async def _get_config_v2(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
+        self, ctrl_key, command, *, key=None, value=None, ctrl_path=None
     ):
         """
         Look up a device's V2 configuration for a given value.
@@ -760,7 +757,7 @@ class Device:
     def get_enum_text(self, enum_name):
         """Get the text associated to an enum value from language pack."""
         if not enum_name:
-            return STATE_OPTIONITEM_NONE
+            return StateOptions.NONE
 
         text_value = LOCAL_LANG_PACK.get(enum_name)
         if not text_value and self._model_lang_pack:
@@ -924,7 +921,7 @@ class DeviceStatus:
                 status_type,
             )
 
-        return STATE_OPTIONITEM_UNKNOWN
+        return StateOptions.UNKNOWN
 
     def update_status(self, key, value) -> bool:
         """Update the status key to a specific value."""
@@ -966,6 +963,16 @@ class DeviceStatus:
             value = str(int(value))
 
         return self._device.model_info.enum_name(curr_key, value)
+
+    def lookup_enum_bool(self, key):
+        """Lookup value for a specific key of type enum checking for bool type."""
+        value = self.lookup_enum(key, True)
+        if value and isinstance(value, str):
+            if value.endswith("_ON_W"):
+                return BIT_ON
+            if value.endswith("_OFF_W"):
+                return BIT_OFF
+        return value
 
     def lookup_range(self, key):
         """Lookup value for a specific key of type range."""
@@ -1010,10 +1017,10 @@ class DeviceStatus:
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
             return None
-        bit_val = LOCAL_LANG_PACK.get(enum_val, STATE_OPTIONITEM_OFF)
-        if bit_val == STATE_OPTIONITEM_ON:
-            return STATE_OPTIONITEM_ON
-        return STATE_OPTIONITEM_OFF
+        bit_val = LOCAL_LANG_PACK.get(enum_val, StateOptions.OFF)
+        if bit_val == StateOptions.ON:
+            return StateOptions.ON
+        return StateOptions.OFF
 
     def _update_feature(
         self, key, status, get_text=True, item_key=None, *, allow_none=False
@@ -1023,9 +1030,9 @@ class DeviceStatus:
             return None
 
         if status is None and not allow_none:
-            status = STATE_OPTIONITEM_NONE
+            status = StateOptions.NONE
 
-        if status == STATE_OPTIONITEM_NONE:
+        if status == StateOptions.NONE:
             get_text = False
 
         if status is None or not get_text:

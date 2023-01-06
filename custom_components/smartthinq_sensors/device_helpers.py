@@ -1,30 +1,25 @@
 """Helper class for ThinQ devices"""
 
-import logging
-
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 
 from .const import DEFAULT_SENSOR
 from .wideq import (
-    STATE_OPTIONITEM_OFF,
-    STATE_OPTIONITEM_ON,
     UNIT_TEMP_CELSIUS,
     UNIT_TEMP_FAHRENHEIT,
     WM_DEVICE_TYPES,
     DeviceType,
+    StateOptions,
 )
 
 STATE_LOOKUP = {
-    STATE_OPTIONITEM_OFF: STATE_OFF,
-    STATE_OPTIONITEM_ON: STATE_ON,
+    StateOptions.OFF: STATE_OFF,
+    StateOptions.ON: STATE_ON,
 }
 
 TEMP_UNIT_LOOKUP = {
     UNIT_TEMP_CELSIUS: UnitOfTemperature.CELSIUS,
     UNIT_TEMP_FAHRENHEIT: UnitOfTemperature.FAHRENHEIT,
 }
-
-_LOGGER = logging.getLogger(__name__)
 
 DEVICE_ICONS = {
     DeviceType.WASHER: "mdi:washing-machine",

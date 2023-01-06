@@ -3,15 +3,7 @@ from __future__ import annotations
 
 import logging
 
-from ..const import (
-    FEAT_CHILDLOCK,
-    FEAT_ERROR_MSG,
-    FEAT_NIGHTDRY,
-    FEAT_PRE_STATE,
-    FEAT_REMOTESTART,
-    FEAT_RUN_STATE,
-    STATE_OPTIONITEM_NONE,
-)
+from ..const import StateOptions, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
@@ -30,9 +22,9 @@ STATE_STYLER_ERROR_NO_ERROR = [
 ]
 
 BIT_FEATURES = {
-    FEAT_CHILDLOCK: ["ChildLock", "childLock"],
-    FEAT_NIGHTDRY: ["NightDry", "nightDry"],
-    FEAT_REMOTESTART: ["RemoteStart", "remoteStart"],
+    WashDeviceFeatures.CHILDLOCK: ["ChildLock", "childLock"],
+    WashDeviceFeatures.NIGHTDRY: ["NightDry", "nightDry"],
+    WashDeviceFeatures.REMOTESTART: ["RemoteStart", "remoteStart"],
 }
 
 _LOGGER = logging.getLogger(__name__)
@@ -205,25 +197,25 @@ class StylerStatus(DeviceStatus):
         """Return current run state."""
         run_state = self._get_run_state()
         if run_state == STATE_STYLER_POWER_OFF:
-            run_state = STATE_OPTIONITEM_NONE
-        return self._update_feature(FEAT_RUN_STATE, run_state)
+            run_state = StateOptions.NONE
+        return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
     @property
     def pre_state(self):
         """Return previous run state."""
         pre_state = self._get_pre_state()
         if pre_state == STATE_STYLER_POWER_OFF:
-            pre_state = STATE_OPTIONITEM_NONE
-        return self._update_feature(FEAT_PRE_STATE, pre_state)
+            pre_state = StateOptions.NONE
+        return self._update_feature(WashDeviceFeatures.PRE_STATE, pre_state)
 
     @property
     def error_msg(self):
         """Return current error message."""
         if not self.is_error:
-            error = STATE_OPTIONITEM_NONE
+            error = StateOptions.NONE
         else:
             error = self._get_error()
-        return self._update_feature(FEAT_ERROR_MSG, error)
+        return self._update_feature(WashDeviceFeatures.ERROR_MSG, error)
 
     def _update_bit_features(self):
         """Update features related to bit status."""

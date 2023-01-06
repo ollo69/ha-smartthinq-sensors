@@ -25,13 +25,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, get_entity_name
-from .wideq import (
-    FEAT_HUMIDITY,
-    FEAT_ROOM_TEMP,
-    FEAT_WATER_OUT_TEMP,
-    UNIT_TEMP_FAHRENHEIT,
-    DeviceType,
-)
+from .wideq import UNIT_TEMP_FAHRENHEIT, AirConditionerFeatures, DeviceType
 from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
 
 # general ac attributes
@@ -329,14 +323,18 @@ class LGEACClimate(LGEClimate):
         """Return the current temperature."""
         curr_temp = None
         if self._device.is_air_to_water:
-            curr_temp = self._api.state.device_features.get(FEAT_WATER_OUT_TEMP)
+            curr_temp = self._api.state.device_features.get(
+                AirConditionerFeatures.WATER_OUT_TEMP
+            )
         if curr_temp is None:
-            curr_temp = self._api.state.device_features.get(FEAT_ROOM_TEMP)
+            curr_temp = self._api.state.device_features.get(
+                AirConditionerFeatures.ROOM_TEMP
+            )
         return curr_temp
 
     @property
     def current_humidity(self) -> int | None:
-        return self._api.state.device_features.get(FEAT_HUMIDITY)
+        return self._api.state.device_features.get(AirConditionerFeatures.HUMIDITY)
 
     @property
     def target_temperature(self) -> float:

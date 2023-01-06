@@ -27,16 +27,10 @@ from .device_helpers import (
     get_multiple_devices_types,
 )
 from .wideq import (
-    FEAT_ECOFRIENDLY,
-    FEAT_EXPRESSFRIDGE,
-    FEAT_EXPRESSMODE,
-    FEAT_ICEPLUS,
-    FEAT_LIGHTING_DISPLAY,
-    FEAT_MODE_AIRCLEAN,
-    FEAT_MODE_AWHP_SILENT,
-    FEAT_MODE_JET,
     WM_DEVICE_TYPES,
+    AirConditionerFeatures,
     DeviceType,
+    RefrigeratorFeatures,
 )
 
 # general sensor attributes
@@ -66,7 +60,7 @@ WASH_DEV_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
 )
 REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
-        key=FEAT_ECOFRIENDLY,
+        key=RefrigeratorFeatures.ECOFRIENDLY,
         name="Eco friendly",
         icon="mdi:gauge-empty",
         turn_off_fn=lambda x: x.device.set_eco_friendly(False),
@@ -74,7 +68,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_EXPRESSFRIDGE,
+        key=RefrigeratorFeatures.EXPRESSFRIDGE,
         name="Express fridge",
         icon="mdi:coolant-temperature",
         turn_off_fn=lambda x: x.device.set_express_fridge(False),
@@ -82,7 +76,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_EXPRESSMODE,
+        key=RefrigeratorFeatures.EXPRESSMODE,
         name="Express mode",
         icon="mdi:snowflake",
         turn_off_fn=lambda x: x.device.set_express_mode(False),
@@ -90,7 +84,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_ICEPLUS,
+        key=RefrigeratorFeatures.ICEPLUS,
         name="Ice plus",
         icon="mdi:snowflake",
         turn_off_fn=lambda x: x.device.set_ice_plus(False),
@@ -100,14 +94,14 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
 )
 AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
-        key=FEAT_MODE_AIRCLEAN,
+        key=AirConditionerFeatures.MODE_AIRCLEAN,
         name="Ionizer",
         icon="mdi:pine-tree",
         turn_off_fn=lambda x: x.device.set_mode_airclean(False),
         turn_on_fn=lambda x: x.device.set_mode_airclean(True),
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_MODE_JET,
+        key=AirConditionerFeatures.MODE_JET,
         name="Jet mode",
         icon="mdi:turbine",
         turn_off_fn=lambda x: x.device.set_mode_jet(False),
@@ -115,14 +109,14 @@ AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.is_mode_jet_available,
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_LIGHTING_DISPLAY,
+        key=AirConditionerFeatures.LIGHTING_DISPLAY,
         name="Display light",
         icon="mdi:wall-sconce-round",
         turn_off_fn=lambda x: x.device.set_lighting_display(False),
         turn_on_fn=lambda x: x.device.set_lighting_display(True),
     ),
     ThinQSwitchEntityDescription(
-        key=FEAT_MODE_AWHP_SILENT,
+        key=AirConditionerFeatures.MODE_AWHP_SILENT,
         name="Silent mode",
         icon="mdi:ear-hearing-off",
         turn_off_fn=lambda x: x.device.set_mode_awhp_silent(False),
@@ -221,8 +215,6 @@ async def async_setup_entry(
 
 class LGESwitch(CoordinatorEntity, SwitchEntity):
     """Class to control switches for LGE device"""
-
-    entity_description: ThinQSwitchEntityDescription
 
     def __init__(
         self,
