@@ -186,11 +186,33 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 
 You can substitute "dry" and "dryer" for "wet" and "washer" if you want to use with a washer, for example.
 
-- Custom card for dryer and washer (![Screenshot of laundry card](https://user-images.githubusercontent.com/10727862/135772833-de1a555a-3a88-4319-a82c-33dbe80fa4c5.png))
+- Timer Bar Card now supports this integration. If you like to show a progress bar for your washer/dryer go to https://github.com/rianadon/timer-bar-card and replace 'sensor.my_washer' with your sensor name.
 
+![image](https://user-images.githubusercontent.com/117555636/210880751-604b6779-fd9d-4c23-b0d9-1a167f42a23a.png)
 <details>
   <summary>
-    Hidden, click to expand
+Code hidden, click to expand
+  </summary>
+
+```yaml
+type: custom:timer-bar-card
+entity: sensor.my_washer # replace with your entity name
+duration:
+  attribute: initial_time
+invert: true # if you like to show the progress bar reverse like the screenshot above shows
+bar_height: 11px # adjusts the height of the bar
+text_width: 4em # adjusts the text width
+
+```
+
+</details>
+
+- Custom card for dryer and washer
+
+![image](https://user-images.githubusercontent.com/117555636/210881105-12a9f72f-b6f8-4f3a-bf00-1b73ba0af3b1.png)
+<details>
+  <summary>
+Code hidden, click to expand
   </summary>
 
 Place this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
@@ -287,11 +309,13 @@ entity: 'sensor.the_dryer_dryer' # Washers work too!
 
 </details>
 
-- Alternative: Template (requires mushroom-card, <img src="https://user-images.githubusercontent.com/10727862/174490941-c0148343-e31b-42fe-a856-376428ee53a5.png" width="500px"/>)
+- Mushroom-card
+
+<img src="https://user-images.githubusercontent.com/10727862/174490941-c0148343-e31b-42fe-a856-376428ee53a5.png" width="500px"/>)
 
 <details>
   <summary>
-    Hidden, click to expand
+Code hidden, click to expand
   </summary>
 
 **Note: You'll need to change the `sensor.dryer` to your own entity, and you might want to change `mdi:tumble-dryer` to `mdi:washing-machine` for washers.**
@@ -323,11 +347,11 @@ tap_action:
 
 </details>
 
-- Alternative: Washer picture status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
+- Washer picture status card (LG전자 / CC BY (https://creativecommons.org/licenses/by/2.0) for image. Find the images [here](/washerpics/))
 
 <details>
   <summary>
-    Hidden, click to expand
+Code hidden, click to expand
   </summary>
 
 configuration.yaml:
