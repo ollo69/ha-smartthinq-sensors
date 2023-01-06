@@ -36,8 +36,6 @@ TEMP_STEP_HALF = 0.5
 
 ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 
-# _LOGGER = logging.getLogger(__name__)
-
 
 class ACOp(Enum):
     """Whether a device is on or off."""
