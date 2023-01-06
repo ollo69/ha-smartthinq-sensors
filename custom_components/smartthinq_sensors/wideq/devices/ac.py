@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 import logging
 
-from ..const import UNIT_TEMP_CELSIUS, UNIT_TEMP_FAHRENHEIT, AirConditionerFeatures
+from ..const import AirConditionerFeatures, TemperatureUnit
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
@@ -253,14 +253,17 @@ class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
     def __init__(
-        self, client: ClientAsync, device_info: DeviceInfo, temp_unit=UNIT_TEMP_CELSIUS
+        self,
+        client: ClientAsync,
+        device_info: DeviceInfo,
+        temp_unit=TemperatureUnit.CELSIUS,
     ):
         """Initialize AirConditionerDevice object."""
         super().__init__(client, device_info, AirConditionerStatus(self))
         self._temperature_unit = (
-            UNIT_TEMP_FAHRENHEIT
-            if temp_unit == UNIT_TEMP_FAHRENHEIT
-            else UNIT_TEMP_CELSIUS
+            TemperatureUnit.FAHRENHEIT
+            if temp_unit == TemperatureUnit.FAHRENHEIT
+            else TemperatureUnit.CELSIUS
         )
         self._is_air_to_water = None
         self._is_water_heater_supported = None
@@ -287,13 +290,13 @@ class AirConditionerDevice(Device):
 
     def _f2c(self, value):
         """Convert Fahrenheit to Celsius temperatures for this device if required."""
-        if self._temperature_unit == UNIT_TEMP_CELSIUS:
+        if self._temperature_unit == TemperatureUnit.CELSIUS:
             return value
         return self._unit_conv.f2c(value, self.model_info)
 
     def conv_temp_unit(self, value):
         """Convert Celsius to Fahrenheit temperatures for this device if required."""
-        if self._temperature_unit == UNIT_TEMP_CELSIUS:
+        if self._temperature_unit == TemperatureUnit.CELSIUS:
             return float(value)
         return self._unit_conv.c2f(value, self.model_info)
 

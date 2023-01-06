@@ -7,7 +7,6 @@ from __future__ import annotations
 import asyncio
 import base64
 from datetime import datetime
-from enum import Enum
 import json
 import logging
 from numbers import Number
@@ -16,13 +15,7 @@ from typing import Any
 import aiohttp
 
 from . import core_exceptions as core_exc
-from .const import (
-    BIT_OFF,
-    BIT_ON,
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-    StateOptions,
-)
+from .const import BIT_OFF, BIT_ON, StateOptions
 from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
 from .model_info import ModelInfo
@@ -54,13 +47,6 @@ SLEEP_BETWEEN_RETRIES = 2  # seconds
 MONITOR_RESTART_SECONDS = 0  # 0 to disable
 
 _LOGGER = logging.getLogger(__name__)
-
-
-class UnitTempModes(Enum):
-    """Define possible temperature units."""
-
-    Celsius = UNIT_TEMP_CELSIUS
-    Fahrenheit = UNIT_TEMP_FAHRENHEIT
 
 
 class Monitor:

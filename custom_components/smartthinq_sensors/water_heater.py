@@ -20,9 +20,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .wideq import (
-    UNIT_TEMP_FAHRENHEIT,
     AirConditionerFeatures,
     DeviceType,
+    TemperatureUnit,
     WaterHeaterFeatures,
 )
 from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, AirConditionerDevice
@@ -143,7 +143,7 @@ class LGEWHWaterHeater(LGEWaterHeater):
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
+        if self._device.temperature_unit == TemperatureUnit.FAHRENHEIT:
             return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
@@ -219,7 +219,7 @@ class LGEACWaterHeater(LGEWaterHeater):
     @property
     def temperature_unit(self) -> str:
         """Return the unit of measurement used by the platform."""
-        if self._device.temperature_unit == UNIT_TEMP_FAHRENHEIT:
+        if self._device.temperature_unit == TemperatureUnit.FAHRENHEIT:
             return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 

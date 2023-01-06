@@ -1,22 +1,16 @@
 """------------------for Oven"""
 from __future__ import annotations
 
-from ..const import (
-    BIT_OFF,
-    UNIT_TEMP_CELSIUS,
-    UNIT_TEMP_FAHRENHEIT,
-    RangeFeatures,
-    StateOptions,
-)
+from ..const import BIT_OFF, RangeFeatures, StateOptions, TemperatureUnit
 from ..core_async import ClientAsync
-from ..device import Device, DeviceStatus, UnitTempModes
+from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
 
 OVEN_TEMP_UNIT = {
-    "0": UnitTempModes.Fahrenheit,
-    "1": UnitTempModes.Celsius,
-    "FAHRENHEIT": UnitTempModes.Fahrenheit,
-    "CELSIUS": UnitTempModes.Celsius,
+    "0": TemperatureUnit.FAHRENHEIT,
+    "1": TemperatureUnit.CELSIUS,
+    "FAHRENHEIT": TemperatureUnit.FAHRENHEIT,
+    "CELSIUS": TemperatureUnit.CELSIUS,
 }
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
@@ -63,9 +57,9 @@ class RangeStatus(DeviceStatus):
             if not oven_temp_unit:
                 self._oven_temp_unit = StateOptions.NONE
             else:
-                self._oven_temp_unit = (
-                    OVEN_TEMP_UNIT.get(oven_temp_unit, UnitTempModes.Celsius)
-                ).value
+                self._oven_temp_unit = OVEN_TEMP_UNIT.get(
+                    oven_temp_unit, TemperatureUnit.CELSIUS
+                )
         return self._oven_temp_unit
 
     @property
@@ -168,9 +162,9 @@ class RangeStatus(DeviceStatus):
     def oven_lower_target_temp(self):
         """Return oven lower target temperature."""
         unit = self.oven_temp_unit
-        if unit == UNIT_TEMP_FAHRENHEIT:
+        if unit == TemperatureUnit.FAHRENHEIT:
             key = "LowerTargetTemp_F"
-        elif unit == UNIT_TEMP_CELSIUS:
+        elif unit == TemperatureUnit.CELSIUS:
             key = "LowerTargetTemp_C"
         else:
             return None
@@ -180,9 +174,9 @@ class RangeStatus(DeviceStatus):
     def oven_upper_target_temp(self):
         """Return oven upper target temperature."""
         unit = self.oven_temp_unit
-        if unit == UNIT_TEMP_FAHRENHEIT:
+        if unit == TemperatureUnit.FAHRENHEIT:
             key = "UpperTargetTemp_F"
-        elif unit == UNIT_TEMP_CELSIUS:
+        elif unit == TemperatureUnit.CELSIUS:
             key = "UpperTargetTemp_C"
         else:
             return None
@@ -192,9 +186,9 @@ class RangeStatus(DeviceStatus):
     def oven_lower_current_temp(self):
         """Return oven lower current temperature."""
         unit = self.oven_temp_unit
-        if unit == UNIT_TEMP_FAHRENHEIT:
+        if unit == TemperatureUnit.FAHRENHEIT:
             key = "LowerCookTemp_F"
-        elif unit == UNIT_TEMP_CELSIUS:
+        elif unit == TemperatureUnit.CELSIUS:
             key = "LowerCookTemp_C"
         else:
             return None
@@ -207,9 +201,9 @@ class RangeStatus(DeviceStatus):
     def oven_upper_current_temp(self):
         """Return oven upper current temperature."""
         unit = self.oven_temp_unit
-        if unit == UNIT_TEMP_FAHRENHEIT:
+        if unit == TemperatureUnit.FAHRENHEIT:
             key = "UpperCookTemp_F"
-        elif unit == UNIT_TEMP_CELSIUS:
+        elif unit == TemperatureUnit.CELSIUS:
             key = "UpperCookTemp_C"
         else:
             return None

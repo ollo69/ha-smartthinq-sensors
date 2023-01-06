@@ -5,9 +5,9 @@ import base64
 import json
 import logging
 
-from ..const import UNIT_TEMP_FAHRENHEIT, RefrigeratorFeatures, StateOptions
+from ..const import RefrigeratorFeatures, StateOptions, TemperatureUnit
 from ..core_async import ClientAsync
-from ..device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus, UnitTempModes
+from ..device import LABEL_BIT_OFF, LABEL_BIT_ON, Device, DeviceStatus
 from ..device_info import DeviceInfo
 from ..model_info import TYPE_ENUM
 
@@ -18,17 +18,17 @@ FEATURE_DESCR = {
 }
 
 REFRTEMPUNIT = {
-    "Ｆ": UnitTempModes.Fahrenheit,
-    "℃": UnitTempModes.Celsius,
-    "˚F": UnitTempModes.Fahrenheit,
-    "˚C": UnitTempModes.Celsius,
+    "Ｆ": TemperatureUnit.FAHRENHEIT,
+    "℃": TemperatureUnit.CELSIUS,
+    "˚F": TemperatureUnit.FAHRENHEIT,
+    "˚C": TemperatureUnit.CELSIUS,
 }
 
 # REFRTEMPUNIT = {
-#     "\uff26": UnitTempModes.Fahrenheit,
-#     "\u2103": UnitTempModes.Celsius,
-#     "\u02daF": UnitTempModes.Fahrenheit,
-#     "\u02daC": UnitTempModes.Celsius,
+#     "\uff26": TemperatureUnit.FAHRENHEIT,
+#     "\u2103": TemperatureUnit.CELSIUS,
+#     "\u02daF": TemperatureUnit.FAHRENHEIT,
+#     "\u02daC": TemperatureUnit.CELSIUS,
 # }
 
 DEFAULT_FRIDGE_RANGE_C = [1, 10]
@@ -164,7 +164,7 @@ class RefrigeratorDevice(Device):
         """Get valid values for temps for V1 models"""
         unit = self._get_temp_unit()
         if unit:
-            unit_key = "_F" if unit == UNIT_TEMP_FAHRENHEIT else "_C"
+            unit_key = "_F" if unit == TemperatureUnit.FAHRENHEIT else "_C"
             if self.model_info.value_exist(key + unit_key):
                 key = key + unit_key
         value_type = self.model_info.value_type(key)
@@ -250,7 +250,7 @@ class RefrigeratorDevice(Device):
         """Return range value for fridge target temperature."""
         if self._fridge_ranges is None:
             unit = self._get_temp_unit() or StateOptions.NONE
-            if unit == UNIT_TEMP_FAHRENHEIT:
+            if unit == TemperatureUnit.FAHRENHEIT:
                 return DEFAULT_FRIDGE_RANGE_F
             return DEFAULT_FRIDGE_RANGE_C
         return self._fridge_ranges
@@ -260,7 +260,7 @@ class RefrigeratorDevice(Device):
         """Return range value for freezer target temperature."""
         if self._freezer_ranges is None:
             unit = self._get_temp_unit() or StateOptions.NONE
-            if unit == UNIT_TEMP_FAHRENHEIT:
+            if unit == TemperatureUnit.FAHRENHEIT:
                 return DEFAULT_FREEZER_RANGE_F
             return DEFAULT_FREEZER_RANGE_C
         return self._freezer_ranges
@@ -420,7 +420,7 @@ class RefrigeratorStatus(DeviceStatus):
         if not config or not isinstance(config, dict):
             return None
         unit = self._get_temp_unit() or StateOptions.NONE
-        unit_key = "tempUnit_F" if unit == UNIT_TEMP_FAHRENHEIT else "tempUnit_C"
+        unit_key = "tempUnit_F" if unit == TemperatureUnit.FAHRENHEIT else "tempUnit_C"
         return config.get(unit_key)
 
     def _get_temp_unit(self):
@@ -429,7 +429,7 @@ class RefrigeratorStatus(DeviceStatus):
             temp_unit = self.lookup_enum(["TempUnit", "tempUnit"])
             if not temp_unit:
                 return None
-            self._temp_unit = (REFRTEMPUNIT.get(temp_unit, UnitTempModes.Celsius)).value
+            self._temp_unit = REFRTEMPUNIT.get(temp_unit, TemperatureUnit.CELSIUS)
         return self._temp_unit
 
     def _get_temp_key(self, key):
