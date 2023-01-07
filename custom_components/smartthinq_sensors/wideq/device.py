@@ -817,6 +817,8 @@ class DeviceStatus:
         max_time_status: str | list,
         filter_types: list | None = None,
         support_key: str | None = None,
+        *,
+        use_time_inverted=False,
     ):
         """Get filter status filtering by type if required."""
         if filter_types and support_key:
@@ -845,6 +847,13 @@ class DeviceStatus:
         )
         if use_time is None:
             return None
+        # for models that return use_time directly in the payload,
+        # the value actually represent remaining time
+        if use_time_inverted:
+            try:
+                use_time = max(max_time - use_time, 0)
+            except ValueError:
+                return None
 
         try:
             return [
