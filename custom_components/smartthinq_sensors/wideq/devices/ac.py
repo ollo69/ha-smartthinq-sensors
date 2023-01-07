@@ -950,6 +950,7 @@ class AirConditionerStatus(DeviceStatus):
         """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
+        self._filter_use_time_inverted = True
 
     def _str_to_temp(self, str_temp):
         """Convert a string to either an `int` or a `float` temperature."""
@@ -973,6 +974,8 @@ class AirConditionerStatus(DeviceStatus):
 
     def update_filter_status(self, values: dict) -> bool:
         """Update device filter status."""
+        self._filter_use_time_inverted = False
+
         if not self.is_info_v2:
             self._data.update(values)
             return True
@@ -990,6 +993,11 @@ class AirConditionerStatus(DeviceStatus):
                 if upd_key in values:
                     self._data[upd_key] = values[upd_key]
                     updated = True
+
+        # for models that return use_time directly in the payload,
+        # the value actually represent remaining time
+        self._filter_use_time_inverted = not updated
+
         return updated
 
     def update_status(self, key, value):
@@ -1173,7 +1181,11 @@ class AirConditionerStatus(DeviceStatus):
         result = {}
 
         for filter_def in FILTER_TYPES:
-            status = self._get_filter_life(filter_def[1], filter_def[2])
+            status = self._get_filter_life(
+                filter_def[1],
+                filter_def[2],
+                use_time_inverted=self._filter_use_time_inverted,
+            )
             if status is not None:
                 for index, feat in enumerate(filter_def[0]):
                     if index >= len(status):

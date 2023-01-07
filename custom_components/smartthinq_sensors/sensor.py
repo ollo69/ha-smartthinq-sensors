@@ -656,7 +656,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
             return None
         data = {}
         for key, feat in features.items():
-            if val := self._api.state.device_features.get(feat):
+            if (val := self._api.state.device_features.get(feat)) is not None:
                 data[key] = val
         return data
 

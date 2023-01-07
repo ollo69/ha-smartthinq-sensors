@@ -364,7 +364,11 @@ class AirPurifierStatus(DeviceStatus):
 
         for filter_def in FILTER_TYPES:
             status = self._get_filter_life(
-                filter_def[1], filter_def[2], filter_def[3], support_key
+                filter_def[1],
+                filter_def[2],
+                filter_def[3],
+                support_key,
+                use_time_inverted=True,
             )
             if status is not None:
                 for index, feat in enumerate(filter_def[0]):
