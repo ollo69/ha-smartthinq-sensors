@@ -140,28 +140,22 @@ class LGEWashDevice(LGEBaseDevice):
     @property
     def start_time(self):
         """Return the time and date the wash began or will begin in ISO format."""
-        if self._api.state:
-            if self._api.state.is_on:
-                state = self._api.state
-                start = datetime.now() + timedelta(
-                    hours=state.reservetime_hour - state.initialtime_hour + state.remaintime_hour,
-                    minutes=state.reservetime_min - state.initialtime_min + state.remaintime_min
-                )
-                return start.isoformat()
-        return ""
+        if not (self._api.state and self._api.state.is_on):
+            return ""
+        state = self._api.state
+        hrs = state.reservetime_hour - state.initialtime_hour + state.remaintime_hour
+        mins = state.reservetime_min - state.initialtime_min + state.remaintime_min
+        return (datetime.now() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def end_time(self):
         """Return the time and date the wash will end in ISO format."""
-        if self._api.state:
-            if self._api.state.is_on:
-                state = self._api.state
-                start = datetime.now() + timedelta(
-                    hours=state.reservetime_hour + state.remaintime_hour,
-                    minutes=state.reservetime_min + state.remaintime_min
-                )
-                return start.isoformat()
-        return ""
+        if not (self._api.state and self._api.state.is_on):
+            return ""
+        state = self._api.state
+        hrs = state.reservetime_hour + state.remaintime_hour
+        mins = state.reservetime_min + state.remaintime_min
+        return (datetime.now() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def initial_time(self):
