@@ -58,6 +58,7 @@ ATTR_ERROR_STATE = "error_state"
 ATTR_INITIAL_TIME = "initial_time"
 ATTR_REMAIN_TIME = "remain_time"
 ATTR_RESERVE_TIME = "reserve_time"
+ATTR_START_TIME = "remain_time"
 ATTR_RUN_COMPLETED = "run_completed"
 
 # refrigerator sensor attributes
@@ -716,6 +717,7 @@ class LGEWashDeviceSensor(LGESensor):
         data = {
             ATTR_RUN_COMPLETED: self._wrap_device.run_completed,
             ATTR_ERROR_STATE: self._wrap_device.error_state,
+            ATTR_START_TIME: self._wrap_device.start_time,
             ATTR_INITIAL_TIME: self._wrap_device.initial_time,
             ATTR_REMAIN_TIME: self._wrap_device.remain_time,
             ATTR_RESERVE_TIME: self._wrap_device.reserve_time,
