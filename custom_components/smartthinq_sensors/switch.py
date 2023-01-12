@@ -216,6 +216,8 @@ async def async_setup_entry(
 class LGESwitch(CoordinatorEntity, SwitchEntity):
     """Class to control switches for LGE device"""
 
+    entity_description: ThinQSwitchEntityDescription
+
     def __init__(
         self,
         api: LGEDevice,
