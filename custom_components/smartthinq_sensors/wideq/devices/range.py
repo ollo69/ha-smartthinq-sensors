@@ -75,14 +75,14 @@ class RangeStatus(DeviceStatus):
     @property
     def is_cooktop_on(self):
         """Return if cooktop is on."""
-        result = [
-            self.cooktop_left_front_state,
-            self.cooktop_left_rear_state,
-            self.cooktop_center_state,
-            self.cooktop_right_front_state,
-            self.cooktop_right_rear_state,
-        ]
-        for res in result:
+        for feature in [
+            RangeFeatures.COOKTOP_CENTER_STATE,
+            RangeFeatures.COOKTOP_LEFT_FRONT_STATE,
+            RangeFeatures.COOKTOP_LEFT_REAR_STATE,
+            RangeFeatures.COOKTOP_RIGHT_FRONT_STATE,
+            RangeFeatures.COOKTOP_RIGHT_REAR_STATE,
+        ]:
+            res = self.device_features.get(feature)
             if res and res != StateOptions.OFF:
                 return True
         return False
@@ -94,7 +94,9 @@ class RangeStatus(DeviceStatus):
         # the five burners do not report individual status.
         # Instead, the cooktop_left_front reports aggregated status for all burners.
         status = self.lookup_enum("LFState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.COOKTOP_LEFT_FRONT_STATE, status)
 
@@ -102,7 +104,9 @@ class RangeStatus(DeviceStatus):
     def cooktop_left_rear_state(self):
         """Return left rear cooktop state."""
         status = self.lookup_enum("LRState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.COOKTOP_LEFT_REAR_STATE, status)
 
@@ -110,7 +114,9 @@ class RangeStatus(DeviceStatus):
     def cooktop_center_state(self):
         """Return center cooktop state."""
         status = self.lookup_enum("CenterState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.COOKTOP_CENTER_STATE, status)
 
@@ -118,7 +124,9 @@ class RangeStatus(DeviceStatus):
     def cooktop_right_front_state(self):
         """Return right front cooktop state."""
         status = self.lookup_enum("RFState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.COOKTOP_RIGHT_FRONT_STATE, status)
 
@@ -126,18 +134,20 @@ class RangeStatus(DeviceStatus):
     def cooktop_right_rear_state(self):
         """Return right rear cooktop state."""
         status = self.lookup_enum("RRState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.COOKTOP_RIGHT_REAR_STATE, status)
 
     @property
     def is_oven_on(self):
         """Return if oven is on."""
-        result = [
-            self.oven_lower_state,
-            self.oven_upper_state,
-        ]
-        for res in result:
+        for feature in [
+            RangeFeatures.OVEN_LOWER_STATE,
+            RangeFeatures.OVEN_UPPER_STATE,
+        ]:
+            res = self.device_features.get(feature)
             if res and res != StateOptions.OFF:
                 return True
         return False
@@ -146,17 +156,37 @@ class RangeStatus(DeviceStatus):
     def oven_lower_state(self):
         """Return oven lower state."""
         status = self.lookup_enum("LowerOvenState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.OVEN_LOWER_STATE, status)
+
+    @property
+    def oven_lower_mode(self):
+        """Return oven lower mode."""
+        status = self.lookup_enum("LowerCookMode")
+        if status is None:
+            return None
+        return self._update_feature(RangeFeatures.OVEN_LOWER_MODE, status)
 
     @property
     def oven_upper_state(self):
         """Return oven upper state."""
         status = self.lookup_enum("UpperOvenState")
-        if status and status == ITEM_STATE_OFF:
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
             status = BIT_OFF
         return self._update_feature(RangeFeatures.OVEN_UPPER_STATE, status)
+
+    @property
+    def oven_upper_mode(self):
+        """Return oven upper mode."""
+        status = self.lookup_enum("UpperCookMode")
+        if status is None:
+            return None
+        return self._update_feature(RangeFeatures.OVEN_UPPER_MODE, status)
 
     @property
     def oven_lower_target_temp(self):
@@ -220,7 +250,9 @@ class RangeStatus(DeviceStatus):
             self.cooktop_right_front_state,
             self.cooktop_right_rear_state,
             self.oven_lower_state,
+            self.oven_lower_mode,
             self.oven_lower_current_temp,
             self.oven_upper_state,
+            self.oven_upper_mode,
             self.oven_upper_current_temp,
         ]

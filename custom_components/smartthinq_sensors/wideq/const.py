@@ -87,8 +87,10 @@ class RangeFeatures(StrEnum):
     COOKTOP_RIGHT_FRONT_STATE = "cooktop_right_front_state"
     COOKTOP_RIGHT_REAR_STATE = "cooktop_right_rear_state"
     OVEN_LOWER_CURRENT_TEMP = "oven_lower_current_temp"
+    OVEN_LOWER_MODE = "oven_lower_mode"
     OVEN_LOWER_STATE = "oven_lower_state"
     OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
+    OVEN_UPPER_MODE = "oven_upper_mode"
     OVEN_UPPER_STATE = "oven_upper_state"
 
 

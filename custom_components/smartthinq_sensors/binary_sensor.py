@@ -166,14 +166,15 @@ RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_COOKTOP_STATE,
         name="Cooktop state",
-        device_class=BinarySensorDeviceClass.HEAT,
+        device_class=BinarySensorDeviceClass.POWER,
         value_fn=lambda x: x.cooktop_state,
     ),
     ThinQBinarySensorEntityDescription(
         key=ATTR_OVEN_STATE,
         name="Oven state",
-        device_class=BinarySensorDeviceClass.HEAT,
+        device_class=BinarySensorDeviceClass.POWER,
         value_fn=lambda x: x.oven_state,
+        entity_registry_enabled_default=False,
     ),
 )
 DEHUMIDIFIER_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (

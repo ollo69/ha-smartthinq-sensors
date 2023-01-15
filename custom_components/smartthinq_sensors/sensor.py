@@ -302,8 +302,18 @@ RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:inbox-arrow-down",
     ),
     ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_LOWER_MODE,
+        name="Oven lower mode",
+        icon="mdi:inbox-arrow-down",
+    ),
+    ThinQSensorEntityDescription(
         key=RangeFeatures.OVEN_UPPER_STATE,
         name="Oven upper state",
+        icon="mdi:inbox-arrow-up",
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_UPPER_MODE,
+        name="Oven upper mode",
         icon="mdi:inbox-arrow-up",
     ),
     ThinQSensorEntityDescription(
@@ -762,6 +772,20 @@ class LGERangeSensor(LGESensor):
     ):
         """Initialize the sensor."""
         super().__init__(api, description, LGERangeDevice(api))
+
+    @property
+    def native_value(self) -> float | int | str | None:
+        """Return the state of the sensor."""
+        value = super().native_value
+        dev_class = self.entity_description.device_class
+        if dev_class and dev_class == SensorDeviceClass.TEMPERATURE:
+            try:
+                num_val = int(value)
+            except (TypeError, ValueError):
+                return value
+            if num_val == 0:
+                return None
+        return value
 
     @property
     def extra_state_attributes(self):
