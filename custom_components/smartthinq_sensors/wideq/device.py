@@ -793,7 +793,7 @@ class DeviceStatus:
             return None
         try:
             return int(value)
-        except ValueError:
+        except (TypeError, ValueError):
             return None
 
     @staticmethod
