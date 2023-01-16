@@ -774,20 +774,6 @@ class LGERangeSensor(LGESensor):
         super().__init__(api, description, LGERangeDevice(api))
 
     @property
-    def native_value(self) -> float | int | str | None:
-        """Return the state of the sensor."""
-        value = super().native_value
-        dev_class = self.entity_description.device_class
-        if dev_class and dev_class == SensorDeviceClass.TEMPERATURE:
-            try:
-                num_val = int(value)
-            except (TypeError, ValueError):
-                return value
-            if num_val == 0:
-                return None
-        return value
-
-    @property
     def extra_state_attributes(self):
         """Return the optional state attributes."""
         if not self._is_default:

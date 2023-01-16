@@ -198,7 +198,10 @@ class RangeStatus(DeviceStatus):
             key = "LowerTargetTemp_C"
         else:
             return None
-        return self._data.get(key)
+        status = self.to_int_or_none(self._data.get(key))
+        if not status:  # 0 means not availabe
+            status = None
+        return status
 
     @property
     def oven_upper_target_temp(self):
@@ -210,7 +213,10 @@ class RangeStatus(DeviceStatus):
             key = "UpperTargetTemp_C"
         else:
             return None
-        return self._data.get(key)
+        status = self.to_int_or_none(self._data.get(key))
+        if not status:  # 0 means not availabe
+            status = None
+        return status
 
     @property
     def oven_lower_current_temp(self):
@@ -222,9 +228,11 @@ class RangeStatus(DeviceStatus):
             key = "LowerCookTemp_C"
         else:
             return None
-        status = self._data.get(key)
+        status = self.to_int_or_none(self._data.get(key))
+        if not status:  # 0 means not availabe
+            status = None
         return self._update_feature(
-            RangeFeatures.OVEN_LOWER_CURRENT_TEMP, status, False
+            RangeFeatures.OVEN_LOWER_CURRENT_TEMP, status, False, allow_none=True
         )
 
     @property
@@ -237,9 +245,11 @@ class RangeStatus(DeviceStatus):
             key = "UpperCookTemp_C"
         else:
             return None
-        status = self._data.get(key)
+        status = self.to_int_or_none(self._data.get(key))
+        if not status:  # 0 means not availabe
+            status = None
         return self._update_feature(
-            RangeFeatures.OVEN_UPPER_CURRENT_TEMP, status, False
+            RangeFeatures.OVEN_UPPER_CURRENT_TEMP, status, False, allow_none=True
         )
 
     def _update_features(self):
