@@ -210,7 +210,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     region = entry.data[CONF_REGION]
     language = entry.data[CONF_LANGUAGE]
     refresh_token = entry.data[CONF_TOKEN]
-    oauth2_url = entry.data.get(CONF_OAUTH2_URL)
+    oauth2_url = None  # entry.data.get(CONF_OAUTH2_URL)
     use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
     use_ha_session = entry.data.get(CONF_USE_HA_SESSION, False)
 
