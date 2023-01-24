@@ -150,13 +150,13 @@ class CoreAsync:
         Parameters:
             country: ThinQ account country
             language: ThinQ account language
-            timeout: the http timeout (default = 10 sec.)
+            timeout: the http timeout (default = 15 sec.)
             session: the AioHttp session to use (if None a new session is created)
         """
 
         self._country = country
         self._language = language
-        self._timeout = timeout
+        self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._oauth_url = oauth_url
 
         if session:
@@ -263,6 +263,7 @@ class CoreAsync:
         """Make a generic HTTP request."""
         async with self._get_session().get(
             url=url,
+            timeout=self._timeout,
         ) as resp:
             result = await resp.content.read()
 
