@@ -304,12 +304,11 @@ class WaterHeaterStatus(DeviceStatus):
     def energy_current(self):
         """Return current energy usage."""
         key = self._get_state_key(STATE_POWER)
-        value = self._data.get(key)
-        if value is not None and self.is_info_v2:
-            # decrease power for V2 device that always return 50 when standby
-            new_value = self.to_int_or_none(value)
-            if new_value and new_value <= 50:
-                value = 5.0
+        if (value := self.to_int_or_none(self._data.get(key))) is None:
+            return None
+        if value <= 50:
+            # decrease power for devices that always return 50 when standby
+            value = 5
         return self._update_feature(WaterHeaterFeatures.ENERGY_CURRENT, value, False)
 
     def _update_features(self):
