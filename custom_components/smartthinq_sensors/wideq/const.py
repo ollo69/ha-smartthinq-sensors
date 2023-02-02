@@ -5,7 +5,7 @@ from .core_enum import StrEnum
 # default core settings
 DEFAULT_COUNTRY = "US"
 DEFAULT_LANGUAGE = "en-US"
-DEFAULT_TIMEOUT = 15  # seconds
+DEFAULT_TIMEOUT = 10  # seconds
 
 # bit status
 BIT_OFF = "OFF"

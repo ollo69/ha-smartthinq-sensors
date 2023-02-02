@@ -150,7 +150,7 @@ class CoreAsync:
         Parameters:
             country: ThinQ account country
             language: ThinQ account language
-            timeout: the http timeout (default = 15 sec.)
+            timeout: the http timeout (default = 10 sec.)
             session: the AioHttp session to use (if None a new session is created)
         """
 
