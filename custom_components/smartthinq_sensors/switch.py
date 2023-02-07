@@ -34,7 +34,7 @@ from .wideq import (
 )
 
 # general sensor attributes
-ATTR_POWER_OFF = "power_off"
+ATTR_POWER = "power"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,10 +51,11 @@ class ThinQSwitchEntityDescription(SwitchEntityDescription):
 
 WASH_DEV_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
-        key=ATTR_POWER_OFF,
-        name="Power off",
-        value_fn=lambda x: x.is_power_on,
+        key=ATTR_POWER,
+        name="Power",
+        value_fn=lambda x: x.is_power_on and not x.device.stand_by,
         turn_off_fn=lambda x: x.device.power_off(),
+        turn_on_fn=lambda x: x.device.wake_up(),
         available_fn=lambda x: x.is_power_on,
     ),
 )

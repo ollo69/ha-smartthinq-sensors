@@ -61,6 +61,7 @@ from .wideq.device import Device as ThinQDevice
 
 SMARTTHINQ_PLATFORMS = [
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.CLIMATE,
     Platform.FAN,
     Platform.HUMIDIFIER,
