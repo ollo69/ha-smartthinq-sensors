@@ -9,5 +9,5 @@
   "requirements": ["pycountry>=20.7.3", "xmltodict>=0.12.0", "cchardet>=2.1.7"],
   "config_flow": true,
   "iot_class": "cloud_polling",
-  "version": "0.29.4"
+  "version": "0.30.0"
 }
