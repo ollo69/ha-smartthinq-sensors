@@ -82,6 +82,7 @@ class Monitor:
     ) -> None:
         """Log and raise error with different level depending on condition."""
         log_lev = logging.DEBUG
+        self._disconnected = True
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
             self._has_error = True
