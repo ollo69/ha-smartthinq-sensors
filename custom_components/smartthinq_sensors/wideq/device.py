@@ -271,9 +271,8 @@ class Monitor:
         """Stop monitor for ThinQ1 device."""
         if not self._work_id:
             return
-        work_id = self._work_id
+        await self._client.session.monitor_stop(self._device_id, self._work_id)
         self._work_id = None
-        await self._client.session.monitor_stop(self._device_id, work_id)
 
     async def poll(self, query_device=False) -> Any | None:
         """
