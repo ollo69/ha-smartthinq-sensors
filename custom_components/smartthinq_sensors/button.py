@@ -20,7 +20,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import LGEBaseDevice, get_entity_name, get_multiple_devices_types
-from .wideq import WM_DEVICE_TYPES
+from .wideq import WM_DEVICE_TYPES, WashDeviceFeatures
 
 # general button attributes
 ATTR_REMOTE_START = "remote_start"
@@ -42,6 +42,7 @@ class ThinQButtonEntityDescription(
     """A class that describes ThinQ button entities."""
 
     available_fn: Callable[[Any], bool] | None = None
+    related_feature: str | None = None
 
 
 WASH_DEV_BUTTON: Tuple[ThinQButtonEntityDescription, ...] = (
@@ -51,6 +52,7 @@ WASH_DEV_BUTTON: Tuple[ThinQButtonEntityDescription, ...] = (
         device_class=ButtonDeviceClass.UPDATE,
         press_action_fn=lambda x: x.device.remote_start(),
         available_fn=lambda x: x.device.remote_start_enabled,
+        related_feature=WashDeviceFeatures.REMOTESTART,
     ),
 )
 
@@ -59,7 +61,11 @@ def _button_exist(
     lge_device: LGEDevice, button_desc: ThinQButtonEntityDescription
 ) -> bool:
     """Check if a button exist for device."""
-    return True
+    feature = button_desc.related_feature
+    if feature is None or feature in lge_device.available_features:
+        return True
+
+    return False
 
 
 async def async_setup_entry(
