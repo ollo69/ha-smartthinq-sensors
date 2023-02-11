@@ -1,5 +1,7 @@
 """Helper class for ThinQ devices"""
 
+from datetime import datetime, timedelta
+
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 
 from .const import DEFAULT_SENSOR
@@ -134,6 +136,26 @@ class LGEWashDevice(LGEBaseDevice):
             if self._api.state.is_error:
                 return STATE_ON
         return STATE_OFF
+
+    @property
+    def start_time(self):
+        """Return the time and date the wash began or will begin in ISO format."""
+        if not (self._api.state and self._api.state.is_on):
+            return ""
+        state = self._api.state
+        hrs = state.reservetime_hour - state.initialtime_hour + state.remaintime_hour
+        mins = state.reservetime_min - state.initialtime_min + state.remaintime_min
+        return (datetime.now() + timedelta(hours=hrs, minutes=mins)).isoformat()
+
+    @property
+    def end_time(self):
+        """Return the time and date the wash will end in ISO format."""
+        if not (self._api.state and self._api.state.is_on):
+            return ""
+        state = self._api.state
+        hrs = state.reservetime_hour + state.remaintime_hour
+        mins = state.reservetime_min + state.remaintime_min
+        return (datetime.now() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def initial_time(self):
