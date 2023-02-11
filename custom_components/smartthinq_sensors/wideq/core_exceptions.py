@@ -4,68 +4,52 @@
 class APIError(Exception):
     """An error reported by the API."""
 
-    def __init__(self, code, message):
-        self.code = code
+    def __init__(self, message="LG ThinQ API Error", code=None):
         self.message = message
-        super().__init__(self.message)
+        self.code = code
+        if code:
+            msg = f"{code} - {message}"
+        else:
+            msg = message
+        super().__init__(msg)
 
 
 class NotLoggedInError(APIError):
     """The session is not valid or expired."""
 
-    def __init__(self):
-        pass
-
 
 class NotConnectedError(APIError):
     """The service can't contact the specified device."""
 
-    def __init__(self):
-        pass
-
 
 class FailedRequestError(APIError):
-    """A failed request typically indicates an unsupported control on a
-    device.
-    """
-
-    def __init__(self):
-        pass
+    """A failed request typically indicates an unsupported control on a device."""
 
 
 class InvalidRequestError(APIError):
     """The server rejected a request as invalid."""
-
-    def __init__(self):
-        pass
 
 
 class InvalidResponseError(APIError):
     """The server provide an invalid response."""
 
     def __init__(self, resp_msg):
-        super().__init__("", resp_msg)
+        super().__init__(f"Received response: {resp_msg}")
 
 
 class InvalidCredentialError(APIError):
     """The server rejected connection."""
-
-    def __init__(self):
-        pass
 
 
 class TokenError(APIError):
     """An authentication token was rejected."""
 
     def __init__(self):
-        pass
+        super().__init__("Token Error")
 
 
 class DeviceNotFound(APIError):
     """Device ID not valid."""
-
-    def __init__(self):
-        pass
 
 
 class MonitorError(APIError):
@@ -75,13 +59,11 @@ class MonitorError(APIError):
 
     def __init__(self, device_id, code):
         self.device_id = device_id
-        super().__init__(code, "Wideq Monitor Error")
+        super().__init__(f"Monitor Error for device {device_id}", code)
 
 
 class InvalidDeviceStatus(Exception):
     """Device exception occurred when status of device is not valid."""
-
-    pass
 
 
 class AuthenticationError(Exception):

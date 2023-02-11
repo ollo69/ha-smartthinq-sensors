@@ -73,7 +73,7 @@ class Monitor:
         self._device_descr = device_info.name
         self._work_id: str | None = None
         self._monitor_start_time: datetime | None = None
-        self._disconnected = True
+        self._disconnected = self._platform_type == PlatformType.THINQ1
         self._has_error = False
         self._invalid_credential_count = 0
 
@@ -82,7 +82,7 @@ class Monitor:
     ) -> None:
         """Log and raise error with different level depending on condition."""
         log_lev = logging.DEBUG
-        self._disconnected = True
+        self._disconnected = self._platform_type == PlatformType.THINQ1
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
             self._has_error = True
@@ -112,7 +112,7 @@ class Monitor:
             if Monitor._client_connected:
                 await self._client.refresh_auth()
                 return True
-            self._disconnected = True
+            self._disconnected = self._platform_type == PlatformType.THINQ1
             return await self._refresh_client()
 
     async def _refresh_client(self) -> bool:
@@ -157,6 +157,7 @@ class Monitor:
                     state = await self.poll(query_device)
 
             except core_exc.NotConnectedError:
+                # This error comes when APIv1 device is turned off
                 if self._has_error:
                     _LOGGER.info(
                         "Connection is now available - Device: %s", self._device_descr
@@ -165,8 +166,9 @@ class Monitor:
                 _LOGGER.debug(
                     "Status not available. Device %s not connected", self._device_descr
                 )
-                self._disconnected = True
-                raise
+                if iteration >= MAX_RETRIES - 1:
+                    raise
+                continue
 
             except core_exc.DeviceNotFound:
                 self._raise_error(
