@@ -157,6 +157,7 @@ class Monitor:
                     state = await self.poll(query_device)
 
             except core_exc.NotConnectedError:
+                # This error comes when APIv1 device is turned off
                 if self._has_error:
                     _LOGGER.info(
                         "Connection is now available - Device: %s", self._device_descr
