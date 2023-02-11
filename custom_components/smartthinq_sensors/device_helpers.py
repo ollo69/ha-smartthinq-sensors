@@ -1,8 +1,9 @@
 """Helper class for ThinQ devices"""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
+from homeassistant.util.dt import utcnow
 
 from .const import DEFAULT_SENSOR
 from .wideq import WM_DEVICE_TYPES, DeviceType, StateOptions, TemperatureUnit
@@ -141,21 +142,29 @@ class LGEWashDevice(LGEBaseDevice):
     def start_time(self):
         """Return the time and date the wash began or will begin in ISO format."""
         if not (self._api.state and self._api.state.is_on):
-            return ""
+            return None
         state = self._api.state
-        hrs = state.reservetime_hour - state.initialtime_hour + state.remaintime_hour
-        mins = state.reservetime_min - state.initialtime_min + state.remaintime_min
-        return (datetime.now() + timedelta(hours=hrs, minutes=mins)).isoformat()
+        hrs = (
+            int(state.reservetime_hour)
+            - int(state.initialtime_hour)
+            + int(state.remaintime_hour)
+        )
+        mins = (
+            int(state.reservetime_min)
+            - int(state.initialtime_min)
+            + int(state.remaintime_min)
+        )
+        return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def end_time(self):
         """Return the time and date the wash will end in ISO format."""
         if not (self._api.state and self._api.state.is_on):
-            return ""
+            return None
         state = self._api.state
-        hrs = state.reservetime_hour + state.remaintime_hour
-        mins = state.reservetime_min + state.remaintime_min
-        return (datetime.now() + timedelta(hours=hrs, minutes=mins)).isoformat()
+        hrs = int(state.reservetime_hour) + int(state.remaintime_hour)
+        mins = int(state.reservetime_min) + int(state.remaintime_min)
+        return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def initial_time(self):
