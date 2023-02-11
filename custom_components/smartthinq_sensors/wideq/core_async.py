@@ -82,7 +82,7 @@ API2_ERRORS = {
     "0106": exc.NotConnectedError,
     "0100": exc.FailedRequestError,
     "0110": exc.InvalidCredentialError,
-    "9999": exc.NotConnectedError,  # This come as "other errors", we manage as not connected.
+    # "9999": exc.NotConnectedError,  # This come as "other errors", we manage as not connected.
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
 }
 
@@ -342,10 +342,10 @@ class CoreAsync:
             if "resultCode" in result:
                 code = result["resultCode"]
                 if code != "0000":
+                    message = result.get("result", "ThinQ APIv2 error")
                     if code in API2_ERRORS:
-                        raise API2_ERRORS[code]()
-                    message = result.get("result", "error")
-                    raise exc.APIError(code, message)
+                        raise API2_ERRORS[code](message)
+                    raise exc.APIError(message, code)
 
             return result
 
@@ -356,10 +356,10 @@ class CoreAsync:
         if "returnCd" in msg:
             code = msg["returnCd"]
             if code != "0000":
+                message = msg.get("returnMsg", "ThinQ APIv1 error")
                 if code in API2_ERRORS:
-                    raise API2_ERRORS[code]()
-                message = msg["returnMsg"]
-                raise exc.APIError(code, message)
+                    raise API2_ERRORS[code](message)
+                raise exc.APIError(message, code)
 
         return msg
 
