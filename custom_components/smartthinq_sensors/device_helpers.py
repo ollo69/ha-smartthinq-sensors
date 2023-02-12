@@ -145,14 +145,14 @@ class LGEWashDevice(LGEBaseDevice):
             return None
         state = self._api.state
         hrs = (
-            int(state.reservetime_hour)
-            - int(state.initialtime_hour)
-            + int(state.remaintime_hour)
+            int(state.reservetime_hour or "0")
+            - int(state.initialtime_hour or "0")
+            + int(state.remaintime_hour or "0")
         )
         mins = (
-            int(state.reservetime_min)
-            - int(state.initialtime_min)
-            + int(state.remaintime_min)
+            int(state.reservetime_min or "0")
+            - int(state.initialtime_min or "0")
+            + int(state.remaintime_min or "0")
         )
         return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
@@ -162,8 +162,8 @@ class LGEWashDevice(LGEBaseDevice):
         if not (self._api.state and self._api.state.is_on):
             return None
         state = self._api.state
-        hrs = int(state.reservetime_hour) + int(state.remaintime_hour)
-        mins = int(state.reservetime_min) + int(state.remaintime_min)
+        hrs = int(state.reservetime_hour or "0") + int(state.remaintime_hour or "0")
+        mins = int(state.reservetime_min or "0") + int(state.remaintime_min or "0")
         return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
