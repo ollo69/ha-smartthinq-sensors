@@ -20,6 +20,8 @@ from .core_async import ClientAsync
 from .device_info import DeviceInfo, PlatformType
 from .model_info import ModelInfo
 
+LANG_PACK = "pack"
+
 LABEL_BIT_OFF = "@CP_OFF_EN_W"
 LABEL_BIT_ON = "@CP_ON_EN_W"
 
@@ -157,7 +159,7 @@ class Monitor:
                     state = await self.poll(query_device)
 
             except core_exc.NotConnectedError:
-                # This error comes when APIv1 device is turned off
+                # This exceptions occurs when APIv1 device is turned off
                 if self._has_error:
                     _LOGGER.info(
                         "Connection is now available - Device: %s", self._device_descr
@@ -166,7 +168,7 @@ class Monitor:
                 _LOGGER.debug(
                     "Status not available. Device %s not connected", self._device_descr
                 )
-                if iteration >= MAX_RETRIES - 1:
+                if iteration >= 1:  # just retry 2 times
                     raise
                 continue
 
@@ -377,6 +379,7 @@ class Device:
         self._model_info: ModelInfo | None = None
         self._model_lang_pack = None
         self._product_lang_pack = None
+        self._local_lang_pack = None
         self._should_poll = device_info.platform_type == PlatformType.THINQ1
         self._mon = Monitor(client, device_info)
         self._control_set = 0
@@ -459,6 +462,10 @@ class Device:
             self._product_lang_pack = await self._client.model_url_info(
                 self._device_info.product_lang_pack_url
             )
+
+        # load local language pack
+        if self._local_lang_pack is None:
+            self._local_lang_pack = self._client.local_lang_pack()
 
         return True
 
@@ -748,9 +755,13 @@ class Device:
 
         text_value = LOCAL_LANG_PACK.get(enum_name)
         if not text_value and self._model_lang_pack:
-            text_value = self._model_lang_pack.get("pack", {}).get(enum_name)
+            if LANG_PACK in self._model_lang_pack:
+                text_value = self._model_lang_pack[LANG_PACK].get(enum_name)
         if not text_value and self._product_lang_pack:
-            text_value = self._product_lang_pack.get("pack", {}).get(enum_name)
+            if LANG_PACK in self._product_lang_pack:
+                text_value = self._product_lang_pack[LANG_PACK].get(enum_name)
+        if not text_value and self._local_lang_pack:
+            text_value = self._local_lang_pack.get(enum_name)
         if not text_value:
             text_value = enum_name
 
