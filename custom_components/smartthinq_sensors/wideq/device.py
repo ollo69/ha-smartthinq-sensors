@@ -36,6 +36,7 @@ LOCAL_LANG_PACK = {
     "LOCK": StateOptions.ON,
     "INITIAL_BIT_OFF": StateOptions.OFF,
     "INITIAL_BIT_ON": StateOptions.ON,
+    "@WM_EDD_REFILL_W": StateOptions.OFF,
     "IGNORE": StateOptions.NONE,
     "NONE": StateOptions.NONE,
     "NOT_USE": "Not Used",

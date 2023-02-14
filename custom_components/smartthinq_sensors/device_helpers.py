@@ -1,6 +1,6 @@
 """Helper class for ThinQ devices"""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 from homeassistant.util.dt import utcnow
@@ -57,6 +57,12 @@ def get_entity_name(device, ent_key, ent_name) -> str:
             name = feat_name.replace("_", " ").capitalize()
 
     return f"{name_slug} {name}"
+
+
+def utcnow_rounded() -> datetime:
+    """Return utc time rounded to minute."""
+    now = utcnow()
+    return now - timedelta(seconds=now.second)
 
 
 class LGEBaseDevice:
@@ -154,7 +160,7 @@ class LGEWashDevice(LGEBaseDevice):
             - int(state.initialtime_min or "0")
             + int(state.remaintime_min or "0")
         )
-        return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
+        return (utcnow_rounded() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def end_time(self):
@@ -164,7 +170,7 @@ class LGEWashDevice(LGEBaseDevice):
         state = self._api.state
         hrs = int(state.reservetime_hour or "0") + int(state.remaintime_hour or "0")
         mins = int(state.reservetime_min or "0") + int(state.remaintime_min or "0")
-        return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
+        return (utcnow_rounded() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
     def initial_time(self):

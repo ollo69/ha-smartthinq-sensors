@@ -144,12 +144,26 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=WashDeviceFeatures.DETERGENT,
         name="Detergent",
+        icon="mdi:water-alert",
+        icon_on="mdi:water-check",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=WashDeviceFeatures.DETERGENTLOW,
+        name="Detergent low",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
         key=WashDeviceFeatures.SOFTENER,
         name="Softener",
+        icon="mdi:water-alert",
+        icon_on="mdi:water-check",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=WashDeviceFeatures.SOFTENERLOW,
+        name="Softener low",
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_registry_enabled_default=False,
     ),
