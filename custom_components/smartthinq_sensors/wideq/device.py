@@ -48,8 +48,6 @@ MAX_UPDATE_FAIL_ALLOWED = 10
 MAX_INVALID_CREDENTIAL_ERR = 3
 SLEEP_BETWEEN_RETRIES = 2  # seconds
 
-MONITOR_RESTART_SECONDS = 0  # 0 to disable
-
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -76,7 +74,6 @@ class Monitor:
         self._device_descr = device_info.name
         self._work_id: str | None = None
         self._monitor_start_time: datetime | None = None
-        self._disconnected = self._platform_type == PlatformType.THINQ1
         self._has_error = False
         self._invalid_credential_count = 0
 
@@ -85,7 +82,6 @@ class Monitor:
     ) -> None:
         """Log and raise error with different level depending on condition."""
         log_lev = logging.DEBUG
-        self._disconnected = self._platform_type == PlatformType.THINQ1
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
             self._has_error = True
@@ -115,7 +111,6 @@ class Monitor:
             if Monitor._client_connected:
                 await self._client.refresh_auth()
                 return True
-            self._disconnected = self._platform_type == PlatformType.THINQ1
             return await self._refresh_client()
 
     async def _refresh_client(self) -> bool:
@@ -156,8 +151,8 @@ class Monitor:
                 await asyncio.sleep(SLEEP_BETWEEN_RETRIES)
 
             try:
-                if mon_started := await self._restart_monitor():
-                    state = await self.poll(query_device)
+                if refresh_auth := await self._refresh_auth():
+                    state, retry = await self.poll(query_device)
 
             except core_exc.NotConnectedError:
                 # This exceptions occurs when APIv1 device is turned off
@@ -230,39 +225,21 @@ class Monitor:
                 )
 
             else:
-                if not mon_started:
+                if not refresh_auth:
                     self._raise_error(
                         "Connection to ThinQ not available. Client refresh error",
                         not_logged=True,
                     )
 
-                if state:
-                    _LOGGER.debug("ThinQ status updated")
-                    # l = dir(state)
-                    # _LOGGER.debug('Status attributes: %s', l)
+                if state or not retry:
                     break
 
                 _LOGGER.debug("No status available yet")
-                continue
 
         if self._has_error:
             _LOGGER.info("Connection is now available - Device: %s", self._device_descr)
             self._has_error = False
         return state
-
-    async def _restart_monitor(self) -> bool:
-        """Restart the device monitor"""
-
-        if not await self._refresh_auth():
-            return False
-
-        if not self._disconnected:
-            return True
-
-        await self.stop()
-        await self.start()
-        self._disconnected = False
-        return True
 
     async def start(self) -> None:
         """Start monitor for ThinQ1 device."""
@@ -279,7 +256,7 @@ class Monitor:
         await self._client.session.monitor_stop(self._device_id, self._work_id)
         self._work_id = None
 
-    async def poll(self, query_device=False) -> Any | None:
+    async def poll(self, query_device=False) -> tuple[Any | None, bool]:
         """
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
@@ -288,52 +265,54 @@ class Monitor:
             return await self._poll_v1()
         return await self._poll_v2(query_device)
 
-    async def _poll_v1_watch_dog(self) -> None:
-        """Force restart monitor every n seconds to avoid connection lost."""
-        if MONITOR_RESTART_SECONDS <= 0:
-            return
-        if self._monitor_start_time is not None:
-            diff = (datetime.utcnow() - self._monitor_start_time).total_seconds()
-            if diff >= MONITOR_RESTART_SECONDS:
-                await self.stop()
-
-    async def _poll_v1(self) -> bytes | None:
+    async def _poll_v1(self) -> tuple[Any | None, bool]:
         """
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
         """
-        await self._poll_v1_watch_dog()
+        state = None
+        await self._client.refresh_devices()
+        if device_data := self._client.get_device(self._device_id):
+            state = device_data.device_state
+
+        if not state or state == "D":
+            _LOGGER.debug(
+                "Device %s not reachable, state: %s", self._device_descr, state
+            )
+            if self._work_id:
+                self._work_id = None
+            return None, False
 
         if not self._work_id:
             await self.start()
             if not self._work_id:
-                return None
+                return None, True
 
         try:
-            return await self._client.session.monitor_poll(
-                self._device_id, self._work_id
+            return (
+                await self._client.session.monitor_poll(self._device_id, self._work_id),
+                True,
             )
         except core_exc.MonitorError:
             # Try to restart the task.
             await self.stop()
-            return None
+            return None, True
 
-    async def _poll_v2(self, query_device=False) -> Any | None:
+    async def _poll_v2(self, query_device=False) -> tuple[Any | None, bool]:
         """
         Get the current status data (a json str) or None if the
         device is not yet ready.
         """
         if self._platform_type != PlatformType.THINQ2:
-            return None
+            return None, False
         if query_device:
             result = await self._client.session.get_device_v2_settings(self._device_id)
-            return result.get("snapshot")
+            return result.get("snapshot"), False
 
         await self._client.refresh_devices()
-        device_data = self._client.get_device(self._device_id)
-        if device_data:
-            return device_data.snapshot
-        return None
+        if device_data := self._client.get_device(self._device_id):
+            return device_data.snapshot, False
+        return None, False
 
     @staticmethod
     def decode_json(data: bytes) -> dict[str, Any]:

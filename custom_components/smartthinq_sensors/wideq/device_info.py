@@ -236,6 +236,11 @@ class DeviceInfo:
         return self._network_type
 
     @property
+    def device_state(self) -> Optional[str]:
+        """Return the status associated to the device."""
+        return self._data.get("deviceState")
+
+    @property
     def snapshot(self) -> Optional[dict[str, Any]]:
         """Return the snapshot data associated to the device."""
         return self._data.get("snapshot")
