@@ -73,7 +73,6 @@ class Monitor:
         self._platform_type = device_info.platform_type
         self._device_descr = device_info.name
         self._work_id: str | None = None
-        self._monitor_start_time: datetime | None = None
         self._has_error = False
         self._invalid_credential_count = 0
 
@@ -247,14 +246,14 @@ class Monitor:
             return
         self._work_id = None
         self._work_id = await self._client.session.monitor_start(self._device_id)
-        self._monitor_start_time = datetime.utcnow()
 
     async def stop(self) -> None:
         """Stop monitor for ThinQ1 device."""
         if not self._work_id:
             return
-        await self._client.session.monitor_stop(self._device_id, self._work_id)
+        work_id = self._work_id
         self._work_id = None
+        await self._client.session.monitor_stop(self._device_id, work_id)
 
     async def poll(self, query_device=False) -> tuple[Any | None, bool]:
         """
