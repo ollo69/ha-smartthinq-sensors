@@ -56,7 +56,7 @@ WASH_DEV_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         value_fn=lambda x: x.is_power_on and not x.device.stand_by,
         turn_off_fn=lambda x: x.device.power_off(),
         turn_on_fn=lambda x: x.device.wake_up(),
-        available_fn=lambda x: x.is_power_on,
+        available_fn=lambda x: x.is_power_on or x.device.stand_by,
     ),
 )
 REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
