@@ -2,7 +2,7 @@
     "config": {
         "abort": {
             "single_instance_allowed": "Kun en enkelt SmartThinQ LGE Sensors konfiguration er tilladt.",
-            "no_smartthinq_devices": "Der blev ikke fundet nogetn SmartThinQ enheder. Komponent-setup annulleres.",
+            "no_smartthinq_devices": "Der blev ikke fundet nogen SmartThinQ enheder. Komponent-setup annulleres.",
             "unsupported_version": "Denne integration kræver mindst HomeAssistant version {req_ver}, du kører version {run_ver}.",
             "reconfigured": "Konfigurationen blev gennemført med succes."
         },
