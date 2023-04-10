@@ -1,6 +1,4 @@
-"""
-Support for LG SmartThinQ device.
-"""
+"""Support for LG SmartThinQ device."""
 
 from __future__ import annotations
 
