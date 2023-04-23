@@ -39,6 +39,6 @@ disable =
     too-many-boolean-expressions,
     unused-argument,
     wrong-import-order,
-    consider-using-f-string,
-    consider-using-namedtuple-or-dataclass,
-    consider-using-assignment-expr
+    consider-using-f-string
+#    consider-using-namedtuple-or-dataclass,
+#    consider-using-assignment-expr

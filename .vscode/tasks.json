@@ -2,34 +2,16 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run Home Assistant on port 9123",
+            "label": "Run Home Assistant on port 8123",
             "type": "shell",
-            "command": "container start",
+            "command": "scripts/develop",
             "problemMatcher": []
         },
         {
-            "label": "Run Home Assistant on port 9123 (with emulation)",
+            "label": "Run Home Assistant on port 8123 (with emulation)",
             "type": "shell",
-            "command": "container start",
-            "problemMatcher": [],
-            "options": {"env": {"thinq2_emulation": "ENABLED"}}
-        },
-        {
-            "label": "Run Home Assistant configuration against /config",
-            "type": "shell",
-            "command": "container check",
-            "problemMatcher": []
-        },
-        {
-            "label": "Upgrade Home Assistant to latest dev",
-            "type": "shell",
-            "command": "container install",
-            "problemMatcher": []
-        },
-        {
-            "label": "Install a specific version of Home Assistant",
-            "type": "shell",
-            "command": "container set-version",
+            "command": "scripts/develop",
+            "options": {"env": {"thinq2_emulation": "ENABLED"}},
             "problemMatcher": []
         },
 		{
