@@ -114,27 +114,26 @@ class Monitor:
 
     async def _refresh_client(self) -> bool:
         """Refresh the devices shared client"""
-        async with Monitor._client_lock:
-            if Monitor._client_connected:
-                return True
-            call_time = datetime.utcnow()
-            difference = (call_time - Monitor._last_client_refresh).total_seconds()
-            if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
-                return False
-
-            Monitor._last_client_refresh = call_time
-            refresh_gateway = False
-            if Monitor._not_logged_count >= 30:
-                Monitor._not_logged_count = 0
-                refresh_gateway = True
-            Monitor._not_logged_count += 1
-            _LOGGER.debug("ThinQ client not connected. Trying to reconnect...")
-            await self._client.refresh(refresh_gateway)
-            _LOGGER.warning("ThinQ client successfully reconnected")
-            Monitor._client_connected = True
-            Monitor._critical_error = False
-            Monitor._not_logged_count = 0
+        if Monitor._client_connected:
             return True
+        call_time = datetime.utcnow()
+        difference = (call_time - Monitor._last_client_refresh).total_seconds()
+        if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
+            return False
+
+        Monitor._last_client_refresh = call_time
+        refresh_gateway = False
+        if Monitor._not_logged_count >= 30:
+            Monitor._not_logged_count = 0
+            refresh_gateway = True
+        Monitor._not_logged_count += 1
+        _LOGGER.debug("ThinQ client not connected. Trying to reconnect...")
+        await self._client.refresh(refresh_gateway)
+        _LOGGER.warning("ThinQ client successfully reconnected")
+        Monitor._client_connected = True
+        Monitor._critical_error = False
+        Monitor._not_logged_count = 0
+        return True
 
     async def refresh(self, query_device=False) -> Any | None:
         """Update device state"""
