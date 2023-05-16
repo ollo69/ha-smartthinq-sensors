@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import ssl
+import sys
 from typing import Any, Optional
 from urllib.parse import (
     ParseResult,
@@ -35,6 +36,12 @@ from .device_info import KEY_DEVICE_ID, DeviceInfo
 
 # The core version
 CORE_VERSION = "coreAsync"
+
+ENABLE_CLEANUP_CLOSED = not (3, 11, 1) <= sys.version_info < (3, 11, 4)
+# Enabling cleanup closed on python 3.11.1+ leaks memory relatively quickly
+# see https://github.com/aio-libs/aiohttp/issues/7252
+# aiohttp interacts poorly with https://github.com/python/cpython/pull/98540
+# The issue was fixed in 3.11.4 via https://github.com/python/cpython/pull/104485
 
 # enable logging of auth information
 LOG_AUTH_INFO = False
@@ -130,7 +137,9 @@ def lg_client_session() -> aiohttp.ClientSession:
     """Create an aiohttp client session to use with LG ThinQ."""
     context = ssl.create_default_context()
     context.set_ciphers(_LG_SSL_CIPHERS)
-    connector = aiohttp.TCPConnector(enable_cleanup_closed=True, ssl_context=context)
+    connector = aiohttp.TCPConnector(
+        enable_cleanup_closed=ENABLE_CLEANUP_CLOSED, ssl_context=context
+    )
     return aiohttp.ClientSession(connector=connector)
 
 
