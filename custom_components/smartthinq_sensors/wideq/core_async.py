@@ -11,8 +11,8 @@ import hmac
 import json
 import logging
 import os
-import sys
 import ssl
+import sys
 from typing import Any, Optional
 from urllib.parse import (
     ParseResult,
