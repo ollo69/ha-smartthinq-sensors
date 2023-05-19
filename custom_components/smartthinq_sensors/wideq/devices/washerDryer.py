@@ -323,6 +323,10 @@ class WMDevice(Device):
             self._status.device_features.get(WashDeviceFeatures.STANDBY)
             == StateOptions.ON
         )
+        if not self._stand_by:
+            standby_enable = self.model_info.config_value("standbyEnable")
+            if standby_enable and not self._should_poll:
+                self._stand_by = not self._status.is_on
         remote_start = self._status.device_features.get(WashDeviceFeatures.REMOTESTART)
         if remote_start == StateOptions.ON:
             if self._remote_start_status is None:
