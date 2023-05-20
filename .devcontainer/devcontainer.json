@@ -17,6 +17,7 @@
                 "ms-python.python",
                 "github.vscode-pull-request-github",
                 "ryanluker.vscode-coverage-gutters",
+                "esbenp.prettier-vscode",
                 "ms-python.vscode-pylance"
             ],
             "settings": {
