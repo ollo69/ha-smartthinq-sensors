@@ -1,0 +1,52 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Seulement une configuration de Capteurs SmartThinQ LGE est permise.",
+            "no_smartthinq_devices": "Aucun appareil SmartThinQ trouvé. Configuration du composant abandonné.",
+            "unsupported_version": "Cette inégration requiert au minimum HomeAssistant version {req_ver}, vous utilisez la version {run_ver}.",
+            "reconfigured": "Configuration terminée avec succès."
+        },
+        "error": {
+            "error_connect": "Erreur de connexion à SmartThinQ. Réessayez et assurez-vous que vous pouvez accéder à l'application LG ThinQ sur votre GSM.",
+            "error_url": "Erreur lors de la récupération de l'URL de connexion de ThinQ.",
+            "invalid_region": "Format de région invalide.",
+            "invalid_language": "Format de language invalide.",
+            "invalid_url": "URL de redirection invalide. Assurez-vous que vous pouvez accéder à l'application LG ThinQ sur votre GSM.",
+            "invalid_credentials": "Informations de compte SmartThinQ invalides. Utilisez l'application LG ThinQ sur votre GSM pour vérifier s'il y a des conditions d'utilisation à accepter. Les comptes créés à partir de réseaux sociaux ne sont pas pris en charge et, dans la plupart des cas, ne fonctionnent pas avec cette intégration.",
+            "invalid_config": "Configuration invalide détectée, veuillez reconfigurer.",
+            "no_user_info": "Le nom d'utilisateur et le mot de passe sont requis.",
+            "unknown": "Erreur inconnue."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "username": "Nom d'utilisateur du compte LG",
+                    "password": "Mot de passe",
+                    "region": "Code du Pays",
+                    "language": "Code du Language",
+                    "use_redirect": "Utilise la méthode d'authentification de redirection d'URL",
+                    "use_ha_session": "Partage la connexion HTTP de Home Assistant (peut provoquer des erreurs SSL)",
+                    "use_tls_v1": "Force l'utilisation du protocole TLSv1 (parfois requis)",
+                    "exclude_dh": "Ne pas utiliser le chiffrement DH (en cas d'erreur 'dh key too small')"
+                },
+                "description": "Insérez vos informations d'accès à votre compte SmartThinQ."
+            },
+            "url": {
+                "data": {
+                    "login_url": "URL de connexion SmartThinQ",
+                    "callback_url": "URL de redirection"
+                },
+                "description": "Utilisez l'URL dans le premier champ pour vous connecter à SmartThinQ avec vos informations d'identification, puis collez l'URL où le navigateur est redirigé après la connexion dans le deuxième champ. Partagez vos commentaires sur votre configuration [ici](https://git.io/JU166).",
+                "title": "Capteurs SmartThinQ LGE - Authentification"
+            },
+            "token": {
+                "data": {
+                    "token": "Actualiser le jeton"
+                },
+                "description": "Enregistrez le jeton généré pour une utilisation future, puis confirmez pour terminer la configuration.",
+                "title": "Capteurs SmartThinQ LGE - Nouveau jeton d'actualisation"
+            }
+        },
+        "title": "Capteurs SmartThinQ LGE"
+    }
+}
