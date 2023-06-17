@@ -12,7 +12,7 @@
             "invalid_region": "Format de région invalide.",
             "invalid_language": "Format de language invalide.",
             "invalid_url": "URL de redirection invalide. Assurez-vous que vous pouvez accéder à l'application LG ThinQ sur votre cellulaire.",
-            "invalid_credentials": "Informations de compte SmartThinQ invalides. Utilisez l'application LG ThinQ sur votre téléphone pour vérifier s'il y a des conditions d'utilisation à accepter. Les comptes créés à partir de réseaux sociaux ne sont pas pris en charge et, dans la plupart des cas, ne fonctionnent pas avec cette intégration.",
+            "invalid_credentials": "Informations de compte SmartThinQ invalides. Utilisez l'application LG ThinQ sur votre cellulaire pour vérifier s'il y a des conditions d'utilisation à accepter. Les comptes créés à partir de réseaux sociaux ne sont pas pris en charge et, dans la plupart des cas, ne fonctionnent pas avec cette intégration.",
             "invalid_config": "Configuration invalide détectée, veuillez reconfigurer.",
             "no_user_info": "Le nom d'utilisateur et le mot de passe sont requis.",
             "unknown": "Erreur inconnue."
