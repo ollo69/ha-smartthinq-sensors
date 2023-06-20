@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from homeassistant.helpers import device_registry as dr
+
+import voluptuous as vol
+
 from datetime import timedelta
 import logging
 
@@ -17,6 +21,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import (
@@ -24,6 +29,7 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_send,
 )
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -66,7 +72,11 @@ SMARTTHINQ_PLATFORMS = [
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.WATER_HEATER,
+    Platform.LIGHT,
+    Platform.SELECT,
 ]
+
+SERVICE_SET_TIME = "set_time"
 
 AUTH_RETRY = "auth_retry"
 MAX_AUTH_RETRY = 5
@@ -466,6 +476,9 @@ class LGEDevice:
     async def _async_state_update(self):
         """Update device state."""
         _LOGGER.debug("Updating ThinQ device %s", self._name)
+        _LOGGER.debug("Updating ThinQ device %s", self._name)
+        _LOGGER.debug("Updating ThinQ device %s", self._name)
+        _LOGGER.debug("Updating ThinQ device %s", self._name)
         if self._disc_count < MAX_DISC_COUNT:
             self._disc_count += 1
 
@@ -534,6 +547,7 @@ async def lge_devices_setup(
     if discovered_devices is None:
         discovered_devices = {}
 
+    enable_set_time_service = False
     device_count = 0
     temp_unit = TemperatureUnit.CELSIUS
     if hass.config.units.temperature_unit != UnitOfTemperature.CELSIUS:
@@ -583,6 +597,34 @@ async def lge_devices_setup(
                 model_name,
                 dev.device_id,
             )
+
+            if lge_dev.device_info.type == DeviceType.MICROWAVE:
+                enable_set_time_service = True
+
+    async def async_set_time(service: ServiceCall):
+        hass
+        wrapped_devices
+        device_registry = dr.async_get(hass)
+        device = device_registry.async_get(service.data["device_id"])
+        for lge_type, lge_devs in wrapped_devices.items():
+            for lge_dev in lge_devs:
+                if lge_dev.name == device.name and \
+                    lge_dev.device_id in [i[-1] for i in device.identifiers]:
+                        await lge_dev.device.async_set_time(time_wanted=service.data.get("time"))
+                        return
+
+    # register services
+    if enable_set_time_service:
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_TIME,
+            async_set_time,
+            schema=vol.Schema({
+                #vol.Required("device_id"): vol.All(cv.string, validate_microwave_device_id),
+                vol.Required("device_id"): cv.string,
+                vol.Optional("time"): cv.time,
+            }),
+        )
 
     if device_count > 0:
         _LOGGER.info("Founds %s LGE device(s)", device_count)

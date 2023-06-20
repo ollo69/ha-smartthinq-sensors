@@ -29,3 +29,25 @@ set_fan_mode:
       example: "low"
       selector:
         text:
+
+set_time:
+  name: Set time
+  description: Set time device.
+  fields:
+    device_id:
+      name: device
+      description: Device
+      required: true
+      selector:
+        device:
+          filter:
+          # TODO Add more microwave model
+          - integration: smartthinq_sensors
+            model: WMVEL2137-MicrowaveOven (MICROWAVE)
+
+    time:
+      name: time
+      description: Time (if not set will use Home-Assistant time)
+      required: false
+      selector:
+        time:

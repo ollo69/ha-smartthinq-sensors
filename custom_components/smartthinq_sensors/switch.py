@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import voluptuous as vol
+
 from dataclasses import dataclass
 import logging
 from typing import Any, Awaitable, Callable, Tuple
@@ -12,10 +14,11 @@ from homeassistant.components.switch import (
     SwitchEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_OFF, STATE_ON
+from homeassistant.const import STATE_OFF, STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -31,6 +34,7 @@ from .wideq import (
     AirConditionerFeatures,
     DeviceType,
     RefrigeratorFeatures,
+    MicroWaveFeatures,
 )
 
 # general sensor attributes
@@ -131,6 +135,48 @@ AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
     name="Zone",
 )
 
+MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.SOUND,
+        name="Sound",
+        icon="mdi:volume-high",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda x: x.is_power_on and x.device.sound_state,
+        turn_off_fn=lambda x: x.device.set_sound(False),
+        turn_on_fn=lambda x: x.device.set_sound(True),
+        available_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.CLOCK_DISPLAY,
+        name="Clock Display",
+        icon="mdi:clock-digital",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda x: x.is_power_on and x.device.clock_display_state,
+        turn_off_fn=lambda x: x.device.set_clock_display(False),
+        turn_on_fn=lambda x: x.device.set_clock_display(True),
+        available_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.CLOCK_24HMODE,
+        name="Clock 24h format",
+        icon="mdi:hours-24",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda x: x.is_power_on and x.device.clock_24hmode_state,
+        turn_off_fn=lambda x: x.device.set_clock_24format(False),
+        turn_on_fn=lambda x: x.device.set_clock_24format(True),
+        available_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.WEIGHT_UNIT_KG,
+        name="Weight Unit kg",
+        icon="mdi:weight-kilogram",
+        entity_category=EntityCategory.CONFIG,
+        value_fn=lambda x: x.is_power_on and x.device.weight_unit_kg_state,
+        turn_off_fn=lambda x: x.device.set_weight_unit_kg(False),
+        turn_on_fn=lambda x: x.device.set_weight_unit_kg(True),
+        available_fn=lambda x: x.is_power_on,
+    ),
+)
 
 def _switch_exist(
     lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription
@@ -202,6 +248,16 @@ async def async_setup_entry(
                 LGEDuctSwitch(lge_device, duct_zone)
                 for lge_device in lge_devices.get(DeviceType.AC, [])
                 for duct_zone in lge_device.device.duct_zones
+            ]
+        )
+
+        # add MicroWave switch
+        lge_switch.extend(
+            [
+                LGESwitch(lge_device, switch_desc)
+                for switch_desc in MICROWAVE_SWITCH
+                for lge_device in lge_devices.get(DeviceType.MICROWAVE, [])
+                if _switch_exist(lge_device, switch_desc)
             ]
         )
 
