@@ -286,7 +286,7 @@ class MicroWaveDevice(Device):
     def vent_speed_state(self) -> str:
         """Get vent speed."""
         state = self._status.vent_speed
-        return state
+        return state.upper()
 
     @property
     def vent_speed_options(self) -> list[str]:
@@ -395,11 +395,16 @@ class MicroWaveStatus(DeviceStatus):
     def vent_speed(self):
         """Get vent speed."""
         raw_value = self.lookup_range("MwoVentSpeedLevel")
-        value = self._device.model_info.enum_name("MwoVentSpeedLevelString", raw_value)
+
+        if hasattr(VentSpeed, raw_value):
+            value = VentSpeed[raw_value].value
+        else:
+            value = self._device.model_info.enum_name("MwoVentSpeedLevelString", raw_value)
+
         if value is None:
             return None
         try:
-            return self._update_feature(MicroWaveFeatures.VENT_SPEED, VentSpeed(value).name).name
+            return self._update_feature(MicroWaveFeatures.VENT_SPEED, VentSpeed(value).name)
         except ValueError:
             return None
 
