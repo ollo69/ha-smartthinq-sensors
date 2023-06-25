@@ -9,7 +9,7 @@ from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
 
-CMD_PREF_DICT = { 
+CMD_PREF_DICT = {
     "command": "Set",
     "ctrlKey": "SetPreference",
     "dataSetList": {
@@ -213,12 +213,13 @@ class MicroWaveDevice(Device):
         cmd["dataSetList"]["ovenState"]["mwoSettingSound"] = state
         cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
 
-        await self.set(cmd, None, key="mwoSettingSound", value = str)
+        await self.set(cmd, None, key="MwoSettingSound", value = state)
 
     @property
     def sound_state(self) -> bool:
         """Get sound on/off."""
-        state = self._status.data.get("MwoSettingSound")
+        state = self._status.sound
+
         if state == "HIGH":
             return True
         return False
@@ -270,7 +271,7 @@ class MicroWaveDevice(Device):
         elif mwoLampLevel == '2':
             return 255
         raise
- 
+
 
     # Vent
     async def set_vent_speed(self, option: str):
@@ -325,7 +326,7 @@ class MicroWaveDevice(Device):
         res = await self._device_poll()
         if not res:
             return None
-        
+
         for key, value in res.items():
             status_res = self._status.update_status(key, value)
             if not status_res:
