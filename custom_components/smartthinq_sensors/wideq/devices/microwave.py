@@ -103,6 +103,7 @@ class MicroWaveDevice(Device):
             state = "CLOCK_HIDE"
         cmd = CMD_PREF_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoSettingClockDisplay"] = state
+        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
         await self.set(cmd, None, key="MwoSettingClockDisplay", value = str(state))
 
     @property
@@ -135,6 +136,7 @@ class MicroWaveDevice(Device):
 
         cmd = CMD_PREF_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = state
+        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
 
         await self.set(cmd, None, key="MwoSettingClockSetHourMode", value = state)
 
@@ -156,6 +158,7 @@ class MicroWaveDevice(Device):
             state = "LB"
         cmd = CMD_PREF_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoSettingDefrostWeightMode"] = state
+        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
 
         await self.set(cmd, None, key="MwoSettingDefrostWeightMode", value = state)
 
@@ -174,6 +177,7 @@ class MicroWaveDevice(Device):
 
         cmd = CMD_PREF_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoSettingDisplayScrollSpeed"] = option
+        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
 
         await self.set(cmd, None, key="MwoSettingDisplayScrollSpeed", value = option)
 
@@ -207,6 +211,7 @@ class MicroWaveDevice(Device):
             state = "HIGH"
         cmd = CMD_PREF_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoSettingSound"] = state
+        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
 
         await self.set(cmd, None, key="mwoSettingSound", value = str)
 
@@ -280,6 +285,8 @@ class MicroWaveDevice(Device):
         cmd = CMD_VENTLAMP_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoVentOnOff"] = on_off
         cmd["dataSetList"]["ovenState"]["mwoVentSpeedLevel"] = int(speed_str)
+        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
+
         await self.set(cmd, None, key="MwoVentSpeedLevel", value = option)
 
     @property
