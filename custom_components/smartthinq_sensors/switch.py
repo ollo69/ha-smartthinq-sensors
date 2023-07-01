@@ -157,18 +157,6 @@ MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on,
     ),
     ThinQSwitchEntityDescription(
-        key=MicroWaveFeatures.CLOCK_24HMODE,
-        name="Clock 24h format",
-        icon="mdi:hours-24",
-        entity_registry_enabled_default=False,
-        entity_registry_visible_default=False,
-        entity_category=EntityCategory.CONFIG,
-        value_fn=lambda x: x.is_power_on and x.device.clock_24hmode_state,
-        turn_off_fn=lambda x: x.device.set_clock_24format(False),
-        turn_on_fn=lambda x: x.device.set_clock_24format(True),
-        available_fn=lambda x: x.is_power_on,
-    ),
-    ThinQSwitchEntityDescription(
         key=MicroWaveFeatures.WEIGHT_UNIT_KG,
         name="Weight Unit kg",
         icon="mdi:weight-kilogram",

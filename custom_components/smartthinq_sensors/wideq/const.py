@@ -168,7 +168,6 @@ class MicroWaveFeatures(StrEnum):
     LIGHT = "light"
     OVEN_LOWER_STATE = "UpperOvenState"
     CLOCK_DISPLAY = "clock_display"
-    CLOCK_24HMODE = "clock_24hmode"
     WEIGHT_UNIT_KG = "weight_unit_kg"
     DISPLAY_SCROLL_SPEED = "display_scroll_speed"
     VENT_SPEED = "vent_speed"

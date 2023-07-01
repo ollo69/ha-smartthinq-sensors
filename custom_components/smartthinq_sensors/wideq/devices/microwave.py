@@ -127,28 +127,6 @@ class MicroWaveDevice(Device):
 
         await self.set(cmd, None)
 
-    async def set_clock_24format(self, turn_on: bool):
-        """Set 12/24 clock format."""
-        if turn_on:
-            state = "24H_MODE"
-        else:
-            state = "12H_MODE"
-
-        cmd = CMD_PREF_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = state
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
-
-        await self.set(cmd, None, key="MwoSettingClockSetHourMode", value = state)
-
-    @property
-    def clock_24hmode_state(self) -> bool:
-        """Get 12/24 clock format."""
-        state = self._status.data.get("MwoSettingClockSetHourMode")
-        if state == "24H_MODE":
-            return True
-        return False
-
-
     # Unit
     async def set_weight_unit_kg(self, turn_on: bool):
         """Set weight unit kg/lb."""
@@ -286,7 +264,6 @@ class MicroWaveDevice(Device):
         cmd = CMD_VENTLAMP_DICT.copy()
         cmd["dataSetList"]["ovenState"]["mwoVentOnOff"] = on_off
         cmd["dataSetList"]["ovenState"]["mwoVentSpeedLevel"] = int(speed_str)
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
 
         await self.set(cmd, None, key="MwoVentSpeedLevel", value = option)
 
@@ -370,12 +347,6 @@ class MicroWaveStatus(DeviceStatus):
         return self._update_feature(MicroWaveFeatures.CLOCK_DISPLAY, status)
 
     @property
-    def clock_24hmode(self):
-        """Get 12/24 clock format."""
-        status = self.data.get("MwoSettingClockSetHourMode")
-        return self._update_feature(MicroWaveFeatures.CLOCK_24HMODE, status)
-
-    @property
     def weight_unit_kg(self):
         """Get weight unit kg/lb."""
         status = self.data.get("MwoSettingDefrostWeightMode")
@@ -420,7 +391,6 @@ class MicroWaveStatus(DeviceStatus):
         _ = [
             self.light,
             self.clock_display,
-            self.clock_24hmode,
             self.weight_unit_kg,
             self.display_scroll_speed,
             self.sound,
