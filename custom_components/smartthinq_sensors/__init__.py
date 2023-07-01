@@ -69,11 +69,11 @@ SMARTTHINQ_PLATFORMS = [
     Platform.CLIMATE,
     Platform.FAN,
     Platform.HUMIDIFIER,
+    Platform.LIGHT,
+    Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.WATER_HEATER,
-    Platform.LIGHT,
-    Platform.SELECT,
 ]
 
 SERVICE_SET_TIME = "set_time"
@@ -475,9 +475,6 @@ class LGEDevice:
 
     async def _async_state_update(self):
         """Update device state."""
-        _LOGGER.debug("Updating ThinQ device %s", self._name)
-        _LOGGER.debug("Updating ThinQ device %s", self._name)
-        _LOGGER.debug("Updating ThinQ device %s", self._name)
         _LOGGER.debug("Updating ThinQ device %s", self._name)
         if self._disc_count < MAX_DISC_COUNT:
             self._disc_count += 1

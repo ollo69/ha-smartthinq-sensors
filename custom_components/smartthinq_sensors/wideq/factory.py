@@ -17,12 +17,12 @@ from .devices.airpurifier import AirPurifierDevice
 from .devices.dehumidifier import DeHumidifierDevice
 from .devices.dishwasher import DishWasherDevice
 from .devices.fan import FanDevice
+from .devices.microwave import MicroWaveDevice
 from .devices.range import RangeDevice
 from .devices.refrigerator import RefrigeratorDevice
 from .devices.styler import StylerDevice
 from .devices.washerDryer import WMDevice, get_sub_devices
 from .devices.waterheater import WaterHeaterDevice
-from .devices.microwave import MicroWaveDevice
 
 
 def get_lge_device(
@@ -49,6 +49,8 @@ def get_lge_device(
         return [DishWasherDevice(client, device_info)]
     if device_type == DeviceType.FAN:
         return [FanDevice(client, device_info)]
+    if device_type == DeviceType.MICROWAVE:
+        return [MicroWaveDevice(client, device_info)]
     if device_type == DeviceType.RANGE:
         return [RangeDevice(client, device_info)]
     if device_type == DeviceType.REFRIGERATOR:
@@ -57,8 +59,6 @@ def get_lge_device(
         return [StylerDevice(client, device_info)]
     if device_type == DeviceType.WATER_HEATER:
         return [WaterHeaterDevice(client, device_info, temp_unit)]
-    if device_type == DeviceType.MICROWAVE:
-        return [MicroWaveDevice(client, device_info)]
     if device_type in WM_DEVICE_TYPES:
         main_dev = [WMDevice(client, device_info)]
         return main_dev + [

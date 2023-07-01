@@ -163,11 +163,11 @@ class WaterHeaterFeatures(StrEnum):
 class MicroWaveFeatures(StrEnum):
     """Features for LG MicroWave devices."""
 
-    POWER_LEVEL = "power_level"
-    SOUND = "sound"
+    CLOCK_DISPLAY = "clock_display"
+    DISPLAY_SCROLL_SPEED = "display_scroll_speed"
     LIGHT = "light"
     OVEN_LOWER_STATE = "UpperOvenState"
-    CLOCK_DISPLAY = "clock_display"
-    WEIGHT_UNIT_KG = "weight_unit_kg"
-    DISPLAY_SCROLL_SPEED = "display_scroll_speed"
+    POWER_LEVEL = "power_level"
+    SOUND = "sound"
     VENT_SPEED = "vent_speed"
+    WEIGHT_UNIT_KG = "weight_unit_kg"
