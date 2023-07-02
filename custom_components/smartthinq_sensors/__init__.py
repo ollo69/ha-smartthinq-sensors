@@ -544,7 +544,6 @@ async def lge_devices_setup(
     if discovered_devices is None:
         discovered_devices = {}
 
-    enable_set_time_service = False
     device_count = 0
     temp_unit = TemperatureUnit.CELSIUS
     if hass.config.units.temperature_unit != UnitOfTemperature.CELSIUS:
@@ -594,34 +593,6 @@ async def lge_devices_setup(
                 model_name,
                 dev.device_id,
             )
-
-            if lge_dev.device_info.type == DeviceType.MICROWAVE:
-                enable_set_time_service = True
-
-    async def async_set_time(service: ServiceCall):
-        hass
-        wrapped_devices
-        device_registry = dr.async_get(hass)
-        device = device_registry.async_get(service.data["device_id"])
-        for lge_type, lge_devs in wrapped_devices.items():
-            for lge_dev in lge_devs:
-                if lge_dev.name == device.name and \
-                    lge_dev.device_id in [i[-1] for i in device.identifiers]:
-                        await lge_dev.device.async_set_time(time_wanted=service.data.get("time"))
-                        return
-
-    # register services
-    if enable_set_time_service:
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_SET_TIME,
-            async_set_time,
-            schema=vol.Schema({
-                #vol.Required("device_id"): vol.All(cv.string, validate_microwave_device_id),
-                vol.Required("device_id"): cv.string,
-                vol.Optional("time"): cv.time,
-            }),
-        )
 
     if device_count > 0:
         _LOGGER.info("Founds %s LGE device(s)", device_count)

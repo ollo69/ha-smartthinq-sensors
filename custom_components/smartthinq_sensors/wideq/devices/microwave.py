@@ -116,7 +116,7 @@ class MicroWaveDevice(Device):
             return False
         raise
 
-    async def async_set_time(self, time_wanted: datetime.time|None=None):
+    async def set_time(self, time_wanted: datetime.time|None=None):
         """Set time on microwave."""
         if time_wanted is None:
             time_wanted = datetime.datetime.now().time()

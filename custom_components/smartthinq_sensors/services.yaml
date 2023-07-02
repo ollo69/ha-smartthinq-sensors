@@ -33,19 +33,12 @@ set_fan_mode:
 set_time:
   name: Set time
   description: Set time device.
+  target:
+    entity:
+      integration: smartthinq_sensors
+      domain: sensor
   fields:
-    device_id:
-      name: device
-      description: Device
-      required: true
-      selector:
-        device:
-          filter:
-          # TODO Add more microwave model
-          - integration: smartthinq_sensors
-            model: WMVEL2137-MicrowaveOven (MICROWAVE)
-
-    time:
+    time_wanted:
       name: time
       description: Time (if not set will use Home-Assistant time)
       required: false

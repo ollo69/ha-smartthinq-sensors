@@ -301,3 +301,11 @@ class LGERangeDevice(LGEBaseDevice):
             unit = self._api.state.oven_temp_unit
             return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
         return UnitOfTemperature.CELSIUS
+
+
+class LGEMicrowaveDevice(LGEBaseDevice):
+    """A wrapper to monitor LGE Micro devices"""
+
+    def __init__(self, api_device):
+        """Initialize the device."""
+        super().__init__(api_device)
