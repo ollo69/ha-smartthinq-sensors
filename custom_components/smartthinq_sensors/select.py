@@ -5,10 +5,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Awaitable, Callable, Tuple
 
-from homeassistant.components.select import (
-    SelectEntity,
-    SelectEntityDescription,
-)
+from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -20,7 +17,6 @@ from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import LGEBaseDevice, get_entity_name
 from .wideq import DeviceType, MicroWaveFeatures
-
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -31,8 +31,8 @@ from .wideq import (
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     DeviceType,
-    RefrigeratorFeatures,
     MicroWaveFeatures,
+    RefrigeratorFeatures,
 )
 
 # general sensor attributes
