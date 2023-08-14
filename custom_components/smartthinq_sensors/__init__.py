@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from homeassistant.helpers import device_registry as dr
-
-import voluptuous as vol
-
 from datetime import timedelta
 import logging
 
@@ -21,7 +17,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import (
@@ -29,7 +24,6 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_send,
 )
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
@@ -69,14 +63,11 @@ SMARTTHINQ_PLATFORMS = [
     Platform.CLIMATE,
     Platform.FAN,
     Platform.HUMIDIFIER,
-    Platform.LIGHT,
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
     Platform.WATER_HEATER,
 ]
-
-SERVICE_SET_TIME = "set_time"
 
 AUTH_RETRY = "auth_retry"
 MAX_AUTH_RETRY = 5

@@ -1,72 +1,62 @@
 """------------------for Microwave"""
 from __future__ import annotations
+
+from copy import deepcopy
+from datetime import datetime, time
 from enum import Enum
 
-import datetime
-
-from ..const import BIT_OFF, MicroWaveFeatures, StateOptions, TemperatureUnit
+from ..const import BIT_OFF, MicroWaveFeatures, StateOptions
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
 
+ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
+
+CMD_SET_PREFERENCE = "SetPreference"
+CMD_SET_VENTLAMP = "setVentLampLevel"
+
 CMD_PREF_DICT = {
     "command": "Set",
-    "ctrlKey": "SetPreference",
+    "ctrlKey": CMD_SET_PREFERENCE,
     "dataSetList": {
         "ovenState": {
             "cmdOptionContentsType": "REMOTE_SETTING",
             "cmdOptionDataLength": "REMOTE_SETTING",
         }
-    }
+    },
 }
 
 CMD_VENTLAMP_DICT = {
     "command": "Set",
-    "ctrlKey": "setVentLampLevel",
+    "ctrlKey": CMD_SET_VENTLAMP,
     "dataSetList": {
         "ovenState": {
             "cmdOptionContentsType": "REMOTE_VENT_LAMP",
             "cmdOptionDataLength": "REMOTE_VENT_LAMP",
         }
-    }
+    },
+}
+
+MW_CMD = {
+    CMD_SET_PREFERENCE: CMD_PREF_DICT,
+    CMD_SET_VENTLAMP: CMD_VENTLAMP_DICT,
 }
 
 
 class DisplayScrollSpeed(Enum):
     """The display scroll speed for a Microwave device."""
 
-    SLOW = '@OV_UX30_TERM_SLOW_W'
-    NORMAL = '@OV_UX30_TERM_NORMAL_W'
-    FAST = '@OV_UX30_TERM_FAST_W'
-
-
-class Sound(Enum):
-    """Whether the sound is on or off."""
-
-    HIGH = "@CP_ON_EN_W",
-    MUTE = "@CP_OFF_EN_W"
-
-
-class LightOnOff(Enum):
-    """The light running state for a Microwave device."""
-
-    DISABLE = '@CP_DISABLE_W'
-    ENABLE = '@CP_ENABLE_W'
+    SLOW = "@OV_UX30_TERM_SLOW_W"
+    NORMAL = "@OV_UX30_TERM_NORMAL_W"
+    FAST = "@OV_UX30_TERM_FAST_W"
 
 
 class LightLevel(Enum):
     """The light level for a Microwave device."""
 
-    OFF = '@CP_OFF_EN_W'
-    LOW = '@OV_TERM_LOW_W'
-    HIGH = '@OV_TERM_HIGH_W'
-
-
-class VentOnOff(Enum):
-    """The vent running state for a Microwave device."""
-
-    DISABLE = '@CP_DISABLE_W'
-    ENABLE = '@CP_ENABLE_W'
+    OFF = "@CP_OFF_EN_W"
+    LOW = "@OV_TERM_LOW_W"
+    HIGH = "@OV_TERM_HIGH_W"
 
 
 class VentSpeed(Enum):
@@ -79,93 +69,96 @@ class VentSpeed(Enum):
     TURBO = "@OV_TERM_TURBO_W"
 
 
+class WeightUnit(Enum):
+    """The weight unit for a Microwave device."""
+
+    KG = "@OV_TERM_UNIT_KG_W"
+    LB = "@OV_TERM_UNIT_LBS_W"
+
+
 class MicroWaveDevice(Device):
     """A higher-level interface for a cooking range."""
 
     def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+        """Init the device."""
         super().__init__(client, device_info, MicroWaveStatus(self))
         self._supported_vent_speed_options = None
+        self._supported_light_mode_options = None
         self._supported_display_scroll_speed_options = None
+        self._supported_defrost_weight_unit_options = None
 
     def reset_status(self):
         self._status = MicroWaveStatus(self)
         return self._status
 
-
     # Settings
+    def _prepare_command(self, ctrl_key, command, key, value):
+        """
+        Prepare command for specific device.
+        Overwrite for specific device settings.
+        """
+        if (cmd_key := MW_CMD.get(ctrl_key)) is None:
+            return None
+
+        cmd = deepcopy(cmd_key)
+        def_cmd = cmd["dataSetList"].get("ovenState", {})
+        cmd["dataSetList"]["ovenState"] = {**def_cmd, **command}
+
+        return cmd
 
     # Clock
     async def set_clock_display(self, turn_on: bool):
         """Set display clock on/off."""
-        if turn_on:
-            state = "CLOCK_SHOW"
-        else:
-            state = "CLOCK_HIDE"
-        cmd = CMD_PREF_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockDisplay"] = state
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
-        await self.set(cmd, None, key="MwoSettingClockDisplay", value = str(state))
+        state = "CLOCK_SHOW" if turn_on else "CLOCK_HIDE"
+        cmd = {"mwoSettingClockDisplay": state}
+        await self.set(
+            CMD_SET_PREFERENCE, cmd, key="MwoSettingClockDisplay", value=state
+        )
 
-    @property
-    def clock_display_state(self) -> bool:
-        """Get display clock on/off."""
-        state = self._status.data.get("MwoSettingClockDisplay")
-        if state == "CLOCK_SHOW":
-            return True
-        elif state == "CLOCK_HIDE":
-            return False
-        raise
-
-    async def set_time(self, time_wanted: datetime.time|None=None):
+    async def set_time(self, time_wanted: time | None = None):
         """Set time on microwave."""
         if time_wanted is None:
-            time_wanted = datetime.datetime.now().time()
+            time_wanted = datetime.now().time()
 
-        cmd = CMD_PREF_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetTimeHour"] =  time_wanted.hour
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetTimeMin"] = time_wanted.minute
+        cmd = {
+            "mwoSettingClockSetTimeHour": time_wanted.hour,
+            "mwoSettingClockSetTimeMin": time_wanted.minute,
+        }
+        await self.set(CMD_SET_PREFERENCE, cmd)
 
-        await self.set(cmd, None)
+    # Sound
+    async def set_sound(self, turn_on: bool):
+        """Set sound on/off."""
+        state = "HIGH" if turn_on else "MUTE"
+        cmd = {"mwoSettingSound": state}
+        await self.set(CMD_SET_PREFERENCE, cmd, key="MwoSettingSound", value=state)
 
     # Unit
-    async def set_weight_unit_kg(self, turn_on: bool):
+    @property
+    def defrost_weight_unit_options(self) -> list[str]:
+        """Get display scrool speed list."""
+        if self._supported_defrost_weight_unit_options is None:
+            key = self._get_state_key("MwoSettingDefrostWeightMode")
+            if not self.model_info.is_enum_type(key):
+                self._supported_defrost_weight_unit_options = []
+                return []
+            mapping = self.model_info.value(key).options
+            mode_list = [e.value for e in WeightUnit]
+            self._supported_defrost_weight_unit_options = [
+                WeightUnit(o).name for o in mapping.values() if o in mode_list
+            ]
+        return self._supported_defrost_weight_unit_options
+
+    async def set_defrost_weight_unit(self, unit: str):
         """Set weight unit kg/lb."""
-        if turn_on:
-            state = "KG"
-        else:
-            state = "LB"
-        cmd = CMD_PREF_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoSettingDefrostWeightMode"] = state
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
+        if unit not in self.display_scroll_speed_options:
+            raise ValueError(f"Invalid display unit: {unit}")
+        cmd = {"mwoSettingDefrostWeightMode": unit}
+        await self.set(
+            CMD_SET_PREFERENCE, cmd, key="MwoSettingDefrostWeightMode", value=unit
+        )
 
-        await self.set(cmd, None, key="MwoSettingDefrostWeightMode", value = state)
-
-    @property
-    def weight_unit_kg_state(self) -> bool:
-        """Get weight unit kg/lb."""
-        state = self._status.data.get("MwoSettingDefrostWeightMode")
-        if state == "KG":
-            return True
-        return False
-
-    async def set_display_scroll_speed(self, option: str):
-        """Set display scrool speed."""
-        if option not in ["SLOW", "NORMAL", "FAST"]:
-            raise
-
-        cmd = CMD_PREF_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoSettingDisplayScrollSpeed"] = option
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
-
-        await self.set(cmd, None, key="MwoSettingDisplayScrollSpeed", value = option)
-
-
-    @property
-    def display_scroll_speed_state(self) -> str:
-        """Get display scrool speed."""
-        state = self._status.data.get("MwoSettingDisplayScrollSpeed")
-        return state
-
+    # Display
     @property
     def display_scroll_speed_options(self) -> list[str]:
         """Get display scrool speed list."""
@@ -181,112 +174,78 @@ class MicroWaveDevice(Device):
             ]
         return self._supported_display_scroll_speed_options
 
-    # Sound
-    async def set_sound(self, turn_on: bool):
-        """Set sound on/off."""
-        state = "MUTE"
-        if turn_on:
-            state = "HIGH"
-        cmd = CMD_PREF_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoSettingSound"] = state
-        cmd["dataSetList"]["ovenState"]["mwoSettingClockSetHourMode"] = self._status.clock_24hmode
+    async def set_display_scroll_speed(self, speed: str):
+        """Set display scrool speed."""
+        if speed not in self.display_scroll_speed_options:
+            raise ValueError(f"Invalid display scroll speed: {speed}")
 
-        await self.set(cmd, None, key="MwoSettingSound", value = state)
-
-    @property
-    def sound_state(self) -> bool:
-        """Get sound on/off."""
-        state = self._status.sound
-
-        if state == "HIGH":
-            return True
-        return False
+        cmd = {"mwoSettingDisplayScrollSpeed": speed}
+        await self.set(
+            CMD_SET_PREFERENCE, cmd, key="MwoSettingDisplayScrollSpeed", value=speed
+        )
 
     # Light
-    async def light_turn_onoff(self, on: bool, **kwargs):
-        """Set light on/off."""
-        if on:
-            state = "ENABLE"
+    @property
+    def light_mode_options(self) -> list[str]:
+        """Get display scrool speed list."""
+        if self._supported_light_mode_options is None:
+            key = self._get_state_key("MwoLampLevelString")
+            if not self.model_info.is_enum_type(key):
+                self._supported_light_mode_options = {}
+                return []
+            mapping = self.model_info.value(key).options
+            mode_list = [e.value for e in LightLevel]
+            self._supported_light_mode_options = {
+                LightLevel(o).name: k for k, o in mapping.items() if o in mode_list
+            }
+        return list(self._supported_light_mode_options)
+
+    async def set_light_mode(self, mode: str):
+        """Set light mode."""
+        if mode not in self.light_mode_options:
+            raise ValueError(f"Invalid light mode: {mode}")
+
+        level = self._supported_light_mode_options[mode]
+        if level != "0":
+            cmd = {
+                "mwoLampOnOff": "ENABLE",
+                "mwoLampLevel": level,
+            }
         else:
-            state = "DISABLE"
-        cmd = CMD_VENTLAMP_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoLampOnOff"] = state
-        # Get brightness wanted
-        brightness = kwargs.get("brightness")
-        mwoLampLevel = 0
-        # if ON and no brightness set, let's turn on the light
-        # with max brightness
-        if on and brightness is None:
-            brightness = 255
+            cmd = {"mwoLampOnOff": "DISABLE"}
 
-        if brightness:
-            if 1 < brightness < 170:
-                # Set brightness to level 1
-                mwoLampLevel = 1
-            elif brightness >= 170:
-                # Set brightness to level 2
-                mwoLampLevel = 2
-            # Set brightness
-            cmd["dataSetList"]["ovenState"]["mwoLampLevel"] = mwoLampLevel
-
-        await self.set(cmd, None, key="MwoLampLevel", value = str(mwoLampLevel))
-
-    @property
-    def light_is_on(self) -> bool:
-        """Get light on/off state."""
-        if self._status.data["MwoLampLevel"] == '0':
-            return False
-        return True
-
-    @property
-    def light_brightness(self) -> int:
-        """Get light brightness."""
-        mwoLampLevel = self._status.data["MwoLampLevel"]
-        if mwoLampLevel == '0' :
-            return 0
-        elif mwoLampLevel == '1':
-            return 127
-        elif mwoLampLevel == '2':
-            return 255
-        raise
-
+        await self.set(CMD_SET_VENTLAMP, cmd, key="MwoLampLevel", value=level)
 
     # Vent
-    async def set_vent_speed(self, option: str):
-        """Set vent speed."""
-        if option not in self.vent_speed_options:
-            raise
-        on_off = self.model_info.enum_value("MwoVentOnOff", getattr(VentOnOff, "ENABLE").value)
-        if option == "OFF":
-            on_off = self.model_info.enum_value("MwoVentOnOff", getattr(VentOnOff, "DISABLE").value)
-        speed_str = self.model_info.enum_value("MwoVentSpeedLevelString", getattr(VentSpeed, option).value)
-
-        cmd = CMD_VENTLAMP_DICT.copy()
-        cmd["dataSetList"]["ovenState"]["mwoVentOnOff"] = on_off
-        cmd["dataSetList"]["ovenState"]["mwoVentSpeedLevel"] = int(speed_str)
-
-        await self.set(cmd, None, key="MwoVentSpeedLevel", value = option)
-
-    @property
-    def vent_speed_state(self) -> str:
-        """Get vent speed."""
-        state = self._status.vent_speed
-        return state.upper()
-
     @property
     def vent_speed_options(self) -> list[str]:
         """Get vent speed list."""
         if self._supported_vent_speed_options is None:
             key = self._get_state_key("MwoVentSpeedLevelString")
             if not self.model_info.is_enum_type(key):
-                self._supported_vent_speed_options = []
+                self._supported_vent_speed_options = {}
                 return []
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in VentSpeed]
-            self._supported_vent_speed_options = [
-                VentSpeed(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_vent_speed_options
+            self._supported_vent_speed_options = {
+                VentSpeed(o).name: k for k, o in mapping.items() if o in mode_list
+            }
+        return list(self._supported_vent_speed_options)
+
+    async def set_vent_speed(self, option: str):
+        """Set vent speed."""
+        if option not in self.vent_speed_options:
+            raise ValueError(f"Invalid vent mode: {option}")
+
+        level = self._supported_vent_speed_options[option]
+        mode = "ENABLE" if level != "0" else "DISABLE"
+
+        cmd = {
+            "mwoVentOnOff": mode,
+            "mwoVentSpeedLevel": level,
+        }
+
+        await self.set(CMD_SET_VENTLAMP, cmd, key="MwoVentSpeedLevel", value=level)
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -295,7 +254,7 @@ class MicroWaveDevice(Device):
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
         )
-        if self._status:
+        if self._status and key is not None:
             self._status.update_status(key, value)
 
     async def poll(self) -> MicroWaveStatus | None:
@@ -304,11 +263,7 @@ class MicroWaveDevice(Device):
         if not res:
             return None
 
-        for key, value in res.items():
-            status_res = self._status.update_status(key, value)
-            if not status_res:
-                self._status = MicroWaveStatus(self, res)
-                return self._status
+        self._status = MicroWaveStatus(self, res)
         return self._status
 
 
@@ -326,6 +281,26 @@ class MicroWaveStatus(DeviceStatus):
         self._oven_temp_unit = None
 
     @property
+    def oven_upper_state(self):
+        """Return upper microwave oven state."""
+        # Known microwave models only have upper oven state information
+        status = self.lookup_enum("UpperOvenState")
+        if status is None:
+            return None
+        if status == ITEM_STATE_OFF:
+            status = BIT_OFF
+        return self._update_feature(MicroWaveFeatures.OVEN_UPPER_STATE, status)
+
+    @property
+    def oven_upper_mode(self):
+        """Return upper microwave oven mode."""
+        # Known microwave models only have upper oven state information
+        status = self.lookup_enum("UpperCookMode")
+        if status is None:
+            return None
+        return self._update_feature(MicroWaveFeatures.OVEN_UPPER_MODE, status)
+
+    @property
     def is_on(self):
         """Return if device is on."""
         return self.is_oven_on
@@ -333,65 +308,100 @@ class MicroWaveStatus(DeviceStatus):
     @property
     def is_oven_on(self):
         """Return if oven is on."""
-        # FIXME: detect the microwave is online
-        self.data.get('UpperOvenState')
-        self.data.get('StandBy')
-        return True
-
-    # FIXME add timer and cook status
+        for feature in [
+            MicroWaveFeatures.OVEN_UPPER_STATE,
+        ]:
+            res = self.device_features.get(feature)
+            if res and res != StateOptions.OFF:
+                return True
+        return False
 
     @property
-    def clock_display(self):
+    def is_clock_display_on(self):
         """Get display clock on/off."""
-        status = self.data.get("MwoSettingClockDisplay")
-        return self._update_feature(MicroWaveFeatures.CLOCK_DISPLAY, status)
+        if (status := self.data.get("MwoSettingClockDisplay")) is None:
+            return None
+        return self._update_feature(
+            MicroWaveFeatures.CLOCK_DISPLAY, status == "CLOCK_SHOW", False
+        )
 
     @property
-    def weight_unit_kg(self):
+    def is_sound_on(self):
+        """Get sound on/off."""
+        if (status := self.data.get("MwoSettingSound")) is None:
+            return None
+        return self._update_feature(MicroWaveFeatures.SOUND, status == "HIGH", False)
+
+    @property
+    def weight_unit(self):
         """Get weight unit kg/lb."""
-        status = self.data.get("MwoSettingDefrostWeightMode")
-        return self._update_feature(MicroWaveFeatures.WEIGHT_UNIT_KG, status)
+        if (value := self.lookup_enum("MwoSettingDefrostWeightMode")) is None:
+            return None
+
+        try:
+            return self._update_feature(
+                MicroWaveFeatures.WEIGHT_UNIT, WeightUnit(value).name, False
+            )
+        except ValueError:
+            return None
 
     @property
     def display_scroll_speed(self):
         """Get display scrool speed."""
-        status = self.data.get("mwoSettingDisplayScrollSpeed")
-        return self._update_feature(MicroWaveFeatures.DISPLAY_SCROLL_SPEED, status)
+        if (value := self.lookup_enum("MwoSettingDisplayScrollSpeed")) is None:
+            return None
+
+        try:
+            return self._update_feature(
+                MicroWaveFeatures.DISPLAY_SCROLL_SPEED,
+                DisplayScrollSpeed(value).name,
+                False,
+            )
+        except ValueError:
+            return None
 
     @property
-    def sound(self):
-        """Get sound on/off."""
-        status = self.data.get('MwoSettingSound')
-        return self._update_feature(MicroWaveFeatures.SOUND, status)
+    def light_mode(self):
+        """Get light mode."""
+        if (raw_value := self.lookup_range("MwoLampLevel")) is None:
+            return None
 
-    @property
-    def light(self):
-        """Get light on/off."""
-        status = self.lookup_range("MwoLampLevel")
-        return self._update_feature(MicroWaveFeatures.LIGHT, status)
+        value = self._device.model_info.enum_name("MwoLampLevelString", raw_value)
+        if value is None:
+            return None
+
+        try:
+            return self._update_feature(
+                MicroWaveFeatures.LIGHT_MODE, LightLevel(value).name, False
+            )
+        except ValueError:
+            return None
 
     @property
     def vent_speed(self):
         """Get vent speed."""
-        raw_value = self.lookup_range("MwoVentSpeedLevel")
+        if (raw_value := self.lookup_range("MwoVentSpeedLevel")) is None:
+            return None
 
-        if hasattr(VentSpeed, raw_value):
-            value = VentSpeed[raw_value].value
-        else:
-            value = self._device.model_info.enum_name("MwoVentSpeedLevelString", raw_value)
-
+        value = self._device.model_info.enum_name("MwoVentSpeedLevelString", raw_value)
         if value is None:
             return None
+
         try:
-            return self._update_feature(MicroWaveFeatures.VENT_SPEED, VentSpeed(value).name)
+            return self._update_feature(
+                MicroWaveFeatures.VENT_SPEED, VentSpeed(value).name, False
+            )
         except ValueError:
             return None
 
     def _update_features(self):
         _ = [
-            self.light,
-            self.clock_display,
-            self.weight_unit_kg,
+            self.oven_upper_state,
+            self.oven_upper_mode,
+            self.is_clock_display_on,
+            self.is_sound_on,
+            self.weight_unit,
             self.display_scroll_speed,
-            self.sound,
+            self.light_mode,
+            self.vent_speed,
         ]
