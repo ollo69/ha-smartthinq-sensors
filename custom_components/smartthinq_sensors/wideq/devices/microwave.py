@@ -151,7 +151,7 @@ class MicroWaveDevice(Device):
 
     async def set_defrost_weight_unit(self, unit: str):
         """Set weight unit kg/lb."""
-        if unit not in self.display_scroll_speed_options:
+        if unit not in self.defrost_weight_unit_options:
             raise ValueError(f"Invalid display unit: {unit}")
         cmd = {"mwoSettingDefrostWeightMode": unit}
         await self.set(

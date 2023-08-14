@@ -484,7 +484,7 @@ MICROWAVE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=MicroWaveFeatures.OVEN_UPPER_MODE,
         name="Oven mode",
-        icon=DEFAULT_ICON,
+        icon="mdi:inbox-full",
     ),
 )
 
