@@ -54,19 +54,19 @@ class DisplayScrollSpeed(Enum):
 class LightLevel(Enum):
     """The light level for a Microwave device."""
 
-    OFF = "@CP_OFF_EN_W"
-    LOW = "@OV_TERM_LOW_W"
-    HIGH = "@OV_TERM_HIGH_W"
+    OFF = "0"
+    LOW = "1"
+    HIGH = "2"
 
 
 class VentSpeed(Enum):
     """The vent speed for a Microwave device."""
 
-    OFF = "@CP_OFF_EN_W"
-    LOW = "@OV_TERM_LOW_W"
-    MID = "@OV_TERM_MID_W"
-    HIGH = "@OV_TERM_HIGH_W"
-    TURBO = "@OV_TERM_TURBO_W"
+    OFF = "0"
+    LOW = "1"
+    MID = "2"
+    HIGH = "3"
+    TURBO = "4"
 
 
 class WeightUnit(Enum):
@@ -92,6 +92,42 @@ class MicroWaveDevice(Device):
         return self._status
 
     # Settings
+    def _prepare_command_pref(self):
+        """Prepare preference command."""
+        if not self._status:
+            return {}
+
+        status_data = self._status.data
+        return {
+            "mwoSettingClockSetTimeHour": "",
+            "mwoSettingClockSetTimeMin": "",
+            "mwoSettingClockSetHourMode": "",
+            "mwoSettingSound": status_data.get("MwoSettingSound", ""),
+            "mwoSettingClockDisplay": status_data.get("MwoSettingClockDisplay", ""),
+            "mwoSettingDisplayScrollSpeed": status_data.get(
+                "MwoSettingDisplayScrollSpeed", ""
+            ),
+            "mwoSettingDefrostWeightMode": status_data.get(
+                "MwoSettingDefrostWeightMode", ""
+            ),
+            "mwoSettingDemoMode": "",
+        }
+
+    def _prepare_command_ventlamp(self):
+        """Prepare vent / lamp command."""
+        if not self._status:
+            return {}
+
+        status_data = self._status.data
+        vent_level = status_data.get("MwoVentSpeedLevel", "0")
+        lamp_level = status_data.get("MwoLampLevel", "0")
+        return {
+            "mwoVentOnOff": "ENABLE" if vent_level != "0" else "DISABLE",
+            "mwoVentSpeedLevel": vent_level,
+            "mwoLampOnOff": "ENABLE" if lamp_level != "0" else "DISABLE",
+            "mwoLampLevel": lamp_level,
+        }
+
     def _prepare_command(self, ctrl_key, command, key, value):
         """
         Prepare command for specific device.
@@ -100,9 +136,16 @@ class MicroWaveDevice(Device):
         if (cmd_key := MW_CMD.get(ctrl_key)) is None:
             return None
 
+        if ctrl_key == CMD_SET_PREFERENCE:
+            full_cmd = self._prepare_command_pref()
+        elif ctrl_key == CMD_SET_VENTLAMP:
+            full_cmd = self._prepare_command_ventlamp()
+        else:
+            full_cmd = {}
+
         cmd = deepcopy(cmd_key)
         def_cmd = cmd["dataSetList"].get("ovenState", {})
-        cmd["dataSetList"]["ovenState"] = {**def_cmd, **command}
+        cmd["dataSetList"]["ovenState"] = {**def_cmd, **full_cmd, **command}
 
         return cmd
 
@@ -196,7 +239,7 @@ class MicroWaveDevice(Device):
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in LightLevel]
             self._supported_light_mode_options = {
-                LightLevel(o).name: k for k, o in mapping.items() if o in mode_list
+                LightLevel(k).name: k for k in mapping.keys() if k in mode_list
             }
         return list(self._supported_light_mode_options)
 
@@ -206,13 +249,12 @@ class MicroWaveDevice(Device):
             raise ValueError(f"Invalid light mode: {mode}")
 
         level = self._supported_light_mode_options[mode]
-        if level != "0":
-            cmd = {
-                "mwoLampOnOff": "ENABLE",
-                "mwoLampLevel": level,
-            }
-        else:
-            cmd = {"mwoLampOnOff": "DISABLE"}
+        status = "ENABLE" if level != "0" else "DISABLE"
+
+        cmd = {
+            "mwoLampOnOff": status,
+            "mwoLampLevel": level,
+        }
 
         await self.set(CMD_SET_VENTLAMP, cmd, key="MwoLampLevel", value=level)
 
@@ -228,7 +270,7 @@ class MicroWaveDevice(Device):
             mapping = self.model_info.value(key).options
             mode_list = [e.value for e in VentSpeed]
             self._supported_vent_speed_options = {
-                VentSpeed(o).name: k for k, o in mapping.items() if o in mode_list
+                VentSpeed(k).name: k for k in mapping.keys() if k in mode_list
             }
         return list(self._supported_vent_speed_options)
 
@@ -363,11 +405,7 @@ class MicroWaveStatus(DeviceStatus):
     @property
     def light_mode(self):
         """Get light mode."""
-        if (raw_value := self.lookup_range("MwoLampLevel")) is None:
-            return None
-
-        value = self._device.model_info.enum_name("MwoLampLevelString", raw_value)
-        if value is None:
+        if (value := self.lookup_range("MwoLampLevel")) is None:
             return None
 
         try:
@@ -380,11 +418,7 @@ class MicroWaveStatus(DeviceStatus):
     @property
     def vent_speed(self):
         """Get vent speed."""
-        if (raw_value := self.lookup_range("MwoVentSpeedLevel")) is None:
-            return None
-
-        value = self._device.model_info.enum_name("MwoVentSpeedLevelString", raw_value)
-        if value is None:
+        if (value := self.lookup_range("MwoVentSpeedLevel")) is None:
             return None
 
         try:

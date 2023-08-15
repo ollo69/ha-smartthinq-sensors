@@ -53,7 +53,6 @@ MICROWAVE_SELECT: Tuple[ThinQSelectEntityDescription, ...] = (
         icon="mdi:fan",
         options_fn=lambda x: x.device.vent_speed_options,
         select_option_fn=lambda x, option: x.device.set_vent_speed(option),
-        available_fn=lambda x: x.is_power_on,
     ),
     ThinQSelectEntityDescription(
         key=MicroWaveFeatures.DISPLAY_SCROLL_SPEED,
