@@ -22,6 +22,15 @@ CMD_PREF_DICT = {
         "ovenState": {
             "cmdOptionContentsType": "REMOTE_SETTING",
             "cmdOptionDataLength": "REMOTE_SETTING",
+            "mwoSettingClockDisplay": "NOT_SET",
+            "mwoSettingClockSetHourMode": "NOT_SET",
+            "mwoSettingClockSetTimeHour": 128,
+            "mwoSettingClockSetTimeMin": 128,
+            "mwoSettingClockSetTimeSec": 128,
+            "mwoSettingDefrostWeightMode": "NOT_SET",
+            "mwoSettingDemoMode": "NOT_SET",
+            "mwoSettingDisplayScrollSpeed": "NOT_SET",
+            "mwoSettingSound": "NOT_SET",
         }
     },
 }
@@ -92,27 +101,6 @@ class MicroWaveDevice(Device):
         return self._status
 
     # Settings
-    def _prepare_command_pref(self):
-        """Prepare preference command."""
-        if not self._status:
-            return {}
-
-        status_data = self._status.data
-        return {
-            "mwoSettingClockSetTimeHour": "",
-            "mwoSettingClockSetTimeMin": "",
-            "mwoSettingClockSetHourMode": "",
-            "mwoSettingSound": status_data.get("MwoSettingSound", ""),
-            "mwoSettingClockDisplay": status_data.get("MwoSettingClockDisplay", ""),
-            "mwoSettingDisplayScrollSpeed": status_data.get(
-                "MwoSettingDisplayScrollSpeed", ""
-            ),
-            "mwoSettingDefrostWeightMode": status_data.get(
-                "MwoSettingDefrostWeightMode", ""
-            ),
-            "mwoSettingDemoMode": "",
-        }
-
     def _prepare_command_ventlamp(self):
         """Prepare vent / lamp command."""
         if not self._status:
@@ -136,9 +124,7 @@ class MicroWaveDevice(Device):
         if (cmd_key := MW_CMD.get(ctrl_key)) is None:
             return None
 
-        if ctrl_key == CMD_SET_PREFERENCE:
-            full_cmd = self._prepare_command_pref()
-        elif ctrl_key == CMD_SET_VENTLAMP:
+        if ctrl_key == CMD_SET_VENTLAMP:
             full_cmd = self._prepare_command_ventlamp()
         else:
             full_cmd = {}
@@ -158,6 +144,14 @@ class MicroWaveDevice(Device):
             CMD_SET_PREFERENCE, cmd, key="MwoSettingClockDisplay", value=state
         )
 
+    async def set_clock_24h_mode(self, turn_on: bool):
+        """Enanble or disable clock 24h mode."""
+        state = "24H_MODE" if turn_on else "12H_MODE"
+        cmd = {"mwoSettingClockSetHourMode": state}
+        await self.set(
+            CMD_SET_PREFERENCE, cmd, key="MwoSettingClockSetHourMode", value=state
+        )
+
     async def set_time(self, time_wanted: time | None = None):
         """Set time on microwave."""
         if time_wanted is None:
@@ -166,6 +160,7 @@ class MicroWaveDevice(Device):
         cmd = {
             "mwoSettingClockSetTimeHour": time_wanted.hour,
             "mwoSettingClockSetTimeMin": time_wanted.minute,
+            "mwoSettingClockSetTimeSec": time_wanted.second,
         }
         await self.set(CMD_SET_PREFERENCE, cmd)
 
@@ -368,6 +363,15 @@ class MicroWaveStatus(DeviceStatus):
         )
 
     @property
+    def is_clock_24h_mode(self):
+        """Get clock mode."""
+        if (status := self.data.get("MwoSettingClockSetHourMode")) is None:
+            return None
+        return self._update_feature(
+            MicroWaveFeatures.CLOCK_24H_MODE, status == "24H_MODE", False
+        )
+
+    @property
     def is_sound_on(self):
         """Get sound on/off."""
         if (status := self.data.get("MwoSettingSound")) is None:
@@ -433,6 +437,7 @@ class MicroWaveStatus(DeviceStatus):
             self.oven_upper_state,
             self.oven_upper_mode,
             self.is_clock_display_on,
+            self.is_clock_24h_mode,
             self.is_sound_on,
             self.weight_unit,
             self.display_scroll_speed,

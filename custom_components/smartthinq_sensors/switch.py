@@ -144,6 +144,14 @@ MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_clock_display(False),
         turn_on_fn=lambda x: x.device.set_clock_display(True),
     ),
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.CLOCK_24H_MODE,
+        name="Clock 24h Mode",
+        icon="mdi:hours-24",
+        entity_category=EntityCategory.CONFIG,
+        turn_off_fn=lambda x: x.device.set_clock_24h_mode(False),
+        turn_on_fn=lambda x: x.device.set_clock_24h_mode(True),
+    ),
 )
 
 AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
