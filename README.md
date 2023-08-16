@@ -16,7 +16,7 @@ Supported devices are:
 - Dishwasher
 - Dryer
 - Fan
-- Mocrowave
+- Microwave
 - Range
 - Refrigerator
 - Styler
