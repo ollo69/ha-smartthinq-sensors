@@ -144,14 +144,6 @@ class MicroWaveDevice(Device):
             CMD_SET_PREFERENCE, cmd, key="MwoSettingClockDisplay", value=state
         )
 
-    async def set_clock_24h_mode(self, turn_on: bool):
-        """Enanble or disable clock 24h mode."""
-        state = "24H_MODE" if turn_on else "12H_MODE"
-        cmd = {"mwoSettingClockSetHourMode": state}
-        await self.set(
-            CMD_SET_PREFERENCE, cmd, key="MwoSettingClockSetHourMode", value=state
-        )
-
     async def set_time(self, time_wanted: time | None = None):
         """Set time on microwave."""
         if time_wanted is None:
@@ -363,15 +355,6 @@ class MicroWaveStatus(DeviceStatus):
         )
 
     @property
-    def is_clock_24h_mode(self):
-        """Get clock mode."""
-        if (status := self.data.get("MwoSettingClockSetHourMode")) is None:
-            return None
-        return self._update_feature(
-            MicroWaveFeatures.CLOCK_24H_MODE, status == "24H_MODE", False
-        )
-
-    @property
     def is_sound_on(self):
         """Get sound on/off."""
         if (status := self.data.get("MwoSettingSound")) is None:
@@ -437,7 +420,6 @@ class MicroWaveStatus(DeviceStatus):
             self.oven_upper_state,
             self.oven_upper_mode,
             self.is_clock_display_on,
-            self.is_clock_24h_mode,
             self.is_sound_on,
             self.weight_unit,
             self.display_scroll_speed,

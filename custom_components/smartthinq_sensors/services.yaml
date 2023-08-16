@@ -29,3 +29,18 @@ set_fan_mode:
       example: "low"
       selector:
         text:
+
+set_time:
+  name: Set time
+  description: Set time device.
+  target:
+    entity:
+      integration: smartthinq_sensors
+      domain: sensor
+  fields:
+    time_wanted:
+      name: time
+      description: Time (if not set will use Home-Assistant time)
+      required: false
+      selector:
+        time:

@@ -165,7 +165,6 @@ class MicroWaveFeatures(StrEnum):
     """Features for LG MicroWave devices."""
 
     CLOCK_DISPLAY = "clock_display"
-    CLOCK_24H_MODE = "clock_24h_mode"
     DISPLAY_SCROLL_SPEED = "display_scroll_speed"
     LIGHT_MODE = "light_mode"
     OVEN_UPPER_STATE = "oven_upper_state"
