@@ -10,6 +10,7 @@ Supported devices are:
 - Dishwasher
 - Dryer
 - Fan
+- Microwave
 - Range
 - Refrigerator
 - Styler
