@@ -159,3 +159,16 @@ class WaterHeaterFeatures(StrEnum):
 
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
+
+
+class MicroWaveFeatures(StrEnum):
+    """Features for LG MicroWave devices."""
+
+    CLOCK_DISPLAY = "clock_display"
+    DISPLAY_SCROLL_SPEED = "display_scroll_speed"
+    LIGHT_MODE = "light_mode"
+    OVEN_UPPER_STATE = "oven_upper_state"
+    OVEN_UPPER_MODE = "oven_upper_mode"
+    SOUND = "sound"
+    VENT_SPEED = "vent_speed"
+    WEIGHT_UNIT = "weight_unit"

@@ -15,6 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -30,6 +31,7 @@ from .wideq import (
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     DeviceType,
+    MicroWaveFeatures,
     RefrigeratorFeatures,
 )
 
@@ -125,6 +127,24 @@ AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on,
     ),
 )
+MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.SOUND,
+        name="Sound",
+        icon="mdi:volume-high",
+        entity_category=EntityCategory.CONFIG,
+        turn_off_fn=lambda x: x.device.set_sound(False),
+        turn_on_fn=lambda x: x.device.set_sound(True),
+    ),
+    ThinQSwitchEntityDescription(
+        key=MicroWaveFeatures.CLOCK_DISPLAY,
+        name="Clock Display",
+        icon="mdi:clock-digital",
+        entity_category=EntityCategory.CONFIG,
+        turn_off_fn=lambda x: x.device.set_clock_display(False),
+        turn_on_fn=lambda x: x.device.set_clock_display(True),
+    ),
+)
 
 AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
     key="duct-zone",
@@ -202,6 +222,16 @@ async def async_setup_entry(
                 LGEDuctSwitch(lge_device, duct_zone)
                 for lge_device in lge_devices.get(DeviceType.AC, [])
                 for duct_zone in lge_device.device.duct_zones
+            ]
+        )
+
+        # add MicroWave switch
+        lge_switch.extend(
+            [
+                LGESwitch(lge_device, switch_desc)
+                for switch_desc in MICROWAVE_SWITCH
+                for lge_device in lge_devices.get(DeviceType.MICROWAVE, [])
+                if _switch_exist(lge_device, switch_desc)
             ]
         )
 

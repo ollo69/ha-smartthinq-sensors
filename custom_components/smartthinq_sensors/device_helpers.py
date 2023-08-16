@@ -23,6 +23,7 @@ DEVICE_ICONS = {
     DeviceType.DRYER: "mdi:tumble-dryer",
     DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
+    DeviceType.MICROWAVE: "mdi:microwave",
     DeviceType.REFRIGERATOR: "mdi:fridge-outline",
     DeviceType.RANGE: "mdi:stove",
 }

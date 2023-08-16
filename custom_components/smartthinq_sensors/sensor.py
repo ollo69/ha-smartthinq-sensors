@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import time
 import logging
 from typing import Any, Callable, Tuple
+
+import voluptuous as vol
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -20,6 +23,7 @@ from homeassistant.const import (
     UnitOfPower,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -38,11 +42,13 @@ from .device_helpers import (
     get_multiple_devices_types,
 )
 from .wideq import (
+    SET_TIME_DEVICE_TYPES,
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     AirPurifierFeatures,
     DehumidifierFeatures,
     DeviceType,
+    MicroWaveFeatures,
     RangeFeatures,
     WashDeviceFeatures,
     WaterHeaterFeatures,
@@ -51,6 +57,7 @@ from .wideq import (
 # service definition
 SERVICE_REMOTE_START = "remote_start"
 SERVICE_WAKE_UP = "wake_up"
+SERVICE_SET_TIME = "set_time"
 
 # general sensor attributes
 ATTR_CURRENT_COURSE = "current_course"
@@ -76,6 +83,7 @@ ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 # supported features
 SUPPORT_REMOTE_START = 1
 SUPPORT_WAKE_UP = 2
+SUPPORT_SET_TIME = 4
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -468,6 +476,23 @@ WATER_HEATER_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
     ),
 )
+MICROWAVE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
+    ThinQSensorEntityDescription(
+        key=DEFAULT_SENSOR,
+        icon=DEFAULT_ICON,
+        value_fn=lambda x: x.power_state,
+    ),
+    ThinQSensorEntityDescription(
+        key=MicroWaveFeatures.OVEN_UPPER_STATE,
+        name="Oven state",
+        icon=DEFAULT_ICON,
+    ),
+    ThinQSensorEntityDescription(
+        key=MicroWaveFeatures.OVEN_UPPER_MODE,
+        name="Oven mode",
+        icon="mdi:inbox-full",
+    ),
+)
 
 
 def _sensor_exist(
@@ -574,6 +599,16 @@ async def async_setup_entry(
             ]
         )
 
+        # add microwave devices
+        lge_sensors.extend(
+            [
+                LGEMicrowaveSensor(lge_device, sensor_desc, LGEBaseDevice(lge_device))
+                for sensor_desc in MICROWAVE_SENSORS
+                for lge_device in lge_devices.get(DeviceType.MICROWAVE, [])
+                if _sensor_exist(lge_device, sensor_desc)
+            ]
+        )
+
         async_add_entities(lge_sensors)
 
     _async_discover_device(lge_cfg_devices)
@@ -595,6 +630,12 @@ async def async_setup_entry(
         {},
         "async_wake_up",
         [SUPPORT_WAKE_UP],
+    )
+    platform.async_register_entity_service(
+        SERVICE_SET_TIME,
+        {vol.Optional("time_wanted"): cv.time},
+        "async_set_time",
+        [SUPPORT_SET_TIME],
     )
 
 
@@ -623,10 +664,14 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         self._is_default = description.key == DEFAULT_SENSOR
 
     @property
-    def supported_features(self):
-        if self._is_default and self._api.type in WM_DEVICE_TYPES:
-            return SUPPORT_REMOTE_START | SUPPORT_WAKE_UP
-        return None
+    def supported_features(self) -> int:
+        features = 0
+        if self._is_default:
+            if self._api.type in WM_DEVICE_TYPES:
+                features |= SUPPORT_REMOTE_START | SUPPORT_WAKE_UP
+            if self._api.type in SET_TIME_DEVICE_TYPES:
+                features |= SUPPORT_SET_TIME
+        return features
 
     @property
     def native_value(self) -> float | int | str | None:
@@ -694,6 +739,12 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.wake_up()
+
+    async def async_set_time(self, time_wanted: time | None = None):
+        """Call the set time command for Microwave devices."""
+        if self._api.type not in SET_TIME_DEVICE_TYPES:
+            raise NotImplementedError()
+        await self._api.device.set_time(time_wanted)
 
 
 class LGEWashDeviceSensor(LGESensor):
@@ -792,3 +843,15 @@ class LGERangeSensor(LGESensor):
         data.update(features)
 
         return data
+
+
+class LGEMicrowaveSensor(LGESensor):
+    """A sensor to monitor LGE Microwave devices"""
+
+    @property
+    def extra_state_attributes(self):
+        """Return the optional state attributes."""
+        if not self._is_default:
+            return super().extra_state_attributes
+
+        return self._wrap_device.get_features_attributes()
