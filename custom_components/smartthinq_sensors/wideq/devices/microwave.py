@@ -111,9 +111,9 @@ class MicroWaveDevice(Device):
         lamp_level = status_data.get("MwoLampLevel", "0")
         return {
             "mwoVentOnOff": "ENABLE" if vent_level != "0" else "DISABLE",
-            "mwoVentSpeedLevel": vent_level,
+            "mwoVentSpeedLevel": int(vent_level),
             "mwoLampOnOff": "ENABLE" if lamp_level != "0" else "DISABLE",
-            "mwoLampLevel": lamp_level,
+            "mwoLampLevel": int(lamp_level),
         }
 
     def _prepare_command(self, ctrl_key, command, key, value):
@@ -240,7 +240,7 @@ class MicroWaveDevice(Device):
 
         cmd = {
             "mwoLampOnOff": status,
-            "mwoLampLevel": level,
+            "mwoLampLevel": int(level),
         }
 
         await self.set(CMD_SET_VENTLAMP, cmd, key="MwoLampLevel", value=level)
@@ -271,7 +271,7 @@ class MicroWaveDevice(Device):
 
         cmd = {
             "mwoVentOnOff": mode,
-            "mwoVentSpeedLevel": level,
+            "mwoVentSpeedLevel": int(level),
         }
 
         await self.set(CMD_SET_VENTLAMP, cmd, key="MwoVentSpeedLevel", value=level)
