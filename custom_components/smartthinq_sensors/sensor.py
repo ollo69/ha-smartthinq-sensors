@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import time
 import logging
 from typing import Any, Callable, Tuple
+
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
