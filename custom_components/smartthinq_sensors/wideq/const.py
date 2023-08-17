@@ -44,6 +44,7 @@ class AirConditionerFeatures(StrEnum):
     ROOM_TEMP = "room_temperature"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
+    RESERVATION_SLEEP_TIME = "reservation_sleep_time"
 
 
 class AirPurifierFeatures(StrEnum):

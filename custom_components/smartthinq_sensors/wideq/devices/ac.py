@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 import logging
+from math import ceil
 
 from ..const import AirConditionerFeatures, TemperatureUnit
 from ..core_async import ClientAsync
@@ -61,6 +62,7 @@ STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
+STATE_RESERVATION_SLEEP_TIME = ["SleepTime", "airState.reservation.sleepTime"]
 
 FILTER_TYPES = [
     [
@@ -87,6 +89,7 @@ CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.cont
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
+CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
 # AWHP Section
 STATE_WATER_IN_TEMP = ["WaterInTempCur", "airState.tempState.inWaterCurrent"]
@@ -869,6 +872,24 @@ class AirConditionerDevice(Device):
             self._filter_status_supported = False
             return None
 
+    async def set_reservation_sleep_time(self, value: float):
+        keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
+        await self.set(
+            keys[0],  # "basicCtrl",
+            keys[1],  # "Set",
+            key=keys[2],  # key="airState.reservation.sleepTime",
+            value=str(ceil(value)),
+        )
+
+    @property
+    def is_reservation_sleep_time_available(self):
+        value = self._status.is_on and (
+            self._status.operation_mode
+            in [ACMode.ACO.name, ACMode.FAN.name, ACMode.COOL.name, ACMode.DRY.name]
+        )
+
+        return value
+
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
     ):
@@ -1277,6 +1298,16 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(STATE_HOT_WATER_MAX_TEMP)
         return self._str_to_temp(self._data.get(key))
 
+    @property
+    def reservation_sleep_time(self):
+        """Return display lighting status."""
+        key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
+        value = float(self._data.get(key))
+
+        return self._update_feature(
+            AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False
+        )
+
     def _update_features(self):
         _ = [
             self.current_temp,
@@ -1290,4 +1321,5 @@ class AirConditionerStatus(DeviceStatus):
             self.water_out_current_temp,
             self.mode_awhp_silent,
             self.hot_water_current_temp,
+            self.reservation_sleep_time,
         ]

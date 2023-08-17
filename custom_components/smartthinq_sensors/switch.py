@@ -215,6 +215,14 @@ async def async_setup_entry(
             ]
         )
 
+        # add AC sleep mode switch
+        lge_switch.extend(
+            [
+                LGESleepModeSwitch(lge_device)
+                for lge_device in lge_devices.get(DeviceType.AC, [])
+            ]
+        )
+
         # add MicroWave switch
         lge_switch.extend(
             [
@@ -351,3 +359,28 @@ class LGEDuctSwitch(LGEBaseSwitch):
         """Turn the entity on."""
         self._wrap_device.device.set_duct_zone(self._zone, True)
         self._api.async_set_updated()
+
+
+class LGESleepModeSwitch(LGESwitch):
+    """Class to control LGE AC reservation sleep time as switch"""
+
+    def __init__(self, api: LGEDevice):
+        desc = ThinQSwitchEntityDescription(
+            key=AirConditionerFeatures.RESERVATION_SLEEP_TIME,
+            name="Sleep mode",
+            icon="mdi:weather-night",
+            available_fn=lambda x: x.device.is_reservation_sleep_time_available,
+            turn_off_fn=lambda x: x.device.set_reservation_sleep_time(0),
+            turn_on_fn=lambda x: x.device.set_reservation_sleep_time(60 * 7),
+        )
+        super().__init__(api, desc)
+
+    @property
+    def is_on(self):
+        """Return the state of the switch."""
+        return self._get_switch_state() > 0
+
+    # No sure if this should be a sensor
+    # @property
+    # def extra_state_attributes(self):
+    #     return {"Remaining time (in minutes)": self._get_switch_state()}
