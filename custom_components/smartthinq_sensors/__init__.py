@@ -5,7 +5,13 @@ from __future__ import annotations
 from datetime import timedelta
 import logging
 
-from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.components import persistent_notification
+from homeassistant.config_entries import (
+    RECONFIGURE_NOTIFICATION_ID,
+    SOURCE_IMPORT,
+    SOURCE_REAUTH,
+    ConfigEntry,
+)
 from homeassistant.const import (
     CONF_REGION,
     CONF_TOKEN,
@@ -16,7 +22,7 @@ from homeassistant.const import (
     __version__,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import (
@@ -166,16 +172,8 @@ def _notify_message(
     hass: HomeAssistant, notification_id: str, title: str, message: str
 ) -> None:
     """Notify user with persistent notification"""
-    hass.async_create_task(
-        hass.services.async_call(
-            domain="persistent_notification",
-            service="create",
-            service_data={
-                "title": title,
-                "message": message,
-                "notification_id": f"{DOMAIN}.{notification_id}",
-            },
-        )
+    persistent_notification.async_create(
+        hass, message, title, f"{DOMAIN}.{notification_id}"
     )
 
 
@@ -226,6 +224,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         return False
 
+    # if we reload the entry, we abort existing reauth flow and dismiss
+    # related notification
+    for progress_flow in hass.config_entries.flow.async_progress_by_handler(
+        entry.domain,
+        match_context={"entry_id": entry.entry_id, "source": SOURCE_REAUTH},
+    ):
+        if "flow_id" in progress_flow:
+            hass.config_entries.flow.async_abort(progress_flow["flow_id"])
+    persistent_notification.async_dismiss(hass, RECONFIGURE_NOTIFICATION_ID)
+
     log_info: bool = hass.data.get(DOMAIN, {}).get(SIGNAL_RELOAD_ENTRY, 0) < 2
     if log_info:
         hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: 2}
@@ -244,13 +252,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except (AuthenticationError, InvalidCredentialError) as exc:
         if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
             hass.data.pop(DOMAIN)
-            # Launch config entries setup
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
-                    DOMAIN, context={"source": SOURCE_IMPORT}, data=entry.data
-                )
-            )
-            return False
+            # Launch config entries reauth setup
+            raise ConfigEntryAuthFailed from exc
 
         hass.data[DOMAIN][AUTH_RETRY] = auth_retry + 1
         msg = (
@@ -276,6 +279,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Connection not available. ThinQ platform not ready", exc_info=True
             )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
+
+    # if the connection is ok, we dismiss related notification
+    persistent_notification.async_dismiss(hass, f"{DOMAIN}.inv_credential")
 
     if not client.has_devices:
         _LOGGER.error("No ThinQ devices found. Component setup aborted")
