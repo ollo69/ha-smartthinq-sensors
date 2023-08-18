@@ -278,8 +278,7 @@ class Monitor:
             _LOGGER.debug(
                 "Device %s not reachable, state: %s", self._device_descr, state
             )
-            if self._work_id:
-                self._work_id = None
+            await self.stop()
             return None, False
 
         if not self._work_id:
