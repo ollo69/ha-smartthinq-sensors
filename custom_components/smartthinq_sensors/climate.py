@@ -24,7 +24,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, get_entity_name
+from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice
 from .wideq import AirConditionerFeatures, DeviceType, TemperatureUnit
 from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
 
@@ -158,11 +158,13 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
 class LGEACClimate(LGEClimate):
     """Air-to-Air climate device."""
 
+    _attr_has_entity_name = True
+    _attr_name = None
+
     def __init__(self, api: LGEDevice) -> None:
         """Initialize the climate."""
         super().__init__(api)
         self._device: AirConditionerDevice = api.device
-        self._attr_name = api.name
         self._attr_unique_id = f"{api.unique_id}-AC"
         self._attr_fan_modes = self._device.fan_speeds
         self._attr_swing_modes = [
@@ -428,6 +430,7 @@ class LGERefrigeratorClimate(LGEClimate):
     """Refrigerator climate device."""
 
     entity_description: ThinQRefClimateEntityDescription
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -438,7 +441,6 @@ class LGERefrigeratorClimate(LGEClimate):
         super().__init__(api)
         self._wrap_device = LGERefrigeratorDevice(api)
         self.entity_description = description
-        self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}-AC"
         self._attr_hvac_modes = [HVACMode.AUTO]
         self._attr_hvac_mode = HVACMode.AUTO

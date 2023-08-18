@@ -26,6 +26,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
+from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -643,6 +644,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
     """Class to monitor sensors for LGE device"""
 
     entity_description: ThinQSensorEntityDescription
+    _attr_has_entity_name = True
     _wrap_device: LGEBaseDevice | None
 
     def __init__(
@@ -656,11 +658,12 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         self._api = api
         self._wrap_device = wrapped_device
         self.entity_description = description
-        self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = api.unique_id
         if description.key != DEFAULT_SENSOR:
             self._attr_unique_id += f"-{description.key}"
         self._attr_device_info = api.device_info
+        if not description.translation_key and description.name is UNDEFINED:
+            self._attr_name = get_entity_name(api, description.key)
         self._is_default = description.key == DEFAULT_SENSOR
 
     @property
