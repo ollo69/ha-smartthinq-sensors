@@ -15,6 +15,7 @@ from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -58,7 +59,6 @@ class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
 WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_RUN_COMPLETED,
-        name="<Run> completed",
         value_fn=lambda x: x.run_completed,
     ),
     ThinQBinarySensorEntityDescription(
@@ -284,19 +284,18 @@ async def async_setup_entry(
     )
 
 
-def get_binary_sensor_name(device, ent_key, ent_name) -> str:
+def get_binary_sensor_name(device: LGEDevice, ent_key: str) -> str:
     """Get the name for the binary sensor"""
-    name = get_entity_name(device, ent_key, ent_name)
     if ent_key == ATTR_RUN_COMPLETED:
-        name = name.replace("<Run>", RUN_COMPLETED_PREFIX.get(device.type, "Run"))
-
-    return name
+        return f"{RUN_COMPLETED_PREFIX.get(device.type, 'Run')} completed"
+    return get_entity_name(device, ent_key)
 
 
 class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Class to monitor binary sensors for LGE device"""
 
     entity_description: ThinQBinarySensorEntityDescription
+    _attr_has_entity_name = True
     _wrap_device: LGEBaseDevice | None
 
     def __init__(
@@ -310,9 +309,10 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._api = api
         self._wrap_device = wrapped_device
         self.entity_description = description
-        self._attr_name = get_binary_sensor_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}"
         self._attr_device_info = api.device_info
+        if not description.translation_key and description.name is UNDEFINED:
+            self._attr_name = get_binary_sensor_name(api, description.key)
 
         self._is_on = None
 

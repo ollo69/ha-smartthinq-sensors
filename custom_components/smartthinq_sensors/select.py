@@ -15,7 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice, get_entity_name
+from .device_helpers import LGEBaseDevice
 from .wideq import DeviceType, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
@@ -128,6 +128,7 @@ class LGESelect(CoordinatorEntity, SelectEntity):
     """Class to control selects for LGE device"""
 
     entity_description: ThinQSelectEntityDescription
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -139,7 +140,6 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         self._api = api
         self._wrap_device = LGEBaseDevice(api)
         self.entity_description = description
-        self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}-select"
         self._attr_device_info = api.device_info
         self._attr_options = self.entity_description.options_fn(self._wrap_device)

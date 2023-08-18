@@ -21,12 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import (
-    STATE_LOOKUP,
-    LGEBaseDevice,
-    get_entity_name,
-    get_multiple_devices_types,
-)
+from .device_helpers import STATE_LOOKUP, LGEBaseDevice, get_multiple_devices_types
 from .wideq import (
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
@@ -146,11 +141,6 @@ MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ),
 )
 
-AC_DUCT_SWITCH = ThinQSwitchEntityDescription(
-    key="duct-zone",
-    name="Zone",
-)
-
 
 def _switch_exist(
     lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription
@@ -244,10 +234,29 @@ async def async_setup_entry(
     )
 
 
-class LGESwitch(CoordinatorEntity, SwitchEntity):
+class LGEBaseSwitch(CoordinatorEntity, SwitchEntity):
+    """Base switch device."""
+
+    _attr_device_class = SwitchDeviceClass.SWITCH
+
+    def __init__(self, api: LGEDevice):
+        """Initialize the base switch."""
+        super().__init__(api.coordinator)
+        self._api = api
+        self._attr_device_info = api.device_info
+        self._wrap_device = LGEBaseDevice(api)
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self._api.available
+
+
+class LGESwitch(LGEBaseSwitch):
     """Class to control switches for LGE device"""
 
     entity_description: ThinQSwitchEntityDescription
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -255,14 +264,9 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         description: ThinQSwitchEntityDescription,
     ):
         """Initialize the switch."""
-        super().__init__(api.coordinator)
-        self._api = api
-        self._wrap_device = LGEBaseDevice(api)
+        super().__init__(api)
         self.entity_description = description
-        self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}-switch"
-        self._attr_device_class = SwitchDeviceClass.SWITCH
-        self._attr_device_info = api.device_info
 
     @property
     def is_on(self):
@@ -313,14 +317,16 @@ class LGESwitch(CoordinatorEntity, SwitchEntity):
         return None
 
 
-class LGEDuctSwitch(LGESwitch):
+class LGEDuctSwitch(LGEBaseSwitch):
     """Class to control switches for LGE AC duct device"""
+
+    _attr_has_entity_name = True
 
     def __init__(self, api: LGEDevice, duct_zone: str):
         """Initialize the switch."""
-        super().__init__(api, AC_DUCT_SWITCH)
-        self._attr_name += f" {duct_zone}"
-        self._attr_unique_id += f"-{duct_zone}"
+        super().__init__(api)
+        self._attr_unique_id = f"{api.unique_id}-duct-zone-switch-{duct_zone}"
+        self._attr_name = f"Zone {duct_zone}"
         self._zone = duct_zone
 
     @property
