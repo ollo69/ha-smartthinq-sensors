@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from copy import deepcopy
 import json
 from numbers import Number
 
@@ -328,7 +329,7 @@ class ModelInfoV1(ModelInfo):
         if "ControlWifi" in self._data:
             control_data = self._data["ControlWifi"].get("action", {}).get(cmd_key)
             if control_data:
-                control = control_data.copy()  # we copy so that we can manipulate
+                control = deepcopy(control_data)  # we copy so that we can manipulate
                 if ctrl_key:
                     control["cmd"] = ctrl_key
         return control
@@ -585,7 +586,7 @@ class ModelInfoV2(ModelInfo):
         if "ControlWifi" in self._data:
             control_data = self._data["ControlWifi"].get(cmd_key)
             if control_data:
-                control = control_data.copy()  # we copy so that we can manipulate
+                control = deepcopy(control_data)  # we copy so that we can manipulate
                 if ctrl_key:
                     control["ctrlKey"] = ctrl_key
         return control
