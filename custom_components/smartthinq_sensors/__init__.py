@@ -232,7 +232,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ):
         if "flow_id" in progress_flow:
             hass.config_entries.flow.async_abort(progress_flow["flow_id"])
-    persistent_notification.async_dismiss(hass, RECONFIGURE_NOTIFICATION_ID)
+            persistent_notification.async_dismiss(hass, RECONFIGURE_NOTIFICATION_ID)
 
     log_info: bool = hass.data.get(DOMAIN, {}).get(SIGNAL_RELOAD_ENTRY, 0) < 2
     if log_info:
