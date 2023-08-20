@@ -65,6 +65,10 @@ SET_TIME_DEVICE_TYPES = [
     DeviceType.MICROWAVE,
 ]
 
+SET_RESERVATION_SLEEP_TIME_DEVICES = [
+    DeviceType.AC
+]
+
 
 class PlatformType(Enum):
     """The category of device."""

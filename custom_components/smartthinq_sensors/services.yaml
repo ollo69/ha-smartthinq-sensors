@@ -44,3 +44,25 @@ set_time:
       required: false
       selector:
         time:
+
+
+set_sleep_time:
+  name: Set sleep time
+  description: Set sleep time.
+  target:
+    entity:
+      integration: smartthinq_sensors
+      domain: sensor
+  fields:
+    sleep_time:
+      name: "Timeout"
+      description: Timeout for sleep mode in minutes
+      default: 60
+      required: false
+      selector:
+        number:
+          min: 30
+          mode: box
+          unit_of_measurement: minutes
+          max: 720
+          steep: 30

@@ -21,6 +21,7 @@ from homeassistant.const import (
     PERCENTAGE,
     STATE_UNAVAILABLE,
     UnitOfPower,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -44,6 +45,7 @@ from .device_helpers import (
 )
 from .wideq import (
     SET_TIME_DEVICE_TYPES,
+    SET_RESERVATION_SLEEP_TIME_DEVICES,
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     AirPurifierFeatures,
@@ -59,6 +61,7 @@ from .wideq import (
 SERVICE_REMOTE_START = "remote_start"
 SERVICE_WAKE_UP = "wake_up"
 SERVICE_SET_TIME = "set_time"
+SERVICE_SET_SLEEP_TIME = "set_sleep_time"
 
 # general sensor attributes
 ATTR_CURRENT_COURSE = "current_course"
@@ -269,6 +272,14 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
             "use_time": AirConditionerFeatures.FILTER_MAIN_USE,
             "max_time": AirConditionerFeatures.FILTER_MAIN_MAX,
         },
+    ),
+    ThinQSensorEntityDescription(
+        key=AirConditionerFeatures.RESERVATION_SLEEP_TIME,
+        name="Sleep time",
+        icon="mdi:weather-night",
+        state_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        # available_fn=lambda x: x.device.is_reservation_sleep_time_available,
     ),
 )
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
@@ -638,6 +649,11 @@ async def async_setup_entry(
         "async_set_time",
         [SUPPORT_SET_TIME],
     )
+    platform.async_register_entity_service(
+        SERVICE_SET_SLEEP_TIME,
+        {vol.Required("sleep_time"): int},
+        "async_set_sleep_time",
+    )
 
 
 class LGESensor(CoordinatorEntity, SensorEntity):
@@ -748,6 +764,17 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._api.type not in SET_TIME_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.set_time(time_wanted)
+
+    async def async_set_sleep_time(self, sleep_time: time | None = None):
+        if self._api.type not in SET_RESERVATION_SLEEP_TIME_DEVICES:
+            raise NotImplementedError()
+
+        if not self._api.device.is_reservation_sleep_time_available:
+            msg = f"{self}: reservation_sleep_time is not available"
+            _LOGGER.error(msg)
+            raise TypeError(msg)
+
+        await self._api.device.set_reservation_sleep_time(sleep_time)
 
 
 class LGEWashDeviceSensor(LGESensor):
