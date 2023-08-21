@@ -13,10 +13,11 @@ from ..core_exceptions import InvalidDeviceStatus
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo, DeviceType
 
-STATE_WM_POWER_OFF = "POWEROFF"
-ENUM_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
-STATES_WM_END = ["END", "COMPLETE"]
-ENUM_WM_END = ["@WM_STATE_END_W", "@WM_STATE_COMPLETE_W"]
+STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
+STATE_WM_END = [
+    "@WM_STATE_END_W",
+    "@WM_STATE_COMPLETE_W",
+]
 STATE_WM_ERROR_OFF = "OFF"
 STATE_WM_ERROR_NO_ERROR = [
     "ERROR_NOERROR",
@@ -85,40 +86,12 @@ class WMDevice(Device):
             self._attr_name += f" {sub_key.capitalize()}"
         self._stand_by = False
         self._remote_start_status = None
-        self._power_off_state = None
-        self._end_states = None
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
         if not (key and self._sub_key):
             return key
         return f"{self._sub_key}{key[0].upper()}{key[1:]}"
-
-    @property
-    def power_off_state(self) -> str:
-        """Return the power off state."""
-        if self._power_off_state is None:
-            status = self._model_info.enum_value(
-                self._get_state_key(POWER_STATUS_KEY), ENUM_WM_POWER_OFF
-            )
-            if status is None and self._model_info.is_info_v2:
-                status = STATE_WM_POWER_OFF
-            self._power_off_state = status or ""
-        return self._power_off_state
-
-    @property
-    def end_states(self):
-        """Return the end states."""
-        if self._end_states is None:
-            enum_states = [
-                self._model_info.enum_value(self._get_state_key(POWER_STATUS_KEY), n)
-                for n in ENUM_WM_END
-            ]
-            states = [s for s in enum_states if s is not None]
-            if self._model_info.is_info_v2:
-                states = [*states, *STATES_WM_END]
-            self._end_states = states
-        return self._end_states
 
     def _getcmdkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a command key if required."""
@@ -268,7 +241,7 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_POWER_OFF)
         await self.set_with_retry(keys[0], keys[1], value=keys[2], num_retry=2)
         self._remote_start_status = None
-        self._update_status(POWER_STATUS_KEY, self.power_off_state)
+        self._update_status(POWER_STATUS_KEY, STATE_WM_POWER_OFF)
 
     async def wake_up(self):
         """Wakeup the device."""
@@ -382,8 +355,6 @@ class WMStatus(DeviceStatus):
     :param data: JSON data from the API.
     """
 
-    _device: WMDevice
-
     def __init__(
         self,
         device: WMDevice,
@@ -408,18 +379,12 @@ class WMStatus(DeviceStatus):
     def _get_run_state(self):
         """Get current run state."""
         if not self._run_state:
-            state = self.lookup_value(self._getkeys(POWER_STATUS_KEY))
+            state = self.lookup_enum(self._getkeys(POWER_STATUS_KEY))
             if not state:
-                self._run_state = self._device.power_off_state
+                self._run_state = STATE_WM_POWER_OFF
             else:
                 self._run_state = state
         return self._run_state
-
-    def _get_run_state_enum(self):
-        """Get current run state enum."""
-        if self._get_run_state() == self._device.power_off_state:
-            return StateOptions.NONE
-        return self.lookup_enum(self._getkeys(POWER_STATUS_KEY))
 
     def _get_pre_state(self):
         """Get previous run state."""
@@ -427,20 +392,12 @@ class WMStatus(DeviceStatus):
             keys = self._getkeys(["PreState", "preState"])
             if not (key := self.get_model_info_key(keys)):
                 return None
-            state = self.lookup_value(key)
+            state = self.lookup_enum(key)
             if not state:
-                self._pre_state = self._device.power_off_state
+                self._pre_state = STATE_WM_POWER_OFF
             else:
                 self._pre_state = state
         return self._pre_state
-
-    def _get_pre_state_enum(self):
-        """Get previous run state enum."""
-        if (pre_state := self._get_pre_state()) is None:
-            return None
-        if pre_state == self._device.power_off_state:
-            return StateOptions.NONE
-        return self.lookup_enum(self._getkeys(["PreState", "preState"]))
 
     def _get_process_state(self):
         """Get current process state."""
@@ -448,20 +405,12 @@ class WMStatus(DeviceStatus):
             keys = self._getkeys(["ProcessState", "processState"])
             if not (key := self.get_model_info_key(keys)):
                 return None
-            state = self.lookup_value(key)
+            state = self.lookup_enum(key)
             if not state:
                 self._process_state = StateOptions.NONE
             else:
                 self._process_state = state
         return self._process_state
-
-    def _get_process_state_enum(self):
-        """Get process run state enum."""
-        if self._get_process_state() is None:
-            return None
-        if not self.is_on:
-            return StateOptions.NONE
-        return self.lookup_enum(self._getkeys(["ProcessState", "processState"]))
 
     def _get_error(self):
         """Get current error."""
@@ -485,7 +434,7 @@ class WMStatus(DeviceStatus):
     def is_on(self):
         """Return if device is on."""
         run_state = self._get_run_state()
-        return run_state != self._device.power_off_state
+        return run_state != STATE_WM_POWER_OFF
 
     @property
     def is_dryer(self):
@@ -501,9 +450,8 @@ class WMStatus(DeviceStatus):
         pre_state = self._get_pre_state()
         if pre_state is None:
             pre_state = self._get_process_state() or StateOptions.NONE
-        if run_state in self._device.end_states or (
-            run_state == self._device.power_off_state
-            and pre_state in self._device.end_states
+        if run_state in STATE_WM_END or (
+            run_state == STATE_WM_POWER_OFF and pre_state in STATE_WM_END
         ):
             return True
         return False
@@ -542,62 +490,70 @@ class WMStatus(DeviceStatus):
         smart_course = self.lookup_reference(course_key, ref_key="name")
         return self._device.get_enum_text(smart_course)
 
-    def _get_time_info(self, keys: list[str]):
-        """Return time info for specific key."""
-        if self.is_info_v2:
-            if not self.is_on:
-                return 0
-            return self.int_or_none(self._data.get(self._getkeys(keys[1])))
-        return self._data.get(keys[0])
-
     @property
     def initialtime_hour(self):
         """Return hour initial time."""
-        return self._get_time_info(["Initial_Time_H", "initialTimeHour"])
+        if self.is_info_v2:
+            return self.int_or_none(self._data.get(self._getkeys("initialTimeHour")))
+        return self._data.get("Initial_Time_H")
 
     @property
     def initialtime_min(self):
         """Return minute initial time."""
-        return self._get_time_info(["Initial_Time_M", "initialTimeMinute"])
+        if self.is_info_v2:
+            return self.int_or_none(self._data.get(self._getkeys("initialTimeMinute")))
+        return self._data.get("Initial_Time_M")
 
     @property
     def remaintime_hour(self):
         """Return hour remaining time."""
-        return self._get_time_info(["Remain_Time_H", "remainTimeHour"])
+        if self.is_info_v2:
+            return self.int_or_none(self._data.get(self._getkeys("remainTimeHour")))
+        return self._data.get("Remain_Time_H")
 
     @property
     def remaintime_min(self):
         """Return minute remaining time."""
-        return self._get_time_info(["Remain_Time_M", "remainTimeMinute"])
+        if self.is_info_v2:
+            return self.int_or_none(self._data.get(self._getkeys("remainTimeMinute")))
+        return self._data.get("Remain_Time_M")
 
     @property
     def reservetime_hour(self):
         """Return hour reserved time."""
-        return self._get_time_info(["Reserve_Time_H", "reserveTimeHour"])
+        if self.is_info_v2:
+            return self.int_or_none(self._data.get(self._getkeys("reserveTimeHour")))
+        return self._data.get("Reserve_Time_H")
 
     @property
     def reservetime_min(self):
         """Return minute reserved time."""
-        return self._get_time_info(["Reserve_Time_M", "reserveTimeMinute"])
+        if self.is_info_v2:
+            return self.int_or_none(self._data.get(self._getkeys("reserveTimeMinute")))
+        return self._data.get("Reserve_Time_M")
 
     @property
     def run_state(self):
         """Return current run state."""
-        run_state = self._get_run_state_enum()
+        run_state = self._get_run_state()
+        if run_state == STATE_WM_POWER_OFF:
+            run_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
     @property
     def pre_state(self):
         """Return previous run state."""
-        pre_state = self._get_pre_state_enum()
+        pre_state = self._get_pre_state()
         if pre_state is None:
             return None
+        if pre_state == STATE_WM_POWER_OFF:
+            pre_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.PRE_STATE, pre_state)
 
     @property
     def process_state(self):
         """Return current process state."""
-        process = self._get_process_state_enum()
+        process = self._get_process_state()
         if process is None:
             return None
         return self._update_feature(WashDeviceFeatures.PROCESS_STATE, process)
