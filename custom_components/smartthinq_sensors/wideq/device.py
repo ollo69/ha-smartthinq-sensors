@@ -944,8 +944,15 @@ class DeviceStatus:
         """Check if one of provided keys exists in associated model info."""
         return bool(self.get_model_info_key(keys))
 
+    def lookup_value(self, key):
+        """Lookup value for a specific key."""
+        curr_key = self._get_data_key(key)
+        if not curr_key:
+            return None
+        return self._data[curr_key]
+
     def lookup_enum(self, key, data_is_num=False):
-        """Lookup value for a specific key of type enum."""
+        """Lookup enum name for a specific key of type enum."""
         curr_key = self._get_data_key(key)
         if not curr_key:
             return None
@@ -967,10 +974,7 @@ class DeviceStatus:
 
     def lookup_range(self, key):
         """Lookup value for a specific key of type range."""
-        curr_key = self._get_data_key(key)
-        if not curr_key:
-            return None
-        return self._data[curr_key]
+        return self.lookup_value(key)
 
     def lookup_reference(self, key, ref_key="_comment"):
         """Lookup value for a specific key of type reference."""
