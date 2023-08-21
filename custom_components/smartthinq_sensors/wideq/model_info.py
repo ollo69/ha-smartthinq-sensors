@@ -121,6 +121,13 @@ class ModelInfo(ABC):
         """
         return key
 
+    def enum_range_values(self, key) -> list[str] | None:
+        """Return a list from a range value."""
+        if not (values := self.value(key, [TYPE_RANGE])):
+            return None
+
+        return [str(i) for i in range(values.min, values.max + 1, values.step)]
+
     def reference_name(self, key, value, ref_key="_comment") -> str | None:
         """Look up the friendly name for an encoded reference value."""
         if not (values := self.value(key, [TYPE_REFERENCE])):
@@ -231,7 +238,7 @@ class ModelInfoV1(ModelInfo):
             return RangeValue(
                 data["option"]["min"],
                 data["option"]["max"],
-                data["option"].get("step", 0),
+                data["option"].get("step", 1),
             )
         if data_type == TYPE_BIT:
             bit_values = {}
@@ -531,7 +538,9 @@ class ModelInfoV2(ModelInfo):
             )
         if data_type == TYPE_RANGE:
             return RangeValue(
-                data["valueMapping"]["min"], data["valueMapping"]["max"], 1
+                data["valueMapping"]["min"],
+                data["valueMapping"]["max"],
+                data["valueMapping"].get("step", 1),
             )
         if data_type == TYPE_REFERENCE:
             ref = data["ref"]

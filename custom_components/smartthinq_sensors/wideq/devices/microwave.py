@@ -76,6 +76,7 @@ class VentSpeed(Enum):
     MID = "2"
     HIGH = "3"
     TURBO = "4"
+    MAX = "5"
 
 
 class WeightUnit(Enum):
@@ -219,14 +220,13 @@ class MicroWaveDevice(Device):
     def light_mode_options(self) -> list[str]:
         """Get display scrool speed list."""
         if self._supported_light_mode_options is None:
-            key = self._get_state_key("MwoLampLevelString")
-            if not self.model_info.is_enum_type(key):
+            key = self._get_state_key("MwoLampLevel")
+            if not (mapping := self.model_info.enum_range_values(key)):
                 self._supported_light_mode_options = {}
                 return []
-            mapping = self.model_info.value(key).options
             mode_list = [e.value for e in LightLevel]
             self._supported_light_mode_options = {
-                LightLevel(k).name: k for k in mapping.keys() if k in mode_list
+                LightLevel(k).name: k for k in mapping if k in mode_list
             }
         return list(self._supported_light_mode_options)
 
@@ -250,14 +250,13 @@ class MicroWaveDevice(Device):
     def vent_speed_options(self) -> list[str]:
         """Get vent speed list."""
         if self._supported_vent_speed_options is None:
-            key = self._get_state_key("MwoVentSpeedLevelString")
-            if not self.model_info.is_enum_type(key):
+            key = self._get_state_key("MwoVentSpeedLevel")
+            if not (mapping := self.model_info.enum_range_values(key)):
                 self._supported_vent_speed_options = {}
                 return []
-            mapping = self.model_info.value(key).options
             mode_list = [e.value for e in VentSpeed]
             self._supported_vent_speed_options = {
-                VentSpeed(k).name: k for k in mapping.keys() if k in mode_list
+                VentSpeed(k).name: k for k in mapping if k in mode_list
             }
         return list(self._supported_vent_speed_options)
 
@@ -303,6 +302,8 @@ class MicroWaveStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
+
+    _device: MicroWaveDevice
 
     def __init__(self, device: MicroWaveDevice, data: dict | None = None):
         """Initialize device status."""
