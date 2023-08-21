@@ -28,7 +28,7 @@ WM_SUB_DEV = {"mini": "miniState"}
 
 POWER_STATUS_KEY = ["State", "state"]
 
-CMD_POWER_OFF = [["Control", "WMOff"], ["Power", "WMOff"], ["Off", None]]
+CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
 CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
 CMD_REMOTE_START = [
     ["Control", "WMStart"],
@@ -250,7 +250,7 @@ class WMDevice(Device):
     async def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
-        await self.set_with_retry(keys[0], keys[1], value=keys[2], num_retry=2)
+        await self.set(keys[0], keys[1], value=keys[2])
         self._remote_start_status = None
         self._update_status(POWER_STATUS_KEY, self.power_off_state)
 
@@ -260,7 +260,7 @@ class WMDevice(Device):
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_WAKE_UP)
-        await self.set_with_retry(keys[0], keys[1], value=keys[2], num_retry=2)
+        await self.set(keys[0], keys[1], value=keys[2])
         self._stand_by = False
 
     async def remote_start(self):
@@ -269,7 +269,7 @@ class WMDevice(Device):
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
-        await self.set_with_retry(keys[0], keys[1], key=keys[2], num_retry=2)
+        await self.set(keys[0], keys[1], key=keys[2])
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -283,43 +283,6 @@ class WMDevice(Device):
             data=data,
             ctrl_path=ctrl_path,
         )
-
-    async def set_with_retry(
-        self,
-        ctrl_key,
-        command,
-        *,
-        key=None,
-        value=None,
-        data=None,
-        ctrl_path=None,
-        num_retry=1,
-    ):
-        """Set a device's control for `key` to `value` with retry."""
-        if num_retry <= 0:
-            num_retry = 1
-        for i in range(num_retry):
-            try:
-                await self.set(
-                    ctrl_key,
-                    command,
-                    key=key,
-                    value=value,
-                    data=data,
-                    ctrl_path=ctrl_path,
-                )
-                return
-            except Exception as exc:  # pylint: disable=broad-except
-                if i == num_retry - 1:
-                    raise
-                _LOGGER.debug(
-                    "Device %s, error executing command %s, tentative %s: %s",
-                    self.name,
-                    command,
-                    i,
-                    exc,
-                )
-            await asyncio.sleep(1)
 
     def reset_status(self):
         tcl_count = None
