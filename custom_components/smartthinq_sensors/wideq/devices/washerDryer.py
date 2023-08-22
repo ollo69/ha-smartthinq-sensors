@@ -218,8 +218,8 @@ class WMDevice(Device):
             return self._prepare_command_v2(cmd, key)
         return self._prepare_command_v1(cmd, key)
 
-    def _get_wm_state(self, state_name: str) -> str | None:
-        """Return the state key based on state name."""
+    def _get_runstate_key(self, state_name: str) -> str | None:
+        """Return the run state key based on state name."""
         key = self.getkey(self._get_state_key(POWER_STATUS_KEY))
         if not self.model_info.is_enum_type(key):
             return None
@@ -246,7 +246,9 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_POWER_OFF)
         await self.set(keys[0], keys[1], value=keys[2])
         self._remote_start_status = None
-        self._update_status(POWER_STATUS_KEY, self._get_wm_state(STATE_WM_POWER_OFF))
+        self._update_status(
+            POWER_STATUS_KEY, self._get_runstate_key(STATE_WM_POWER_OFF)
+        )
 
     async def wake_up(self):
         """Wakeup the device."""
@@ -256,7 +258,7 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_WAKE_UP)
         await self.set(keys[0], keys[1], value=keys[2])
         self._stand_by = False
-        self._update_status(POWER_STATUS_KEY, self._get_wm_state("INITIAL"))
+        self._update_status(POWER_STATUS_KEY, self._get_runstate_key("STATE_INITIAL"))
 
     async def remote_start(self):
         """Remote start the device."""
