@@ -82,7 +82,6 @@ class WMDevice(Device):
             self._attr_name += f" {sub_key.capitalize()}"
         self._stand_by = False
         self._remote_start_status = None
-        self._power_off_state = None
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -219,20 +218,16 @@ class WMDevice(Device):
             return self._prepare_command_v2(cmd, key)
         return self._prepare_command_v1(cmd, key)
 
-    @property
-    def power_off_state(self) -> str:
-        """Return the power off state key."""
-        if self._power_off_state is None:
-            self._power_off_state = ""
-            key = self.getkey(self._get_state_key(POWER_STATUS_KEY))
-            if not self.model_info.is_enum_type(key):
-                return ""
-            mapping = self.model_info.value(key).options
-            for key, val in mapping.items():
-                if STATE_WM_POWER_OFF in val:
-                    self._power_off_state = key
-                    break
-        return self._power_off_state
+    def _get_wm_state(self, state_name: str) -> str | None:
+        """Return the state key based on state name."""
+        key = self.getkey(self._get_state_key(POWER_STATUS_KEY))
+        if not self.model_info.is_enum_type(key):
+            return None
+        mapping = self.model_info.value(key).options
+        for key, val in mapping.items():
+            if state_name in val:
+                return key
+        return None
 
     @property
     def stand_by(self) -> bool:
@@ -251,7 +246,7 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_POWER_OFF)
         await self.set(keys[0], keys[1], value=keys[2])
         self._remote_start_status = None
-        self._update_status(POWER_STATUS_KEY, self.power_off_state)
+        self._update_status(POWER_STATUS_KEY, self._get_wm_state(STATE_WM_POWER_OFF))
 
     async def wake_up(self):
         """Wakeup the device."""
@@ -261,6 +256,7 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_WAKE_UP)
         await self.set(keys[0], keys[1], value=keys[2])
         self._stand_by = False
+        self._update_status(POWER_STATUS_KEY, self._get_wm_state("INITIAL"))
 
     async def remote_start(self):
         """Remote start the device."""
