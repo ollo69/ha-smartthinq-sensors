@@ -244,7 +244,8 @@ class Monitor:
         """Start monitor for ThinQ1 device."""
         if self._platform_type != PlatformType.THINQ1:
             return
-        self._work_id = None
+        if self._work_id:
+            return
         self._work_id = await self._client.session.monitor_start(self._device_id)
 
     async def stop(self) -> None:
@@ -269,32 +270,24 @@ class Monitor:
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
         """
-        state = None
-        await self._client.refresh_devices()
-        if device_data := self._client.get_device(self._device_id):
-            state = device_data.device_state
-
-        if not state or state == "D":
-            _LOGGER.debug(
-                "Device %s not reachable, state: %s", self._device_descr, state
-            )
-            await self.stop()
-            return None, False
-
+        await self.start()
         if not self._work_id:
-            await self.start()
-            if not self._work_id:
-                return None, True
+            return None, True
 
         try:
-            return (
-                await self._client.session.monitor_poll(self._device_id, self._work_id),
-                True,
+            result = await self._client.session.monitor_poll(
+                self._device_id, self._work_id
             )
         except core_exc.MonitorError:
-            # Try to restart the task.
-            await self.stop()
-            return None, True
+            result = None
+        except Exception:
+            self._work_id = None
+            raise
+
+        if not result:
+            self._work_id = None
+
+        return result, True
 
     async def _poll_v2(self, query_device=False) -> tuple[Any | None, bool]:
         """
