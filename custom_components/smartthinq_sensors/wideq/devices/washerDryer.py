@@ -290,14 +290,13 @@ class WMDevice(Device):
 
     def _set_remote_start_opt(self, res):
         """Save the status to use for remote start."""
-        self._stand_by = (
-            self._status.device_features.get(WashDeviceFeatures.STANDBY)
-            == StateOptions.ON
-        )
-        if not self._stand_by:
+        stand_by = self._status.device_features.get(WashDeviceFeatures.STANDBY)
+        if stand_by is None:
             standby_enable = self.model_info.config_value("standbyEnable")
             if standby_enable and not self._should_poll:
                 self._stand_by = not self._status.is_on
+        else:
+            self._stand_by = stand_by == StateOptions.ON
         remote_start = self._status.device_features.get(WashDeviceFeatures.REMOTESTART)
         if remote_start == StateOptions.ON:
             if self._remote_start_status is None:
