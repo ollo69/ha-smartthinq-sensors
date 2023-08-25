@@ -108,6 +108,9 @@ class ModelInfo(ABC):
             return None
 
         options = values.options
+        if self.value_type(key) == TYPE_BOOL:
+            bool_val = options.get(value, 0)
+            return BIT_ON if bool_val else BIT_OFF
         return options.get(value, "")
 
     def enum_index(self, key, index):
@@ -252,7 +255,7 @@ class ModelInfoV1(ModelInfo):
             ref = data["option"][0]
             return ReferenceValue(self._data[ref])
         if data_type == TYPE_BOOL:
-            return EnumValue({"0": BIT_OFF, "1": BIT_ON})
+            return EnumValue({"0": 0, "1": 1})
         if data_type == TYPE_STRING:
             return None
         raise ValueError(
@@ -546,7 +549,10 @@ class ModelInfoV2(ModelInfo):
             ref = data["ref"]
             return ReferenceValue(self._data.get(ref))
         if data_type == TYPE_BOOL:
-            return EnumValue({0: BIT_OFF, 1: BIT_ON})
+            if "valueMapping" in data:
+                mapping = data["valueMapping"]
+                return EnumValue({k: v.get("index", 0) for k, v in mapping.items()})
+            return EnumValue({0: 0, 1: 1})
         if data_type == TYPE_STRING:
             return None
         raise ValueError(
