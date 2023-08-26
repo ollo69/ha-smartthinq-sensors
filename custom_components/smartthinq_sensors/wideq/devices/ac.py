@@ -249,6 +249,11 @@ class JetModeSupport(Enum):
     BOTH = 3
 
 
+def _remove_duplicated(elem: list) -> list:
+    """Remove duplicated values from a list."""
+    return list(dict.fromkeys(elem))
+
+
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
@@ -573,16 +578,15 @@ class AirConditionerDevice(Device):
             self._supported_horizontal_steps = []
             if not self._is_mode_supported(SUPPORT_VANE_HSTEP):
                 return []
-
             key = self._get_state_key(STATE_WDIR_HSTEP)
-            values = self.model_info.value(key)
-            if not hasattr(values, "options"):
+            if not self.model_info.is_enum_type(key):
                 return []
 
-            mapping = values.options
+            options = self.model_info.value(key).options
+            mapping = _remove_duplicated(list(options.values()))
             mode_list = [e.value for e in ACHStepMode]
             self._supported_horizontal_steps = [
-                ACHStepMode(o).name for o in mapping.values() if o in mode_list
+                ACHStepMode(o).name for o in mapping if o in mode_list
             ]
         return self._supported_horizontal_steps
 
@@ -593,16 +597,15 @@ class AirConditionerDevice(Device):
             self._supported_vertical_steps = []
             if not self._is_mode_supported(SUPPORT_VANE_VSTEP):
                 return []
-
             key = self._get_state_key(STATE_WDIR_VSTEP)
-            values = self.model_info.value(key)
-            if not hasattr(values, "options"):
+            if not self.model_info.is_enum_type(key):
                 return []
 
-            mapping = values.options
+            options = self.model_info.value(key).options
+            mapping = _remove_duplicated(list(options.values()))
             mode_list = [e.value for e in ACVStepMode]
             self._supported_vertical_steps = [
-                ACVStepMode(o).name for o in mapping.values() if o in mode_list
+                ACVStepMode(o).name for o in mapping if o in mode_list
             ]
         return self._supported_vertical_steps
 
