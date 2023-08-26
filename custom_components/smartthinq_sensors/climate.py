@@ -444,7 +444,7 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
-        await self._api.device.set_reservation_sleep_time(sleep_time)
+        await self._device.set_reservation_sleep_time(sleep_time)
 
 
 class LGERefrigeratorClimate(LGEClimate):
