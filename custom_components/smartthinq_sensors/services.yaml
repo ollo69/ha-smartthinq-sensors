@@ -58,11 +58,10 @@ set_sleep_time:
       name: "Timeout"
       description: Timeout for sleep mode in minutes
       default: 60
-      required: false
+      required: true
       selector:
         number:
-          min: 30
+          min: 0
+          max: 720
           mode: box
           unit_of_measurement: minutes
-          max: 720
-          steep: 30
