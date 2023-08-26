@@ -468,9 +468,9 @@ class RefrigeratorStatus(DeviceStatus):
             index = 1
         temp_key = self._get_temp_key(STATE_FRIDGE_TEMP[index])
         if temp_key is None:
-            return StateOptions.NONE
+            return None
         temp_lists = self._device.get_fridge_temps(self._get_temp_unit(), unit_key)
-        return temp_lists.get(temp_key, temp_key)
+        return temp_lists.get(temp_key, self.to_int_or_none(temp_key))
 
     @property
     def temp_freezer(self):
@@ -482,9 +482,9 @@ class RefrigeratorStatus(DeviceStatus):
             index = 1
         temp_key = self._get_temp_key(STATE_FREEZER_TEMP[index])
         if temp_key is None:
-            return StateOptions.NONE
+            return None
         temp_lists = self._device.get_freezer_temps(self._get_temp_unit(), unit_key)
-        return temp_lists.get(temp_key, temp_key)
+        return temp_lists.get(temp_key, self.to_int_or_none(temp_key))
 
     @property
     def temp_unit(self):
