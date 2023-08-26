@@ -874,7 +874,7 @@ class AirConditionerDevice(Device):
     async def set_reservation_sleep_time(self, value: int):
         """Set the device sleep time reservation in minutes."""
         keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
-        await self.set(keys[0], keys[1], key=keys[2], value=value)
+        await self.set(keys[0], keys[1], key=keys[2], value=str(value))
 
     @property
     def is_reservation_sleep_time_available(self):
