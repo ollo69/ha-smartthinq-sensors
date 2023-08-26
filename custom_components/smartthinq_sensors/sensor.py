@@ -45,7 +45,6 @@ from .device_helpers import (
 )
 from .wideq import (
     SET_TIME_DEVICE_TYPES,
-    SET_RESERVATION_SLEEP_TIME_DEVICES,
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
     AirPurifierFeatures,
@@ -61,7 +60,6 @@ from .wideq import (
 SERVICE_REMOTE_START = "remote_start"
 SERVICE_WAKE_UP = "wake_up"
 SERVICE_SET_TIME = "set_time"
-SERVICE_SET_SLEEP_TIME = "set_sleep_time"
 
 # general sensor attributes
 ATTR_CURRENT_COURSE = "current_course"
@@ -649,11 +647,6 @@ async def async_setup_entry(
         "async_set_time",
         [SUPPORT_SET_TIME],
     )
-    platform.async_register_entity_service(
-        SERVICE_SET_SLEEP_TIME,
-        {vol.Required("sleep_time"): int},
-        "async_set_sleep_time",
-    )
 
 
 class LGESensor(CoordinatorEntity, SensorEntity):
@@ -764,17 +757,6 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._api.type not in SET_TIME_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.set_time(time_wanted)
-
-    async def async_set_sleep_time(self, sleep_time: time | None = None):
-        if self._api.type not in SET_RESERVATION_SLEEP_TIME_DEVICES:
-            raise NotImplementedError()
-
-        if not self._api.device.is_reservation_sleep_time_available:
-            msg = f"{self}: reservation_sleep_time is not available"
-            _LOGGER.error(msg)
-            raise TypeError(msg)
-
-        await self._api.device.set_reservation_sleep_time(sleep_time)
 
 
 class LGEWashDeviceSensor(LGESensor):

@@ -52,7 +52,7 @@ set_sleep_time:
   target:
     entity:
       integration: smartthinq_sensors
-      domain: sensor
+      domain: climate
   fields:
     sleep_time:
       name: "Timeout"

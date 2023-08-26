@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from enum import Enum
 import logging
-from math import ceil
 
 from ..const import AirConditionerFeatures, TemperatureUnit
 from ..core_async import ClientAsync
@@ -872,17 +871,14 @@ class AirConditionerDevice(Device):
             self._filter_status_supported = False
             return None
 
-    async def set_reservation_sleep_time(self, value: float):
+    async def set_reservation_sleep_time(self, value: int):
+        """Set the device sleep time reservation in minutes."""
         keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
-        await self.set(
-            keys[0],  # "basicCtrl",
-            keys[1],  # "Set",
-            key=keys[2],  # key="airState.reservation.sleepTime",
-            value=str(ceil(value)),
-        )
+        await self.set(keys[0], keys[1], key=keys[2], value=value)
 
     @property
     def is_reservation_sleep_time_available(self):
+        """Return if reservation sleep time is available."""
         value = self._status.is_on and (
             self._status.operation_mode
             in [ACMode.ACO.name, ACMode.FAN.name, ACMode.COOL.name, ACMode.DRY.name]
@@ -1300,9 +1296,9 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def reservation_sleep_time(self):
-        """Return display lighting status."""
+        """Return reservation sleep time in minutes."""
         key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
-        value = float(self._data.get(key))
+        value = int(self._data.get(key))
 
         return self._update_feature(
             AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False

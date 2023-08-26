@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Awaitable, Callable, Tuple
 
+import voluptuous as vol
+
 from homeassistant.components.climate import ClimateEntity, ClimateEntityDescription
 from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
@@ -19,7 +21,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
@@ -31,6 +33,9 @@ from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirCondition
 # general ac attributes
 ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
+
+# service definitions
+SERVICE_SET_SLEEP_TIME = "set_sleep_time"
 
 HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
     ACMode.AI.name: HVACMode.AUTO,
@@ -139,6 +144,14 @@ async def async_setup_entry(
         async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
     )
 
+    # register services
+    platform = current_platform.get()
+    platform.async_register_entity_service(
+        SERVICE_SET_SLEEP_TIME,
+        {vol.Required("sleep_time"): int},
+        "async_set_sleep_time",
+    )
+
 
 class LGEClimate(CoordinatorEntity, ClimateEntity):
     """Base climate device."""
@@ -153,6 +166,15 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         return self._api.available
+
+    async def async_set_sleep_time(self, sleep_time: int | None = None):
+        """Call the set sleep time command for AC devices."""
+        if not self._api.device.is_reservation_sleep_time_available:
+            msg = f"{self}: reservation_sleep_time is not available"
+            _LOGGER.error(msg)
+            raise TypeError(msg)
+
+        await self._api.device.set_reservation_sleep_time(sleep_time)
 
 
 class LGEACClimate(LGEClimate):
