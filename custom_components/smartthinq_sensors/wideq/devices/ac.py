@@ -10,6 +10,7 @@ from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
+from ..model_info import TYPE_RANGE
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
@@ -283,6 +284,7 @@ class AirConditionerDevice(Device):
         self._supported_vertical_steps = None
         self._supported_mode_jet = None
         self._temperature_range = None
+        self._sleep_time_range = None
         self._hot_water_temperature_range = None
         self._temperature_step = TEMP_STEP_WHOLE
         self._duct_zones = {}
@@ -871,20 +873,43 @@ class AirConditionerDevice(Device):
             self._filter_status_supported = False
             return None
 
-    async def set_reservation_sleep_time(self, value: int):
-        """Set the device sleep time reservation in minutes."""
-        keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
-        await self.set(keys[0], keys[1], key=keys[2], value=str(value))
+    @property
+    def sleep_time_range(self) -> list[int]:
+        """Return valid range for sleep time."""
+        if self._sleep_time_range is None:
+            key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
+            if (range_val := self.model_info.value(key, TYPE_RANGE)) is None:
+                self._sleep_time_range = [0, 420]
+            else:
+                self._sleep_time_range = [range_val.min, range_val.max]
+        return self._sleep_time_range
 
     @property
-    def is_reservation_sleep_time_available(self):
+    def is_reservation_sleep_time_available(self) -> bool:
         """Return if reservation sleep time is available."""
-        value = self._status.is_on and (
-            self._status.operation_mode
+        if (status := self._status) is None:
+            return False
+        if (
+            status.device_features.get(AirConditionerFeatures.RESERVATION_SLEEP_TIME)
+            is None
+        ):
+            return False
+        return status.is_on and (
+            status.operation_mode
             in [ACMode.ACO.name, ACMode.FAN.name, ACMode.COOL.name, ACMode.DRY.name]
         )
 
-        return value
+    async def set_reservation_sleep_time(self, value: int):
+        """Set the device sleep time reservation in minutes."""
+        if not self.is_reservation_sleep_time_available:
+            raise ValueError("Reservation sleep time is not available")
+        valid_range = self.sleep_time_range
+        if not (valid_range[0] <= value <= valid_range[1]):
+            raise ValueError(
+                f"Invalid sleep time value. Valid range: {valid_range[0]} - {valid_range[1]}"
+            )
+        keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
+        await self.set(keys[0], keys[1], key=keys[2], value=str(value))
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -1298,8 +1323,8 @@ class AirConditionerStatus(DeviceStatus):
     def reservation_sleep_time(self):
         """Return reservation sleep time in minutes."""
         key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
-        value = int(self._data.get(key))
-
+        if (value := self.to_int_or_none(self.lookup_range(key))) is None:
+            return None
         return self._update_feature(
             AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False
         )

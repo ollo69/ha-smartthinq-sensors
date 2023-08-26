@@ -41,10 +41,10 @@ class AirConditionerFeatures(StrEnum):
     MODE_AIRCLEAN = "mode_airclean"
     MODE_AWHP_SILENT = "mode_awhp_silent"
     MODE_JET = "mode_jet"
+    RESERVATION_SLEEP_TIME = "reservation_sleep_time"
     ROOM_TEMP = "room_temperature"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
-    RESERVATION_SLEEP_TIME = "reservation_sleep_time"
 
 
 class AirPurifierFeatures(StrEnum):

@@ -277,7 +277,6 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:weather-night",
         state_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
-        # available_fn=lambda x: x.device.is_reservation_sleep_time_available,
     ),
 )
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (

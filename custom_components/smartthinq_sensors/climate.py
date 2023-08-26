@@ -167,14 +167,9 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
         """Return True if entity is available."""
         return self._api.available
 
-    async def async_set_sleep_time(self, sleep_time: int | None = None):
+    async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
-        if not self._api.device.is_reservation_sleep_time_available:
-            msg = f"{self}: reservation_sleep_time is not available"
-            _LOGGER.error(msg)
-            raise TypeError(msg)
-
-        await self._api.device.set_reservation_sleep_time(sleep_time)
+        raise NotImplementedError()
 
 
 class LGEACClimate(LGEClimate):
@@ -446,6 +441,10 @@ class LGEACClimate(LGEClimate):
         return self._device.conv_temp_unit(
             AWHP_MAX_TEMP if self._device.is_air_to_water else DEFAULT_MAX_TEMP
         )
+
+    async def async_set_sleep_time(self, sleep_time: int) -> None:
+        """Call the set sleep time command for AC devices."""
+        await self._api.device.set_reservation_sleep_time(sleep_time)
 
 
 class LGERefrigeratorClimate(LGEClimate):
