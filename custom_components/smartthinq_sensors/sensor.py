@@ -21,6 +21,7 @@ from homeassistant.const import (
     PERCENTAGE,
     STATE_UNAVAILABLE,
     UnitOfPower,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -269,6 +270,13 @@ AC_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
             "use_time": AirConditionerFeatures.FILTER_MAIN_USE,
             "max_time": AirConditionerFeatures.FILTER_MAIN_MAX,
         },
+    ),
+    ThinQSensorEntityDescription(
+        key=AirConditionerFeatures.RESERVATION_SLEEP_TIME,
+        name="Sleep time",
+        icon="mdi:weather-night",
+        state_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
     ),
 )
 RANGE_SENSORS: Tuple[ThinQSensorEntityDescription, ...] = (
