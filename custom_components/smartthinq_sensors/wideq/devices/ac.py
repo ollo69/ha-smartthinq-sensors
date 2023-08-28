@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import cached_property
 import logging
 
 from ..const import AirConditionerFeatures, TemperatureUnit
@@ -283,20 +284,13 @@ class AirConditionerDevice(Device):
             if temp_unit == TemperatureUnit.FAHRENHEIT
             else TemperatureUnit.CELSIUS
         )
+
         self._is_air_to_water = None
         self._is_water_heater_supported = None
-        self._is_mode_airclean_supported = None
         self._is_pm_supported = None
-        self._is_duct_zones_supported = None
-        self._supported_operation = None
-        self._supported_op_modes = None
-        self._supported_fan_speeds = None
-        self._supported_horizontal_steps = None
-        self._supported_vertical_steps = None
-        self._supported_mode_jet = None
         self._temperature_range = None
-        self._sleep_time_range = None
         self._hot_water_temperature_range = None
+
         self._temperature_step = TEMP_STEP_WHOLE
         self._duct_zones = {}
 
@@ -339,14 +333,13 @@ class AirConditionerDevice(Device):
         else:
             return self.model_info.enum_value(supp_key, key[1]) is not None
 
-    def _get_supported_operations(self):
-        """Get a list of the ACOp Operations the device supports."""
+    @cached_property
+    def _supported_operations(self):
+        """Return the list of the ACOp Operations the device supports."""
 
-        if not self._supported_operation:
-            key = self._get_state_key(STATE_OPERATION)
-            mapping = self.model_info.value(key).options
-            self._supported_operation = [ACOp(o) for o in mapping.values()]
-        return self._supported_operation
+        key = self._get_state_key(STATE_OPERATION)
+        mapping = self.model_info.value(key).options
+        return [ACOp(o) for o in mapping.values()]
 
     def _supported_on_operation(self):
         """
@@ -357,7 +350,7 @@ class AirConditionerDevice(Device):
             make a better decision.
         """
 
-        operations = self._get_supported_operations()
+        operations = self._supported_operations
 
         # This ON operation appears to be supported in newer AC models
         if ACOp.ALL_ON in operations:
@@ -419,19 +412,15 @@ class AirConditionerDevice(Device):
             self._hot_water_temperature_range = [min_temp, max_temp]
         return self._hot_water_temperature_range
 
-    @property
+    @cached_property
     def is_duct_zones_supported(self):
         """Check if device support duct zones."""
-        if self._is_duct_zones_supported is None:
-            self._is_duct_zones_supported = False
-            supp_key = self._get_state_key(SUPPORT_DUCT_ZONE)
-            if not self.model_info.is_enum_type(supp_key):
-                return False
-            mapping = self.model_info.value(supp_key).options
-            zones = [key for key in mapping.keys() if key != "0"]
-            if zones:
-                self._is_duct_zones_supported = True
-        return self._is_duct_zones_supported
+        supp_key = self._get_state_key(SUPPORT_DUCT_ZONE)
+        if not self.model_info.is_enum_type(supp_key):
+            return False
+        mapping = self.model_info.value(supp_key).options
+        zones = [key for key in mapping.keys() if key != "0"]
+        return len(zones) > 0
 
     def is_duct_zone_enabled(self, zone: str) -> bool:
         """Get if a specific zone is enabled"""
@@ -560,73 +549,51 @@ class AirConditionerDevice(Device):
             self._is_water_heater_supported = self._is_mode_supported(SUPPORT_HOT_WATER)
         return self._is_water_heater_supported
 
-    @property
+    @cached_property
     def op_modes(self):
         """Return a list of available operation modes."""
-        if self._supported_op_modes is None:
-            key = self._get_state_key(SUPPORT_OPERATION_MODE)
-            if not self.model_info.is_enum_type(key):
-                self._supported_op_modes = []
-                return []
-            mapping = self.model_info.value(key).options
-            mode_list = [e.value for e in ACMode]
-            self._supported_op_modes = [
-                ACMode(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_op_modes
+        key = self._get_state_key(SUPPORT_OPERATION_MODE)
+        if not self.model_info.is_enum_type(key):
+            return []
+        mapping = self.model_info.value(key).options
+        mode_list = [e.value for e in ACMode]
+        return [ACMode(o).name for o in mapping.values() if o in mode_list]
 
-    @property
+    @cached_property
     def fan_speeds(self):
         """Return a list of available fan speeds."""
-        if self._supported_fan_speeds is None:
-            key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-            if not self.model_info.is_enum_type(key):
-                self._supported_fan_speeds = []
-                return []
-            mapping = self.model_info.value(key).options
-            mode_list = [e.value for e in ACFanSpeed]
-            self._supported_fan_speeds = [
-                ACFanSpeed(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_fan_speeds
+        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
+        if not self.model_info.is_enum_type(key):
+            return []
+        mapping = self.model_info.value(key).options
+        mode_list = [e.value for e in ACFanSpeed]
+        return [ACFanSpeed(o).name for o in mapping.values() if o in mode_list]
 
-    @property
+    @cached_property
     def horizontal_step_modes(self):
         """Return a list of available horizontal step modes."""
-        if self._supported_horizontal_steps is None:
-            self._supported_horizontal_steps = []
-            if not self._is_mode_supported(SUPPORT_VANE_HSTEP):
-                return []
-            key = self._get_state_key(STATE_WDIR_HSTEP)
-            if not self.model_info.is_enum_type(key):
-                return []
+        if not self._is_mode_supported(SUPPORT_VANE_HSTEP):
+            return []
+        key = self._get_state_key(STATE_WDIR_HSTEP)
+        if not self.model_info.is_enum_type(key):
+            return []
+        options = self.model_info.value(key).options
+        mapping = _remove_duplicated(list(options.values()))
+        mode_list = [e.value for e in ACHStepMode]
+        return [ACHStepMode(o).name for o in mapping if o in mode_list]
 
-            options = self.model_info.value(key).options
-            mapping = _remove_duplicated(list(options.values()))
-            mode_list = [e.value for e in ACHStepMode]
-            self._supported_horizontal_steps = [
-                ACHStepMode(o).name for o in mapping if o in mode_list
-            ]
-        return self._supported_horizontal_steps
-
-    @property
+    @cached_property
     def vertical_step_modes(self):
         """Return a list of available vertical step modes."""
-        if self._supported_vertical_steps is None:
-            self._supported_vertical_steps = []
-            if not self._is_mode_supported(SUPPORT_VANE_VSTEP):
-                return []
-            key = self._get_state_key(STATE_WDIR_VSTEP)
-            if not self.model_info.is_enum_type(key):
-                return []
-
-            options = self.model_info.value(key).options
-            mapping = _remove_duplicated(list(options.values()))
-            mode_list = [e.value for e in ACVStepMode]
-            self._supported_vertical_steps = [
-                ACVStepMode(o).name for o in mapping if o in mode_list
-            ]
-        return self._supported_vertical_steps
+        if not self._is_mode_supported(SUPPORT_VANE_VSTEP):
+            return []
+        key = self._get_state_key(STATE_WDIR_VSTEP)
+        if not self.model_info.is_enum_type(key):
+            return []
+        options = self.model_info.value(key).options
+        mapping = _remove_duplicated(list(options.values()))
+        mode_list = [e.value for e in ACVStepMode]
+        return [ACVStepMode(o).name for o in mapping if o in mode_list]
 
     @property
     def temperature_unit(self):
@@ -654,27 +621,22 @@ class AirConditionerDevice(Device):
             return None
         return self.conv_temp_unit(temp_range[1])
 
-    @property
+    @cached_property
     def is_mode_airclean_supported(self):
         """Return if AirClean mode is supported."""
-        if self._is_mode_airclean_supported is None:
-            self._is_mode_airclean_supported = self._is_mode_supported(SUPPORT_AIRCLEAN)
-        return self._is_mode_airclean_supported
+        return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
-    @property
+    @cached_property
     def supported_mode_jet(self):
         """Return if Jet mode is supported."""
-        if self._supported_mode_jet is None:
-            supported = JetModeSupport.NONE
-            if self._is_mode_supported(SUPPORT_JET_COOL):
-                supported = JetModeSupport.COOL
-            if self._is_mode_supported(SUPPORT_JET_HEAT):
-                if supported == JetModeSupport.COOL:
-                    supported = JetModeSupport.BOTH
-                else:
-                    supported = JetModeSupport.HEAT
-            self._supported_mode_jet = supported
-        return self._supported_mode_jet
+        supported = JetModeSupport.NONE
+        if self._is_mode_supported(SUPPORT_JET_COOL):
+            supported = JetModeSupport.COOL
+        if self._is_mode_supported(SUPPORT_JET_HEAT):
+            if supported == JetModeSupport.COOL:
+                return JetModeSupport.BOTH
+            return JetModeSupport.HEAT
+        return supported
 
     @property
     def is_mode_jet_available(self):
@@ -909,16 +871,13 @@ class AirConditionerDevice(Device):
             self._filter_status_supported = False
             return None
 
-    @property
+    @cached_property
     def sleep_time_range(self) -> list[int]:
         """Return valid range for sleep time."""
-        if self._sleep_time_range is None:
-            key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
-            if (range_val := self.model_info.value(key, TYPE_RANGE)) is None:
-                self._sleep_time_range = [0, 420]
-            else:
-                self._sleep_time_range = [range_val.min, range_val.max]
-        return self._sleep_time_range
+        key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
+        if (range_val := self.model_info.value(key, TYPE_RANGE)) is None:
+            return [0, 420]
+        return [range_val.min, range_val.max]
 
     @property
     def is_reservation_sleep_time_available(self) -> bool:
