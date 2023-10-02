@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import json
 import logging
@@ -13,11 +12,8 @@ from ..core_exceptions import InvalidDeviceStatus
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo, DeviceType
 
-STATE_WM_POWER_OFF = "@WM_STATE_POWER_OFF_W"
-STATE_WM_END = [
-    "@WM_STATE_END_W",
-    "@WM_STATE_COMPLETE_W",
-]
+STATE_WM_POWER_OFF = "STATE_POWER_OFF"
+STATE_WM_END = ["STATE_END", "STATE_COMPLETE"]
 STATE_WM_ERROR_OFF = "OFF"
 STATE_WM_ERROR_NO_ERROR = [
     "ERROR_NOERROR",
@@ -31,7 +27,7 @@ WM_SUB_DEV = {"mini": "miniState"}
 
 POWER_STATUS_KEY = ["State", "state"]
 
-CMD_POWER_OFF = [["Control", "WMOff"], ["Power", "WMOff"], ["Off", None]]
+CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
 CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
 CMD_REMOTE_START = [
     ["Control", "WMStart"],
@@ -100,11 +96,9 @@ class WMDevice(Device):
         return f"{self._sub_key.capitalize()}{key}"
 
     def _update_status(self, key, value):
-        if self._status:
-            status_key = self._get_state_key(key)
-            status_value = self.model_info.enum_value(status_key, value)
-            if status_value:
-                self._status.update_status(status_key, status_value)
+        if self._status and value:
+            status_key = self.getkey(self._get_state_key(key))
+            self._status.update_status(status_key, value)
 
     def _get_course_info(self, course_key, course_id):
         """Get definition for a specific course ID."""
@@ -224,6 +218,17 @@ class WMDevice(Device):
             return self._prepare_command_v2(cmd, key)
         return self._prepare_command_v1(cmd, key)
 
+    def _get_runstate_key(self, state_name: str) -> str | None:
+        """Return the run state key based on state name."""
+        key = self.getkey(self._get_state_key(POWER_STATUS_KEY))
+        if not self.model_info.is_enum_type(key):
+            return None
+        mapping = self.model_info.value(key).options
+        for key, val in mapping.items():
+            if state_name in val:
+                return key
+        return None
+
     @property
     def stand_by(self) -> bool:
         """Return if device is in standby mode."""
@@ -239,9 +244,11 @@ class WMDevice(Device):
     async def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
-        await self.set_with_retry(keys[0], keys[1], value=keys[2], num_retry=2)
+        await self.set(keys[0], keys[1], value=keys[2])
         self._remote_start_status = None
-        self._update_status(POWER_STATUS_KEY, STATE_WM_POWER_OFF)
+        self._update_status(
+            POWER_STATUS_KEY, self._get_runstate_key(STATE_WM_POWER_OFF)
+        )
 
     async def wake_up(self):
         """Wakeup the device."""
@@ -249,8 +256,9 @@ class WMDevice(Device):
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_WAKE_UP)
-        await self.set_with_retry(keys[0], keys[1], value=keys[2], num_retry=2)
+        await self.set(keys[0], keys[1], value=keys[2])
         self._stand_by = False
+        self._update_status(POWER_STATUS_KEY, self._get_runstate_key("STATE_INITIAL"))
 
     async def remote_start(self):
         """Remote start the device."""
@@ -258,7 +266,7 @@ class WMDevice(Device):
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
-        await self.set_with_retry(keys[0], keys[1], key=keys[2], num_retry=2)
+        await self.set(keys[0], keys[1], key=keys[2])
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -273,43 +281,6 @@ class WMDevice(Device):
             ctrl_path=ctrl_path,
         )
 
-    async def set_with_retry(
-        self,
-        ctrl_key,
-        command,
-        *,
-        key=None,
-        value=None,
-        data=None,
-        ctrl_path=None,
-        num_retry=1,
-    ):
-        """Set a device's control for `key` to `value` with retry."""
-        if num_retry <= 0:
-            num_retry = 1
-        for i in range(num_retry):
-            try:
-                await self.set(
-                    ctrl_key,
-                    command,
-                    key=key,
-                    value=value,
-                    data=data,
-                    ctrl_path=ctrl_path,
-                )
-                return
-            except Exception as exc:  # pylint: disable=broad-except
-                if i == num_retry - 1:
-                    raise
-                _LOGGER.debug(
-                    "Device %s, error executing command %s, tentative %s: %s",
-                    self.name,
-                    command,
-                    i,
-                    exc,
-                )
-            await asyncio.sleep(1)
-
     def reset_status(self):
         tcl_count = None
         if self._status:
@@ -319,14 +290,15 @@ class WMDevice(Device):
 
     def _set_remote_start_opt(self, res):
         """Save the status to use for remote start."""
-        self._stand_by = (
-            self._status.device_features.get(WashDeviceFeatures.STANDBY)
-            == StateOptions.ON
-        )
-        if not self._stand_by:
+        stand_by = self._status.device_features.get(WashDeviceFeatures.STANDBY)
+        if stand_by is None:
             standby_enable = self.model_info.config_value("standbyEnable")
             if standby_enable and not self._should_poll:
                 self._stand_by = not self._status.is_on
+            else:
+                self._stand_by = False
+        else:
+            self._stand_by = stand_by == StateOptions.ON
         remote_start = self._status.device_features.get(WashDeviceFeatures.REMOTESTART)
         if remote_start == StateOptions.ON:
             if self._remote_start_status is None:
@@ -354,6 +326,8 @@ class WMStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
+
+    _device: WMDevice
 
     def __init__(
         self,
@@ -434,7 +408,7 @@ class WMStatus(DeviceStatus):
     def is_on(self):
         """Return if device is on."""
         run_state = self._get_run_state()
-        return run_state != STATE_WM_POWER_OFF
+        return STATE_WM_POWER_OFF not in run_state
 
     @property
     def is_dryer(self):
@@ -450,8 +424,9 @@ class WMStatus(DeviceStatus):
         pre_state = self._get_pre_state()
         if pre_state is None:
             pre_state = self._get_process_state() or StateOptions.NONE
-        if run_state in STATE_WM_END or (
-            run_state == STATE_WM_POWER_OFF and pre_state in STATE_WM_END
+        if any(state in run_state for state in STATE_WM_END) or (
+            STATE_WM_POWER_OFF in run_state
+            and any(state in pre_state for state in STATE_WM_END)
         ):
             return True
         return False
@@ -490,53 +465,49 @@ class WMStatus(DeviceStatus):
         smart_course = self.lookup_reference(course_key, ref_key="name")
         return self._device.get_enum_text(smart_course)
 
+    def _get_time_info(self, keys: list[str]):
+        """Return time info for specific key."""
+        if self.is_info_v2:
+            if not self.is_on:
+                return 0
+            return self.int_or_none(self._data.get(self._getkeys(keys[1])))
+        return self._data.get(keys[0])
+
     @property
     def initialtime_hour(self):
         """Return hour initial time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get(self._getkeys("initialTimeHour")))
-        return self._data.get("Initial_Time_H")
+        return self._get_time_info(["Initial_Time_H", "initialTimeHour"])
 
     @property
     def initialtime_min(self):
         """Return minute initial time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get(self._getkeys("initialTimeMinute")))
-        return self._data.get("Initial_Time_M")
+        return self._get_time_info(["Initial_Time_M", "initialTimeMinute"])
 
     @property
     def remaintime_hour(self):
         """Return hour remaining time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get(self._getkeys("remainTimeHour")))
-        return self._data.get("Remain_Time_H")
+        return self._get_time_info(["Remain_Time_H", "remainTimeHour"])
 
     @property
     def remaintime_min(self):
         """Return minute remaining time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get(self._getkeys("remainTimeMinute")))
-        return self._data.get("Remain_Time_M")
+        return self._get_time_info(["Remain_Time_M", "remainTimeMinute"])
 
     @property
     def reservetime_hour(self):
         """Return hour reserved time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get(self._getkeys("reserveTimeHour")))
-        return self._data.get("Reserve_Time_H")
+        return self._get_time_info(["Reserve_Time_H", "reserveTimeHour"])
 
     @property
     def reservetime_min(self):
         """Return minute reserved time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get(self._getkeys("reserveTimeMinute")))
-        return self._data.get("Reserve_Time_M")
+        return self._get_time_info(["Reserve_Time_M", "reserveTimeMinute"])
 
     @property
     def run_state(self):
         """Return current run state."""
         run_state = self._get_run_state()
-        if run_state == STATE_WM_POWER_OFF:
+        if STATE_WM_POWER_OFF in run_state:
             run_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
@@ -546,7 +517,7 @@ class WMStatus(DeviceStatus):
         pre_state = self._get_pre_state()
         if pre_state is None:
             return None
-        if pre_state == STATE_WM_POWER_OFF:
+        if STATE_WM_POWER_OFF in pre_state:
             pre_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.PRE_STATE, pre_state)
 
@@ -556,6 +527,8 @@ class WMStatus(DeviceStatus):
         process = self._get_process_state()
         if process is None:
             return None
+        if not self.is_on:
+            process = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.PROCESS_STATE, process)
 
     @property

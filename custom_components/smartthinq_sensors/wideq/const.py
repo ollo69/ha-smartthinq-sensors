@@ -41,6 +41,7 @@ class AirConditionerFeatures(StrEnum):
     MODE_AIRCLEAN = "mode_airclean"
     MODE_AWHP_SILENT = "mode_awhp_silent"
     MODE_JET = "mode_jet"
+    RESERVATION_SLEEP_TIME = "reservation_sleep_time"
     ROOM_TEMP = "room_temperature"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
@@ -159,3 +160,16 @@ class WaterHeaterFeatures(StrEnum):
 
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
+
+
+class MicroWaveFeatures(StrEnum):
+    """Features for LG MicroWave devices."""
+
+    CLOCK_DISPLAY = "clock_display"
+    DISPLAY_SCROLL_SPEED = "display_scroll_speed"
+    LIGHT_MODE = "light_mode"
+    OVEN_UPPER_STATE = "oven_upper_state"
+    OVEN_UPPER_MODE = "oven_upper_mode"
+    SOUND = "sound"
+    VENT_SPEED = "vent_speed"
+    WEIGHT_UNIT = "weight_unit"

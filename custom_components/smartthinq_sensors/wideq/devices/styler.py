@@ -6,11 +6,8 @@ from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
 
-STATE_STYLER_POWER_OFF = "@ST_STATE_POWER_OFF_W"
-STATE_STYLER_END = [
-    "@ST_STATE_END_W",
-    "@ST_STATE_COMPLETE_W",
-]
+STATE_STYLER_POWER_OFF = "STATE_POWER_OFF"
+STATE_STYLER_END = ["STATE_END", "STATE_COMPLETE"]
 STATE_STYLER_ERROR_OFF = "OFF"
 STATE_STYLER_ERROR_NO_ERROR = [
     "ERROR_NOERROR",
@@ -54,6 +51,8 @@ class StylerStatus(DeviceStatus):
     :param device: The Device instance.
     :param data: JSON data from the API.
     """
+
+    _device: StylerDevice
 
     def __init__(self, device: StylerDevice, data: dict | None = None):
         """Initialize device status."""
@@ -103,15 +102,16 @@ class StylerStatus(DeviceStatus):
     def is_on(self):
         """Return if device is on."""
         run_state = self._get_run_state()
-        return run_state != STATE_STYLER_POWER_OFF
+        return STATE_STYLER_POWER_OFF not in run_state
 
     @property
     def is_run_completed(self):
         """Return if run is completed."""
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
-        if run_state in STATE_STYLER_END or (
-            run_state == STATE_STYLER_POWER_OFF and pre_state in STATE_STYLER_END
+        if any(state in run_state for state in STATE_STYLER_END) or (
+            STATE_STYLER_POWER_OFF in run_state
+            and any(state in pre_state for state in STATE_STYLER_END)
         ):
             return True
         return False
@@ -146,53 +146,49 @@ class StylerStatus(DeviceStatus):
         smart_course = self.lookup_reference(course_key, ref_key="name")
         return self._device.get_enum_text(smart_course)
 
+    def _get_time_info(self, keys: list[str]):
+        """Return time info for specific key."""
+        if self.is_info_v2:
+            if not self.is_on:
+                return 0
+            return self.int_or_none(self._data.get(keys[1]))
+        return self._data.get(keys[0])
+
     @property
     def initialtime_hour(self):
         """Return hour initial time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get("initialTimeHour"))
-        return self._data.get("Initial_Time_H")
+        return self._get_time_info(["Initial_Time_H", "initialTimeHour"])
 
     @property
     def initialtime_min(self):
         """Return minute initial time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get("initialTimeMinute"))
-        return self._data.get("Initial_Time_M")
+        return self._get_time_info(["Initial_Time_M", "initialTimeMinute"])
 
     @property
     def remaintime_hour(self):
         """Return hour remaining time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get("remainTimeHour"))
-        return self._data.get("Remain_Time_H")
+        return self._get_time_info(["Remain_Time_H", "remainTimeHour"])
 
     @property
     def remaintime_min(self):
         """Return minute remaining time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get("remainTimeMinute"))
-        return self._data.get("Remain_Time_M")
+        return self._get_time_info(["Remain_Time_M", "remainTimeMinute"])
 
     @property
     def reservetime_hour(self):
         """Return hour reserved time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get("reserveTimeHour"))
-        return self._data.get("Reserve_Time_H")
+        return self._get_time_info(["Reserve_Time_H", "reserveTimeHour"])
 
     @property
     def reservetime_min(self):
         """Return minute reserved time."""
-        if self.is_info_v2:
-            return self.int_or_none(self._data.get("reserveTimeMinute"))
-        return self._data.get("Reserve_Time_M")
+        return self._get_time_info(["Reserve_Time_M", "reserveTimeMinute"])
 
     @property
     def run_state(self):
         """Return current run state."""
         run_state = self._get_run_state()
-        if run_state == STATE_STYLER_POWER_OFF:
+        if STATE_STYLER_POWER_OFF in run_state:
             run_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
@@ -200,7 +196,7 @@ class StylerStatus(DeviceStatus):
     def pre_state(self):
         """Return previous run state."""
         pre_state = self._get_pre_state()
-        if pre_state == STATE_STYLER_POWER_OFF:
+        if STATE_STYLER_POWER_OFF in pre_state:
             pre_state = StateOptions.NONE
         return self._update_feature(WashDeviceFeatures.PRE_STATE, pre_state)
 

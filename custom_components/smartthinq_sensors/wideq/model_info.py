@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from copy import deepcopy
 import json
 from numbers import Number
 
@@ -107,6 +108,9 @@ class ModelInfo(ABC):
             return None
 
         options = values.options
+        if self.value_type(key) == TYPE_BOOL:
+            bool_val = options.get(value, 0)
+            return BIT_ON if bool_val else BIT_OFF
         return options.get(value, "")
 
     def enum_index(self, key, index):
@@ -119,6 +123,13 @@ class ModelInfo(ABC):
         Not very useful other than for comprehension.
         """
         return key
+
+    def enum_range_values(self, key) -> list[str] | None:
+        """Return a list from a range value."""
+        if not (values := self.value(key, [TYPE_RANGE])):
+            return None
+
+        return [str(i) for i in range(values.min, values.max + 1, values.step)]
 
     def reference_name(self, key, value, ref_key="_comment") -> str | None:
         """Look up the friendly name for an encoded reference value."""
@@ -230,7 +241,7 @@ class ModelInfoV1(ModelInfo):
             return RangeValue(
                 data["option"]["min"],
                 data["option"]["max"],
-                data["option"].get("step", 0),
+                data["option"].get("step", 1),
             )
         if data_type == TYPE_BIT:
             bit_values = {}
@@ -244,7 +255,7 @@ class ModelInfoV1(ModelInfo):
             ref = data["option"][0]
             return ReferenceValue(self._data[ref])
         if data_type == TYPE_BOOL:
-            return EnumValue({"0": BIT_OFF, "1": BIT_ON})
+            return EnumValue({"0": 0, "1": 1})
         if data_type == TYPE_STRING:
             return None
         raise ValueError(
@@ -328,7 +339,7 @@ class ModelInfoV1(ModelInfo):
         if "ControlWifi" in self._data:
             control_data = self._data["ControlWifi"].get("action", {}).get(cmd_key)
             if control_data:
-                control = control_data.copy()  # we copy so that we can manipulate
+                control = deepcopy(control_data)  # we copy so that we can manipulate
                 if ctrl_key:
                     control["cmd"] = ctrl_key
         return control
@@ -530,13 +541,18 @@ class ModelInfoV2(ModelInfo):
             )
         if data_type == TYPE_RANGE:
             return RangeValue(
-                data["valueMapping"]["min"], data["valueMapping"]["max"], 1
+                data["valueMapping"]["min"],
+                data["valueMapping"]["max"],
+                data["valueMapping"].get("step", 1),
             )
         if data_type == TYPE_REFERENCE:
             ref = data["ref"]
             return ReferenceValue(self._data.get(ref))
         if data_type == TYPE_BOOL:
-            return EnumValue({0: BIT_OFF, 1: BIT_ON})
+            if "valueMapping" in data:
+                mapping = data["valueMapping"]
+                return EnumValue({k: v.get("index", 0) for k, v in mapping.items()})
+            return EnumValue({0: 0, 1: 1})
         if data_type == TYPE_STRING:
             return None
         raise ValueError(
@@ -585,7 +601,7 @@ class ModelInfoV2(ModelInfo):
         if "ControlWifi" in self._data:
             control_data = self._data["ControlWifi"].get(cmd_key)
             if control_data:
-                control = control_data.copy()  # we copy so that we can manipulate
+                control = deepcopy(control_data)  # we copy so that we can manipulate
                 if ctrl_key:
                     control["ctrlKey"] = ctrl_key
         return control

@@ -16,6 +16,7 @@ Supported devices are:
 - Dishwasher
 - Dryer
 - Fan
+- Microwave
 - Range
 - Refrigerator
 - Styler
@@ -392,6 +393,16 @@ type: vertical-stack
 ```
 
 </details>
+
+## Obtaining API Information
+
+For troubleshooting issues, or investigating potential new devices, information can be intercepted from the API via a man-in-the-middle (MITM) http proxy interception method. Charles, mitmproxy, and Fiddler are examples of software that can be used to perform this mitm 'attack'/observation.
+
+This can be done using a physical or virtual device that can run the LG ThinQ app. While it is theoretically possible with iOS, it is much easier to do this using Android.
+
+Windows 11 enables the ability to run Android apps on most modern machines, making this process more accessible by eliminating the need for a physical device or separate emulation/virtualization software.
+
+For information on how to do this with Windows Subsystem for Android (WSA) on Windows 11 using mitmproxy, please see the repo [zimmra/frida-rootbypass-and-sslunpinning-lg-thinq](https://github.com/zimmra/frida-rootbypass-and-sslunpinning-lg-thinq) (Method tested August '23, LG ThinQ Version 4.1.46041)
 
 ## Be kind
 

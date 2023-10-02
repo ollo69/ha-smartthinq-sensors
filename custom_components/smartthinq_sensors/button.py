@@ -19,7 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice, get_entity_name, get_multiple_devices_types
+from .device_helpers import LGEBaseDevice, get_multiple_devices_types
 from .wideq import WM_DEVICE_TYPES, WashDeviceFeatures
 
 # general button attributes
@@ -111,6 +111,7 @@ class LGEButton(CoordinatorEntity, ButtonEntity):
     """Class to control buttons for LGE device"""
 
     entity_description: ThinQButtonEntityDescription
+    _attr_has_entity_name = True
 
     def __init__(
         self,
@@ -122,7 +123,6 @@ class LGEButton(CoordinatorEntity, ButtonEntity):
         self._api = api
         self._wrap_device = LGEBaseDevice(api)
         self.entity_description = description
-        self._attr_name = get_entity_name(api, description.key, description.name)
         self._attr_unique_id = f"{api.unique_id}-{description.key}-button"
         self._attr_device_info = api.device_info
 

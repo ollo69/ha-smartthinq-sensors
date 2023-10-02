@@ -61,6 +61,10 @@ WM_DEVICE_TYPES = [
     DeviceType.WASHER,
 ]
 
+SET_TIME_DEVICE_TYPES = [
+    DeviceType.MICROWAVE,
+]
+
 
 class PlatformType(Enum):
     """The category of device."""

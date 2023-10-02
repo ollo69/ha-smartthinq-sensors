@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 from homeassistant.util.dt import utcnow
 
+from . import LGEDevice
 from .const import DEFAULT_SENSOR
 from .wideq import WM_DEVICE_TYPES, DeviceType, StateOptions, TemperatureUnit
 
@@ -23,6 +24,7 @@ DEVICE_ICONS = {
     DeviceType.DRYER: "mdi:tumble-dryer",
     DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
+    DeviceType.MICROWAVE: "mdi:microwave",
     DeviceType.REFRIGERATOR: "mdi:fridge-outline",
     DeviceType.RANGE: "mdi:stove",
 }
@@ -44,19 +46,17 @@ def get_multiple_devices_types(lge_devices: dict, dev_types: list) -> list:
     ]
 
 
-def get_entity_name(device, ent_key, ent_name) -> str:
+def get_entity_name(device: LGEDevice, ent_key: str) -> str:
     """Get the name for the entity"""
-    name_slug = device.name
     if ent_key == DEFAULT_SENSOR:
-        return name_slug
+        return None
 
-    name = ent_name or ent_key
-    if not ent_name:
-        feat_name = device.available_features.get(ent_key)
-        if feat_name and feat_name != ent_key:
-            name = feat_name.replace("_", " ").capitalize()
+    name = ent_key.replace("_", " ").capitalize()
+    feat_name = device.available_features.get(ent_key)
+    if feat_name and feat_name != ent_key:
+        name = feat_name.replace("_", " ").capitalize()
 
-    return f"{name_slug} {name}"
+    return name
 
 
 class LGEBaseDevice:

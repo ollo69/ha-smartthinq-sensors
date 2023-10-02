@@ -92,11 +92,13 @@ class LGEBaseHumidifier(CoordinatorEntity, HumidifierEntity):
 class LGEDeHumidifier(LGEBaseHumidifier):
     """LG DeHumidifier device."""
 
+    _attr_has_entity_name = True
+    _attr_name = None
+
     def __init__(self, api: LGEDevice) -> None:
         """Initialize the dehumidifier."""
         super().__init__(api)
         self._device: DeHumidifierDevice = api.device
-        self._attr_name = api.name
         self._attr_unique_id = f"{api.unique_id}-DEHUM"
         self._attr_device_class = HumidifierDeviceClass.DEHUMIDIFIER
 
