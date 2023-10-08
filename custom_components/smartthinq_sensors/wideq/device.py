@@ -167,6 +167,10 @@ class Monitor:
                     raise
                 continue
 
+            except core_exc.FailedRequestError:
+                _LOGGER.debug("Failed request for device %s", self._device_descr)
+                raise
+
             except core_exc.DeviceNotFound:
                 self._raise_error(
                     f"Device ID {self._device_id} is invalid, status update failed"
