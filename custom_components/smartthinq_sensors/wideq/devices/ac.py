@@ -991,6 +991,8 @@ class AirConditionerDevice(Device):
 class AirConditionerStatus(DeviceStatus):
     """Higher-level information about a AC's current status."""
 
+    _device: AirConditionerDevice
+
     def __init__(self, device: AirConditionerDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
@@ -1177,6 +1179,10 @@ class AirConditionerStatus(DeviceStatus):
         """Return current humidity."""
         key = self._get_state_key(STATE_HUMIDITY)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
+            return None
+        # some V1 device return humidity with value = 0
+        # when humidity sensor is not available
+        if not self.is_info_v2 and value == 0:
             return None
         if value >= 100:
             value = value / 10
