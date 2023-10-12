@@ -78,18 +78,25 @@ class Monitor:
         self._invalid_credential_count = 0
 
     def _raise_error(
-        self, msg, *, not_logged=False, exc: Exception = None, exc_info=False
+        self,
+        msg,
+        *,
+        not_logged=False,
+        exc: Exception = None,
+        exc_info=False,
+        warn_lev=True,
     ) -> None:
         """Log and raise error with different level depending on condition."""
-        log_lev = logging.DEBUG
+
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
-            self._has_error = True
-            log_lev = logging.WARNING
 
-        if not self._has_error:
-            self._has_error = True
+        if self._has_error or not_logged or warn_lev:
             log_lev = logging.WARNING
+        else:
+            log_lev = logging.INFO
+
+        self._has_error = True
         _LOGGER.log(
             log_lev, "%s - Device: %s", msg, self._device_descr, exc_info=exc_info
         )
@@ -168,8 +175,7 @@ class Monitor:
                 continue
 
             except core_exc.FailedRequestError:
-                _LOGGER.debug("Failed request for device %s", self._device_descr)
-                raise
+                self._raise_error("Status update request failed", warn_lev=False)
 
             except core_exc.DeviceNotFound:
                 self._raise_error(
@@ -211,7 +217,9 @@ class Monitor:
 
             except (asyncio.TimeoutError, aiohttp.ServerTimeoutError) as exc:
                 # These are network errors, refresh client is not required
-                self._raise_error("Connection to ThinQ failed. Timeout error", exc=exc)
+                self._raise_error(
+                    "Connection to ThinQ failed. Timeout error", exc=exc, warn_lev=False
+                )
 
             except aiohttp.ClientError as exc:
                 # These are network errors, refresh client is not required

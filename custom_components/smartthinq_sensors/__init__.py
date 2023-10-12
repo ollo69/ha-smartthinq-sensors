@@ -56,7 +56,6 @@ from .wideq import (
 from .wideq.core_async import ClientAsync
 from .wideq.core_exceptions import (
     AuthenticationError,
-    FailedRequestError,
     InvalidCredentialError,
     MonitorRefreshError,
     MonitorUnavailableError,
@@ -482,7 +481,7 @@ class LGEDevice:
             # or due to temporary connection failure that will be restored
             state = await self._device.poll()
 
-        except (FailedRequestError, MonitorRefreshError, NotConnectedError):
+        except (MonitorRefreshError, NotConnectedError):
             # These exceptions are raised when device is not connected (turned off)
             # or unreachable due to network or API errors
             # If device status is "on" we reset the status, otherwise we just
