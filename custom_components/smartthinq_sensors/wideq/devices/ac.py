@@ -12,6 +12,8 @@ from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo
 from ..model_info import TYPE_RANGE
 
+AWHP_MODEL_TYPE = ["AWHP", "SAC_AWHP"]
+
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
 SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
@@ -94,12 +96,12 @@ CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 # AWHP Section
 STATE_WATER_IN_TEMP = ["WaterInTempCur", "airState.tempState.inWaterCurrent"]
 STATE_WATER_OUT_TEMP = ["WaterTempCur", "airState.tempState.outWaterCurrent"]
-STATE_WATER_MIN_TEMP = ["WaterHeatMinTemp", "airState.tempState.waterTempCoolMin"]
-STATE_WATER_MAX_TEMP = ["WaterHeatMaxTemp", "airState.tempState.waterTempHeatMax"]
+STATE_WATER_MIN_TEMP = ["WaterTempCoolMin", "airState.tempState.waterTempCoolMin"]
+STATE_WATER_MAX_TEMP = ["WaterTempHeatMax", "airState.tempState.waterTempHeatMax"]
 STATE_HOT_WATER_TEMP = ["HotWaterTempCur", "airState.tempState.hotWaterCurrent"]
 STATE_HOT_WATER_TARGET_TEMP = ["HotWaterTempCfg", "airState.tempState.hotWaterTarget"]
-STATE_HOT_WATER_MIN_TEMP = ["HotWaterMinTemp", "airState.tempState.hotWaterTempMin"]
-STATE_HOT_WATER_MAX_TEMP = ["HotWaterMaxTemp", "airState.tempState.hotWaterTempMax"]
+STATE_HOT_WATER_MIN_TEMP = ["HotWaterTempMin", "airState.tempState.hotWaterTempMin"]
+STATE_HOT_WATER_MAX_TEMP = ["HotWaterTempMax", "airState.tempState.hotWaterTempMax"]
 STATE_HOT_WATER_MODE = ["HotWater", "airState.miscFuncState.hotWater"]
 STATE_MODE_AWHP_SILENT = ["SilentMode", "airState.miscFuncState.silentAWHP"]
 
@@ -533,7 +535,7 @@ class AirConditionerDevice(Device):
         if self._is_air_to_water is None:
             if not self.model_info:
                 return False
-            self._is_air_to_water = self.model_info.model_type == "AWHP"
+            self._is_air_to_water = self.model_info.model_type in AWHP_MODEL_TYPE
         return self._is_air_to_water
 
     @property
@@ -1248,7 +1250,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def water_in_current_temp(self):
         """Return AWHP in water current temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_air_to_water:
             return None
         key = self._get_state_key(STATE_WATER_IN_TEMP)
         value = self._str_to_temp(self._data.get(key))
@@ -1257,7 +1259,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def water_out_current_temp(self):
         """Return AWHP out water current temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_air_to_water:
             return None
         key = self._get_state_key(STATE_WATER_OUT_TEMP)
         value = self._str_to_temp(self._data.get(key))
@@ -1266,7 +1268,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def water_target_min_temp(self):
         """Return AWHP water target minimum allowed temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_air_to_water:
             return None
         key = self._get_state_key(STATE_WATER_MIN_TEMP)
         return self._str_to_temp(self._data.get(key))
@@ -1274,7 +1276,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def water_target_max_temp(self):
         """Return AWHP water target maximun allowed temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_air_to_water:
             return None
         key = self._get_state_key(STATE_WATER_MAX_TEMP)
         return self._str_to_temp(self._data.get(key))
@@ -1282,7 +1284,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def mode_awhp_silent(self):
         """Return AWHP silent mode status."""
-        if not self.is_info_v2:
+        if not (self._device.is_air_to_water and self.is_info_v2):
             return None
         key = self._get_state_key(STATE_MODE_AWHP_SILENT)
         if (value := self.lookup_enum(key, True)) is None:
@@ -1295,7 +1297,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def hot_water_current_temp(self):
         """Return AWHP hot water current temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_water_heater_supported:
             return None
         key = self._get_state_key(STATE_HOT_WATER_TEMP)
         value = self._str_to_temp(self._data.get(key))
@@ -1304,7 +1306,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def hot_water_target_temp(self):
         """Return AWHP hot water target temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_water_heater_supported:
             return None
         key = self._get_state_key(STATE_HOT_WATER_TARGET_TEMP)
         return self._str_to_temp(self._data.get(key))
@@ -1312,7 +1314,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def hot_water_target_min_temp(self):
         """Return AWHP hot water target minimum allowed temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_water_heater_supported:
             return None
         key = self._get_state_key(STATE_HOT_WATER_MIN_TEMP)
         return self._str_to_temp(self._data.get(key))
@@ -1320,7 +1322,7 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def hot_water_target_max_temp(self):
         """Return AWHP hot water target maximun allowed temperature."""
-        if not self.is_info_v2:
+        if not self._device.is_water_heater_supported:
             return None
         key = self._get_state_key(STATE_HOT_WATER_MAX_TEMP)
         return self._str_to_temp(self._data.get(key))
