@@ -89,9 +89,9 @@ API2_ERRORS = {
     "0106": exc.NotConnectedError,
     "0100": exc.FailedRequestError,
     "0110": exc.InvalidCredentialError,
-    # "9999": exc.NotConnectedError,  # This come as "other errors", we manage as not connected.
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
     "9995": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
+    "9999": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
 }
 
 DEFAULT_TOKEN_VALIDITY = 3600  # seconds
@@ -354,7 +354,7 @@ class CoreAsync:
             if "resultCode" in result:
                 code = result["resultCode"]
                 if code != "0000":
-                    message = result.get("result") or "ThinQ APIv2 unknown error"
+                    message = result.get("result") or "ThinQ APIv2 error"
                     if code in API2_ERRORS:
                         raise API2_ERRORS[code](message)
                     raise exc.APIError(message, code)
@@ -368,7 +368,7 @@ class CoreAsync:
         if "returnCd" in msg:
             code = msg["returnCd"]
             if code != "0000":
-                message = msg.get("returnMsg") or "ThinQ APIv1 unknown error"
+                message = msg.get("returnMsg") or "ThinQ APIv1 error"
                 if code in API2_ERRORS:
                     raise API2_ERRORS[code](message)
                 raise exc.APIError(message, code)
