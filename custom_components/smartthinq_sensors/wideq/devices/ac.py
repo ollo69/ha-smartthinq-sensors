@@ -16,6 +16,7 @@ AWHP_MODEL_TYPE = ["AWHP", "SAC_AWHP"]
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
+SUPPORT_AIR_POLUTION = ["SupportAirPolution", "support.airPolution"]
 SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
 SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
 SUPPORT_RAC_MODE = ["SupportRACMode", "support.racMode"]
@@ -1380,7 +1381,7 @@ class AirConditionerStatus(DeviceStatus):
             self.filters_life,
             self.humidity,
             self.pm10,
-            self.pm2,
+            self.pm25,
             self.pm1,
             self.mode_airclean,
             self.mode_jet,
