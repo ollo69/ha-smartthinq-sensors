@@ -121,6 +121,13 @@ AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         turn_on_fn=lambda x: x.device.set_mode_awhp_silent(True),
         available_fn=lambda x: x.is_power_on,
     ),
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.AIRMON,
+        name="Air monitoring",
+        icon="mdi:air-filter",
+        turn_off_fn=lambda x: x.device.set_airmon(False),
+        turn_on_fn=lambda x: x.device.set_airmon(True),
+    ),
 )
 MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(

@@ -66,6 +66,7 @@ STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 STATE_RESERVATION_SLEEP_TIME = ["SleepTime", "airState.reservation.sleepTime"]
+STATE_AIRMON = ["AirMon", "airState.quality.airMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
 STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
 STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
@@ -94,6 +95,7 @@ CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
+CMD_STATE_AIRMON = [CTRL_BASIC, "Set", STATE_AIRMON]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
@@ -132,6 +134,9 @@ ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 
 LIGHTING_DISPLAY_OFF = "0"
 LIGHTING_DISPLAY_ON = "1"
+
+AIRMON_OPERATIONING = "@AP_SETTING_SENSORMON_OPERATIONING_W"
+AIRMON_ALWAYS = "@AP_SETTING_SENSORMON_ALWAYS_W"
 
 MODE_OFF = "@OFF"
 MODE_ON = "@ON"
@@ -805,6 +810,13 @@ class AirConditionerDevice(Device):
         jet = self.model_info.enum_value(keys[2], jet_key.value)
         await self.set(keys[0], keys[1], key=keys[2], value=jet)
 
+    async def set_airmon(self, status: bool):
+        """Set the continuious air monitoring on or off."""
+        keys = self._get_cmd_keys(CMD_STATE_AIRMON)
+        airmon_key = AIRMON_ALWAYS if status else AIRMON_OPERATIONING
+        airmon = self.model_info.enum_value(keys[2], airmon_key)
+        await self.set(keys[0], keys[1], key=keys[2], value=airmon)
+
     async def set_lighting_display(self, status: bool):
         """Set the lighting display on or off."""
         keys = self._get_cmd_keys(CMD_STATE_LIGHTING_DISPLAY)
@@ -1263,6 +1275,15 @@ class AirConditionerStatus(DeviceStatus):
             str(value) == LIGHTING_DISPLAY_ON,
             False,
         )
+
+    @property
+    def airmon(self):
+        """Return AirMon status."""
+        key = self._get_state_key(STATE_AIRMON)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == AIRMON_ALWAYS
+        return self._update_feature(AirConditionerFeatures.AIRMON, status, False)
 
     @property
     def filters_life(self):
