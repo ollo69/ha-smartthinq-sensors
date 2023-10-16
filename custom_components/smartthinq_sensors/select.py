@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable, Tuple
+from typing import Any, Awaitable, Callable
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -39,7 +39,7 @@ class ThinQSelectEntityDescription(
     value_fn: Callable[[Any], str] | None = None
 
 
-MICROWAVE_SELECT: Tuple[ThinQSelectEntityDescription, ...] = (
+MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ThinQSelectEntityDescription(
         key=MicroWaveFeatures.LIGHT_MODE,
         name="Light Mode",

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable, Tuple
+from typing import Any, Awaitable, Callable
 
 import voluptuous as vol
 
@@ -74,7 +74,7 @@ class ThinQRefClimateEntityDescription(
     """A class that describes ThinQ climate entities."""
 
 
-REFRIGERATOR_CLIMATE: Tuple[ThinQRefClimateEntityDescription, ...] = (
+REFRIGERATOR_CLIMATE: tuple[ThinQRefClimateEntityDescription, ...] = (
     ThinQRefClimateEntityDescription(
         key=ATTR_FRIDGE,
         name="Fridge",
