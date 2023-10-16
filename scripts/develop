@@ -17,4 +17,5 @@ fi
 export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
 
 # Start Home Assistant
-hass --config "${PWD}/config" --debug
+#hass --config "${PWD}/config" --debug
+hass --config "${PWD}/config"
