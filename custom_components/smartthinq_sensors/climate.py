@@ -356,18 +356,6 @@ class LGEACClimate(LGEClimate):
         return self._api.state.device_features.get(AirConditionerFeatures.HUMIDITY)
 
     @property
-    def current_pm10(self) -> int | None:
-        return self._api.state.device_features.get(AirConditionerFeatures.PM10)
-
-    @property
-    def current_pm2(self) -> int | None:
-        return self._api.state.device_features.get(AirConditionerFeatures.PM2)
-
-    @property
-    def current_pm1(self) -> int | None:
-        return self._api.state.device_features.get(AirConditionerFeatures.PM1)
-
-    @property
     def target_temperature(self) -> float:
         """Return the temperature we try to reach."""
         return self._api.state.target_temp

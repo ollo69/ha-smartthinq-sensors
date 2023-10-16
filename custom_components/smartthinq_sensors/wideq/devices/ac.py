@@ -14,9 +14,9 @@ from ..model_info import TYPE_RANGE
 
 AWHP_MODEL_TYPE = ["AWHP", "SAC_AWHP"]
 
+SUPPORT_AIR_POLUTION = ["SupportAirPolution", "support.airPolution"]
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
-SUPPORT_AIR_POLUTION = ["SupportAirPolution", "support.airPolution"]
 SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
 SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
 SUPPORT_RAC_MODE = ["SupportRACMode", "support.racMode"]
