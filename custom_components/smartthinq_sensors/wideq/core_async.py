@@ -13,7 +13,7 @@ import logging
 import os
 import ssl
 import sys
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import (
     ParseResult,
     parse_qs,
@@ -1233,7 +1233,7 @@ class ClientAsync:
     def __init__(
         self,
         auth: Auth,
-        session: Optional[Session] = None,
+        session: Session | None = None,
         country: str = DEFAULT_COUNTRY,
         language: str = DEFAULT_LANGUAGE,
         *,
@@ -1242,7 +1242,7 @@ class ClientAsync:
         """Initialize the client."""
         # The three steps required to get access to call the API.
         self._auth: Auth = auth
-        self._session: Optional[Session] = session
+        self._session: Session | None = session
         self._last_device_update = datetime.utcnow()
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
