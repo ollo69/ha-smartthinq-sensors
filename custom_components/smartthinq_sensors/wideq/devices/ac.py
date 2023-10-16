@@ -1195,39 +1195,6 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.HUMIDITY, value, False)
 
     @property
-    def pm1(self):
-        """Return Air PM1 value."""
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@PM1_0_SUPPORT") is None:
-            return None
-        key = self._get_state_key(STATE_PM1)
-        if (value := self.lookup_range(key)) is None:
-            return None
-        return self._update_feature(AirConditionerFeatures.PM1, value, False)
-
-    @property
-    def pm10(self):
-        """Return Air PM10 value."""
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@PM10_SUPPORT") is None:
-            return None
-        key = self._get_state_key(STATE_PM10)
-        if (value := self.lookup_range(key)) is None:
-            return None
-        return self._update_feature(AirConditionerFeatures.PM10, value, False)
-
-    @property
-    def pm25(self):
-        """Return Air PM2.5 value."""
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@PM2_5_SUPPORT") is None:
-            return None
-        key = self._get_state_key(STATE_PM25)
-        if (value := self.lookup_range(key)) is None:
-            return None
-        return self._update_feature(AirConditionerFeatures.PM25, value, False)
-
-    @property
     def mode_airclean(self):
         """Return AirClean Mode status."""
         if not self._device.is_mode_airclean_supported:
@@ -1283,6 +1250,39 @@ class AirConditionerStatus(DeviceStatus):
                     result[feat] = status[index]
 
         return result
+
+    @property
+    def pm1(self):
+        """Return Air PM1 value."""
+        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
+        if self._device.model_info.enum_value(support_key, "@PM1_0_SUPPORT") is None:
+            return None
+        key = self._get_state_key(STATE_PM1)
+        if (value := self.lookup_range(key)) is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.PM1, value, False)
+
+    @property
+    def pm10(self):
+        """Return Air PM10 value."""
+        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
+        if self._device.model_info.enum_value(support_key, "@PM10_SUPPORT") is None:
+            return None
+        key = self._get_state_key(STATE_PM10)
+        if (value := self.lookup_range(key)) is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.PM10, value, False)
+
+    @property
+    def pm25(self):
+        """Return Air PM2.5 value."""
+        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
+        if self._device.model_info.enum_value(support_key, "@PM2_5_SUPPORT") is None:
+            return None
+        key = self._get_state_key(STATE_PM25)
+        if (value := self.lookup_range(key)) is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.PM25, value, False)
 
     @property
     def water_in_current_temp(self):
