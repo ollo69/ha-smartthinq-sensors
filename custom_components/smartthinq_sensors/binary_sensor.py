@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any, Callable, Tuple
+from typing import Any, Callable
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -56,7 +56,7 @@ class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
     value_fn: Callable[[Any], bool | str] | None = None
 
 
-WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
+WASH_DEV_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_RUN_COMPLETED,
         value_fn=lambda x: x.run_completed,
@@ -168,7 +168,7 @@ WASH_DEV_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
 )
-REFRIGERATOR_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
+REFRIGERATOR_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_DOOR_OPEN,
         name="Door open",
@@ -176,7 +176,7 @@ REFRIGERATOR_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
         value_fn=lambda x: x.dooropen_state,
     ),
 )
-RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
+RANGE_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_COOKTOP_STATE,
         name="Cooktop state",
@@ -191,7 +191,7 @@ RANGE_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
 )
-DEHUMIDIFIER_BINARY_SENSORS: Tuple[ThinQBinarySensorEntityDescription, ...] = (
+DEHUMIDIFIER_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=DehumidifierFeatures.WATER_TANK_FULL,
         name="Water Tank Full",

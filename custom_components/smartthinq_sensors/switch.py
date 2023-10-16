@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable, Tuple
+from typing import Any, Awaitable, Callable
 
 from homeassistant.components.switch import (
     SwitchDeviceClass,
@@ -46,7 +46,7 @@ class ThinQSwitchEntityDescription(SwitchEntityDescription):
     value_fn: Callable[[Any], bool] | None = None
 
 
-WASH_DEV_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+WASH_DEV_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
         key=ATTR_POWER,
         name="Power",
@@ -56,7 +56,7 @@ WASH_DEV_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on or x.device.stand_by,
     ),
 )
-REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
         key=RefrigeratorFeatures.ECOFRIENDLY,
         name="Eco friendly",
@@ -90,7 +90,7 @@ REFRIGERATOR_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
 )
-AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AIRCLEAN,
         name="Ionizer",
@@ -122,7 +122,7 @@ AC_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.is_power_on,
     ),
 )
-MICROWAVE_SWITCH: Tuple[ThinQSwitchEntityDescription, ...] = (
+MICROWAVE_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
         key=MicroWaveFeatures.SOUND,
         name="Sound",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable, Tuple
+from typing import Any, Awaitable, Callable
 
 from homeassistant.components.button import (
     ButtonDeviceClass,
@@ -45,7 +45,7 @@ class ThinQButtonEntityDescription(
     related_feature: str | None = None
 
 
-WASH_DEV_BUTTON: Tuple[ThinQButtonEntityDescription, ...] = (
+WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
     ThinQButtonEntityDescription(
         key=ATTR_REMOTE_START,
         name="Remote Start",
