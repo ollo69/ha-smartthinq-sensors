@@ -45,6 +45,7 @@ class AirConditionerFeatures(StrEnum):
     ROOM_TEMP = "room_temperature"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
+    MODE_UN_NANO = "mode_un_nano"
 
 
 class AirPurifierFeatures(StrEnum):

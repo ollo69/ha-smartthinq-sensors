@@ -114,6 +114,13 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_on_fn=lambda x: x.device.set_lighting_display(True),
     ),
     ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.MODE_UN_NANO,
+        name="UV Nano",
+        icon="mdi:alpha-u-box-outline",
+        turn_off_fn=lambda x: x.device.set_uv_nano(False),
+        turn_on_fn=lambda x: x.device.set_uv_nano(True),
+    ),
+    ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AWHP_SILENT,
         name="Silent mode",
         icon="mdi:ear-hearing-off",

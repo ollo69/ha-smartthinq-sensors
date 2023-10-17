@@ -64,6 +64,7 @@ STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
+STATE_UV_NANO = ["UVNano", "airState.miscFuncState.Uvnano"]
 STATE_RESERVATION_SLEEP_TIME = ["SleepTime", "airState.reservation.sleepTime"]
 
 FILTER_TYPES = [
@@ -91,6 +92,7 @@ CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.cont
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
+CMD_STATE_UV_NANO = [CTRL_BASIC, "Set", STATE_UV_NANO]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
 # AWHP Section
@@ -128,6 +130,9 @@ ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 
 LIGHTING_DISPLAY_OFF = "0"
 LIGHTING_DISPLAY_ON = "1"
+
+UV_NANO_OFF = "0"
+UV_NANO_ON = "1"
 
 MODE_OFF = "@OFF"
 MODE_ON = "@ON"
@@ -807,6 +812,12 @@ class AirConditionerDevice(Device):
         lighting = LIGHTING_DISPLAY_ON if status else LIGHTING_DISPLAY_OFF
         await self.set(keys[0], keys[1], key=keys[2], value=lighting)
 
+    async def set_uv_nano(self, status: bool):
+        """Set the lighting display on or off."""
+        keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
+        state = UV_NANO_ON if status else UV_NANO_OFF
+        await self.set(keys[0], keys[1], key=keys[2], value=state)
+
     async def set_mode_awhp_silent(self, value: bool):
         """Set the AWHP silent mode on or off."""
         if not self.is_air_to_water:
@@ -1228,6 +1239,18 @@ class AirConditionerStatus(DeviceStatus):
         )
 
     @property
+    def mode_uv_nano(self):
+        """Return display lighting status."""
+        key = self._get_state_key(STATE_UV_NANO)
+        if (value := self.to_int_or_none(self._data.get(key))) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.MODE_UN_NANO,
+            str(value) == UV_NANO_ON,
+            False,
+        )
+
+    @property
     def filters_life(self):
         """Return percentage status for all filters."""
         result = {}
@@ -1346,6 +1369,7 @@ class AirConditionerStatus(DeviceStatus):
             self.mode_airclean,
             self.mode_jet,
             self.lighting_display,
+            self.mode_uv_nano,
             self.water_in_current_temp,
             self.water_out_current_temp,
             self.mode_awhp_silent,
