@@ -33,6 +33,7 @@ SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
+SUPPORT_PM = [SUPPORT_AIR_POLUTION, ["@PM10_SUPPORT", "@PM1_0_SUPPORT", "@PM2_5_SUPPORT"]]
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
@@ -282,6 +283,7 @@ class AirConditionerDevice(Device):
         self._is_air_to_water = None
         self._is_water_heater_supported = None
         self._is_mode_airclean_supported = None
+        self._is_pm_supported = None
         self._is_duct_zones_supported = None
         self._supported_operation = None
         self._supported_op_modes = None
@@ -328,7 +330,11 @@ class AirConditionerDevice(Device):
         if not isinstance(key, list):
             return False
         supp_key = self._get_state_key(key[0])
-        return self.model_info.enum_value(supp_key, key[1]) is not None
+
+        if isinstance(key[1], list):
+            return [self.model_info.enum_value(supp_key, k) is not None for k in key[1]]
+        else:
+            return self.model_info.enum_value(supp_key, key[1]) is not None
 
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
@@ -687,6 +693,27 @@ class AirConditionerDevice(Device):
         ):
             return True
         return False
+
+    @property
+    def is_pm10_supported(self):
+        """Return if PM sensors are supported."""
+        if self._is_pm_supported is None:
+            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_pm_supported[0]
+
+    @property
+    def is_pm25_supported(self):
+        """Return if PM sensors are supported."""
+        if self._is_pm_supported is None:
+            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_pm_supported[2]
+
+    @property
+    def is_pm1_supported(self):
+        """Return if PM sensors are supported."""
+        if self._is_pm_supported is None:
+            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_pm_supported[1]
 
     @property
     def hot_water_target_temperature_step(self):
@@ -1254,9 +1281,9 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def pm1(self):
         """Return Air PM1 value."""
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@PM1_0_SUPPORT") is None:
+        if not self._device.is_pm1_supported:
             return None
+
         key = self._get_state_key(STATE_PM1)
         if (value := self.lookup_range(key)) is None:
             return None
@@ -1265,9 +1292,9 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def pm10(self):
         """Return Air PM10 value."""
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@PM10_SUPPORT") is None:
+        if not self._device.is_pm10_supported:
             return None
+
         key = self._get_state_key(STATE_PM10)
         if (value := self.lookup_range(key)) is None:
             return None
@@ -1276,9 +1303,9 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def pm25(self):
         """Return Air PM2.5 value."""
-        support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
-        if self._device.model_info.enum_value(support_key, "@PM2_5_SUPPORT") is None:
+        if not self._device.is_pm25_supported:
             return None
+
         key = self._get_state_key(STATE_PM25)
         if (value := self.lookup_range(key)) is None:
             return None
