@@ -7,15 +7,15 @@
             "reconfigured": "Konfiguration erfolgreich abgeschlossen."
         },
         "error": {
-            "error_connect": "Error connecting to SmartThinQ. Try again, and make sure you can access the ThinQ app on your phone.",
-            "error_url": "Error retrieving login URL from ThinQ.",
+            "error_connect": "Verbindung zu SmartThinQ fehlgeschlagen. Try again, and make sure you can access the ThinQ app on your phone.",
+            "error_url": "Fehler beim Abruf der Login-URL von ThinQ.",
             "invalid_region": "Invalid region format.",
             "invalid_language": "Invalid language format.",
             "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone.",
             "invalid_credentials": "Invalid SmartThinQ credentials. Use the LG App on your mobile device to verify if there are Term of Service to accept. Account based on social network are not supported and in most case do not work with this integration.",
-            "invalid_config": "Found invalid configuration, please reconfigure.",
-            "no_user_info": "User Name and Password are required.",
-            "unknown": "Unknown error."
+            "invalid_config": "Ungültige Konfiguration, bitte erneut konfigurieren.",
+            "no_user_info": "Name und Passwort ist verpflichtend.",
+            "unknown": "Unbekannter Fehler."
         },
         "step": {
             "user": {
