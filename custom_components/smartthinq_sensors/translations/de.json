@@ -14,16 +14,16 @@
             "invalid_url": "Ungültige Weiterleitungs-URL. Stelle sicher, dass die ThinQ App auf Deinem Smartphone erreichbar ist.",
             "invalid_credentials": "Ungültige SmartThinQ Anmeldedaten. Verwende die LG App auf Deinem Mobilgerät um zu prüfen ob Du zuerst Nutzungsbedingungen akzeptieren musst. Socia Media-Accounts werden nicht unterstützt und funktionieren in den meisten Fällen nicht mit dieser Integration.",
             "invalid_config": "Ungültige Konfiguration, bitte erneut konfigurieren.",
-            "no_user_info": "Name und Passwort ist verpflichtend.",
+            "no_user_info": "Kein Name und Passwort eingegeben.",
             "unknown": "Unbekannter Fehler."
         },
         "step": {
             "user": {
                 "data": {
-                    "username": "LG account user name",
-                    "password": "Password",
-                    "region": "Country Code",
-                    "language": "Language Code",
+                    "username": "Benutzername des LG Accounts",
+                    "password": "Passwort",
+                    "region": "Landescode",
+                    "language": "Sprachcode",
                     "use_redirect": "Use URL redirect authentication method",
                     "use_ha_session": "Share Home Assistant HTTP connection (may cause SSL errors)",
                     "use_tls_v1": "Force use of protocol TLSv1 (sometimes required)",
@@ -43,7 +43,7 @@
                 "data": {
                     "token": "Refresh Token"
                 },
-                "description": "Save the generated token for future use, then confirm to complete the configuration.",
+                "description": "Speichere den generierten Token an einem sicheren Ort und bestätige die Konfiguration.",
                 "title": "SmartThinQ LGE Sensors - New refresh token"
             }
         },
