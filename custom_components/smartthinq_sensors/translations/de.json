@@ -24,19 +24,19 @@
                     "password": "Passwort",
                     "region": "Landescode",
                     "language": "Sprachcode",
-                    "use_redirect": "Use URL redirect authentication method",
-                    "use_ha_session": "Share Home Assistant HTTP connection (may cause SSL errors)",
-                    "use_tls_v1": "Force use of protocol TLSv1 (sometimes required)",
-                    "exclude_dh": "Do not use DH cypher (in case 'dh key too small' error)"
+                    "use_redirect": "Verwende die Anmeldemethode 'URL Weiterleitung'",
+                    "use_ha_session": "Teile Deine Home Assistant HTTP Verbindung (kann SSL-Fehler verursachen)",
+                    "use_tls_v1": "Erzwinge TLSv1 (gelegentlich notwendig)",
+                    "exclude_dh": "Verwende nicht DH cypher (wenn der Fehler 'dh key too small' angezeigt wird)"
                 },
-                "description": "Insert your SmartThinQ account access information."
+                "description": "Trage Deine Anmeldedaten für Deine SmartThinQ Account hier ein."
             },
             "url": {
                 "data": {
                     "login_url": "SmartThinQ Login URL",
-                    "callback_url": "Redirection URL"
+                    "callback_url": "Weiterleitungs URL"
                 },
-                "description": "Use the URL in the first field to perform login to SmartThinQ with your credentials, then paste the URL where the browser is redirected after the login in the second field. Share feedback about your setup [here](https://git.io/JU166).",
+                "description": "Melde Dich mit der URL im ersten Feld mit Deinen bekannten Anmeldedaten bei SmartThinQ an und kopiere die URL, auf die Du nach dem Login weitergeleitet wirst in das zweite Feld. Du kannst Dein Feedback über das Setup [hier](https://git.io/JU166) teilen.",
                 "title": "SmartThinQ LGE Sensors - Anmelden"
             },
             "token": {
