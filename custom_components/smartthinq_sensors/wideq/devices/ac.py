@@ -14,6 +14,7 @@ from ..model_info import TYPE_RANGE
 
 AWHP_MODEL_TYPE = ["AWHP", "SAC_AWHP"]
 
+SUPPORT_AIR_POLUTION = ["SupportAirPolution", "support.airPolution"]
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
 SUPPORT_DUCT_ZONE = ["SupportDuctZoneType", "support.airState.ductZone.type"]
@@ -32,6 +33,10 @@ SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
+SUPPORT_PM = [
+    SUPPORT_AIR_POLUTION,
+    ["@PM10_SUPPORT", "@PM1_0_SUPPORT", "@PM2_5_SUPPORT"],
+]
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
@@ -64,6 +69,9 @@ STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
+STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
+STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
+STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
 STATE_RESERVATION_SLEEP_TIME = ["SleepTime", "airState.reservation.sleepTime"]
 
 FILTER_TYPES = [
@@ -278,6 +286,7 @@ class AirConditionerDevice(Device):
         self._is_air_to_water = None
         self._is_water_heater_supported = None
         self._is_mode_airclean_supported = None
+        self._is_pm_supported = None
         self._is_duct_zones_supported = None
         self._supported_operation = None
         self._supported_op_modes = None
@@ -324,7 +333,11 @@ class AirConditionerDevice(Device):
         if not isinstance(key, list):
             return False
         supp_key = self._get_state_key(key[0])
-        return self.model_info.enum_value(supp_key, key[1]) is not None
+
+        if isinstance(key[1], list):
+            return [self.model_info.enum_value(supp_key, k) is not None for k in key[1]]
+        else:
+            return self.model_info.enum_value(supp_key, key[1]) is not None
 
     def _get_supported_operations(self):
         """Get a list of the ACOp Operations the device supports."""
@@ -683,6 +696,27 @@ class AirConditionerDevice(Device):
         ):
             return True
         return False
+
+    @property
+    def is_pm10_supported(self):
+        """Return if PM sensors are supported."""
+        if self._is_pm_supported is None:
+            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_pm_supported[0]
+
+    @property
+    def is_pm25_supported(self):
+        """Return if PM sensors are supported."""
+        if self._is_pm_supported is None:
+            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_pm_supported[2]
+
+    @property
+    def is_pm1_supported(self):
+        """Return if PM sensors are supported."""
+        if self._is_pm_supported is None:
+            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_pm_supported[1]
 
     @property
     def hot_water_target_temperature_step(self):
@@ -1248,6 +1282,39 @@ class AirConditionerStatus(DeviceStatus):
         return result
 
     @property
+    def pm1(self):
+        """Return Air PM1 value."""
+        if not self._device.is_pm1_supported:
+            return None
+
+        key = self._get_state_key(STATE_PM1)
+        if (value := self.lookup_range(key)) is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.PM1, value, False)
+
+    @property
+    def pm10(self):
+        """Return Air PM10 value."""
+        if not self._device.is_pm10_supported:
+            return None
+
+        key = self._get_state_key(STATE_PM10)
+        if (value := self.lookup_range(key)) is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.PM10, value, False)
+
+    @property
+    def pm25(self):
+        """Return Air PM2.5 value."""
+        if not self._device.is_pm25_supported:
+            return None
+
+        key = self._get_state_key(STATE_PM25)
+        if (value := self.lookup_range(key)) is None:
+            return None
+        return self._update_feature(AirConditionerFeatures.PM25, value, False)
+
+    @property
     def water_in_current_temp(self):
         """Return AWHP in water current temperature."""
         if not self._device.is_air_to_water:
@@ -1343,6 +1410,9 @@ class AirConditionerStatus(DeviceStatus):
             self.energy_current,
             self.filters_life,
             self.humidity,
+            self.pm10,
+            self.pm25,
+            self.pm1,
             self.mode_airclean,
             self.mode_jet,
             self.lighting_display,
