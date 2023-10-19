@@ -167,7 +167,7 @@ class MicroWaveDevice(Device):
     # Unit
     @property
     def defrost_weight_unit_options(self) -> list[str]:
-        """Get display scrool speed list."""
+        """Get display scroll speed list."""
         if self._supported_defrost_weight_unit_options is None:
             key = self._get_state_key("MwoSettingDefrostWeightMode")
             if not self.model_info.is_enum_type(key):
@@ -192,7 +192,7 @@ class MicroWaveDevice(Device):
     # Display
     @property
     def display_scroll_speed_options(self) -> list[str]:
-        """Get display scrool speed list."""
+        """Get display scroll speed list."""
         if self._supported_display_scroll_speed_options is None:
             key = self._get_state_key("MwoSettingDisplayScrollSpeed")
             if not self.model_info.is_enum_type(key):
@@ -206,7 +206,7 @@ class MicroWaveDevice(Device):
         return self._supported_display_scroll_speed_options
 
     async def set_display_scroll_speed(self, speed: str):
-        """Set display scrool speed."""
+        """Set display scroll speed."""
         if speed not in self.display_scroll_speed_options:
             raise ValueError(f"Invalid display scroll speed: {speed}")
 
@@ -218,7 +218,7 @@ class MicroWaveDevice(Device):
     # Light
     @property
     def light_mode_options(self) -> list[str]:
-        """Get display scrool speed list."""
+        """Get display scroll speed list."""
         if self._supported_light_mode_options is None:
             key = self._get_state_key("MwoLampLevel")
             if not (mapping := self.model_info.enum_range_values(key)):
@@ -377,7 +377,7 @@ class MicroWaveStatus(DeviceStatus):
 
     @property
     def display_scroll_speed(self):
-        """Get display scrool speed."""
+        """Get display scroll speed."""
         if (value := self.lookup_enum("MwoSettingDisplayScrollSpeed")) is None:
             return None
 

@@ -179,7 +179,7 @@ def _notify_message(
 
 @callback
 def _migrate_old_entry_config(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Migrate an old config entry if availabl."""
+    """Migrate an old config entry if available."""
     old_key = "outh_url"  # old conf key with typo error
     if old_key not in entry.data:
         return

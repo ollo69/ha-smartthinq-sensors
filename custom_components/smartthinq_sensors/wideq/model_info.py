@@ -584,7 +584,7 @@ class ModelInfoV2(ModelInfo):
         return options.get(index, "")
 
     def target_key(self, key, value, target) -> str | None:
-        """Look up tarket key inside a value."""
+        """Look up target key inside a value."""
         if not (data := self._data_root(key)):
             return None
 
