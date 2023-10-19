@@ -1388,7 +1388,7 @@ class AirConditionerStatus(DeviceStatus):
 
     @property
     def hot_water_target_max_temp(self):
-        """Return AWHP hot water target maximun allowed temperature."""
+        """Return AWHP hot water target maximum allowed temperature."""
         if not self._device.is_water_heater_supported:
             return None
         key = self._get_state_key(STATE_HOT_WATER_MAX_TEMP)

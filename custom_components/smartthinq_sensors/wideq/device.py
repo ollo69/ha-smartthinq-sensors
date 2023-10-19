@@ -867,7 +867,7 @@ class DeviceStatus:
 
     @property
     def has_data(self) -> bool:
-        """Check if status cointain valid data."""
+        """Check if status contain valid data."""
         return bool(self._data)
 
     @property

@@ -100,7 +100,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         return None
 
     def _get_hass_region_lang(self):
-        """Get the hass configured region and languange."""
+        """Get the hass configured region and language."""
         if self._region and self._user_lang:
             return
         # This works starting from HA 2022.12

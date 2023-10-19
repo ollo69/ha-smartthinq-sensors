@@ -28,7 +28,7 @@ def gen_uuid() -> str:
 
 
 class TempUnitConversion:
-    """Class to convert teperature unit with LG device conversion rules."""
+    """Class to convert temperature unit with LG device conversion rules."""
 
     def __init__(self):
         """Initialize object."""
