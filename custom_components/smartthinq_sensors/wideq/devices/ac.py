@@ -36,7 +36,7 @@ SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
 SUPPORT_PM = [
     SUPPORT_AIR_POLUTION,
-    ["@PM10_SUPPORT", "@PM1_0_SUPPORT", "@PM2_5_SUPPORT"],
+    ["@PM1_0_SUPPORT", "@PM2_5_SUPPORT", "@PM10_SUPPORT"],
 ]
 
 CTRL_BASIC = ["Control", "basicCtrl"]
@@ -285,12 +285,6 @@ class AirConditionerDevice(Device):
             else TemperatureUnit.CELSIUS
         )
 
-        self._is_air_to_water = None
-        self._is_water_heater_supported = None
-        self._is_pm_supported = None
-        self._temperature_range = None
-        self._hot_water_temperature_range = None
-
         self._temperature_step = TEMP_STEP_WHOLE
         self._duct_zones = {}
 
@@ -326,21 +320,20 @@ class AirConditionerDevice(Device):
         """Check if a specific mode for support key is supported."""
         if not isinstance(key, list):
             return False
-        supp_key = self._get_state_key(key[0])
 
+        supp_key = self._get_state_key(key[0])
         if isinstance(key[1], list):
             return [self.model_info.enum_value(supp_key, k) is not None for k in key[1]]
-        else:
-            return self.model_info.enum_value(supp_key, key[1]) is not None
+        return self.model_info.enum_value(supp_key, key[1]) is not None
 
-    @cached_property
-    def _supported_operations(self):
+    def _get_supported_operations(self):
         """Return the list of the ACOp Operations the device supports."""
 
         key = self._get_state_key(STATE_OPERATION)
         mapping = self.model_info.value(key).options
         return [ACOp(o) for o in mapping.values()]
 
+    @cached_property
     def _supported_on_operation(self):
         """
         Get the most correct "On" operation the device supports.
@@ -350,7 +343,7 @@ class AirConditionerDevice(Device):
             make a better decision.
         """
 
-        operations = self._supported_operations
+        operations = self._get_supported_operations()
 
         # This ON operation appears to be supported in newer AC models
         if ACOp.ALL_ON in operations:
@@ -376,41 +369,36 @@ class AirConditionerDevice(Device):
             f" too many reported operations: '{str(operations)}'"
         )
 
-    def _get_temperature_range(self):
+    @cached_property
+    def _temperature_range(self):
         """Get valid temperature range for model."""
 
-        if not self._temperature_range:
-            if not self.model_info:
-                return None
-
-            if self.is_air_to_water:
-                min_temp = self._status.water_target_min_temp or AWHP_MIN_TEMP
-                max_temp = self._status.water_target_max_temp or AWHP_MAX_TEMP
+        if self.is_air_to_water:
+            min_temp = self._status.water_target_min_temp or AWHP_MIN_TEMP
+            max_temp = self._status.water_target_max_temp or AWHP_MAX_TEMP
+        else:
+            key = self._get_state_key(STATE_TARGET_TEMP)
+            range_info = self.model_info.value(key)
+            if not range_info:
+                min_temp = DEFAULT_MIN_TEMP
+                max_temp = DEFAULT_MAX_TEMP
             else:
-                key = self._get_state_key(STATE_TARGET_TEMP)
-                range_info = self.model_info.value(key)
-                if not range_info:
-                    min_temp = DEFAULT_MIN_TEMP
-                    max_temp = DEFAULT_MAX_TEMP
-                else:
-                    min_temp = min(range_info.min, DEFAULT_MIN_TEMP)
-                    max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
-            self._temperature_range = [min_temp, max_temp]
-        return self._temperature_range
+                min_temp = min(range_info.min, DEFAULT_MIN_TEMP)
+                max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
+        return [min_temp, max_temp]
 
-    def _get_hot_water_temperature_range(self):
+    @cached_property
+    def _hot_water_temperature_range(self):
         """Get valid hot water temperature range for model."""
 
         if not self.is_water_heater_supported:
             return None
 
-        if not self._hot_water_temperature_range:
-            min_temp = self._status.hot_water_target_min_temp
-            max_temp = self._status.hot_water_target_max_temp
-            if min_temp is None or max_temp is None:
-                return [AWHP_MIN_TEMP, AWHP_MAX_TEMP]
-            self._hot_water_temperature_range = [min_temp, max_temp]
-        return self._hot_water_temperature_range
+        min_temp = self._status.hot_water_target_min_temp
+        max_temp = self._status.hot_water_target_max_temp
+        if min_temp is None or max_temp is None:
+            return [AWHP_MIN_TEMP, AWHP_MAX_TEMP]
+        return [min_temp, max_temp]
 
     @cached_property
     def is_duct_zones_supported(self):
@@ -531,23 +519,17 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_DUCT_ZONES)
         await self.set(keys[0], keys[1], key=keys[2], value=zone_cmd)
 
-    @property
+    @cached_property
     def is_air_to_water(self):
         """Return if is a Air To Water device."""
-        if self._is_air_to_water is None:
-            if not self.model_info:
-                return False
-            self._is_air_to_water = self.model_info.model_type in AWHP_MODEL_TYPE
-        return self._is_air_to_water
+        return self.model_info.model_type in AWHP_MODEL_TYPE
 
-    @property
+    @cached_property
     def is_water_heater_supported(self):
         """Return if Water Heater is supported."""
         if not self.is_air_to_water:
             return False
-        if self._is_water_heater_supported is None:
-            self._is_water_heater_supported = self._is_mode_supported(SUPPORT_HOT_WATER)
-        return self._is_water_heater_supported
+        return self._is_mode_supported(SUPPORT_HOT_WATER)
 
     @cached_property
     def op_modes(self):
@@ -608,7 +590,7 @@ class AirConditionerDevice(Device):
     @property
     def target_temperature_min(self):
         """Return minimum value for target temperature."""
-        temp_range = self._get_temperature_range()
+        temp_range = self._temperature_range
         if not temp_range:
             return None
         return self.conv_temp_unit(temp_range[0])
@@ -616,7 +598,7 @@ class AirConditionerDevice(Device):
     @property
     def target_temperature_max(self):
         """Return maximum value for target temperature."""
-        temp_range = self._get_temperature_range()
+        temp_range = self._temperature_range
         if not temp_range:
             return None
         return self.conv_temp_unit(temp_range[1])
@@ -659,26 +641,25 @@ class AirConditionerDevice(Device):
             return True
         return False
 
-    @property
-    def is_pm10_supported(self):
+    @cached_property
+    def _is_pm_supported(self):
         """Return if PM sensors are supported."""
-        if self._is_pm_supported is None:
-            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
+        return self._is_mode_supported(SUPPORT_PM)
+
+    @property
+    def is_pm1_supported(self):
+        """Return if PM1 sensor is supported."""
         return self._is_pm_supported[0]
 
     @property
     def is_pm25_supported(self):
-        """Return if PM sensors are supported."""
-        if self._is_pm_supported is None:
-            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
-        return self._is_pm_supported[2]
+        """Return if PM2.5 sensor is supported."""
+        return self._is_pm_supported[1]
 
     @property
-    def is_pm1_supported(self):
-        """Return if PM sensors are supported."""
-        if self._is_pm_supported is None:
-            self._is_pm_supported = self._is_mode_supported(SUPPORT_PM)
-        return self._is_pm_supported[1]
+    def is_pm10_supported(self):
+        """Return if PM10 sensor is supported."""
+        return self._is_pm_supported[2]
 
     @property
     def hot_water_target_temperature_step(self):
@@ -688,7 +669,7 @@ class AirConditionerDevice(Device):
     @property
     def hot_water_target_temperature_min(self):
         """Return minimum value for hot water target temperature."""
-        temp_range = self._get_hot_water_temperature_range()
+        temp_range = self._hot_water_temperature_range
         if not temp_range:
             return None
         return self.conv_temp_unit(temp_range[0])
@@ -696,14 +677,14 @@ class AirConditionerDevice(Device):
     @property
     def hot_water_target_temperature_max(self):
         """Return maximum value for hot water target temperature."""
-        temp_range = self._get_hot_water_temperature_range()
+        temp_range = self._hot_water_temperature_range
         if not temp_range:
             return None
         return self.conv_temp_unit(temp_range[1])
 
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""
-        operation = self._supported_on_operation() if turn_on else ACOp.OFF
+        operation = self._supported_on_operation if turn_on else ACOp.OFF
         keys = self._get_cmd_keys(CMD_STATE_OPERATION)
         op_value = self.model_info.enum_value(keys[2], operation.value)
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
@@ -762,7 +743,7 @@ class AirConditionerDevice(Device):
 
     async def set_target_temp(self, temp):
         """Set the device's target temperature in Celsius degrees."""
-        range_info = self._get_temperature_range()
+        range_info = self._temperature_range
         conv_temp = self._f2c(temp)
         if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
@@ -827,7 +808,7 @@ class AirConditionerDevice(Device):
         """Set the device hot water target temperature in Celsius degrees."""
         if not self.is_water_heater_supported:
             raise ValueError("Hot water mode not supported")
-        range_info = self._get_hot_water_temperature_range()
+        range_info = self._hot_water_temperature_range
         conv_temp = self._f2c(temp)
         if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
