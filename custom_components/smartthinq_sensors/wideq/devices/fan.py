@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import cached_property
 import logging
 
 from ..core_async import ClientAsync
@@ -55,22 +56,16 @@ class FanDevice(Device):
 
     def __init__(self, client: ClientAsync, device_info: DeviceInfo):
         super().__init__(client, device_info, FanStatus(self))
-        self._supported_fan_speeds = None
 
-    @property
+    @cached_property
     def fan_speeds(self) -> list:
         """Available fan speeds."""
-        if self._supported_fan_speeds is None:
-            key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-            if not self.model_info.is_enum_type(key):
-                self._supported_fan_speeds = []
-                return []
-            mapping = self.model_info.value(key).options
-            mode_list = [e.value for e in FanSpeed]
-            self._supported_fan_speeds = [
-                FanSpeed(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_fan_speeds
+        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
+        if not self.model_info.is_enum_type(key):
+            return []
+        mapping = self.model_info.value(key).options
+        mode_list = [e.value for e in FanSpeed]
+        return [FanSpeed(o).name for o in mapping.values() if o in mode_list]
 
     @property
     def fan_presets(self) -> list:
@@ -133,6 +128,8 @@ class FanDevice(Device):
 
 class FanStatus(DeviceStatus):
     """Higher-level information about a Fan's current status."""
+
+    _device: FanDevice
 
     def __init__(self, device: FanDevice, data: dict | None = None):
         """Initialize device status."""
