@@ -218,6 +218,8 @@ class AirPurifierDevice(Device):
 class AirPurifierStatus(DeviceStatus):
     """Higher-level information about a Air Purifier's current status."""
 
+    _device: AirPurifierDevice
+
     def __init__(self, device: AirPurifierDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)
