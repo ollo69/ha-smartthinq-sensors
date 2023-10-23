@@ -345,6 +345,10 @@ class Monitor:
         await self.stop()
 
 
+class DeviceNotInitialized(Exception):
+    """Device exception occurred when device is not initialized."""
+
+
 class Device:
     """
     A higher-level interface to a specific device.
@@ -403,8 +407,10 @@ class Device:
         return self._attr_name
 
     @property
-    def model_info(self) -> ModelInfo | None:
+    def model_info(self) -> ModelInfo:
         """Return 'model_info' for this device."""
+        if self._model_info is None:
+            raise DeviceNotInitialized()
         return self._model_info
 
     @property

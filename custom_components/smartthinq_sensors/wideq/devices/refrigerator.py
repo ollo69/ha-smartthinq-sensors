@@ -152,7 +152,6 @@ class RefrigeratorDevice(Device):
                 self._temp_unit = unit
                 self._fridge_temps = None
                 self._freezer_temps = None
-        return
 
     def _get_temp_unit(self, unit=None):
         """Get the configured temperature unit."""
