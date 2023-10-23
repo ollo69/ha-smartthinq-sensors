@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import cached_property
 
 from ..const import TemperatureUnit, WaterHeaterFeatures
 from ..core_async import ClientAsync
@@ -72,9 +73,6 @@ class WaterHeaterDevice(Device):
             if temp_unit == TemperatureUnit.FAHRENHEIT
             else TemperatureUnit.CELSIUS
         )
-        self._supported_op_modes = None
-        self._temperature_range = None
-        self._temperature_step = TEMP_STEP_WHOLE
 
         self._current_power = 0
         self._current_power_supported = True
@@ -93,38 +91,28 @@ class WaterHeaterDevice(Device):
             return float(value)
         return self._unit_conv.c2f(value, self.model_info)
 
-    def _get_temperature_range(self):
+    @cached_property
+    def _temperature_range(self):
         """Get valid temperature range for model."""
+        key = self._get_state_key(STATE_TARGET_TEMP)
+        range_info = self.model_info.value(key)
+        if not range_info:
+            min_temp = DEFAULT_MIN_TEMP
+            max_temp = DEFAULT_MAX_TEMP
+        else:
+            min_temp = min(range_info.min, DEFAULT_MIN_TEMP)
+            max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
+        return [min_temp, max_temp]
 
-        if not self._temperature_range:
-            if not self.model_info:
-                return None
-
-            key = self._get_state_key(STATE_TARGET_TEMP)
-            range_info = self.model_info.value(key)
-            if not range_info:
-                min_temp = DEFAULT_MIN_TEMP
-                max_temp = DEFAULT_MAX_TEMP
-            else:
-                min_temp = min(range_info.min, DEFAULT_MIN_TEMP)
-                max_temp = max(range_info.max, DEFAULT_MAX_TEMP)
-            self._temperature_range = [min_temp, max_temp]
-        return self._temperature_range
-
-    @property
+    @cached_property
     def op_modes(self):
         """Return a list of available operation modes."""
-        if self._supported_op_modes is None:
-            key = self._get_state_key(SUPPORT_OPERATION_MODE)
-            if not self.model_info.is_enum_type(key):
-                self._supported_op_modes = []
-                return []
-            mapping = self.model_info.value(key).options
-            mode_list = [e.value for e in WHMode]
-            self._supported_op_modes = [
-                WHMode(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_op_modes
+        key = self._get_state_key(SUPPORT_OPERATION_MODE)
+        if not self.model_info.is_enum_type(key):
+            return []
+        mapping = self.model_info.value(key).options
+        mode_list = [e.value for e in WHMode]
+        return [WHMode(o).name for o in mapping.values() if o in mode_list]
 
     @property
     def temperature_unit(self):
@@ -134,22 +122,18 @@ class WaterHeaterDevice(Device):
     @property
     def target_temperature_step(self):
         """Return target temperature step used."""
-        return self._temperature_step
+        return TEMP_STEP_WHOLE
 
     @property
     def target_temperature_min(self):
         """Return minimum value for target temperature."""
-        temp_range = self._get_temperature_range()
-        if not temp_range:
-            return None
+        temp_range = self._temperature_range
         return self.conv_temp_unit(temp_range[0])
 
     @property
     def target_temperature_max(self):
         """Return maximum value for target temperature."""
-        temp_range = self._get_temperature_range()
-        if not temp_range:
-            return None
+        temp_range = self._temperature_range
         return self.conv_temp_unit(temp_range[1])
 
     async def set_op_mode(self, mode):
@@ -162,7 +146,7 @@ class WaterHeaterDevice(Device):
 
     async def set_target_temp(self, temp):
         """Set the device's target temperature in Celsius degrees."""
-        range_info = self._get_temperature_range()
+        range_info = self._temperature_range
         conv_temp = self._f2c(temp)
         if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
