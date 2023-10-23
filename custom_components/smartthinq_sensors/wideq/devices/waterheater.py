@@ -213,6 +213,8 @@ class WaterHeaterDevice(Device):
 class WaterHeaterStatus(DeviceStatus):
     """Higher-level information about a Water Heater's current status."""
 
+    _device: WaterHeaterDevice
+
     def __init__(self, device: WaterHeaterDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)

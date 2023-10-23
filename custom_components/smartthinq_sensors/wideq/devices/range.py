@@ -45,6 +45,8 @@ class RangeStatus(DeviceStatus):
     :param data: JSON data from the API.
     """
 
+    _device: RangeDevice
+
     def __init__(self, device: RangeDevice, data: dict | None = None):
         """Initialize device status."""
         super().__init__(device, data)

@@ -591,16 +591,12 @@ class AirConditionerDevice(Device):
     def target_temperature_min(self):
         """Return minimum value for target temperature."""
         temp_range = self._temperature_range
-        if not temp_range:
-            return None
         return self.conv_temp_unit(temp_range[0])
 
     @property
     def target_temperature_max(self):
         """Return maximum value for target temperature."""
         temp_range = self._temperature_range
-        if not temp_range:
-            return None
         return self.conv_temp_unit(temp_range[1])
 
     @cached_property
