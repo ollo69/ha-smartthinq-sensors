@@ -44,14 +44,14 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         key=MicroWaveFeatures.LIGHT_MODE,
         name="Light Mode",
         icon="mdi:lightbulb",
-        options_fn=lambda x: x.device.light_mode_options,
+        options_fn=lambda x: x.device.light_modes,
         select_option_fn=lambda x, option: x.device.set_light_mode(option),
     ),
     ThinQSelectEntityDescription(
         key=MicroWaveFeatures.VENT_SPEED,
         name="Vent Speed",
         icon="mdi:fan",
-        options_fn=lambda x: x.device.vent_speed_options,
+        options_fn=lambda x: x.device.vent_speeds,
         select_option_fn=lambda x, option: x.device.set_vent_speed(option),
     ),
     ThinQSelectEntityDescription(
@@ -59,7 +59,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         name="Display Scroll Speed",
         icon="mdi:format-pilcrow-arrow-right",
         entity_category=EntityCategory.CONFIG,
-        options_fn=lambda x: x.device.display_scroll_speed_options,
+        options_fn=lambda x: x.device.display_scroll_speeds,
         select_option_fn=lambda x, option: x.device.set_display_scroll_speed(option),
     ),
     ThinQSelectEntityDescription(
@@ -67,7 +67,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         name="Weight Unit",
         icon="mdi:weight",
         entity_category=EntityCategory.CONFIG,
-        options_fn=lambda x: x.device.defrost_weight_unit_options,
+        options_fn=lambda x: x.device.defrost_weight_units,
         select_option_fn=lambda x, option: x.device.set_defrost_weight_unit(option),
     ),
 )

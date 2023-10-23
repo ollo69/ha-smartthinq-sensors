@@ -4,6 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, time
 from enum import Enum
+from functools import cached_property
 
 from ..const import BIT_OFF, MicroWaveFeatures, StateOptions
 from ..core_async import ClientAsync
@@ -92,10 +93,6 @@ class MicroWaveDevice(Device):
     def __init__(self, client: ClientAsync, device_info: DeviceInfo):
         """Init the device."""
         super().__init__(client, device_info, MicroWaveStatus(self))
-        self._supported_vent_speed_options = None
-        self._supported_light_mode_options = None
-        self._supported_display_scroll_speed_options = None
-        self._supported_defrost_weight_unit_options = None
 
     def reset_status(self):
         self._status = MicroWaveStatus(self)
@@ -165,24 +162,19 @@ class MicroWaveDevice(Device):
         await self.set(CMD_SET_PREFERENCE, cmd, key="MwoSettingSound", value=state)
 
     # Unit
-    @property
-    def defrost_weight_unit_options(self) -> list[str]:
+    @cached_property
+    def defrost_weight_units(self) -> list[str]:
         """Get display scroll speed list."""
-        if self._supported_defrost_weight_unit_options is None:
-            key = self._get_state_key("MwoSettingDefrostWeightMode")
-            if not self.model_info.is_enum_type(key):
-                self._supported_defrost_weight_unit_options = []
-                return []
-            mapping = self.model_info.value(key).options
-            mode_list = [e.value for e in WeightUnit]
-            self._supported_defrost_weight_unit_options = [
-                WeightUnit(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_defrost_weight_unit_options
+        key = self._get_state_key("MwoSettingDefrostWeightMode")
+        if not self.model_info.is_enum_type(key):
+            return []
+        mapping = self.model_info.value(key).options
+        mode_list = [e.value for e in WeightUnit]
+        return [WeightUnit(o).name for o in mapping.values() if o in mode_list]
 
     async def set_defrost_weight_unit(self, unit: str):
         """Set weight unit kg/lb."""
-        if unit not in self.defrost_weight_unit_options:
+        if unit not in self.defrost_weight_units:
             raise ValueError(f"Invalid display unit: {unit}")
         cmd = {"mwoSettingDefrostWeightMode": unit}
         await self.set(
@@ -190,24 +182,19 @@ class MicroWaveDevice(Device):
         )
 
     # Display
-    @property
-    def display_scroll_speed_options(self) -> list[str]:
+    @cached_property
+    def display_scroll_speeds(self) -> list[str]:
         """Get display scroll speed list."""
-        if self._supported_display_scroll_speed_options is None:
-            key = self._get_state_key("MwoSettingDisplayScrollSpeed")
-            if not self.model_info.is_enum_type(key):
-                self._supported_display_scroll_speed_options = []
-                return []
-            mapping = self.model_info.value(key).options
-            mode_list = [e.value for e in DisplayScrollSpeed]
-            self._supported_display_scroll_speed_options = [
-                DisplayScrollSpeed(o).name for o in mapping.values() if o in mode_list
-            ]
-        return self._supported_display_scroll_speed_options
+        key = self._get_state_key("MwoSettingDisplayScrollSpeed")
+        if not self.model_info.is_enum_type(key):
+            return []
+        mapping = self.model_info.value(key).options
+        mode_list = [e.value for e in DisplayScrollSpeed]
+        return [DisplayScrollSpeed(o).name for o in mapping.values() if o in mode_list]
 
     async def set_display_scroll_speed(self, speed: str):
         """Set display scroll speed."""
-        if speed not in self.display_scroll_speed_options:
+        if speed not in self.display_scroll_speeds:
             raise ValueError(f"Invalid display scroll speed: {speed}")
 
         cmd = {"mwoSettingDisplayScrollSpeed": speed}
@@ -216,26 +203,26 @@ class MicroWaveDevice(Device):
         )
 
     # Light
-    @property
-    def light_mode_options(self) -> list[str]:
+    @cached_property
+    def _supported_light_modes(self) -> dict[str, str]:
         """Get display scroll speed list."""
-        if self._supported_light_mode_options is None:
-            key = self._get_state_key("MwoLampLevel")
-            if not (mapping := self.model_info.enum_range_values(key)):
-                self._supported_light_mode_options = {}
-                return []
-            mode_list = [e.value for e in LightLevel]
-            self._supported_light_mode_options = {
-                LightLevel(k).name: k for k in mapping if k in mode_list
-            }
-        return list(self._supported_light_mode_options)
+        key = self._get_state_key("MwoLampLevel")
+        if not (mapping := self.model_info.enum_range_values(key)):
+            return {}
+        mode_list = [e.value for e in LightLevel]
+        return {LightLevel(k).name: k for k in mapping if k in mode_list}
+
+    @property
+    def light_modes(self) -> list[str]:
+        """Get display scroll speed list."""
+        return list(self._supported_light_modes)
 
     async def set_light_mode(self, mode: str):
         """Set light mode."""
-        if mode not in self.light_mode_options:
+        if mode not in self.light_modes:
             raise ValueError(f"Invalid light mode: {mode}")
 
-        level = self._supported_light_mode_options[mode]
+        level = self._supported_light_modes[mode]
         status = "ENABLE" if level != "0" else "DISABLE"
 
         cmd = {
@@ -246,26 +233,26 @@ class MicroWaveDevice(Device):
         await self.set(CMD_SET_VENTLAMP, cmd, key="MwoLampLevel", value=level)
 
     # Vent
+    @cached_property
+    def _supported_vent_speeds(self) -> dict[str, str]:
+        """Get vent speed."""
+        key = self._get_state_key("MwoVentSpeedLevel")
+        if not (mapping := self.model_info.enum_range_values(key)):
+            return {}
+        mode_list = [e.value for e in VentSpeed]
+        return {VentSpeed(k).name: k for k in mapping if k in mode_list}
+
     @property
-    def vent_speed_options(self) -> list[str]:
+    def vent_speeds(self) -> list[str]:
         """Get vent speed list."""
-        if self._supported_vent_speed_options is None:
-            key = self._get_state_key("MwoVentSpeedLevel")
-            if not (mapping := self.model_info.enum_range_values(key)):
-                self._supported_vent_speed_options = {}
-                return []
-            mode_list = [e.value for e in VentSpeed]
-            self._supported_vent_speed_options = {
-                VentSpeed(k).name: k for k in mapping if k in mode_list
-            }
-        return list(self._supported_vent_speed_options)
+        return list(self._supported_vent_speeds)
 
     async def set_vent_speed(self, option: str):
         """Set vent speed."""
-        if option not in self.vent_speed_options:
+        if option not in self.vent_speeds:
             raise ValueError(f"Invalid vent mode: {option}")
 
-        level = self._supported_vent_speed_options[option]
+        level = self._supported_vent_speeds[option]
         mode = "ENABLE" if level != "0" else "DISABLE"
 
         cmd = {
@@ -367,54 +354,46 @@ class MicroWaveStatus(DeviceStatus):
         """Get weight unit kg/lb."""
         if (value := self.lookup_enum("MwoSettingDefrostWeightMode")) is None:
             return None
-
         try:
-            return self._update_feature(
-                MicroWaveFeatures.WEIGHT_UNIT, WeightUnit(value).name, False
-            )
+            status = WeightUnit(value).name
         except ValueError:
             return None
+        return self._update_feature(MicroWaveFeatures.WEIGHT_UNIT, status, False)
 
     @property
     def display_scroll_speed(self):
         """Get display scroll speed."""
         if (value := self.lookup_enum("MwoSettingDisplayScrollSpeed")) is None:
             return None
-
         try:
-            return self._update_feature(
-                MicroWaveFeatures.DISPLAY_SCROLL_SPEED,
-                DisplayScrollSpeed(value).name,
-                False,
-            )
+            status = DisplayScrollSpeed(value).name
         except ValueError:
             return None
+        return self._update_feature(
+            MicroWaveFeatures.DISPLAY_SCROLL_SPEED, status, False
+        )
 
     @property
     def light_mode(self):
         """Get light mode."""
         if (value := self.lookup_range("MwoLampLevel")) is None:
             return None
-
         try:
-            return self._update_feature(
-                MicroWaveFeatures.LIGHT_MODE, LightLevel(value).name, False
-            )
+            status = LightLevel(value).name
         except ValueError:
             return None
+        return self._update_feature(MicroWaveFeatures.LIGHT_MODE, status, False)
 
     @property
     def vent_speed(self):
         """Get vent speed."""
         if (value := self.lookup_range("MwoVentSpeedLevel")) is None:
             return None
-
         try:
-            return self._update_feature(
-                MicroWaveFeatures.VENT_SPEED, VentSpeed(value).name, False
-            )
+            status = VentSpeed(value).name
         except ValueError:
             return None
+        return self._update_feature(MicroWaveFeatures.VENT_SPEED, status, False)
 
     def _update_features(self):
         _ = [
