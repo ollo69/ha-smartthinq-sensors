@@ -70,6 +70,7 @@ STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
+STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
 STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
 STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
@@ -942,6 +943,7 @@ class AirConditionerStatus(DeviceStatus):
         """Initialize device status."""
         super().__init__(device, data)
         self._operation = None
+        self._airmon_on = None
         self._filter_use_time_inverted = True
 
     def _str_to_temp(self, str_temp):
@@ -1191,37 +1193,56 @@ class AirConditionerStatus(DeviceStatus):
         return result
 
     @property
+    def airmon_on(self):
+        """Return if AirMon sensor is on."""
+        if self._airmon_on is None:
+            self._airmon_on = False
+            key = self._get_state_key(STATE_AIRSENSORMON)
+            if (value := self.lookup_enum(key, True)) is not None:
+                self._airmon_on = value == MODE_ON
+        return self._airmon_on
+
+    @property
     def pm1(self):
         """Return Air PM1 value."""
         if not self._device.is_pm1_supported:
             return None
-
         key = self._get_state_key(STATE_PM1)
         if (value := self.lookup_range(key)) is None:
             return None
-        return self._update_feature(AirConditionerFeatures.PM1, value, False)
+        if not (self.is_on or self.airmon_on):
+            value = None
+        return self._update_feature(
+            AirConditionerFeatures.PM1, value, False, allow_none=True
+        )
 
     @property
     def pm10(self):
         """Return Air PM10 value."""
         if not self._device.is_pm10_supported:
             return None
-
         key = self._get_state_key(STATE_PM10)
         if (value := self.lookup_range(key)) is None:
             return None
-        return self._update_feature(AirConditionerFeatures.PM10, value, False)
+        if not (self.is_on or self.airmon_on):
+            value = None
+        return self._update_feature(
+            AirConditionerFeatures.PM10, value, False, allow_none=True
+        )
 
     @property
     def pm25(self):
         """Return Air PM2.5 value."""
         if not self._device.is_pm25_supported:
             return None
-
         key = self._get_state_key(STATE_PM25)
         if (value := self.lookup_range(key)) is None:
             return None
-        return self._update_feature(AirConditionerFeatures.PM25, value, False)
+        if not (self.is_on or self.airmon_on):
+            value = None
+        return self._update_feature(
+            AirConditionerFeatures.PM25, value, False, allow_none=True
+        )
 
     @property
     def water_in_current_temp(self):
