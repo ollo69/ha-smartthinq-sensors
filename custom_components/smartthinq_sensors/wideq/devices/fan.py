@@ -60,12 +60,7 @@ class FanDevice(Device):
     @cached_property
     def fan_speeds(self) -> list:
         """Available fan speeds."""
-        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in FanSpeed]
-        return [FanSpeed(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_WIND_STRENGTH, FanSpeed)
 
     @property
     def fan_presets(self) -> list:
