@@ -70,6 +70,11 @@ CMD_VENTLAMP_DICT = {
     },
 }
 
+MW_CMD = {
+    CMD_SET_PREFERENCE: CMD_PREF_DICT,
+    CMD_SET_VENTLAMP: CMD_VENTLAMP_DICT,
+}
+
 MODE_ENABLE = "ENABLE"
 MODE_DISABLE = "DISABLE"
 
@@ -78,11 +83,6 @@ MODE_VOLOFF = "MUTE"
 
 MODE_CLKON = "CLOCK_SHOW"
 MODE_CLKOFF = "CLOCK_HIDE"
-
-MW_CMD = {
-    CMD_SET_PREFERENCE: CMD_PREF_DICT,
-    CMD_SET_VENTLAMP: CMD_VENTLAMP_DICT,
-}
 
 
 class DisplayScrollSpeed(Enum):
@@ -195,12 +195,7 @@ class MicroWaveDevice(Device):
     @cached_property
     def defrost_weight_units(self) -> list[str]:
         """Get display scroll speed list."""
-        key = self._get_state_key(STATE_DEFROSTWMODE)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in WeightUnit]
-        return [WeightUnit(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(STATE_DEFROSTWMODE, WeightUnit)
 
     async def set_defrost_weight_unit(self, unit: str):
         """Set weight unit kg/lb."""
@@ -213,12 +208,7 @@ class MicroWaveDevice(Device):
     @cached_property
     def display_scroll_speeds(self) -> list[str]:
         """Get display scroll speed list."""
-        key = self._get_state_key(STATE_DISPLAYSCROLL)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in DisplayScrollSpeed]
-        return [DisplayScrollSpeed(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(STATE_DISPLAYSCROLL, DisplayScrollSpeed)
 
     async def set_display_scroll_speed(self, speed: str):
         """Set display scroll speed."""
