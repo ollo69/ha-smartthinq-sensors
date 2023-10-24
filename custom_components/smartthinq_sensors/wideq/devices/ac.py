@@ -263,11 +263,6 @@ class JetModeSupport(Enum):
     BOTH = 3
 
 
-def _remove_duplicated(elem: list) -> list:
-    """Remove duplicated values from a list."""
-    return list(dict.fromkeys(elem))
-
-
 class AirConditionerDevice(Device):
     """A higher-level interface for a AC."""
 
@@ -534,48 +529,26 @@ class AirConditionerDevice(Device):
     @cached_property
     def op_modes(self):
         """Return a list of available operation modes."""
-        key = self._get_state_key(SUPPORT_OPERATION_MODE)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in ACMode]
-        return [ACMode(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_OPERATION_MODE, ACMode)
 
     @cached_property
     def fan_speeds(self):
         """Return a list of available fan speeds."""
-        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in ACFanSpeed]
-        return [ACFanSpeed(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_WIND_STRENGTH, ACFanSpeed)
 
     @cached_property
     def horizontal_step_modes(self):
         """Return a list of available horizontal step modes."""
         if not self._is_mode_supported(SUPPORT_VANE_HSTEP):
             return []
-        key = self._get_state_key(STATE_WDIR_HSTEP)
-        if not self.model_info.is_enum_type(key):
-            return []
-        options = self.model_info.value(key).options
-        mapping = _remove_duplicated(list(options.values()))
-        mode_list = [e.value for e in ACHStepMode]
-        return [ACHStepMode(o).name for o in mapping if o in mode_list]
+        return self._get_property_values(STATE_WDIR_HSTEP, ACHStepMode)
 
     @cached_property
     def vertical_step_modes(self):
         """Return a list of available vertical step modes."""
         if not self._is_mode_supported(SUPPORT_VANE_VSTEP):
             return []
-        key = self._get_state_key(STATE_WDIR_VSTEP)
-        if not self.model_info.is_enum_type(key):
-            return []
-        options = self.model_info.value(key).options
-        mapping = _remove_duplicated(list(options.values()))
-        mode_list = [e.value for e in ACVStepMode]
-        return [ACVStepMode(o).name for o in mapping if o in mode_list]
+        return self._get_property_values(STATE_WDIR_VSTEP, ACVStepMode)
 
     @property
     def temperature_unit(self):
