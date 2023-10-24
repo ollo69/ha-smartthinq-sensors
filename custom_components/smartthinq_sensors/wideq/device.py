@@ -8,6 +8,7 @@ import asyncio
 import base64
 from copy import deepcopy
 from datetime import datetime
+from enum import Enum
 import json
 import logging
 from numbers import Number
@@ -345,6 +346,11 @@ class Monitor:
         await self.stop()
 
 
+def _remove_duplicated(elem: list) -> list:
+    """Remove duplicated values from a list."""
+    return list(dict.fromkeys(elem))
+
+
 class DeviceNotInitialized(Exception):
     """Device exception occurred when device is not initialized."""
 
@@ -477,6 +483,16 @@ class Device:
         key = self._get_state_key(key_name[2])
 
         return [ctrl, cmd, key]
+
+    def _get_property_values(self, prop_key: list | str, prop_enum: Enum) -> list[str]:
+        """Return a list of available values for a specific device property."""
+        key = self._get_state_key(prop_key)
+        if not self.model_info.is_enum_type(key):
+            return []
+        options = self.model_info.value(key).options
+        mapping = _remove_duplicated(list(options.values()))
+        valid_props = [e.value for e in prop_enum]
+        return [prop_enum(o).name for o in mapping if o in valid_props]
 
     async def _set_control(
         self,

@@ -122,34 +122,17 @@ class AirPurifierDevice(Device):
     @cached_property
     def op_modes(self) -> list:
         """Available operation modes."""
-        key = self._get_state_key(SUPPORT_OPERATION_MODE)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in AirPurifierMode]
-        return [AirPurifierMode(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_OPERATION_MODE, AirPurifierMode)
 
     @cached_property
     def fan_speeds(self) -> list:
         """Available fan speeds."""
-        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in AirPurifierFanSpeed]
-        return [AirPurifierFanSpeed(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_WIND_STRENGTH, AirPurifierFanSpeed)
 
     @cached_property
     def fan_presets(self) -> list:
         """Available fan presets."""
-        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        preset_list = [e.value for e in AirPurifierFanPreset]
-        return [
-            AirPurifierFanPreset(o).name for o in mapping.values() if o in preset_list
-        ]
+        return self._get_property_values(SUPPORT_WIND_STRENGTH, AirPurifierFanPreset)
 
     async def power(self, turn_on):
         """Turn on or off the device (according to a boolean)."""

@@ -95,22 +95,12 @@ class DeHumidifierDevice(Device):
     @cached_property
     def op_modes(self):
         """Return a list of available operation modes."""
-        key = self._get_state_key(SUPPORT_OPERATION_MODE)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in DHumMode]
-        return [DHumMode(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_OPERATION_MODE, DHumMode)
 
     @cached_property
     def fan_speeds(self):
         """Return a list of available fan speeds."""
-        key = self._get_state_key(SUPPORT_WIND_STRENGTH)
-        if not self.model_info.is_enum_type(key):
-            return []
-        mapping = self.model_info.value(key).options
-        mode_list = [e.value for e in DHumFanSpeed]
-        return [DHumFanSpeed(o).name for o in mapping.values() if o in mode_list]
+        return self._get_property_values(SUPPORT_WIND_STRENGTH, DHumFanSpeed)
 
     @property
     def target_humidity_step(self):
