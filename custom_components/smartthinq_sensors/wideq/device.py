@@ -485,7 +485,7 @@ class Device:
         return [ctrl, cmd, key]
 
     def _get_property_values(self, prop_key: list | str, prop_enum: Enum) -> list[str]:
-        """Return a list of available operation modes."""
+        """Return a list of available values for a specific device property."""
         key = self._get_state_key(prop_key)
         if not self.model_info.is_enum_type(key):
             return []
