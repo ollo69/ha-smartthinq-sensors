@@ -1,7 +1,9 @@
 """Platform for LGE fan integration."""
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
+from typing import Any, Awaitable, Callable
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.config_entries import ConfigEntry
@@ -17,12 +19,25 @@ from homeassistant.util.percentage import (
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .wideq import DeviceType
-from .wideq.devices.fan import FanDevice
 
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class LGEFanWrapperDescription:
+    """A class that describes LG fan wrapper."""
+
+    fanspeed_fn: Callable[[Any], str]
+    fanspeeds_fn: Callable[[Any], list[str]]
+    set_fanspeed_fn: Callable[[Any], Awaitable[None]]
+    fanpreset_fn: Callable[[Any], str] | None = None
+    fanpresets_fn: Callable[[Any], list[str]] | None = None
+    set_fanpreset_fn: Callable[[Any], Awaitable[None]] | None = None
+    turn_off_fn: Callable[[Any], Awaitable[None]] | None = None
+    turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
 
 
 async def async_setup_entry(
@@ -65,6 +80,65 @@ async def async_setup_entry(
     )
 
 
+class LGEFanWrapper:
+    """Wrapper class for LG fan device."""
+
+    def __init__(self, api: LGEDevice, descr: LGEFanWrapperDescription) -> None:
+        """Initialize the wrapper."""
+        self._api = api
+        self._device = api.device
+        self._description = descr
+        self._avl_speeds = None
+        self._turn_off_speed = None
+
+    @property
+    def fan_speed(self) -> str:
+        """Return current speed."""
+        return self._description.fanspeed_fn(self._api.state)
+
+    @property
+    def fan_speeds(self) -> list[str]:
+        """List of available speeds."""
+        if self._avl_speeds is None:
+            avl_speeds = self._description.fanspeeds_fn(self._device).copy()
+            if self._description.turn_off_fn is None:
+                self._turn_off_speed = avl_speeds.pop(0)
+            self._avl_speeds = avl_speeds
+        return self._avl_speeds
+
+    @property
+    def fan_preset(self) -> str | None:
+        """Return current preset."""
+        if self._description.fanpreset_fn is None:
+            return None
+        return self._description.fanpreset_fn(self._api.state)
+
+    @property
+    def fan_presets(self) -> list[str]:
+        """List of available presets."""
+        if self._description.fanpresets_fn is None:
+            return []
+        return self._description.fanpresets_fn(self._device)
+
+    async def async_turn_on(self, speed: str | None) -> None:
+        """Turn on the fan."""
+        on_speed = speed
+        if self._description.turn_on_fn is not None:
+            await self._description.turn_on_fn(self._device)
+        elif not on_speed:
+            on_speed = self.fan_speeds[0]
+        if on_speed:
+            await self._description.set_fanspeed_fn(self._device, on_speed)
+
+    async def async_turn_off(self) -> None:
+        """Turn on the fan."""
+        if self._description.turn_off_fn is None:
+            _ = self.fan_speeds  # this populate _turn_off_speed attribute
+            await self._description.set_fanspeed_fn(self._device, self._turn_off_speed)
+        else:
+            await self._description.turn_off_fn(self._device)
+
+
 class LGEBaseFan(CoordinatorEntity, FanEntity):
     """Base fan device."""
 
@@ -89,7 +163,7 @@ class LGEFan(LGEBaseFan):
     def __init__(self, api: LGEDevice, *, icon: str = None) -> None:
         """Initialize the fan."""
         super().__init__(api)
-        self._device: FanDevice = api.device
+        self._device = api.device
         self._attr_unique_id = f"{api.unique_id}-FAN"
         if icon:
             self._attr_icon = icon
