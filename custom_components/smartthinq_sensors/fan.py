@@ -18,7 +18,7 @@ from homeassistant.util.percentage import (
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import DeviceType
+from .wideq import DeviceType, MicroWaveFeatures
 
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
@@ -30,9 +30,10 @@ _LOGGER = logging.getLogger(__name__)
 class LGEFanWrapperDescription:
     """A class that describes LG fan wrapper."""
 
-    fanspeed_fn: Callable[[Any], str]
+    fanspeed_fn: Callable[[Any], str] | None
     fanspeeds_fn: Callable[[Any], list[str]]
     set_fanspeed_fn: Callable[[Any], Awaitable[None]]
+    feature_key: str | None = None
     name: str | None = None
     translation_key: str | None = None
     icon: str | None = None
@@ -63,12 +64,25 @@ WRAPPER = {
         turn_on_fn=lambda x: x.device.power(True),
     ),
     DeviceType.MICROWAVE: LGEFanWrapperDescription(
+        feature_key=MicroWaveFeatures.VENT_SPEED,
         name="Fan",
-        fanspeed_fn=lambda x: x.state.vent_speed,
+        fanspeed_fn=None,
         fanspeeds_fn=lambda x: x.device.vent_speeds,
         set_fanspeed_fn=lambda x, option: x.device.set_vent_speed(option),
     ),
 }
+
+
+def _fan_exist(lge_device: LGEDevice, fan_desc: LGEFanWrapperDescription) -> bool:
+    """Check if a fan exist for device."""
+    feature = fan_desc.feature_key
+    if feature is None:
+        return True
+
+    if feature in lge_device.available_features:
+        return True
+
+    return False
 
 
 async def async_setup_entry(
@@ -95,6 +109,7 @@ async def async_setup_entry(
                 [
                     LGEFan(lge_device, LGEFanWrapper(lge_device, WRAPPER[dev_type]))
                     for lge_device in lge_devices.get(dev_type, [])
+                    if _fan_exist(lge_device, WRAPPER[dev_type])
                 ]
             )
 
@@ -142,6 +157,8 @@ class LGEFanWrapper:
     @property
     def fan_speed(self) -> str:
         """Return current speed."""
+        if feature := self._description.feature_key:
+            return self._api.state.device_features.get(feature)
         return self._description.fanspeed_fn(self._api)
 
     @property
