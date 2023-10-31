@@ -101,17 +101,17 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_fan = []
-
         # Fan devices
-        for dev_type in (DeviceType.FAN, DeviceType.AIR_PURIFIER, DeviceType.MICROWAVE):
-            lge_fan.extend(
-                [
-                    LGEFan(lge_device, LGEFanWrapper(lge_device, WRAPPER[dev_type]))
-                    for lge_device in lge_devices.get(dev_type, [])
-                    if _fan_exist(lge_device, WRAPPER[dev_type])
-                ]
+        lge_fan = [
+            LGEFan(lge_device, LGEFanWrapper(lge_device, WRAPPER[dev_type]))
+            for dev_type in (
+                DeviceType.FAN,
+                DeviceType.AIR_PURIFIER,
+                DeviceType.MICROWAVE,
             )
+            for lge_device in lge_devices.get(dev_type, [])
+            if _fan_exist(lge_device, WRAPPER[dev_type])
+        ]
 
         async_add_entities(lge_fan)
 
@@ -130,6 +130,7 @@ class LGEFanWrapper:
         self._api = api
         self._description = descr
         self._turn_off_speed = None
+        self._last_speed = None
         self._avl_speeds = self._get_fan_speeds()
 
     def _get_fan_speeds(self) -> list[str]:
@@ -138,6 +139,11 @@ class LGEFanWrapper:
         if self._description.turn_off_fn is None:
             self._turn_off_speed = avl_speeds.pop(0)
         return avl_speeds
+
+    @property
+    def feature_key(self) -> str | None:
+        """Return associated feature."""
+        return self._description.feature_key
 
     @property
     def name(self) -> str | None:
@@ -205,7 +211,7 @@ class LGEFanWrapper:
         if self._description.turn_on_fn is not None:
             await self._description.turn_on_fn(self._api)
         elif not on_speed:
-            on_speed = self.fan_speeds[0]
+            on_speed = self._last_speed or self.fan_speeds[0]
 
         if on_speed:
             await self.async_set_speed(on_speed)
@@ -215,6 +221,7 @@ class LGEFanWrapper:
     async def async_turn_off(self) -> None:
         """Turn on the fan."""
         if self._description.turn_off_fn is None:
+            self._last_speed = self.fan_speed
             await self.async_set_speed(self._turn_off_speed)
         else:
             await self._description.turn_off_fn(self._api)
@@ -245,6 +252,8 @@ class LGEFan(LGEBaseFan):
         super().__init__(api)
         self._wrapper = wrapper
         self._attr_unique_id = f"{api.unique_id}-FAN"
+        if feature_key := wrapper.feature_key:
+            self._attr_unique_id += f"-{feature_key}"
         if trans_key := wrapper.translation_key:
             self._attr_translation_key = trans_key
         else:
