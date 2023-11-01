@@ -176,3 +176,11 @@ class MicroWaveFeatures(StrEnum):
     SOUND = "sound"
     VENT_SPEED = "vent_speed"
     WEIGHT_UNIT = "weight_unit"
+
+
+class HoodFeatures(StrEnum):
+    """Features for LG Hood devices."""
+
+    LIGHT_MODE = "light_mode"
+    HOOD_STATE = "hood_state"
+    VENT_SPEED = "vent_speed"

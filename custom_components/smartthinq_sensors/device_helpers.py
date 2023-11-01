@@ -41,6 +41,7 @@ DEVICE_ICONS = {
     DeviceType.DRYER: "mdi:tumble-dryer",
     DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
+    DeviceType.HOOD: "mdi:scent-off",
     DeviceType.MICROWAVE: "mdi:microwave",
     DeviceType.REFRIGERATOR: "mdi:fridge-outline",
     DeviceType.RANGE: "mdi:stove",
@@ -372,6 +373,6 @@ def get_wrapper_device(
         return LGERangeDevice(lge_device)
     if dev_type in (DeviceType.AC, DeviceType.WATER_HEATER):
         return LGETempDevice(lge_device)
-    if dev_type == DeviceType.MICROWAVE:
+    if dev_type in (DeviceType.HOOD, DeviceType.MICROWAVE):
         return LGEBaseDevice(lge_device)
     return None

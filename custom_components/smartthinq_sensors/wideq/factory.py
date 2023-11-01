@@ -17,6 +17,7 @@ from .devices.airpurifier import AirPurifierDevice
 from .devices.dehumidifier import DeHumidifierDevice
 from .devices.dishwasher import DishWasherDevice
 from .devices.fan import FanDevice
+from .devices.hood import HoodDevice
 from .devices.microwave import MicroWaveDevice
 from .devices.range import RangeDevice
 from .devices.refrigerator import RefrigeratorDevice
@@ -49,6 +50,8 @@ def get_lge_device(
         return [DishWasherDevice(client, device_info)]
     if device_type == DeviceType.FAN:
         return [FanDevice(client, device_info)]
+    if device_type == DeviceType.HOOD:
+        return [HoodDevice(client, device_info)]
     if device_type == DeviceType.MICROWAVE:
         return [MicroWaveDevice(client, device_info)]
     if device_type == DeviceType.RANGE:
