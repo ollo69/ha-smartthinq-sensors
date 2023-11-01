@@ -1,0 +1,52 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Kun en enkelt SmartThinQ LGE Sensors konfiguration er tilladt.",
+            "no_smartthinq_devices": "Der blev ikke fundet nogen SmartThinQ enheder. Komponent-setup annulleres.",
+            "unsupported_version": "Denne integration kræver mindst HomeAssistant version {req_ver}, du kører version {run_ver}.",
+            "reconfigured": "Konfigurationen blev gennemført med succes."
+        },
+        "error": {
+            "error_connect": "Kunne ikke forbinde til SmartThinQ. Prøv igen og sikr dig at du har adgang til ThinQ app'en på din telefon.",
+            "error_url": "Kunne ikke hente login URL fra ThinQ.",
+            "invalid_region": "Ukendt regionsformat.",
+            "invalid_language": "Ukendt sprogformat.",
+            "invalid_url": "Ukendt videresendelses URL. Sikr dig at du har adgang til ThinQ app'en på din telefon.",
+            "invalid_credentials": "Ugyldige SmartThinQ brugeroplysninger. Brug LG app'en på din mobile enhed til at sikre at alle Brugsbetingelser er accepterede. Konti baseret på sociale netværk kan ikke bruges og fungerer oftest ikke med denne integration.",
+            "invalid_config": "Ugyldig konfiguration fundet - konfigurer venligst forfra.",
+            "no_user_info": "Brugernavn og Kodeord er påkrævede.",
+            "unknown": "Ukendt fejl."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "username": "LG konto brugernavn",
+                    "password": "Kodeord",
+                    "region": "Landekode",
+                    "language": "Sprogkode",
+                    "use_redirect": "Brug URL videresendelses som godkendelsesmetode",
+                    "use_ha_session": "Del Home Assistant HTTP forbindelse (kan give SSL fejl)",
+                    "use_tls_v1": "Kræv brug af TLSv1 protokol (nogengange påkrævet)",
+                    "exclude_dh": "Brug ikke DH cipher (hvis du får 'dh key too small' fejl)"
+                },
+                "description": "Indtast dine SmartThinQ kontoinformationer."
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ login URL",
+                    "callback_url": "Videresendelses URL"
+                },
+                "description": "Brug URL'en i det første felt for at logge ind i SmartThinQ med dine informationer og indsæt bagefter URL'en til der, hvor din browser blev videresendt til efter login i det andet felt. Del feedback omkring dit setup [her](https://git.io/JU166).",
+                "title": "SmartThinQ LGE Sensors - Godkendelse"
+            },
+            "token": {
+                "data": {
+                    "token": "Refresh Token"
+                },
+                "description": "Gem den genererede token til fremtidig brug, og bekræft herefter for at færdiggøre konfigurationen.",
+                "title": "SmartThinQ LGE Sensors - Ny refresh token"
+            }
+        },
+        "title": "SmartThinQ LGE Sensors"
+    }
+}
