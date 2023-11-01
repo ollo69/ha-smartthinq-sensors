@@ -1,0 +1,52 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Es ist nur eine einzige Konfiguration von SmartThinQ LGE-Sensoren erlaubt.",
+            "no_smartthinq_devices": "Keine SmartThinQ-Geräte gefunden. Setup abgebrochen.",
+            "unsupported_version": "Diese Integration setzt mindestens HomeAssistant Version {req_ver} voraus. Aktuell ist Version {run_ver} installiert.",
+            "reconfigured": "Konfiguration erfolgreich abgeschlossen."
+        },
+        "error": {
+            "error_connect": "Verbindung zu SmartThinQ fehlgeschlagen. Try again, and make sure you can access the ThinQ app on your phone.",
+            "error_url": "Fehler beim Abruf der Login-URL von ThinQ.",
+            "invalid_region": "Ungültiges Regionsformat.",
+            "invalid_language": "Ungültiges Sprachformat.",
+            "invalid_url": "Ungültige Weiterleitungs-URL. Stelle sicher, dass die ThinQ App auf Deinem Smartphone erreichbar ist.",
+            "invalid_credentials": "Ungültige SmartThinQ Anmeldedaten. Verwende die LG App auf Deinem Mobilgerät um zu prüfen ob Du zuerst Nutzungsbedingungen akzeptieren musst. Socia Media-Accounts werden nicht unterstützt und funktionieren in den meisten Fällen nicht mit dieser Integration.",
+            "invalid_config": "Ungültige Konfiguration, bitte erneut konfigurieren.",
+            "no_user_info": "Kein Name und Passwort eingegeben.",
+            "unknown": "Unbekannter Fehler."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "username": "Benutzername des LG Accounts",
+                    "password": "Passwort",
+                    "region": "Landescode",
+                    "language": "Sprachcode",
+                    "use_redirect": "Verwende die Anmeldemethode 'URL Weiterleitung'",
+                    "use_ha_session": "Teile Deine Home Assistant HTTP Verbindung (kann SSL-Fehler verursachen)",
+                    "use_tls_v1": "Erzwinge TLSv1 (gelegentlich notwendig)",
+                    "exclude_dh": "Verwende nicht DH Cypher (wenn der Fehler 'dh key too small' angezeigt wird)"
+                },
+                "description": "Trage Deine Anmeldedaten für Deine SmartThinQ Account hier ein."
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ Login URL",
+                    "callback_url": "Weiterleitungs URL"
+                },
+                "description": "Melde Dich mit der URL im ersten Feld mit Deinen bekannten Anmeldedaten bei SmartThinQ an und kopiere die URL, auf die Du nach dem Login weitergeleitet wirst in das zweite Feld. Du kannst Dein Feedback über das Setup [hier](https://git.io/JU166) teilen.",
+                "title": "SmartThinQ LGE Sensors - Anmelden"
+            },
+            "token": {
+                "data": {
+                    "token": "Token aktualisieren"
+                },
+                "description": "Speichere den generierten Token an einem sicheren Ort und bestätige die Konfiguration.",
+                "title": "SmartThinQ LGE Sensors - New refresh token"
+            }
+        },
+        "title": "SmartThinQ LGE Sensors"
+    }
+}
