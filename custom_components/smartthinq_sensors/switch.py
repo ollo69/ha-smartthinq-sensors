@@ -21,7 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import STATE_LOOKUP, LGEBaseDevice, get_multiple_devices_types
+from .device_helpers import STATE_LOOKUP, LGEBaseDevice
 from .wideq import (
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
@@ -135,6 +135,14 @@ MICROWAVE_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
 )
 
 
+SWITCH_ENTITIES = {
+    DeviceType.AC: AC_SWITCH,
+    DeviceType.MICROWAVE: MICROWAVE_SWITCH,
+    DeviceType.REFRIGERATOR: REFRIGERATOR_SWITCH,
+    **{dev_type: WASH_DEV_SWITCH for dev_type in WM_DEVICE_TYPES},
+}
+
+
 def _switch_exist(
     lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription
 ) -> bool:
@@ -165,39 +173,13 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_switch = []
-
-        # add WM devices
-        lge_switch.extend(
-            [
-                LGESwitch(lge_device, switch_desc)
-                for switch_desc in WASH_DEV_SWITCH
-                for lge_device in get_multiple_devices_types(
-                    lge_devices, WM_DEVICE_TYPES
-                )
-                if _switch_exist(lge_device, switch_desc)
-            ]
-        )
-
-        # add refrigerators
-        lge_switch.extend(
-            [
-                LGESwitch(lge_device, switch_desc)
-                for switch_desc in REFRIGERATOR_SWITCH
-                for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
-                if _switch_exist(lge_device, switch_desc)
-            ]
-        )
-
-        # add AC switch
-        lge_switch.extend(
-            [
-                LGESwitch(lge_device, switch_desc)
-                for switch_desc in AC_SWITCH
-                for lge_device in lge_devices.get(DeviceType.AC, [])
-                if _switch_exist(lge_device, switch_desc)
-            ]
-        )
+        lge_switch = [
+            LGESwitch(lge_device, switch_desc)
+            for dev_type, switch_descs in SWITCH_ENTITIES.items()
+            for switch_desc in switch_descs
+            for lge_device in lge_devices.get(dev_type, [])
+            if _switch_exist(lge_device, switch_desc)
+        ]
 
         # add AC duct zone switch
         lge_switch.extend(
@@ -205,16 +187,6 @@ async def async_setup_entry(
                 LGEDuctSwitch(lge_device, duct_zone)
                 for lge_device in lge_devices.get(DeviceType.AC, [])
                 for duct_zone in lge_device.device.duct_zones
-            ]
-        )
-
-        # add MicroWave switch
-        lge_switch.extend(
-            [
-                LGESwitch(lge_device, switch_desc)
-                for switch_desc in MICROWAVE_SWITCH
-                for lge_device in lge_devices.get(DeviceType.MICROWAVE, [])
-                if _switch_exist(lge_device, switch_desc)
             ]
         )
 
