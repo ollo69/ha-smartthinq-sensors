@@ -117,15 +117,11 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_climates = []
-
         # AC devices
-        lge_climates.extend(
-            [
-                LGEACClimate(lge_device)
-                for lge_device in lge_devices.get(DeviceType.AC, [])
-            ]
-        )
+        lge_climates = [
+            LGEACClimate(lge_device)
+            for lge_device in lge_devices.get(DeviceType.AC, [])
+        ]
 
         # Refrigerator devices
         lge_climates.extend(

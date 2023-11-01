@@ -47,15 +47,11 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_humidifier = []
-
         # DeHumidifier devices
-        lge_humidifier.extend(
-            [
-                LGEDeHumidifier(lge_device)
-                for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
-            ]
-        )
+        lge_humidifier = [
+            LGEDeHumidifier(lge_device)
+            for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
+        ]
 
         async_add_entities(lge_humidifier)
 

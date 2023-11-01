@@ -19,7 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice, get_multiple_devices_types
+from .device_helpers import LGEBaseDevice
 from .wideq import WM_DEVICE_TYPES, WashDeviceFeatures
 
 # general button attributes
@@ -56,6 +56,10 @@ WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
     ),
 )
 
+BUTTON_ENTITIES = {
+    **{dev_type: WASH_DEV_BUTTON for dev_type in WM_DEVICE_TYPES},
+}
+
 
 def _button_exist(
     lge_device: LGEDevice, button_desc: ThinQButtonEntityDescription
@@ -84,19 +88,13 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_button = []
-
-        # add WM devices
-        lge_button.extend(
-            [
-                LGEButton(lge_device, button_desc)
-                for button_desc in WASH_DEV_BUTTON
-                for lge_device in get_multiple_devices_types(
-                    lge_devices, WM_DEVICE_TYPES
-                )
-                if _button_exist(lge_device, button_desc)
-            ]
-        )
+        lge_button = [
+            LGEButton(lge_device, button_desc)
+            for dev_type, button_descs in BUTTON_ENTITIES.items()
+            for button_desc in button_descs
+            for lge_device in lge_devices.get(dev_type, [])
+            if _button_exist(lge_device, button_desc)
+        ]
 
         async_add_entities(lge_button)
 

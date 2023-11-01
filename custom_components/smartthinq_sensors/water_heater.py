@@ -66,15 +66,11 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_water_heater = []
-
         # WH devices
-        lge_water_heater.extend(
-            [
-                LGEWHWaterHeater(lge_device)
-                for lge_device in lge_devices.get(DeviceType.WATER_HEATER, [])
-            ]
-        )
+        lge_water_heater = [
+            LGEWHWaterHeater(lge_device)
+            for lge_device in lge_devices.get(DeviceType.WATER_HEATER, [])
+        ]
 
         # AC devices
         lge_water_heater.extend(

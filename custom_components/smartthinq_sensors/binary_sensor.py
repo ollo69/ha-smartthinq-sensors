@@ -19,19 +19,23 @@ from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
-from .const import DEFAULT_ICON, DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import (
+    ATTR_DOOR_OPEN,
+    ATTR_ERROR_STATE,
+    ATTR_RUN_COMPLETED,
+    DEFAULT_ICON,
+    DOMAIN,
+    LGE_DEVICES,
+    LGE_DISCOVERY_NEW,
+)
 from .device_helpers import (
     DEVICE_ICONS,
     STATE_LOOKUP,
     WASH_DEVICE_TYPES,
     LGEBaseDevice,
-    LGERangeDevice,
-    LGERefrigeratorDevice,
-    LGEWashDevice,
+    get_wrapper_device,
     get_entity_name,
-    get_multiple_devices_types,
 )
-from .sensor import ATTR_DOOR_OPEN, ATTR_ERROR_STATE, ATTR_RUN_COMPLETED
 from .wideq import DehumidifierFeatures, DeviceType, WashDeviceFeatures
 
 # range sensor attributes
@@ -198,6 +202,13 @@ DEHUMIDIFIER_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ),
 )
 
+BINARY_SENSOR_ENTITIES = {
+    DeviceType.DEHUMIDIFIER: DEHUMIDIFIER_BINARY_SENSORS,
+    DeviceType.RANGE: RANGE_BINARY_SENSORS,
+    DeviceType.REFRIGERATOR: REFRIGERATOR_BINARY_SENSORS,
+    **{dev_type: WASH_DEV_BINARY_SENSORS for dev_type in WASH_DEVICE_TYPES},
+}
+
 
 def _binary_sensor_exist(
     lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription
@@ -229,51 +240,15 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_sensors = []
-
-        # add WASH devices
-        lge_sensors.extend(
-            [
-                LGEBinarySensor(lge_device, sensor_desc, LGEWashDevice(lge_device))
-                for sensor_desc in WASH_DEV_BINARY_SENSORS
-                for lge_device in get_multiple_devices_types(
-                    lge_devices, WASH_DEVICE_TYPES
-                )
-                if _binary_sensor_exist(lge_device, sensor_desc)
-            ]
-        )
-
-        # add refrigerators
-        lge_sensors.extend(
-            [
-                LGEBinarySensor(
-                    lge_device, sensor_desc, LGERefrigeratorDevice(lge_device)
-                )
-                for sensor_desc in REFRIGERATOR_BINARY_SENSORS
-                for lge_device in lge_devices.get(DeviceType.REFRIGERATOR, [])
-                if _binary_sensor_exist(lge_device, sensor_desc)
-            ]
-        )
-
-        # add ranges
-        lge_sensors.extend(
-            [
-                LGEBinarySensor(lge_device, sensor_desc, LGERangeDevice(lge_device))
-                for sensor_desc in RANGE_BINARY_SENSORS
-                for lge_device in lge_devices.get(DeviceType.RANGE, [])
-                if _binary_sensor_exist(lge_device, sensor_desc)
-            ]
-        )
-
-        # add dehumidifier
-        lge_sensors.extend(
-            [
-                LGEBinarySensor(lge_device, sensor_desc)
-                for sensor_desc in DEHUMIDIFIER_BINARY_SENSORS
-                for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
-                if _binary_sensor_exist(lge_device, sensor_desc)
-            ]
-        )
+        lge_sensors = [
+            LGEBinarySensor(
+                lge_device, sensor_desc, get_wrapper_device(lge_device, dev_type)
+            )
+            for dev_type, sensor_descs in BINARY_SENSOR_ENTITIES.items()
+            for sensor_desc in sensor_descs
+            for lge_device in lge_devices.get(dev_type, [])
+            if _binary_sensor_exist(lge_device, sensor_desc)
+        ]
 
         async_add_entities(lge_sensors)
 
