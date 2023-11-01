@@ -22,7 +22,7 @@ from homeassistant.util.percentage import (
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import DeviceType, MicroWaveFeatures
+from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
@@ -62,6 +62,11 @@ AIRPURIFIER_WRAPPER = LGEFanWrapperDescription(
     turn_off_fn=lambda x: x.device.power(False),
     turn_on_fn=lambda x: x.device.power(True),
 )
+HOOD_WRAPPER = LGEFanWrapperDescription(
+    fanspeed_fn=None,
+    fanspeeds_fn=lambda x: x.device.vent_speeds,
+    set_fanspeed_fn=lambda x, option: x.device.set_vent_speed(option),
+)
 MICROWAVE_WRAPPER = LGEFanWrapperDescription(
     fanspeed_fn=None,
     fanspeeds_fn=lambda x: x.device.vent_speeds,
@@ -96,6 +101,13 @@ AIRPURIFIER_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
         wrapper_description=AIRPURIFIER_WRAPPER,
     ),
 )
+HOOD_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
+    ThinQFanEntityDescription(
+        key=HoodFeatures.VENT_SPEED,
+        name="Fan",
+        wrapper_description=HOOD_WRAPPER,
+    ),
+)
 MICROWAVE_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
     ThinQFanEntityDescription(
         key=MicroWaveFeatures.VENT_SPEED,
@@ -107,6 +119,7 @@ MICROWAVE_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
 FAN_ENTITIES = {
     DeviceType.FAN: FAN_DEVICE,
     DeviceType.AIR_PURIFIER: AIRPURIFIER_DEVICE,
+    DeviceType.HOOD: HOOD_DEVICE,
     DeviceType.MICROWAVE: MICROWAVE_DEVICE,
 }
 

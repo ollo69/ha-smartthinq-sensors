@@ -20,7 +20,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import LGEBaseDevice
-from .wideq import DeviceType, MicroWaveFeatures
+from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,14 @@ class ThinQLightEntityDescription(LightEntityDescription):
     turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
 
 
+HOOD_LIGHT: tuple[ThinQLightEntityDescription, ...] = (
+    ThinQLightEntityDescription(
+        key=HoodFeatures.LIGHT_MODE,
+        name="Light",
+        effects_fn=lambda x: x.device.light_modes,
+        set_effect_fn=lambda x, option: x.device.set_light_mode(option),
+    ),
+)
 MICROWAVE_LIGHT: tuple[ThinQLightEntityDescription, ...] = (
     ThinQLightEntityDescription(
         key=MicroWaveFeatures.LIGHT_MODE,
@@ -46,6 +54,7 @@ MICROWAVE_LIGHT: tuple[ThinQLightEntityDescription, ...] = (
 )
 
 LIGHT_ENTITIES = {
+    DeviceType.HOOD: HOOD_LIGHT,
     DeviceType.MICROWAVE: MICROWAVE_LIGHT,
 }
 

@@ -495,6 +495,13 @@ WATER_HEATER_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
     ),
 )
+HOOD_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
+    ThinQSensorEntityDescription(
+        key=DEFAULT_SENSOR,
+        icon=DEFAULT_ICON,
+        value_fn=lambda x: x.power_state,
+    ),
+)
 MICROWAVE_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
         key=DEFAULT_SENSOR,
@@ -517,6 +524,7 @@ SENSOR_ENTITIES = {
     DeviceType.AC: AC_SENSORS,
     DeviceType.AIR_PURIFIER: AIR_PURIFIER_SENSORS,
     DeviceType.DEHUMIDIFIER: DEHUMIDIFIER_SENSORS,
+    DeviceType.HOOD: HOOD_SENSORS,
     DeviceType.MICROWAVE: MICROWAVE_SENSORS,
     DeviceType.RANGE: RANGE_SENSORS,
     DeviceType.REFRIGERATOR: REFRIGERATOR_SENSORS,
