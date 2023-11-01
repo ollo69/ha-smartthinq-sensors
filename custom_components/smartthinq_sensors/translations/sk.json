@@ -21,7 +21,7 @@
             "user": {
                 "data": {
                     "username": "Používateľské meno účtu LG",
-                    "password": Heslo",
+                    "password": "Heslo",
                     "region": "Región",
                     "language": "Jazyk",
                     "use_redirect": "Použite metódu overenia presmerovania adresy URL",
