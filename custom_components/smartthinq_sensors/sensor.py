@@ -33,9 +33,9 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import (
     ATTR_CURRENT_COURSE,
-    ATTR_INITIAL_TIME,
     ATTR_FREEZER_TEMP,
     ATTR_FRIDGE_TEMP,
+    ATTR_INITIAL_TIME,
     ATTR_OVEN_LOWER_TARGET_TEMP,
     ATTR_OVEN_UPPER_TARGET_TEMP,
     ATTR_REMAIN_TIME,
