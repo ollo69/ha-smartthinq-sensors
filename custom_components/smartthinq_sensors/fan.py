@@ -5,7 +5,11 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Awaitable, Callable
 
-from homeassistant.components.fan import FanEntity, FanEntityFeature
+from homeassistant.components.fan import (
+    FanEntity,
+    FanEntityDescription,
+    FanEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -22,6 +26,7 @@ from .wideq import DeviceType, MicroWaveFeatures
 
 ATTR_FAN_MODE = "fan_mode"
 ATTR_FAN_MODES = "fan_modes"
+DEFAULT_KEY = "default"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,10 +38,6 @@ class LGEFanWrapperDescription:
     fanspeed_fn: Callable[[Any], str] | None
     fanspeeds_fn: Callable[[Any], list[str]]
     set_fanspeed_fn: Callable[[Any], Awaitable[None]]
-    feature_key: str | None = None
-    name: str | None = None
-    translation_key: str | None = None
-    icon: str | None = None
     fanpreset_fn: Callable[[Any], str] | None = None
     fanpresets_fn: Callable[[Any], list[str]] | None = None
     set_fanpreset_fn: Callable[[Any], Awaitable[None]] | None = None
@@ -44,39 +45,76 @@ class LGEFanWrapperDescription:
     turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
 
 
-WRAPPER = {
-    DeviceType.FAN: LGEFanWrapperDescription(
-        fanspeed_fn=lambda x: x.state.fan_speed,
-        fanspeeds_fn=lambda x: x.device.fan_speeds,
-        set_fanspeed_fn=lambda x, option: x.device.set_fan_speed(option),
-        turn_off_fn=lambda x: x.device.power(False),
-        turn_on_fn=lambda x: x.device.power(True),
+FAN_WRAPPER = LGEFanWrapperDescription(
+    fanspeed_fn=lambda x: x.state.fan_speed,
+    fanspeeds_fn=lambda x: x.device.fan_speeds,
+    set_fanspeed_fn=lambda x, option: x.device.set_fan_speed(option),
+    turn_off_fn=lambda x: x.device.power(False),
+    turn_on_fn=lambda x: x.device.power(True),
+)
+AIRPURIFIER_WRAPPER = LGEFanWrapperDescription(
+    fanspeed_fn=lambda x: x.state.fan_speed,
+    fanspeeds_fn=lambda x: x.device.fan_speeds,
+    set_fanspeed_fn=lambda x, option: x.device.set_fan_speed(option),
+    fanpreset_fn=lambda x: x.state.fan_preset,
+    fanpresets_fn=lambda x: x.device.fan_presets,
+    set_fanpreset_fn=lambda x, option: x.device.set_fan_preset(option),
+    turn_off_fn=lambda x: x.device.power(False),
+    turn_on_fn=lambda x: x.device.power(True),
+)
+MICROWAVE_WRAPPER = LGEFanWrapperDescription(
+    fanspeed_fn=None,
+    fanspeeds_fn=lambda x: x.device.vent_speeds,
+    set_fanspeed_fn=lambda x, option: x.device.set_vent_speed(option),
+)
+
+
+@dataclass
+class ThinQFanRequiredKeysMixin:
+    """Mixin for required keys."""
+
+    wrapper_description: LGEFanWrapperDescription
+
+
+@dataclass
+class ThinQFanEntityDescription(FanEntityDescription, ThinQFanRequiredKeysMixin):
+    """A class that describes ThinQ fan entities."""
+
+
+FAN_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
+    ThinQFanEntityDescription(
+        key=DEFAULT_KEY,
+        name=None,
+        wrapper_description=FAN_WRAPPER,
     ),
-    DeviceType.AIR_PURIFIER: LGEFanWrapperDescription(
+)
+AIRPURIFIER_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
+    ThinQFanEntityDescription(
+        key=DEFAULT_KEY,
+        name=None,
         icon="mdi:air-purifier",
-        fanspeed_fn=lambda x: x.state.fan_speed,
-        fanspeeds_fn=lambda x: x.device.fan_speeds,
-        set_fanspeed_fn=lambda x, option: x.device.set_fan_speed(option),
-        fanpreset_fn=lambda x: x.state.fan_preset,
-        fanpresets_fn=lambda x: x.device.fan_presets,
-        set_fanpreset_fn=lambda x, option: x.device.set_fan_preset(option),
-        turn_off_fn=lambda x: x.device.power(False),
-        turn_on_fn=lambda x: x.device.power(True),
+        wrapper_description=AIRPURIFIER_WRAPPER,
     ),
-    DeviceType.MICROWAVE: LGEFanWrapperDescription(
-        feature_key=MicroWaveFeatures.VENT_SPEED,
+)
+MICROWAVE_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
+    ThinQFanEntityDescription(
+        key=MicroWaveFeatures.VENT_SPEED,
         name="Fan",
-        fanspeed_fn=None,
-        fanspeeds_fn=lambda x: x.device.vent_speeds,
-        set_fanspeed_fn=lambda x, option: x.device.set_vent_speed(option),
+        wrapper_description=MICROWAVE_WRAPPER,
     ),
+)
+
+FAN_ENTITIES = {
+    DeviceType.FAN: FAN_DEVICE,
+    DeviceType.AIR_PURIFIER: AIRPURIFIER_DEVICE,
+    DeviceType.MICROWAVE: MICROWAVE_DEVICE,
 }
 
 
-def _fan_exist(lge_device: LGEDevice, fan_desc: LGEFanWrapperDescription) -> bool:
+def _fan_exist(lge_device: LGEDevice, fan_desc: ThinQFanEntityDescription) -> bool:
     """Check if a fan exist for device."""
-    feature = fan_desc.feature_key
-    if feature is None:
+    feature = fan_desc.key
+    if feature == DEFAULT_KEY:
         return True
 
     if feature in lge_device.available_features:
@@ -103,14 +141,11 @@ async def async_setup_entry(
 
         # Fan devices
         lge_fan = [
-            LGEFan(lge_device, LGEFanWrapper(lge_device, WRAPPER[dev_type]))
-            for dev_type in (
-                DeviceType.FAN,
-                DeviceType.AIR_PURIFIER,
-                DeviceType.MICROWAVE,
-            )
+            LGEFan(lge_device, fan_desc)
+            for dev_type, fan_descs in FAN_ENTITIES.items()
+            for fan_desc in fan_descs
             for lge_device in lge_devices.get(dev_type, [])
-            if _fan_exist(lge_device, WRAPPER[dev_type])
+            if _fan_exist(lge_device, fan_desc)
         ]
 
         async_add_entities(lge_fan)
@@ -125,10 +160,16 @@ async def async_setup_entry(
 class LGEFanWrapper:
     """Wrapper class for LG fan device."""
 
-    def __init__(self, api: LGEDevice, descr: LGEFanWrapperDescription) -> None:
+    def __init__(
+        self,
+        api: LGEDevice,
+        descr: LGEFanWrapperDescription,
+        feature_key: str | None = None,
+    ) -> None:
         """Initialize the wrapper."""
         self._api = api
         self._description = descr
+        self._feature_key = feature_key
         self._turn_off_speed = None
         self._last_speed = None
         self._avl_speeds = self._get_fan_speeds()
@@ -141,31 +182,13 @@ class LGEFanWrapper:
         return avl_speeds
 
     @property
-    def feature_key(self) -> str | None:
-        """Return associated feature."""
-        return self._description.feature_key
-
-    @property
-    def name(self) -> str | None:
-        """Return associated name."""
-        return self._description.name
-
-    @property
-    def translation_key(self) -> str | None:
-        """Return associated name."""
-        return self._description.translation_key
-
-    @property
-    def icon(self) -> str | None:
-        """Return associated icon."""
-        return self._description.icon
-
-    @property
-    def fan_speed(self) -> str:
+    def fan_speed(self) -> str | None:
         """Return current speed."""
-        if feature := self._description.feature_key:
+        if self._description.fanspeed_fn:
+            return self._description.fanspeed_fn(self._api)
+        if feature := self._feature_key:
             return self._api.state.device_features.get(feature)
-        return self._description.fanspeed_fn(self._api)
+        return None
 
     @property
     def fan_speeds(self) -> list[str]:
@@ -245,24 +268,21 @@ class LGEBaseFan(CoordinatorEntity, FanEntity):
 class LGEFan(LGEBaseFan):
     """LG Fan device."""
 
+    entity_description: ThinQFanEntityDescription
     _attr_has_entity_name = True
 
-    def __init__(self, api: LGEDevice, wrapper: LGEFanWrapper) -> None:
+    def __init__(self, api: LGEDevice, description: ThinQFanEntityDescription) -> None:
         """Initialize the fan."""
         super().__init__(api)
-        self._wrapper = wrapper
+        wrapper = LGEFanWrapper(api, description.wrapper_description, description.key)
+        self.entity_description = description
         self._attr_unique_id = f"{api.unique_id}-FAN"
-        if feature_key := wrapper.feature_key:
-            self._attr_unique_id += f"-{feature_key}"
-        if trans_key := wrapper.translation_key:
-            self._attr_translation_key = trans_key
-        else:
-            self._attr_name = wrapper.name
-        if wrapper.icon:
-            self._attr_icon = wrapper.icon
+        if description.key != DEFAULT_KEY:
+            self._attr_unique_id += f"-{description.key}"
         self._attr_speed_count = len(wrapper.fan_speeds)
         if presets := wrapper.fan_presets:
             self._attr_preset_modes = presets
+        self._wrapper = wrapper
 
     @property
     def supported_features(self) -> int:
