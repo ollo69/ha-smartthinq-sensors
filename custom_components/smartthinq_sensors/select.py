@@ -15,7 +15,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice
 from .wideq import DeviceType, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,13 +40,6 @@ class ThinQSelectEntityDescription(
 
 MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ThinQSelectEntityDescription(
-        key=MicroWaveFeatures.LIGHT_MODE,
-        name="Light Mode",
-        icon="mdi:lightbulb",
-        options_fn=lambda x: x.device.light_modes,
-        select_option_fn=lambda x, option: x.device.set_light_mode(option),
-    ),
-    ThinQSelectEntityDescription(
         key=MicroWaveFeatures.DISPLAY_SCROLL_SPEED,
         name="Display Scroll Speed",
         icon="mdi:format-pilcrow-arrow-right",
@@ -64,6 +56,10 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         select_option_fn=lambda x, option: x.device.set_defrost_weight_unit(option),
     ),
 )
+
+SELECT_ENTITIES = {
+    DeviceType.MICROWAVE: MICROWAVE_SELECT,
+}
 
 
 def _select_exist(
@@ -96,17 +92,13 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_select = []
-
-        # add WM devices
-        lge_select.extend(
-            [
-                LGESelect(lge_device, select_desc)
-                for select_desc in MICROWAVE_SELECT
-                for lge_device in lge_devices.get(DeviceType.MICROWAVE, [])
-                if _select_exist(lge_device, select_desc)
-            ]
-        )
+        lge_select = [
+            LGESelect(lge_device, select_desc)
+            for dev_type, select_descs in SELECT_ENTITIES.items()
+            for select_desc in select_descs
+            for lge_device in lge_devices.get(dev_type, [])
+            if _select_exist(lge_device, select_desc)
+        ]
 
         async_add_entities(lge_select)
 
@@ -131,22 +123,21 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         """Initialize the select."""
         super().__init__(api.coordinator)
         self._api = api
-        self._wrap_device = LGEBaseDevice(api)
         self.entity_description = description
         self._attr_unique_id = f"{api.unique_id}-{description.key}-select"
         self._attr_device_info = api.device_info
-        self._attr_options = self.entity_description.options_fn(self._wrap_device)
+        self._attr_options = self.entity_description.options_fn(self._api)
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        await self.entity_description.select_option_fn(self._wrap_device, option)
+        await self.entity_description.select_option_fn(self._api, option)
         self._api.async_set_updated()
 
     @property
     def current_option(self) -> str | None:
         """Return the selected entity option to represent the entity state."""
         if self.entity_description.value_fn is not None:
-            return self.entity_description.value_fn(self._wrap_device)
+            return self.entity_description.value_fn(self._api)
 
         if self._api.state:
             feature = self.entity_description.key
@@ -159,5 +150,5 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         """Return True if entity is available."""
         is_avail = True
         if self.entity_description.available_fn is not None:
-            is_avail = self.entity_description.available_fn(self._wrap_device)
+            is_avail = self.entity_description.available_fn(self._api)
         return self._api.available and is_avail

@@ -46,7 +46,7 @@ def get_multiple_devices_types(lge_devices: dict, dev_types: list) -> list:
     ]
 
 
-def get_entity_name(device: LGEDevice, ent_key: str) -> str:
+def get_entity_name(device: LGEDevice, ent_key: str) -> str | None:
     """Get the name for the entity"""
     if ent_key == DEFAULT_SENSOR:
         return None
