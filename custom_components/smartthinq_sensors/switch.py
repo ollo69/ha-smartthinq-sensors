@@ -107,6 +107,13 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.is_mode_jet_available,
     ),
     ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.LIGHTING_DISPLAY,
+        name="Display light",
+        icon="mdi:wall-sconce-round",
+        turn_off_fn=lambda x: x.device.set_lighting_display(False),
+        turn_on_fn=lambda x: x.device.set_lighting_display(True),
+    ),
+    ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AWHP_SILENT,
         name="Silent mode",
         icon="mdi:ear-hearing-off",
