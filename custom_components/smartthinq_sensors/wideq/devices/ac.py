@@ -35,7 +35,8 @@ SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
-SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@BRIGHTNESS_CONTROL"]
+SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
+SUPPORT_LIGHT_INV_SWITCH = [SUPPORT_LIGHT, "@BRIGHTNESS_CONTROL"]
 SUPPORT_PM = [
     SUPPORT_AIR_POLUTION,
     ["@PM1_0_SUPPORT", "@PM2_5_SUPPORT", "@PM10_SUPPORT"],
@@ -140,6 +141,8 @@ ADD_FEAT_POLL_INTERVAL = 300  # 5 minutes
 
 LIGHT_DISPLAY_OFF = ["@RAC_LED_OFF", "@AC_LED_OFF_W"]
 LIGHT_DISPLAY_ON = ["@RAC_LED_ON", "@AC_LED_ON_W"]
+LIGHT_DISPLAY_INV_OFF = ["@RAC_LED_ON", "@AC_LED_OFF_W"]
+LIGHT_DISPLAY_INV_ON = ["@RAC_LED_OFF", "@AC_LED_ON_W"]
 
 MODE_OFF = "@OFF"
 MODE_ON = "@ON"
@@ -581,9 +584,13 @@ class AirConditionerDevice(Device):
         return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
     @cached_property
-    def is_light_switch_supported(self):
-        """Return if AirClean mode is supported."""
-        return self._is_mode_supported(SUPPORT_LIGHT_SWITCH)
+    def supported_ligth_modes(self):
+        """Return light switch modes supported."""
+        if self._is_mode_supported(SUPPORT_LIGHT_SWITCH):
+            return {MODE_OFF: LIGHT_DISPLAY_OFF, MODE_ON: LIGHT_DISPLAY_ON}
+        if self._is_mode_supported(SUPPORT_LIGHT_INV_SWITCH):
+            return {MODE_OFF: LIGHT_DISPLAY_INV_OFF, MODE_ON: LIGHT_DISPLAY_INV_ON}
+        return None
 
     @cached_property
     def supported_mode_jet(self):
@@ -757,11 +764,11 @@ class AirConditionerDevice(Device):
 
     async def set_lighting_display(self, status: bool):
         """Set the lighting display on or off."""
-        if not self.is_light_switch_supported:
+        if not (supp_modes := self.supported_ligth_modes):
             raise ValueError("Light switching not supported")
 
         keys = self._get_cmd_keys(CMD_STATE_LIGHTING_DISPLAY)
-        modes = LIGHT_DISPLAY_ON if status else LIGHT_DISPLAY_OFF
+        modes = supp_modes[MODE_ON] if status else supp_modes[MODE_OFF]
         for mode in modes:
             if (lighting := self.model_info.enum_value(keys[2], mode)) is not None:
                 break
@@ -1178,13 +1185,13 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def lighting_display(self):
         """Return display lighting status."""
-        if not self._device.is_light_switch_supported:
+        if not (supp_modes := self._device.supported_ligth_modes):
             return None
         key = self._get_state_key(STATE_LIGHTING_DISPLAY)
         if (value := self.lookup_enum(key, True)) is None:
             return None
         return self._update_feature(
-            AirConditionerFeatures.LIGHTING_DISPLAY, value in LIGHT_DISPLAY_ON, False
+            AirConditionerFeatures.LIGHTING_DISPLAY, value in supp_modes[MODE_ON], False
         )
 
     @property
