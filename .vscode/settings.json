@@ -1,5 +1,4 @@
 {
-  "python.formatting.provider": "black",
   //"editor.formatOnSave": true
   // Added --no-cov to work around TypeError: message must be set
   // https://github.com/microsoft/vscode-python/issues/14067

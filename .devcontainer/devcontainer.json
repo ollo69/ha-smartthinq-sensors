@@ -14,21 +14,21 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "ms-python.python",
-                "github.vscode-pull-request-github",
-                "ryanluker.vscode-coverage-gutters",
-                "esbenp.prettier-vscode",
-                "ms-python.vscode-pylance"
+				"ms-python.black-formatter",
+				"ms-python.pylint",
+				"ms-python.vscode-pylance",
+				"visualstudioexptteam.vscodeintellicode",
+				"redhat.vscode-yaml",
+				"esbenp.prettier-vscode",
+				"GitHub.vscode-pull-request-github",
+                "ryanluker.vscode-coverage-gutters"
             ],
             "settings": {
                 "files.eol": "\n",
                 "editor.tabSize": 4,
                 "python.pythonPath": "/usr/bin/python3",
+				"python.testing.pytestArgs": ["--no-cov"],
                 "python.analysis.autoSearchPaths": false,
-                "python.linting.pylintEnabled": true,
-                "python.linting.enabled": true,
-                "python.formatting.provider": "black",
-                "python.formatting.blackPath": "/usr/local/py-utils/bin/black",
                 "editor.formatOnPaste": false,
                 "editor.formatOnSave": true,
                 "editor.formatOnType": true,
