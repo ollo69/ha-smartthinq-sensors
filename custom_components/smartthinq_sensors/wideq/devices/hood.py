@@ -12,31 +12,28 @@ from ..device_info import DeviceInfo
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
 
+CTRL_BASIC = "basicCtrl"
+
 STATE_LAMPLEVEL = "LampLevel"
 STATE_VENTLEVEL = "VentLevel"
 
-CMD_LAMPMODE = "lampOnOff"
 CMD_LAMPLEVEL = "lampLevel"
-CMD_VENTMODE = "ventOnOff"
 CMD_VENTLEVEL = "ventLevel"
 
-CMD_SET_VENTLAMP = "setCookStart"
+CMD_SET_VENTLAMP = "setVentLamp"
 
 KEY_DATASET = "dataSetList"
 KEY_HOODSTATE = "hoodState"
 
 CMD_VENTLAMP_DICT = {
     "command": "Set",
-    "ctrlKey": CMD_SET_VENTLAMP,
+    "ctrlKey": CTRL_BASIC,
     KEY_DATASET: {KEY_HOODSTATE: {}},
 }
 
 HOOD_CMD = {
     CMD_SET_VENTLAMP: CMD_VENTLAMP_DICT,
 }
-
-MODE_ENABLE = "ENABLE"
-MODE_DISABLE = "DISABLE"
 
 
 class LightLevel(Enum):
@@ -70,21 +67,6 @@ class HoodDevice(Device):
         return self._status
 
     # Settings
-    def _prepare_command_ventlamp(self):
-        """Prepare vent / lamp command."""
-        if not self._status:
-            return {}
-
-        status_data = self._status.data
-        vent_level = status_data.get(STATE_VENTLEVEL, "0")
-        lamp_level = status_data.get(STATE_LAMPLEVEL, "0")
-        return {
-            CMD_VENTMODE: MODE_ENABLE if vent_level != "0" else MODE_DISABLE,
-            CMD_VENTLEVEL: int(vent_level),
-            CMD_LAMPMODE: MODE_ENABLE if lamp_level != "0" else MODE_DISABLE,
-            CMD_LAMPLEVEL: int(lamp_level),
-        }
-
     def _prepare_command(self, ctrl_key, command, key, value):
         """
         Prepare command for specific device.
@@ -93,14 +75,9 @@ class HoodDevice(Device):
         if (cmd_key := HOOD_CMD.get(ctrl_key)) is None:
             return None
 
-        if ctrl_key == CMD_SET_VENTLAMP:
-            full_cmd = self._prepare_command_ventlamp()
-        else:
-            full_cmd = {}
-
         cmd = deepcopy(cmd_key)
         def_cmd = cmd[KEY_DATASET].get(KEY_HOODSTATE, {})
-        cmd[KEY_DATASET][KEY_HOODSTATE] = {**def_cmd, **full_cmd, **command}
+        cmd[KEY_DATASET][KEY_HOODSTATE] = {**def_cmd, **command}
 
         return cmd
 
@@ -125,8 +102,7 @@ class HoodDevice(Device):
             raise ValueError(f"Invalid light mode: {mode}")
 
         level = self._supported_light_modes[mode]
-        status = MODE_ENABLE if level != "0" else MODE_DISABLE
-        cmd = {CMD_LAMPMODE: status, CMD_LAMPLEVEL: int(level)}
+        cmd = {CMD_LAMPLEVEL: int(level)}
 
         await self.set(CMD_SET_VENTLAMP, cmd, key=STATE_LAMPLEVEL, value=level)
 
@@ -151,8 +127,7 @@ class HoodDevice(Device):
             raise ValueError(f"Invalid vent mode: {option}")
 
         level = self._supported_vent_speeds[option]
-        mode = MODE_ENABLE if level != "0" else MODE_DISABLE
-        cmd = {CMD_VENTMODE: mode, CMD_VENTLEVEL: int(level)}
+        cmd = {CMD_VENTLEVEL: int(level)}
 
         await self.set(CMD_SET_VENTLAMP, cmd, key=STATE_VENTLEVEL, value=level)
 
