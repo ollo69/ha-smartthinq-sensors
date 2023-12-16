@@ -77,6 +77,7 @@ class Monitor:
         self._work_id: str | None = None
         self._has_error = False
         self._invalid_credential_count = 0
+        self._error_log_count = 0
 
     def _raise_error(
         self,
@@ -85,19 +86,22 @@ class Monitor:
         not_logged=False,
         exc: Exception = None,
         exc_info=False,
-        warn_lev=True,
+        debug_count=0,
     ) -> None:
         """Log and raise error with different level depending on condition."""
 
         if not_logged and Monitor._client_connected:
             Monitor._client_connected = False
 
-        if self._has_error or not_logged or warn_lev:
+        self._error_log_count += 1
+        if self._error_log_count > debug_count:
+            self._has_error = True
+
+        if self._has_error or not_logged:
             log_lev = logging.WARNING
         else:
-            log_lev = logging.INFO
+            log_lev = logging.DEBUG
 
-        self._has_error = True
         _LOGGER.log(
             log_lev, "%s - Device: %s", msg, self._device_descr, exc_info=exc_info
         )
@@ -163,6 +167,7 @@ class Monitor:
 
             except core_exc.NotConnectedError:
                 # This exceptions occurs when APIv1 device is turned off
+                self._error_log_count = 0
                 if self._has_error:
                     _LOGGER.info(
                         "Connection is now available - Device: %s", self._device_descr
@@ -176,7 +181,7 @@ class Monitor:
                 continue
 
             except core_exc.FailedRequestError:
-                self._raise_error("Status update request failed", warn_lev=False)
+                self._raise_error("Status update request failed", debug_count=3)
 
             except core_exc.DeviceNotFound:
                 self._raise_error(
@@ -219,7 +224,7 @@ class Monitor:
             except (asyncio.TimeoutError, aiohttp.ServerTimeoutError) as exc:
                 # These are network errors, refresh client is not required
                 self._raise_error(
-                    "Connection to ThinQ failed. Timeout error", exc=exc, warn_lev=False
+                    "Connection to ThinQ failed. Timeout error", exc=exc, debug_count=3
                 )
 
             except aiohttp.ClientError as exc:
@@ -248,6 +253,7 @@ class Monitor:
 
                 _LOGGER.debug("No status available yet")
 
+        self._error_log_count = 0
         if self._has_error:
             _LOGGER.info("Connection is now available - Device: %s", self._device_descr)
             self._has_error = False
