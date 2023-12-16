@@ -51,6 +51,7 @@ PRESET_MODE_LOOKUP: dict[str, dict[str, HVACMode]] = {
     ACMode.ENERGY_SAVER.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
 }
 
+HVAC_MODE_NONE = "--"
 ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
 ATTR_SWING_VERTICAL = "swing_mode_vertical"
 SWING_PREFIX = ["Vertical", "Horizontal"]
@@ -199,6 +200,9 @@ class LGEACClimate(LGEClimate):
                 for key, mode in HVAC_MODE_LOOKUP.items()
                 if key in self._device.op_modes
             }
+            if not self._hvac_mode_lookup:
+                self._hvac_mode_lookup = {HVAC_MODE_NONE: HVACMode.AUTO}
+
         return self._hvac_mode_lookup
 
     def _available_preset_modes(self) -> dict[str, str]:
@@ -295,7 +299,8 @@ class LGEACClimate(LGEClimate):
 
         if not self._api.state.is_on:
             await self._device.power(True)
-        await self._device.set_op_mode(operation_mode)
+        if operation_mode != HVAC_MODE_NONE:
+            await self._device.set_op_mode(operation_mode)
         self._api.async_set_updated()
 
     @property

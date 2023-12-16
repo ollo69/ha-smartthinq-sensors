@@ -34,7 +34,7 @@ SUPPORT_VANE_VSWING = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_SWING_UP_DO
 SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
-SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, "@HOTWATER"]
+SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, ["@HOTWATER", "@HOTWATER_ONLY"]]
 SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
 SUPPORT_LIGHT_INV_SWITCH = [SUPPORT_LIGHT, "@BRIGHTNESS_CONTROL"]
 SUPPORT_PM = [
@@ -530,7 +530,7 @@ class AirConditionerDevice(Device):
         """Return if Water Heater is supported."""
         if not self.is_air_to_water:
             return False
-        return self._is_mode_supported(SUPPORT_HOT_WATER)
+        return any(self._is_mode_supported(SUPPORT_HOT_WATER))
 
     @cached_property
     def op_modes(self):
