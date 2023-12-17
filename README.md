@@ -216,7 +216,11 @@ text_width: 4em # adjusts the text width
 Code hidden, click to expand
   </summary>
 
+_Ensure that advance mode is enabled for your account else you won't see the resources page. **Your User** > **Advanced Mode**. Toggle to true._
+
 Place this file in `/config/www/laundry.js`, and add a custom resource in **HA UI** > **Sidebar** > **Config** > **Dashboards** > **Resources** > **Plus** > **Add `/local/laundry.js`**.
+
+In newer HA versions, you can find the custom resource page in **HA UI** > **Sidebar** > **Settings** > **Dashboards** > **[3-dots, top right]** > **Resources** **+ Add Resources** > **Add `/local/laundry.js`**
 
 ```js
 class LaundryCard extends HTMLElement {
