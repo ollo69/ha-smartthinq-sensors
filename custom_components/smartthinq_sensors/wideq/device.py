@@ -181,7 +181,7 @@ class Monitor:
                 continue
 
             except core_exc.FailedRequestError:
-                self._raise_error("Status update request failed", debug_count=3)
+                self._raise_error("Status update request failed", debug_count=2)
 
             except core_exc.DeviceNotFound:
                 self._raise_error(
@@ -224,13 +224,15 @@ class Monitor:
             except (asyncio.TimeoutError, aiohttp.ServerTimeoutError) as exc:
                 # These are network errors, refresh client is not required
                 self._raise_error(
-                    "Connection to ThinQ failed. Timeout error", exc=exc, debug_count=3
+                    "Connection to ThinQ failed. Timeout error", exc=exc, debug_count=2
                 )
 
             except aiohttp.ClientError as exc:
                 # These are network errors, refresh client is not required
                 self._raise_error(
-                    "Connection to ThinQ failed. Network connection error", exc=exc
+                    "Connection to ThinQ failed. Network connection error",
+                    exc=exc,
+                    debug_count=2,
                 )
 
             except Exception as exc:  # pylint: disable=broad-except

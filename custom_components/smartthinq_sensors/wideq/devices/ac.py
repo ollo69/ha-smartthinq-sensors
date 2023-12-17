@@ -107,6 +107,7 @@ CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
 # AWHP Section
+STATE_AWHP_TEMP_MODE = ["AwhpTempSwitch", "airState.miscFuncState.awhpTempSwitch"]
 STATE_WATER_IN_TEMP = ["WaterInTempCur", "airState.tempState.inWaterCurrent"]
 STATE_WATER_OUT_TEMP = ["WaterTempCur", "airState.tempState.outWaterCurrent"]
 STATE_WATER_MIN_TEMP = ["WaterTempCoolMin", "airState.tempState.waterTempCoolMin"]
@@ -149,6 +150,9 @@ MODE_ON = "@ON"
 
 MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
 MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
+
+AWHP_MODE_AIR = "@AIR"
+AWHP_MODE_WATER = "@WATER"
 
 ZONE_OFF = "0"
 ZONE_ON = "1"
@@ -374,7 +378,8 @@ class AirConditionerDevice(Device):
     def _temperature_range(self):
         """Get valid temperature range for model."""
 
-        if self.is_air_to_water:
+        temp_mode = self._status.awhp_temp_mode
+        if temp_mode and temp_mode == AWHP_MODE_WATER:
             min_temp = self._status.water_target_min_temp or AWHP_MIN_TEMP
             max_temp = self._status.water_target_max_temp or AWHP_MAX_TEMP
         else:
@@ -967,6 +972,7 @@ class AirConditionerStatus(DeviceStatus):
         self._operation = None
         self._airmon_on = None
         self._filter_use_time_inverted = True
+        self._current_temp = None
 
     def _str_to_temp(self, str_temp):
         """Convert a string to either an `int` or a `float` temperature."""
@@ -1107,11 +1113,24 @@ class AirConditionerStatus(DeviceStatus):
         return value == MODE_ON
 
     @property
-    def current_temp(self):
-        """Return current temperature."""
+    def room_temp(self):
+        """Return room temperature."""
         key = self._get_state_key(STATE_CURRENT_TEMP)
         value = self._str_to_temp(self._data.get(key))
         return self._update_feature(AirConditionerFeatures.ROOM_TEMP, value, False)
+
+    @property
+    def current_temp(self):
+        """Return current temperature."""
+        if self._current_temp is None:
+            curr_temp = None
+            mode = self.awhp_temp_mode
+            if mode and mode == AWHP_MODE_WATER:
+                curr_temp = self.water_out_current_temp
+            if curr_temp is None:
+                curr_temp = self.room_temp
+            self._current_temp = curr_temp
+        return self._current_temp
 
     @property
     def target_temp(self):
@@ -1267,6 +1286,17 @@ class AirConditionerStatus(DeviceStatus):
         )
 
     @property
+    def awhp_temp_mode(self):
+        """Return if AWHP is set in air or water mode."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_AWHP_TEMP_MODE)
+        if (value := self.lookup_enum(key, True)) is not None:
+            if value == AWHP_MODE_AIR:
+                return AWHP_MODE_AIR
+        return AWHP_MODE_WATER
+
+    @property
     def water_in_current_temp(self):
         """Return AWHP in water current temperature."""
         if not self._device.is_air_to_water:
@@ -1358,7 +1388,7 @@ class AirConditionerStatus(DeviceStatus):
 
     def _update_features(self):
         _ = [
-            self.current_temp,
+            self.room_temp,
             self.energy_current,
             self.filters_life,
             self.humidity,

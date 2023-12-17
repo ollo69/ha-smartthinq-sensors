@@ -341,16 +341,7 @@ class LGEACClimate(LGEClimate):
     @property
     def current_temperature(self) -> float:
         """Return the current temperature."""
-        curr_temp = None
-        if self._device.is_air_to_water:
-            curr_temp = self._api.state.device_features.get(
-                AirConditionerFeatures.WATER_OUT_TEMP
-            )
-        if curr_temp is None:
-            curr_temp = self._api.state.device_features.get(
-                AirConditionerFeatures.ROOM_TEMP
-            )
-        return curr_temp
+        return self._api.state.current_temp
 
     @property
     def current_humidity(self) -> int | None:
