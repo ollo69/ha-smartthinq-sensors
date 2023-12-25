@@ -1,6 +1,6 @@
 """LG SmartThinQ constants."""
 
-from .core_enum import StrEnum
+from .backports.enum import StrEnum
 
 # default core settings
 DEFAULT_COUNTRY = "US"
