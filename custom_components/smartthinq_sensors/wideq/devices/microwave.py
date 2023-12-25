@@ -4,8 +4,8 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, time
 from enum import Enum
-from functools import cached_property
 
+from ..backports.functools import cached_property
 from ..const import BIT_OFF, MicroWaveFeatures, StateOptions
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus

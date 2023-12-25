@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from functools import cached_property
 import logging
 
+from ..backports.functools import cached_property
 from ..const import AirConditionerFeatures, TemperatureUnit
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
