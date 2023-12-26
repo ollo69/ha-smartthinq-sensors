@@ -301,6 +301,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
+    if discovered_devices is None:
+        raise ConfigEntryNotReady("ThinQ platform not ready: no devices found.")
+
     # remove device not available anymore
     dev_ids = [v for ids in discovered_devices.values() for v in ids]
     cleanup_orphan_lge_devices(hass, entry.entry_id, dev_ids)
@@ -538,6 +541,11 @@ async def lge_devices_setup(
 
     wrapped_devices: dict[DeviceType, list[LGEDevice]] = {}
     unsupported_devices: dict[DeviceType, list[ThinQDeviceInfo]] = {}
+
+    # if client device is None somenthing is wrong
+    if (client_devices := client.devices) is None:
+        return wrapped_devices, unsupported_devices, discovered_devices
+
     new_devices = {}
     if discovered_devices is None:
         discovered_devices = {}
@@ -547,7 +555,7 @@ async def lge_devices_setup(
     if hass.config.units.temperature_unit != UnitOfTemperature.CELSIUS:
         temp_unit = TemperatureUnit.FAHRENHEIT
 
-    for device_info in client.devices:
+    for device_info in client_devices:
         device_id = device_info.device_id
         if device_id in discovered_devices:
             new_devices[device_id] = discovered_devices[device_id]
