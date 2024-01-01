@@ -1298,6 +1298,7 @@ class ClientAsync:
         """Load dict with available devices."""
         if self._session and (self._devices is None or force_update):
             if (new_devices := await self._session.get_devices()) is None:
+                self._devices = None
                 return
             if self.emulation:
                 # for debug

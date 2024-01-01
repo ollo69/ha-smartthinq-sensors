@@ -542,6 +542,9 @@ async def lge_devices_setup(
     wrapped_devices: dict[DeviceType, list[LGEDevice]] = {}
     unsupported_devices: dict[DeviceType, list[ThinQDeviceInfo]] = {}
 
+    if not client.has_devices:
+        await client.refresh_devices()
+
     # if client device is None somenthing is wrong
     if (client_devices := client.devices) is None:
         return wrapped_devices, unsupported_devices, discovered_devices
