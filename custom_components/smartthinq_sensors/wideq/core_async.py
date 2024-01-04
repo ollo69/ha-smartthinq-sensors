@@ -107,6 +107,10 @@ _LG_SSL_CIPHERS = (
 _COMMON_LANG_URI_ID = "langPackCommonUri"
 _LOCAL_LANG_FILE = "local_lang_pack.json"
 
+_HOME_ID = "homeId"
+_HOME_NAME = "homeName"
+_HOME_CURRENT = "currentHomeYn"
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -999,6 +1003,7 @@ class Session:
         """Initialize session object."""
         self._auth = auth
         self.session_id = session_id
+        self._homes: dict | None = None
         self._common_lang_pack_url = None
 
     @property
@@ -1064,10 +1069,74 @@ class Session:
             self._auth.user_number,
         )
 
+    async def _get_homes(self) -> dict | None:
+        """Get a dict of homes associated with the user's account."""
+        if self._homes is not None:
+            return self._homes
+
+        homes = await self.get2("service/homes")
+        if not isinstance(homes, dict):
+            _LOGGER.warning("LG API return invalid homes information: '%s'", homes)
+            return None
+
+        _LOGGER.debug("Received homes: %s", homes)
+        loaded_homes = {}
+        homes_list = as_list(homes.get("item", []))
+        for home in homes_list:
+            if home_id := home.get(_HOME_ID):
+                loaded_homes[home_id] = {
+                    _HOME_NAME: home.get(_HOME_NAME, "unamed home"),
+                    _HOME_CURRENT: home.get(_HOME_CURRENT, "N"),
+                }
+
+        if loaded_homes:
+            self._homes = loaded_homes
+        return loaded_homes
+
+    async def _get_home_devices(self, home_id: str) -> list[dict] | None:
+        """
+        Get a list of devices associated with the user's home_id.
+        Return information about the devices.
+        """
+        dashboard = await self.get2(f"service/homes/{home_id}")
+        if not isinstance(dashboard, dict):
+            _LOGGER.warning(
+                "LG API return invalid devices information for home_id %s: '%s'",
+                home_id,
+                dashboard,
+            )
+            return None
+
+        if self._common_lang_pack_url is None:
+            if _COMMON_LANG_URI_ID in dashboard:
+                self._common_lang_pack_url = dashboard[_COMMON_LANG_URI_ID]
+            else:
+                self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
+        return as_list(dashboard.get("devices", []))
+
     async def get_devices(self) -> list[dict] | None:
         """
         Get a list of devices associated with the user's account.
         Return information about the devices.
+        """
+        if not (homes := await self._get_homes()):
+            _LOGGER.warning("Not possible to determinate a valid home_id")
+            return None
+
+        valid_home = False
+        devices_list = []
+        for home_id in homes:
+            if (devices := await self._get_home_devices(home_id)) is None:
+                continue
+            valid_home = True
+            devices_list.extend(devices)
+
+        return devices_list if valid_home else None
+
+    async def get_devices_dashboard(self) -> list[dict] | None:
+        """
+        Get a list of devices associated with the user's account.
+        Return information about the devices based on old API call
         """
         dashboard = await self.get2("service/application/dashboard")
         if not isinstance(dashboard, dict):
