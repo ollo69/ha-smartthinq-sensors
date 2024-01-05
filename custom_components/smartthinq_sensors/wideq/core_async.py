@@ -1004,6 +1004,7 @@ class Session:
         self._auth = auth
         self.session_id = session_id
         self._homes: dict | None = None
+        self._use_homes = False
         self._common_lang_pack_url = None
 
     @property
@@ -1114,10 +1115,10 @@ class Session:
                 self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
         return as_list(dashboard.get("devices", []))
 
-    async def get_devices(self) -> list[dict] | None:
+    async def get_devices_homes(self) -> list[dict] | None:
         """
         Get a list of devices associated with the user's account.
-        Return information about the devices.
+        Return information about the devices based on homes API call.
         """
         if not (homes := await self._get_homes()):
             _LOGGER.warning("Not possible to determinate a valid home_id")
@@ -1136,12 +1137,12 @@ class Session:
     async def get_devices_dashboard(self) -> list[dict] | None:
         """
         Get a list of devices associated with the user's account.
-        Return information about the devices based on old API call
+        Return information about the devices based on dashboard API call.
         """
         dashboard = await self.get2("service/application/dashboard")
         if not isinstance(dashboard, dict):
             _LOGGER.warning(
-                "LG API return invalid devices information: '%s'", dashboard
+                "LG dashboard API return invalid devices information: '%s'", dashboard
             )
             return None
         if self._common_lang_pack_url is None:
@@ -1150,6 +1151,18 @@ class Session:
             else:
                 self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
         return as_list(dashboard.get("item", []))
+
+    async def get_devices(self) -> list[dict] | None:
+        """
+        Get a list of devices associated with the user's account.
+        Return information about the devices.
+        """
+        if not self._use_homes:
+            if (devices := await self.get_devices_dashboard()) is not None:
+                return devices
+            _LOGGER.info("Switching to homes method to retrieve devices")
+            self._use_homes = True
+        return await self.get_devices_homes()
 
     async def monitor_start(self, device_id):
         """
