@@ -11,5 +11,5 @@ tts:
 
 logger:
   default: info
-  logs:
-    custom_components.smartthinq_sensors: debug
+#  logs:
+#    custom_components.smartthinq_sensors: debug

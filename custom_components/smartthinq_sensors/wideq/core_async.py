@@ -48,12 +48,14 @@ LOG_AUTH_INFO = False
 
 # v2
 V2_API_KEY = "VGhpblEyLjAgU0VSVklDRQ=="
-V2_CLIENT_ID = "65260af7e8e6547b51fdccf930097c51eb9885a508d3fddfa9ee6cdec22ae1bd"
+# V2_CLIENT_ID = "65260af7e8e6547b51fdccf930097c51eb9885a508d3fddfa9ee6cdec22ae1bd"
+V2_CLIENT_ID = "c713ea8e50f657534ff8b9d373dfebfc2ed70b88285c26b8ade49868c0b164d9"
 V2_SVC_PHASE = "OP"
 V2_APP_LEVEL = "PRD"
-V2_APP_OS = "LINUX"
+V2_APP_OS = "ANDROID"  # "LINUX"
 V2_APP_TYPE = "NUTS"
-V2_APP_VER = "3.0.1700"
+V2_APP_VER = "5.0.1200"  # "3.0.1700"
+V2_THINQ_APP_VER = "LG ThinQ/5.0.12120"
 
 # new
 V2_GATEWAY_URL = "https://route.lgthinq.com:46030/v1/service/application/gateway-uri"
@@ -107,6 +109,7 @@ _LG_SSL_CIPHERS = (
 _COMMON_LANG_URI_ID = "langPackCommonUri"
 _LOCAL_LANG_FILE = "local_lang_pack.json"
 
+_API_USE_HOMES = False
 _HOME_ID = "homeId"
 _HOME_NAME = "homeName"
 _HOME_CURRENT = "currentHomeYn"
@@ -175,6 +178,7 @@ class CoreAsync:
         self._language = language
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._oauth_url = oauth_url
+        self._client_id = None
         self._lang_pack_url = None
 
         if session:
@@ -211,6 +215,20 @@ class CoreAsync:
             self._session = lg_client_session()
         return self._session
 
+    def _get_client_id(self, user_number: str | None = None) -> str:
+        """Generate a new clent ID or return existing."""
+        if self._client_id is not None:
+            return self._client_id
+        if user_number is None:
+            return None
+
+        hash_object = hashlib.sha256()
+        hash_object.update(
+            (user_number + datetime.utcnow().strftime("%Y%m%d%H%M%S")).encode("utf8")
+        )
+        self._client_id = hash_object.hexdigest()
+        return self._client_id
+
     @staticmethod
     async def _get_json_resp(response: aiohttp.ClientResponse) -> dict:
         """Try to get the json content from request response."""
@@ -246,10 +264,12 @@ class CoreAsync:
     @staticmethod
     def _thinq2_headers(
         extra_headers: dict | None = None,
+        client_id: str | None = None,
         access_token: str | None = None,
         user_number: str | None = None,
         country=DEFAULT_COUNTRY,
         language=DEFAULT_LANGUAGE,
+        security_key=False,
     ) -> dict:
         """Prepare API2 header."""
 
@@ -257,7 +277,8 @@ class CoreAsync:
             "Accept": "application/json",
             "Content-type": "application/json;charset=UTF-8",
             "x-api-key": V2_API_KEY,
-            "x-client-id": V2_CLIENT_ID,
+            # "x-app-version": V2_THINQ_APP_VER,
+            "x-client-id": client_id or V2_CLIENT_ID,
             "x-country-code": country,
             "x-language-code": language,
             "x-message-id": gen_uuid(),
@@ -267,8 +288,10 @@ class CoreAsync:
             "x-thinq-app-os": V2_APP_OS,
             "x-thinq-app-type": V2_APP_TYPE,
             "x-thinq-app-ver": V2_APP_VER,
-            "x-thinq-security-key": SECURITY_KEY,
         }
+
+        if security_key:
+            headers["x-thinq-security-key"] = SECURITY_KEY
 
         if access_token:
             headers["x-emp-token"] = access_token
@@ -303,9 +326,11 @@ class CoreAsync:
 
         _LOGGER.debug("thinq2_get before: %s", url)
 
+        client_id = self._get_client_id(user_number)
         async with self._get_session().get(
             url=url,
             headers=self._thinq2_headers(
+                client_id=client_id,
                 access_token=access_token,
                 user_number=user_number,
                 extra_headers=headers or {},
@@ -338,15 +363,18 @@ class CoreAsync:
 
         _LOGGER.debug("lgedm2_post before: %s", url)
 
+        client_id = self._get_client_id(user_number)
         async with self._get_session().post(
             url=url,
             json=data if is_api_v2 else {DATA_ROOT: data},
             headers=self._thinq2_headers(
+                client_id=client_id,
                 access_token=access_token,
                 user_number=user_number,
                 extra_headers=headers or {},
                 country=self._country,
                 language=self._language,
+                security_key=True,
             ),
             timeout=self._timeout,
             raise_for_status=False,
@@ -1004,7 +1032,6 @@ class Session:
         self._auth = auth
         self.session_id = session_id
         self._homes: dict | None = None
-        self._use_homes = False
         self._common_lang_pack_url = None
 
     @property
@@ -1157,11 +1184,8 @@ class Session:
         Get a list of devices associated with the user's account.
         Return information about the devices.
         """
-        if not self._use_homes:
-            if (devices := await self.get_devices_dashboard()) is not None:
-                return devices
-            _LOGGER.info("Switching to homes method to retrieve devices")
-            self._use_homes = True
+        if not _API_USE_HOMES:
+            return await self.get_devices_dashboard()
         return await self.get_devices_homes()
 
     async def monitor_start(self, device_id):
