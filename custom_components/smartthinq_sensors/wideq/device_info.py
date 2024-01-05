@@ -170,9 +170,10 @@ class DeviceInfo:
         """Return the device firmware version."""
         if fw_ver := self._data.get("fwVer"):
             return fw_ver
-        if "modemInfo" in self._data:
-            if fw_ver := self._data["modemInfo"].get("appVersion"):
-                return fw_ver
+        if (fw_ver := self._data.get("modemInfo")) is not None:
+            if isinstance(fw_ver, dict):
+                return fw_ver.get("appVersion")
+            return fw_ver
         return None
 
     @property
