@@ -4,6 +4,7 @@ A low-level, general abstraction for the LG SmartThinQ API.
 from __future__ import annotations
 
 import asyncio
+import awsiot
 import base64
 from datetime import datetime
 import hashlib
@@ -703,6 +704,9 @@ class CoreAsync:
         )
 
         return out["access_token"], out["expires_in"]
+
+    async def register_mqtt(self, user_number: str):
+        """Connect to MQTT server for on event update."""
 
 
 class Gateway:
