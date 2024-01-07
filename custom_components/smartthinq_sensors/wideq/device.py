@@ -579,7 +579,7 @@ class Device:
         if self._should_poll or self.client.emulation:
             return None
 
-        payload = await self._client.session.device_v2_controls(
+        result = await self._client.session.device_v2_controls(
             self._device_info.device_id,
             ctrl_key,
             command,
@@ -588,7 +588,6 @@ class Device:
             ctrl_path=ctrl_path,
         )
 
-        result = payload.get("result")
         if not result or "data" not in result:
             return None
         return result["data"]

@@ -347,8 +347,7 @@ class CoreAsync:
         if "resultCode" not in out:
             raise exc.APIError("-1", out)
 
-        res = self._manage_lge_result(out, True)
-        return res["result"]
+        return self._manage_lge_result(out, True)
 
     async def lgedm2_post(
         self,
@@ -398,7 +397,7 @@ class CoreAsync:
                         raise API2_ERRORS[code](message)
                     raise exc.APIError(message, code)
 
-            return result
+            return result.get("result")
 
         msg = result.get(DATA_ROOT)
         if not msg:
