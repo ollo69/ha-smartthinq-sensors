@@ -4,7 +4,12 @@ A low-level, general abstraction for the LG SmartThinQ API.
 from __future__ import annotations
 
 import asyncio
-import awsiot
+from awscrt import mqtt
+from awsiot import mqtt_connection_builder
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import NameOID
 import base64
 from datetime import datetime
 import hashlib
@@ -14,6 +19,7 @@ import logging
 import os
 import ssl
 import sys
+import re
 from typing import Any
 from urllib.parse import (
     ParseResult,
@@ -60,6 +66,7 @@ V2_THINQ_APP_VER = "LG ThinQ/5.0.12120"
 
 # new
 V2_GATEWAY_URL = "https://route.lgthinq.com:46030/v1/service/application/gateway-uri"
+V2_ROUTE_URL = "https://common.lgthinq.com/route"
 V2_AUTH_PATH = "/oauth/1.0/oauth2/token"
 V2_USER_INFO = "/users/profile"
 V2_EMP_SESS_URL = "https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession"
@@ -705,8 +712,206 @@ class CoreAsync:
 
         return out["access_token"], out["expires_in"]
 
-    async def register_mqtt(self, user_number: str):
+    #
+    # MQTT section
+    #
+
+    @staticmethod
+    def _get_private_key(
+        user_number: str, storage_path: str | None = None
+    ) -> rsa.RSAPrivateKey:
+        """Get private key required to register with MQTT server."""
+
+        key: rsa.RSAPrivateKey | None = None
+        if storage_path is not None:
+            try:
+                with open(f"{storage_path}thinq_mqtt_key.pem", "rb") as f:
+                    key = serialization.load_pem_private_key(
+                        data=f.read(),
+                        password=user_number.encode(),
+                    )
+            except (OSError, ValueError):
+                pass
+
+            if key is not None:
+                return key
+
+        key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+
+        # Write our certificate out to disk.
+        if storage_path is not None:
+            with open(f"{storage_path}thinq_mqtt_key.pem", "wb") as f:
+                f.write(
+                    key.private_bytes(
+                        encoding=serialization.Encoding.PEM,
+                        format=serialization.PrivateFormat.TraditionalOpenSSL,
+                        encryption_algorithm=serialization.BestAvailableEncryption(
+                            user_number.encode()
+                        ),
+                    )
+                )
+
+        return key
+
+    @staticmethod
+    def _get_csr(
+        key: rsa.RSAPrivateKey, storage_path: str | None = None
+    ) -> x509.CertificateSigningRequest:
+        """Get certificate signing request to register with MQTT server."""
+
+        csr: x509.CertificateSigningRequest | None = None
+        if storage_path is not None:
+            try:
+                with open(f"{storage_path}thinq_mqtt_csr.pem", "rb") as f:
+                    csr = serialization.load_pem_public_key(
+                        data=f.read(),
+                    )
+            except (OSError, ValueError):
+                pass
+
+            if csr is not None:
+                return csr
+
+        csr = (
+            x509.CertificateSigningRequestBuilder()
+            .subject_name(
+                x509.Name(
+                    [
+                        x509.NameAttribute(NameOID.COMMON_NAME, "AWS IoT Certificate"),
+                        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Amazon"),
+                    ]
+                )
+            )
+            .sign(key, hashes.SHA256())
+        )
+
+        # Write our CSR out to disk.
+        if storage_path is not None:
+            with open(f"{storage_path}thinq_mqtt_csr.pem", "wb") as f:
+                f.write(csr.public_bytes(serialization.Encoding.PEM))
+
+        return csr
+
+    @staticmethod
+    def _get_ca_root_url(mqtt_url: str) -> str | None:
+        """Get the CA root for certificate request."""
+
+        # AWS endpoint
+        if re.match("^([^.]+)-ats.iot.([^.]+).amazonaws.com", mqtt_url):
+            return "https://www.amazontrust.com/repository/AmazonRootCA1.pem"
+        # LG owned certificate - Comodo CA
+        if re.match("^([^.]+).iot.ruic.lgthinq.com", mqtt_url):
+            return "http://www.tbs-x509.com/Comodo_AAA_Certificate_Services.crt"
+        return None
+
+    async def _request_mqtt_info(
+        self,
+        thinq2_uri: str,
+        access_token: str,
+        user_number: str,
+        csr: x509.CertificateSigningRequest,
+    ) -> dict | None:
+        """Get the CA root for certificate request."""
+
+        url = urljoin(thinq2_uri, "service/users/client")
+        result = await self.lgedm2_post(
+            url,
+            data={},
+            access_token=access_token,
+            user_number=user_number,
+            is_api_v2=True,
+        )
+
+        csr_str = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+        url = urljoin(thinq2_uri, "service/users/client/certificate")
+        result = await self.lgedm2_post(
+            url,
+            data={"csr": csr_str},
+            access_token=access_token,
+            user_number=user_number,
+            is_api_v2=True,
+        )
+
+        return result
+
+    async def register_mqtt(
+        self, thinq2_url: str, access_token: str, user_number: str
+    ) -> bool:
         """Connect to MQTT server for on event update."""
+        urls = await self.thinq2_get(V2_ROUTE_URL)
+        if "mqttServer" not in urls:
+            return False
+
+        key = self._get_private_key(user_number)
+        csr = self._get_csr(key)
+        mqtt_url = urlparse(urls["mqttServer"])
+        if (ca_root_url := self._get_ca_root_url(mqtt_url.hostname)) is None:
+            return False
+
+        mqtt_info = await self._request_mqtt_info(
+            thinq2_url, access_token, user_number, csr
+        )
+        if mqtt_info is None:
+            return False
+        if (mqtt_cert := mqtt_info.get("certificatePem")) is None:
+            return False
+        if not (mqtt_topics := mqtt_info.get("subscriptions")):
+            return False
+        _LOGGER.warning("MQTT Topics to subscribe: %s", mqtt_topics)
+
+        if (root_cert := await self.http_get_bytes(ca_root_url)) is None:
+            return False
+
+        private_key = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+
+        _LOGGER.warning("Connecting to mqtt")
+        mqtt_connection = mqtt_connection_builder.mtls_from_bytes(
+            endpoint=mqtt_url.hostname,
+            cert_bytes=mqtt_cert.encode("utf-8"),
+            pri_key_bytes=private_key,
+            ca_bytes=root_cert,
+            client_id=self._get_client_id(user_number),
+            clean_session=False,
+            keep_alive_secs=30,
+            # on_connection_interrupted=on_connection_interrupted,
+            # on_connection_resumed=on_connection_resumed,
+            # http_proxy_options=proxy_options,
+            # on_connection_success=on_connection_success,
+            # on_connection_failure=on_connection_failure,
+            # on_connection_closed=on_connection_closed
+        )
+
+        connect_future = mqtt_connection.connect()
+        connect_future.result(5)
+        _LOGGER.warning("Connected to mqtt")
+
+        def on_message_received(topic, payload, dup, qos, retain, **kwargs):
+            _LOGGER.warning("Received message from topic %s: %s", topic, payload)
+
+        # Subscribe
+        for message_topic in mqtt_topics:
+            _LOGGER.warning("Subscribing to topic %s", message_topic)
+            subscribe_future, _ = mqtt_connection.subscribe(
+                topic=message_topic,
+                qos=mqtt.QoS.AT_LEAST_ONCE,
+                callback=on_message_received,
+            )
+
+            subscribe_result = subscribe_future.result(5)
+            _LOGGER.warning(
+                "Subscribed %s with %s",
+                subscribe_result["topic"],
+                subscribe_result["qos"],
+            )
+
+        return True
 
 
 class Gateway:
@@ -1573,6 +1778,10 @@ class ClientAsync:
         except Exception:  # pylint: disable=broad-except
             await core.close()
             raise
+
+        await core.register_mqtt(
+            gateway.thinq2_uri, client._auth.access_token, client._auth.user_number
+        )
 
         return client
 
