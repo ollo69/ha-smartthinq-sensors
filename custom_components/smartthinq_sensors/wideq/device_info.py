@@ -33,7 +33,9 @@ class DeviceType(Enum):
     FAN = 405
     WATER_HEATER = 406
     AIR_PURIFIER_FAN = 410
-    ROBOT_KING = 501
+    ROBOT_VACUUM = 501
+    STICK_VACUUM = 504
+    CLOUD_GATEWAY = 603
     TV = 701
     BOILER = 801
     SPEAKER = 901

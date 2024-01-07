@@ -1281,7 +1281,6 @@ class Session:
                 }
             )
             res = await self.post("rti/rtiControl", payload)
-            _LOGGER.debug("Set V1 result: %s", str(res))
 
         return res
 
@@ -1313,7 +1312,6 @@ class Session:
 
         if payload:
             res = await self.post2(cmd_path, payload)
-            _LOGGER.debug("Set V2 result: %s", str(res))
 
         return res
 
