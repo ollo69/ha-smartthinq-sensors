@@ -20,7 +20,7 @@ import os
 import ssl
 import sys
 import re
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import (
     ParseResult,
     parse_qs,
@@ -838,7 +838,11 @@ class CoreAsync:
         return result
 
     async def register_mqtt(
-        self, thinq2_url: str, access_token: str, user_number: str
+        self,
+        thinq2_url: str,
+        access_token: str,
+        user_number: str,
+        update_callback: Callable[[str, bytes], None] | None = None,
     ) -> bool:
         """Connect to MQTT server for on event update."""
         urls = await self.thinq2_get(V2_ROUTE_URL)
@@ -892,8 +896,13 @@ class CoreAsync:
         connect_future.result(5)
         _LOGGER.warning("Connected to mqtt")
 
-        def on_message_received(topic, payload, dup, qos, retain, **kwargs):
+        def on_message_received(
+            topic: str, payload: bytes, dup: bool, qos: mqtt.QoS, retain: bool, **kwargs
+        ):
+            """Callback for payload received from subscribed topics."""
             _LOGGER.warning("Received message from topic %s: %s", topic, payload)
+            if update_callback and not retain:
+                update_callback(topic, payload)
 
         # Subscribe
         for message_topic in mqtt_topics:
@@ -1032,6 +1041,7 @@ class Auth:
         access_token: str | None = None,
         token_validity: str | None = None,
         user_number: str | None = None,
+        mqtt_started=False,
     ) -> None:
         """Initialize ThinQ authentication object."""
         self._gateway: Gateway = gateway
@@ -1042,6 +1052,7 @@ class Auth:
         )
         self.user_number = user_number
         self._token_created_on = datetime.utcnow() if access_token else datetime.min
+        self._mqtt_started = mqtt_started
 
     @property
     def gateway(self) -> Gateway:
@@ -1205,11 +1216,27 @@ class Auth:
             access_token,
             token_validity,
             self.user_number,
+            self._mqtt_started,
         )
 
     def refresh_gateway(self, gateway: Gateway) -> None:
         """Refresh the gateway."""
         self._gateway = gateway
+
+    async def start_mqtt(
+        self, update_callback: Callable[[str, bytes], None] | None = None
+    ) -> bool:
+        """Start MQTT connection."""
+        if self._mqtt_started:
+            return True
+        try:
+            gateway = self.gateway
+            self._mqtt_started = await gateway.core.register_mqtt(
+                gateway.thinq2_uri, self.access_token, self.user_number, update_callback
+            )
+        except Exception:  # pylint: disable=broad-except
+            return False
+        return self._mqtt_started
 
     def dump(self) -> dict:
         """Return a dict of dumped Auth class."""
@@ -1695,6 +1722,7 @@ class ClientAsync:
         self._auth = await self.auth.refresh(True)
         self._session = self.auth.start_session()
         await self._load_devices()
+        await self.auth.start_mqtt(self.update_callback)
 
     async def refresh_auth(self) -> None:
         """Refresh auth token if requested."""
@@ -1702,6 +1730,10 @@ class ClientAsync:
             self._auth = await self._session.refresh_auth()
         else:
             await self.refresh()
+
+    def update_callback(self, topic: str, payload: bytes):
+        """Callback for MQTT update message."""
+        _LOGGER.warning("Received message from topic %s: %s", topic, payload)
 
     @classmethod
     async def from_user_login(
@@ -1778,10 +1810,6 @@ class ClientAsync:
         except Exception:  # pylint: disable=broad-except
             await core.close()
             raise
-
-        await core.register_mqtt(
-            gateway.thinq2_uri, client._auth.access_token, client._auth.user_number
-        )
 
         return client
 
