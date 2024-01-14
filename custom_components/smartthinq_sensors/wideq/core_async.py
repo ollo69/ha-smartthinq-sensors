@@ -875,13 +875,14 @@ class CoreAsync:
             encryption_algorithm=serialization.NoEncryption(),
         )
 
-        _LOGGER.warning("Connecting to mqtt")
+        _LOGGER.warning("Connecting to mqtt: %s:%s", mqtt_url.hostname, mqtt_url.port)
         mqtt_connection = mqtt_connection_builder.mtls_from_bytes(
             endpoint=mqtt_url.hostname,
+            port=mqtt_url.port,
+            client_id=self._get_client_id(user_number),
+            ca_bytes=root_cert,
             cert_bytes=mqtt_cert.encode("utf-8"),
             pri_key_bytes=private_key,
-            ca_bytes=root_cert,
-            client_id=self._get_client_id(user_number),
             clean_session=False,
             keep_alive_secs=30,
             # on_connection_interrupted=on_connection_interrupted,
@@ -1234,7 +1235,8 @@ class Auth:
             self._mqtt_started = await gateway.core.register_mqtt(
                 gateway.thinq2_uri, self.access_token, self.user_number, update_callback
             )
-        except Exception:  # pylint: disable=broad-except
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.warning("Error connecting to MQTT: %s", ex)
             return False
         return self._mqtt_started
 
