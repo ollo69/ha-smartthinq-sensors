@@ -29,7 +29,7 @@
                     "use_tls_v1": "Forçar o uso do protocolo TLSv1 (por vezes necessário)",
                     "exclude_dh": "Não usar a cifra DH (no caso de erro 'chave dh muito pequena')"
                 },
-                "description": "Insirir informações de acesso à conta SmartThinQ."
+                "description": "Inserir informações de acesso à conta SmartThinQ."
             },
             "url": {
                 "data": {
