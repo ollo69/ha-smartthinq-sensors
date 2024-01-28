@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from copy import deepcopy
 import json
+import logging
 from numbers import Number
 
 from .const import BIT_OFF, BIT_ON
@@ -17,6 +18,8 @@ TYPE_NUMBER = "number"
 TYPE_RANGE = "range"
 TYPE_REFERENCE = "reference"
 TYPE_STRING = "string"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 EnumValue = namedtuple("EnumValue", ["options"])
@@ -178,6 +181,11 @@ class ModelInfo(ABC):
     def decode_snapshot(self, data, key):
         """Decode status data."""
 
+    @property
+    def monitor_type(self) -> str | None:
+        """Return used monitor type."""
+        return None
+
 
 class ModelInfoV1(ModelInfo):
     """A description of a device model's capabilities for type V1."""
@@ -190,6 +198,7 @@ class ModelInfoV1(ModelInfo):
     def __init__(self, data):
         """Initialize the class."""
         super().__init__(data)
+        self._monitor_type = None
         self._bit_keys = {}
 
     @property
@@ -345,14 +354,26 @@ class ModelInfoV1(ModelInfo):
         return control
 
     @property
+    def monitor_type(self) -> str | None:
+        """Return used monitor type."""
+        if self._monitor_type is None:
+            self._monitor_type = self._data["Monitoring"]["type"]
+        return self._monitor_type
+
+    @property
     def byte_monitor_data(self):
         """Check that type of monitoring is BINARY(BYTE)."""
-        return self._data["Monitoring"]["type"] == "BINARY(BYTE)"
+        return self.monitor_type == "BINARY(BYTE)"
 
     @property
     def hex_monitor_data(self):
         """Check that type of monitoring is BINARY(HEX)."""
-        return self._data["Monitoring"]["type"] == "BINARY(HEX)"
+        return self.monitor_type == "BINARY(HEX)"
+
+    @property
+    def xml_monitor_data(self):
+        """Check that type of monitoring is XML."""
+        return self.monitor_type == "XML"
 
     def decode_monitor_byte(self, data):
         """Decode binary byte encoded status data."""
@@ -388,9 +409,23 @@ class ModelInfoV1(ModelInfo):
         return decoded
 
     @staticmethod
-    def decode_monitor_json(data):
+    def decode_monitor_xml(data):
+        """Decode a xml that encodes status data."""
+        _LOGGER.warning("Received XML data from device: %s", data)
+        return None
+
+    @staticmethod
+    def decode_monitor_json(data, mon_type):
         """Decode a bytestring that encodes JSON status data."""
-        return json.loads(data.decode("utf8"))
+        try:
+            return json.loads(data.decode("utf8"))
+        except json.JSONDecodeError:
+            _LOGGER.warning(
+                "Received data with invalid format from device. Type: %s - Data: %s",
+                mon_type,
+                data,
+            )
+            return None
 
     def decode_monitor(self, data):
         """Decode status data."""
@@ -399,7 +434,9 @@ class ModelInfoV1(ModelInfo):
             return self.decode_monitor_byte(data)
         if self.hex_monitor_data:
             return self.decode_monitor_hex(data)
-        return self.decode_monitor_json(data)
+        if self.xml_monitor_data:
+            return self.decode_monitor_xml(data)
+        return self.decode_monitor_json(data, self.monitor_type)
 
     @staticmethod
     def _get_current_temp_key(key: str, data):
@@ -421,7 +458,7 @@ class ModelInfoV1(ModelInfo):
 
     def decode_snapshot(self, data, key):
         """Decode status data."""
-        if self._data["Monitoring"]["type"] != "THINQ2":
+        if self.monitor_type != "THINQ2":
             return {}
 
         if key and key not in data:

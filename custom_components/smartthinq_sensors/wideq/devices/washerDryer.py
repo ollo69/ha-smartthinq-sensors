@@ -42,7 +42,7 @@ BIT_FEATURES = {
     WashDeviceFeatures.DAMPDRYBEEP: ["DampDryBeep", "dampDryBeep"],
     WashDeviceFeatures.DETERGENT: ["DetergentStatus", "ezDetergentState"],
     WashDeviceFeatures.DETERGENTLOW: ["DetergentRemaining", "detergentRemaining"],
-    WashDeviceFeatures.DOORCLOSE: ["DoorClose", "doorClose"],
+    WashDeviceFeatures.DOOROPEN: ["DoorClose", "doorClose"],
     WashDeviceFeatures.DOORLOCK: ["DoorLock", "doorLock"],
     WashDeviceFeatures.HANDIRON: ["HandIron", "handIron"],
     WashDeviceFeatures.MEDICRINSE: ["MedicRinse", "medicRinse"],
@@ -56,6 +56,8 @@ BIT_FEATURES = {
     WashDeviceFeatures.STEAMSOFTENER: ["SteamSoftener", "steamSoftener"],
     WashDeviceFeatures.TURBOWASH: ["TurboWash", "turboWash"],
 }
+
+INVERTED_BITS = [WashDeviceFeatures.DOOROPEN]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -651,7 +653,8 @@ class WMStatus(DeviceStatus):
         """Update features related to bit status."""
         index = 1 if self.is_info_v2 else 0
         for feature, keys in BIT_FEATURES.items():
-            status = self.lookup_bit(self._getkeys(keys[index]))
+            invert = feature in INVERTED_BITS
+            status = self.lookup_bit(self._getkeys(keys[index]), invert)
             self._update_feature(feature, status, False)
 
     def _update_features(self):

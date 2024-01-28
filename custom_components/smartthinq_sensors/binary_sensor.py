@@ -84,13 +84,6 @@ WASH_DEV_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
-        key=WashDeviceFeatures.DOORCLOSE,
-        name="Door close",
-        icon="mdi:alpha-o-box-outline",
-        icon_on="mdi:alpha-c-box",
-        entity_registry_enabled_default=False,
-    ),
-    ThinQBinarySensorEntityDescription(
         key=WashDeviceFeatures.DOORLOCK,
         name="Door lock",
         icon="mdi:lock-open-variant-outline",

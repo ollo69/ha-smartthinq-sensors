@@ -1030,20 +1030,27 @@ class DeviceStatus:
 
         # exception because doorlock bit
         # is not inside the model enum
-        if key == "DoorLock" and ret_val is None:
-            if str_val == "1":
+        door_locks = {"DoorLock": "1", "doorLock": "DOORLOCK_ON"}
+        if ret_val is None and key in door_locks:
+            if self.is_info_v2 and not str_val:
+                return None
+            if str_val == door_locks[key]:
                 return LABEL_BIT_ON
             return LABEL_BIT_OFF
 
         return ret_val
 
-    def lookup_bit(self, key):
+    def lookup_bit(self, key, invert=False):
         """Lookup bit value for a specific key of type enum."""
         enum_val = self.lookup_bit_enum(key)
         if enum_val is None:
             return None
-        bit_val = LOCAL_LANG_PACK.get(enum_val, StateOptions.OFF)
-        if bit_val == StateOptions.ON:
+        bit_val = LOCAL_LANG_PACK.get(enum_val)
+        if not bit_val:
+            return StateOptions.OFF
+        if not invert:
+            return bit_val
+        if bit_val == StateOptions.OFF:
             return StateOptions.ON
         return StateOptions.OFF
 
