@@ -376,12 +376,15 @@ class Device:
         client: ClientAsync,
         device_info: DeviceInfo,
         status: DeviceStatus | None = None,
+        *,
+        sub_device: str | None = None,
     ):
         """Create a wrapper for a `DeviceInfo` object associated with a Client."""
 
         self._client = client
         self._device_info = device_info
         self._status = status
+        self._sub_device = sub_device
         self._model_data = None
         self._model_info: ModelInfo | None = None
         self._model_lang_pack = None
@@ -396,6 +399,9 @@ class Device:
         # attributes for properties
         self._attr_unique_id = self._device_info.device_id
         self._attr_name = self._device_info.name
+        if sub_device:
+            self._attr_unique_id += f"-{sub_device}"
+            self._attr_name += f" {sub_device.capitalize()}"
 
         # for logging unknown states received
         self._unknown_states = []
@@ -456,7 +462,9 @@ class Device:
                 if self._model_data is None:
                     return False
 
-            self._model_info = ModelInfo.get_model_info(self._model_data)
+            self._model_info = ModelInfo.get_model_info(
+                self._model_data, self._sub_device
+            )
             if self._model_info is None:
                 return False
 

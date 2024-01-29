@@ -32,17 +32,24 @@ class ModelInfo(ABC):
     """The base abstract class for a device model's capabilities."""
 
     @staticmethod
-    def get_model_info(model_data: dict) -> ModelInfo | None:
+    def get_model_info(
+        model_data: dict, sub_device: str | None = None
+    ) -> ModelInfo | None:
         """Return the correct model info."""
-        if ModelInfoV2AC.is_valid_model_data(model_data):
+        if sub_device is not None:
+            data = {"Info": model_data["Info"], **model_data[sub_device]}
+        else:
+            data = model_data
+
+        if ModelInfoV2AC.is_valid_model_data(data):
             # this is new V2 model for AC
-            return ModelInfoV2AC(model_data)
-        if ModelInfoV1.is_valid_model_data(model_data):
+            return ModelInfoV2AC(data)
+        if ModelInfoV1.is_valid_model_data(data):
             # this is old V1 model
-            return ModelInfoV1(model_data)
-        if ModelInfoV2.is_valid_model_data(model_data):
+            return ModelInfoV1(data)
+        if ModelInfoV2.is_valid_model_data(data):
             # this is new V2 model
-            return ModelInfoV2(model_data)
+            return ModelInfoV2(data)
         return None
 
     @staticmethod
@@ -63,7 +70,7 @@ class ModelInfo(ABC):
         """Return the data dictionary"""
         if not self._data:
             return {}
-        return self._data.copy()
+        return deepcopy(self._data)
 
     @property
     @abstractmethod
