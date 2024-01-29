@@ -77,7 +77,7 @@ def get_lge_device(
             dev_list.extend(
                 [
                     WMDevice(client, device_info, sub_device=sub_device, sub_key=key)
-                    for key in get_sub_keys(device_info)
+                    for key in get_sub_keys(device_info, sub_device)
                 ]
             )
         return dev_list
