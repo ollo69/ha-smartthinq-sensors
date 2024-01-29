@@ -23,6 +23,7 @@ class DeviceType(Enum):
     DISHWASHER = 204
     TOWER_WASHER = 221
     TOWER_DRYER = 222
+    TOWER_WASHERDRYER = 223
     RANGE = 301
     MICROWAVE = 302
     COOKTOP = 303
@@ -60,8 +61,11 @@ WM_DEVICE_TYPES = [
     DeviceType.DRYER,
     DeviceType.TOWER_DRYER,
     DeviceType.TOWER_WASHER,
+    DeviceType.TOWER_WASHERDRYER,
     DeviceType.WASHER,
 ]
+
+WM_COMPLEX_DEVICES = {DeviceType.TOWER_WASHERDRYER: ["washer", "dryer"]}
 
 SET_TIME_DEVICE_TYPES = [
     DeviceType.MICROWAVE,

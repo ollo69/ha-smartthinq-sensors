@@ -6,6 +6,7 @@ from .const import TemperatureUnit
 from .core_async import ClientAsync
 from .device import Device
 from .device_info import (
+    WM_COMPLEX_DEVICES,
     WM_DEVICE_TYPES,
     DeviceInfo,
     DeviceType,
@@ -22,8 +23,15 @@ from .devices.microwave import MicroWaveDevice
 from .devices.range import RangeDevice
 from .devices.refrigerator import RefrigeratorDevice
 from .devices.styler import StylerDevice
-from .devices.washerDryer import WMDevice, get_sub_devices
+from .devices.washerDryer import WMDevice, get_sub_keys
 from .devices.waterheater import WaterHeaterDevice
+
+
+def _get_sub_devices(device_type: DeviceType) -> list[str | None]:
+    """Return a list of complex devices"""
+    if sub_devices := WM_COMPLEX_DEVICES.get(device_type):
+        return sub_devices
+    return [None]
 
 
 def get_lge_device(
@@ -63,9 +71,14 @@ def get_lge_device(
     if device_type == DeviceType.WATER_HEATER:
         return [WaterHeaterDevice(client, device_info, temp_unit)]
     if device_type in WM_DEVICE_TYPES:
-        main_dev = [WMDevice(client, device_info)]
-        return main_dev + [
-            WMDevice(client, device_info, sub_key=key)
-            for key in get_sub_devices(device_info)
-        ]
+        dev_list = []
+        for sub_device in _get_sub_devices(device_type):
+            dev_list.append(WMDevice(client, device_info, sub_device=sub_device))
+            dev_list.extend(
+                [
+                    WMDevice(client, device_info, sub_device=sub_device, sub_key=key)
+                    for key in get_sub_keys(device_info)
+                ]
+            )
+        return dev_list
     return None
