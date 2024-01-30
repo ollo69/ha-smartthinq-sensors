@@ -10,10 +10,12 @@ Supported devices are:
 - Dishwasher
 - Dryer
 - Fan
+- Hood
 - Microwave
 - Range
 - Refrigerator
 - Styler
+- Tower Washer-Dryer
 - Washer
 - Water Heater
 
