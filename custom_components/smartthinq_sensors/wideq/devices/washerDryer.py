@@ -397,7 +397,8 @@ class WMStatus(DeviceStatus):
         """Get current error."""
         if not self._error:
             keys = self._getkeys(["Error", "error"])
-            error = self.lookup_reference(keys, ref_key="title")
+            if (error := self.lookup_enum(keys)) is None:
+                error = self.lookup_reference(keys, ref_key="title")
             if not error:
                 self._error = STATE_WM_ERROR_OFF
             else:
