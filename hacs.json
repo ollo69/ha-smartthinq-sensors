@@ -1,5 +1,5 @@
 {
   "name": "SmartThinQ LGE Sensors",
   "content_in_root": false,
-  "homeassistant": "2023.8.0"
+  "homeassistant": "2023.10.0"
 }
