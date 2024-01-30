@@ -37,14 +37,17 @@ TEMP_UNIT_LOOKUP = {
 }
 
 DEVICE_ICONS = {
-    DeviceType.WASHER: "mdi:washing-machine",
-    DeviceType.DRYER: "mdi:tumble-dryer",
-    DeviceType.STYLER: "mdi:palette-swatch-outline",
     DeviceType.DISHWASHER: "mdi:dishwasher",
+    DeviceType.DRYER: "mdi:tumble-dryer",
     DeviceType.HOOD: "mdi:scent-off",
     DeviceType.MICROWAVE: "mdi:microwave",
-    DeviceType.REFRIGERATOR: "mdi:fridge-outline",
     DeviceType.RANGE: "mdi:stove",
+    DeviceType.REFRIGERATOR: "mdi:fridge-outline",
+    DeviceType.STYLER: "mdi:palette-swatch-outline",
+    DeviceType.TOWER_DRYER: "mdi:tumble-dryer",
+    DeviceType.TOWER_WASHER: "mdi:washing-machine",
+    DeviceType.TOWER_WASHERDRYER: "mdi:washing-machine",
+    DeviceType.WASHER: "mdi:washing-machine",
 }
 
 WASH_DEVICE_TYPES = [
