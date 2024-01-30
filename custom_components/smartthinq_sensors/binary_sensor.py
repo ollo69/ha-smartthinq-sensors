@@ -44,13 +44,6 @@ ATTR_OVEN_STATE = "oven_state"
 
 _LOGGER = logging.getLogger(__name__)
 
-RUN_COMPLETED_PREFIX = {
-    DeviceType.WASHER: "Wash",
-    DeviceType.DRYER: "Dry",
-    DeviceType.STYLER: "Style",
-    DeviceType.DISHWASHER: "Wash",
-}
-
 
 @dataclass
 class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
@@ -63,6 +56,7 @@ class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
 WASH_DEV_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=ATTR_RUN_COMPLETED,
+        name="Run completed",
         value_fn=lambda x: x.run_completed,
     ),
     ThinQBinarySensorEntityDescription(
@@ -252,13 +246,6 @@ async def async_setup_entry(
     )
 
 
-def get_binary_sensor_name(device: LGEDevice, ent_key: str) -> str:
-    """Get the name for the binary sensor"""
-    if ent_key == ATTR_RUN_COMPLETED:
-        return f"{RUN_COMPLETED_PREFIX.get(device.type, 'Run')} completed"
-    return get_entity_name(device, ent_key)
-
-
 class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
     """Class to monitor binary sensors for LGE device"""
 
@@ -280,7 +267,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         self._attr_unique_id = f"{api.unique_id}-{description.key}"
         self._attr_device_info = api.device_info
         if not description.translation_key and description.name is UNDEFINED:
-            self._attr_name = get_binary_sensor_name(api, description.key)
+            self._attr_name = get_entity_name(api, description.key)
 
         self._is_on = None
 
