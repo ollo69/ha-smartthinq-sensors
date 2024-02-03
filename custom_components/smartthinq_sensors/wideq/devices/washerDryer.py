@@ -35,6 +35,12 @@ CMD_REMOTE_START = [
     ["Start", "WMStart"],
 ]
 
+VT_CTRL_CMD = {
+    "WMOff": [{"cmd": "power", "type": "ABSOLUTE", "value": "POWER_OFF"}],
+    "WMWakeup": [{"cmd": "power", "type": "ABSOLUTE", "value": "POWER_ON"}],
+    "WMStart": [{"cmd": "wmControl", "type": "ABSOLUTE", "value": "START"}],
+}
+
 BIT_FEATURES = {
     WashDeviceFeatures.ANTICREASE: ["AntiCrease", "antiCrease"],
     WashDeviceFeatures.CHILDLOCK: ["ChildLock", "childLock"],
@@ -89,6 +95,7 @@ class WMDevice(Device):
             self._attr_name += f" {sub_key.capitalize()}"
         self._stand_by = False
         self._remote_start_status = None
+        self._power_on_available: bool = None
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -178,7 +185,8 @@ class WMDevice(Device):
         if not data_set:
             return cmd
 
-        if key and key.find("WMStart") >= 0:
+        res_data_set = None
+        if key and key.find("WMStart") >= 0 and WM_ROOT_DATA in data_set:
             status_data = self._update_course_info(self._remote_start_status)
             n_course_key = self.model_info.config_value(self.getkey("courseType"))
             s_course_key = self.model_info.config_value(self.getkey("smartCourseType"))
@@ -209,19 +217,61 @@ class WMDevice(Device):
                     cmd_data_set[cmd_key] = "INITIAL_BIT_ON"
                 else:
                     cmd_data_set[cmd_key] = status_data.get(cmd_key, cmd_value)
-            data_set[WM_ROOT_DATA] = cmd_data_set
+            res_data_set = {WM_ROOT_DATA: cmd_data_set}
 
-        cmd["dataSetList"] = data_set
+        return {
+            **cmd,
+            "dataKey": None,
+            "dataValue": None,
+            "dataSetList": res_data_set or data_set,
+            "dataGetList": None,
+        }
 
-        return cmd
+    def _prepare_command_vtctrl(self, cmd: dict, command: str):
+        """Prepare vtCtrl command for specific ThinQ2 device."""
+        data_set: dict = cmd.pop("data", None)
+        if not data_set:
+            return cmd
+
+        cmd_data_set = {}
+        ctrl_target = None if not self._sub_device else self._sub_device.upper()
+        for cmd_key, cmd_val in data_set.items():
+            if cmd_key == "ctrlTarget":
+                cmd_data_set[cmd_key] = [ctrl_target] if ctrl_target else cmd_val
+            elif cmd_key == "reqDevType":
+                cmd_data_set[cmd_key] = "APP"
+            elif cmd_key == "vtData":
+                vt_data = {}
+                for dt_key in cmd_val.keys():
+                    vt_data[ctrl_target or dt_key] = VT_CTRL_CMD[command]
+                cmd_data_set[cmd_key] = vt_data
+            else:
+                cmd_data_set[cmd_key] = cmd_val
+
+        return {
+            **cmd,
+            "dataKey": None,
+            "dataValue": None,
+            "dataSetList": cmd_data_set,
+            "dataGetList": None,
+        }
 
     def _prepare_command(self, ctrl_key, command, key, value):
         """Prepare command for specific device."""
-        cmd = self.model_info.get_control_cmd(command, ctrl_key)
+        cmd = None
+        vt_ctrl = True
+        if command in VT_CTRL_CMD:
+            cmd = self.model_info.get_control_cmd("vtCtrl", "vtCtrl")
+        if not cmd:
+            vt_ctrl = False
+            cmd = self.model_info.get_control_cmd(command, ctrl_key)
+
         if not cmd:
             return None
 
         if self.model_info.is_info_v2:
+            if vt_ctrl:
+                return self._prepare_command_vtctrl(cmd, command)
             return self._prepare_command_v2(cmd, key)
         return self._prepare_command_v1(cmd, key)
 
@@ -297,15 +347,25 @@ class WMDevice(Device):
 
     def _set_remote_start_opt(self, res):
         """Save the status to use for remote start."""
-        stand_by = self._status.device_features.get(WashDeviceFeatures.STANDBY)
-        if stand_by is None:
-            standby_enable = self.model_info.config_value("standbyEnable")
-            if standby_enable and not self._should_poll:
-                self._stand_by = not self._status.is_on
+        if self._power_on_available is None:
+            if self.model_info.config_value("powerOnButtonAvailable"):
+                self._power_on_available = True
             else:
-                self._stand_by = False
+                self._power_on_available = False
+
+        if self._power_on_available:
+            self._stand_by = not self._status.is_on
         else:
-            self._stand_by = stand_by == StateOptions.ON
+            stand_by = self._status.device_features.get(WashDeviceFeatures.STANDBY)
+            if stand_by is None:
+                standby_enable = self.model_info.config_value("standbyEnable")
+                if standby_enable and not self._should_poll:
+                    self._stand_by = not self._status.is_on
+                else:
+                    self._stand_by = False
+            else:
+                self._stand_by = stand_by == StateOptions.ON
+
         remote_start = self._status.device_features.get(WashDeviceFeatures.REMOTESTART)
         if remote_start == StateOptions.ON:
             if self._remote_start_status is None:
