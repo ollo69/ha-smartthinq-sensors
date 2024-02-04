@@ -1,4 +1,5 @@
 """------------------for DishWasher"""
+
 from __future__ import annotations
 
 import logging
@@ -30,7 +31,7 @@ BIT_FEATURES = {
     WashDeviceFeatures.NIGHTDRY: ["NightDry", "nightDry"],
     WashDeviceFeatures.RINSEREFILL: ["RinseRefill", "rinseRefill"],
     WashDeviceFeatures.SALTREFILL: ["SaltRefill", "saltRefill"],
-    WashDeviceFeatures.STEAM: ["Steam", "steam"],
+    WashDeviceFeatures.STEAM: ["PreSteam", "preSteam"],
 }
 
 _LOGGER = logging.getLogger(__name__)

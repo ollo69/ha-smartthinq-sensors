@@ -132,8 +132,7 @@ class WMDevice(Device):
 
     def _update_status(self, key, value):
         if self._status and value:
-            status_key = self.getkey(self._get_state_key(key))
-            self._status.update_status(status_key, value)
+            self._status.update_status(key, value)
 
     def _get_course_info(self, course_key, course_id):
         """Get definition for a specific course ID."""

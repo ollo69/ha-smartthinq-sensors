@@ -2,6 +2,7 @@
 A high-level, convenient abstraction for interacting with
 the LG SmartThinQ API for most use cases.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -960,11 +961,11 @@ class DeviceStatus:
 
     def update_status(self, key, value) -> bool:
         """Update the status key to a specific value."""
-        if key in self._data:
-            self._data[key] = value
-            self._features_updated = False
-            return True
-        return False
+        if not (upd_key := self._get_data_key(key)):
+            return False
+        self._data[upd_key] = value
+        self._features_updated = False
+        return True
 
     def update_status_feat(self, key, value, upd_features=False) -> bool:
         """Update device status and features."""
