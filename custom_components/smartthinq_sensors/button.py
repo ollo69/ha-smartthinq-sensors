@@ -61,6 +61,7 @@ WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
         device_class=ButtonDeviceClass.UPDATE,
         press_action_fn=lambda x: x.device.pause(),
         available_fn=lambda x: x.device.pause_enabled,
+        related_feature=WashDeviceFeatures.REMOTESTART,
     ),
 )
 
