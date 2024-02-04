@@ -159,20 +159,30 @@ class WMDevice(Device):
             )
             s_course_key = "SmartCourse"
             def_course_id = str(self.model_info.config_value("defaultCourseId"))
+
+        course_info = None
+        course_set = False
         if course_id is None:
             # check if this course is defined in data payload
             for course_key in [n_course_key, s_course_key]:
                 course_id = str(data.get(course_key))
-                if self._get_course_info(course_key, course_id):
-                    return ret_data
+                if course_info := self._get_course_info(course_key, course_id):
+                    course_set = True
+                    break
+        else:
+            course_info = self._get_course_info(n_course_key, course_id)
+
+        if not course_info:
             course_id = def_course_id
+            course_info = self._get_course_info(n_course_key, course_id)
 
         # save information for specific or default course
-        course_info = self._get_course_info(n_course_key, course_id)
         if course_info:
             ret_data[n_course_key] = course_id
             for func_key in course_info["function"]:
                 key = func_key.get("value")
+                if course_set and key in ret_data:
+                    continue
                 data = func_key.get("default")
                 if key and data:
                     ret_data[key] = data
