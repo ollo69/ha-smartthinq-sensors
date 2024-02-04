@@ -24,6 +24,7 @@ from .wideq import WM_DEVICE_TYPES, WashDeviceFeatures
 
 # general button attributes
 ATTR_REMOTE_START = "remote_start"
+ATTR_PAUSE = "device_pause"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,6 +54,13 @@ WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
         press_action_fn=lambda x: x.device.remote_start(),
         available_fn=lambda x: x.device.remote_start_enabled,
         related_feature=WashDeviceFeatures.REMOTESTART,
+    ),
+    ThinQButtonEntityDescription(
+        key=ATTR_PAUSE,
+        name="Pause",
+        device_class=ButtonDeviceClass.UPDATE,
+        press_action_fn=lambda x: x.device.pause(),
+        available_fn=lambda x: x.device.pause_enabled,
     ),
 )
 
@@ -135,3 +143,4 @@ class LGEButton(CoordinatorEntity, ButtonEntity):
     async def async_press(self) -> None:
         """Triggers service."""
         await self.entity_description.press_action_fn(self._wrap_device)
+        self._api.async_set_updated()

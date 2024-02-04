@@ -6,6 +6,7 @@ import base64
 import json
 import logging
 
+from ..backports.functools import cached_property
 from ..const import StateOptions, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidDeviceStatus
@@ -13,6 +14,8 @@ from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo, DeviceType
 
 STATE_WM_POWER_OFF = "STATE_POWER_OFF"
+STATE_WM_INITIAL = "STATE_INITIAL"
+STATE_WM_PAUSE = "STATE_PAUSE"
 STATE_WM_END = ["STATE_END", "STATE_COMPLETE"]
 STATE_WM_ERROR_OFF = "OFF"
 STATE_WM_ERROR_NO_ERROR = [
@@ -29,6 +32,7 @@ POWER_STATUS_KEY = ["State", "state"]
 
 CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
 CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
+CMD_PAUSE = [["Control", "WMControl"], ["Operation", "WMStop"], ["Stop", None]]
 CMD_REMOTE_START = [
     ["Control", "WMStart"],
     ["OperationStart", "WMStart"],
@@ -38,6 +42,7 @@ CMD_REMOTE_START = [
 VT_CTRL_CMD = {
     "WMOff": [{"cmd": "power", "type": "ABSOLUTE", "value": "POWER_OFF"}],
     "WMWakeup": [{"cmd": "power", "type": "ABSOLUTE", "value": "POWER_ON"}],
+    "WMStop": [{"cmd": "wmControl", "type": "ABSOLUTE", "value": "PAUSE"}],
     "WMStart": [{"cmd": "wmControl", "type": "ABSOLUTE", "value": "START"}],
 }
 
@@ -95,7 +100,23 @@ class WMDevice(Device):
             self._attr_name += f" {sub_key.capitalize()}"
         self._stand_by = False
         self._remote_start_status = None
+        self._remote_start_pressed = False
         self._power_on_available: bool = None
+
+    @cached_property
+    def _state_power_off(self):
+        """Return native value for power off state."""
+        return self._get_runstate_key(STATE_WM_POWER_OFF)
+
+    @cached_property
+    def _state_power_on_init(self):
+        """Return native value for power on init state."""
+        return self._get_runstate_key(STATE_WM_INITIAL)
+
+    @cached_property
+    def _state_pause(self):
+        """Return native value for pause state."""
+        return self._get_runstate_key(STATE_WM_PAUSE)
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -294,18 +315,40 @@ class WMDevice(Device):
     @property
     def remote_start_enabled(self) -> bool:
         """Return if remote start is enabled."""
+        if self._remote_start_pressed:
+            self._remote_start_pressed = False
+            return False
         if not self._status.is_on:
             return False
-        return self._remote_start_status is not None and not self._stand_by
+        if self._remote_start_status is None or self._stand_by:
+            return False
+        if self._status.internal_run_state in [
+            self._state_power_on_init,
+            self._state_pause,
+        ]:
+            return True
+        return False
+
+    @property
+    def pause_enabled(self) -> bool:
+        """Return if pause is enabled."""
+        if not self._status.is_on:
+            return False
+        if self._remote_start_status is None or self._stand_by:
+            return False
+        if self._status.internal_run_state not in [
+            self._state_power_on_init,
+            self._state_pause,
+        ]:
+            return True
+        return False
 
     async def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
         await self.set(keys[0], keys[1], value=keys[2])
         self._remote_start_status = None
-        self._update_status(
-            POWER_STATUS_KEY, self._get_runstate_key(STATE_WM_POWER_OFF)
-        )
+        self._update_status(POWER_STATUS_KEY, self._state_power_off)
 
     async def wake_up(self):
         """Wakeup the device."""
@@ -315,7 +358,7 @@ class WMDevice(Device):
         keys = self._get_cmd_keys(CMD_WAKE_UP)
         await self.set(keys[0], keys[1], value=keys[2])
         self._stand_by = False
-        self._update_status(POWER_STATUS_KEY, self._get_runstate_key("STATE_INITIAL"))
+        self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
 
     async def remote_start(self):
         """Remote start the device."""
@@ -324,6 +367,16 @@ class WMDevice(Device):
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
+        self._remote_start_pressed = True
+
+    async def pause(self):
+        """Pause the device."""
+        if not self.pause_enabled:
+            raise InvalidDeviceStatus()
+
+        keys = self._get_cmd_keys(CMD_PAUSE)
+        await self.set(keys[0], keys[1], value=keys[2])
+        self._update_status(POWER_STATUS_KEY, self._state_pause)
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -405,6 +458,7 @@ class WMStatus(DeviceStatus):
     ):
         """Initialize device status."""
         super().__init__(device, data)
+        self._internal_run_state = None
         self._run_state = None
         self._pre_state = None
         self._process_state = None
@@ -420,10 +474,13 @@ class WMStatus(DeviceStatus):
     def _get_run_state(self):
         """Get current run state."""
         if not self._run_state:
-            state = self.lookup_enum(self._getkeys(POWER_STATUS_KEY))
+            curr_key = self._get_data_key(self._getkeys(POWER_STATUS_KEY))
+            state = self.lookup_enum(curr_key)
             if not state:
+                self._internal_run_state = None
                 self._run_state = STATE_WM_POWER_OFF
             else:
+                self._internal_run_state = self._data[curr_key]
                 self._run_state = state
         return self._run_state
 
@@ -471,6 +528,12 @@ class WMStatus(DeviceStatus):
             return False
         self._run_state = None
         return True
+
+    @property
+    def internal_run_state(self):
+        """Return internal representation for run state."""
+        self._get_run_state()
+        return self._internal_run_state
 
     @property
     def is_on(self):
