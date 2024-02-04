@@ -165,7 +165,7 @@ class WMDevice(Device):
         if course_id is None:
             # check if this course is defined in data payload
             for course_key in [n_course_key, s_course_key]:
-                course_id = str(data.get(course_key))
+                course_id = str(ret_data.get(course_key))
                 if course_info := self._get_course_info(course_key, course_id):
                     course_set = True
                     break
@@ -178,7 +178,8 @@ class WMDevice(Device):
 
         # save information for specific or default course
         if course_info:
-            ret_data[n_course_key] = course_id
+            if not course_set:
+                ret_data[n_course_key] = course_id
             for func_key in course_info["function"]:
                 key = func_key.get("value")
                 if course_set and key in ret_data:
