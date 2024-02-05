@@ -1,4 +1,5 @@
 """Platform for LGE humidifier integration."""
+
 from __future__ import annotations
 
 import logging
@@ -107,11 +108,11 @@ class LGEDeHumidifier(LGEBaseHumidifier):
             self._use_fan_modes = True
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> HumidifierEntityFeature:
         """Return the list of supported features."""
         if self.available_modes:
             return HumidifierEntityFeature.MODES
-        return 0
+        return HumidifierEntityFeature(0)
 
     @property
     def extra_state_attributes(self):

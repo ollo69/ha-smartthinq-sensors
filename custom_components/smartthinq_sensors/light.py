@@ -1,4 +1,5 @@
 """Support for ThinQ light devices."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -143,7 +144,7 @@ class LGELight(CoordinatorEntity, LightEntity):
         return self._api.available
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> LightEntityFeature:
         """Return the list of supported features."""
         if self.effect_list and len(self.effect_list) > 1:
             return LightEntityFeature.EFFECT

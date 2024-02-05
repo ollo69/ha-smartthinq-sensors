@@ -1,4 +1,5 @@
 """Platform for LGE climate integration."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -234,7 +235,7 @@ class LGEACClimate(LGEClimate):
         return None
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
         features = ClimateEntityFeature.TARGET_TEMPERATURE
         if len(self.fan_modes) > 0:
@@ -459,10 +460,10 @@ class LGERefrigeratorClimate(LGEClimate):
         self._attr_hvac_mode = HVACMode.AUTO
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
         if not self._wrap_device.device.set_values_allowed:
-            return 0
+            return ClimateEntityFeature(0)
         return ClimateEntityFeature.TARGET_TEMPERATURE
 
     @property

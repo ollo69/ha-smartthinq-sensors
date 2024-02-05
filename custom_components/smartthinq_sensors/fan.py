@@ -1,4 +1,5 @@
 """Platform for LGE fan integration."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -298,9 +299,9 @@ class LGEFan(LGEBaseFan):
         self._wrapper = wrapper
 
     @property
-    def supported_features(self) -> int:
+    def supported_features(self) -> FanEntityFeature:
         """Return the list of supported features."""
-        features = 0
+        features = FanEntityFeature(0)
         if self.speed_count > 1:
             features |= FanEntityFeature.SET_SPEED
         if self.preset_modes is not None:
