@@ -102,6 +102,7 @@ class WMDevice(Device):
         self._remote_start_status = None
         self._remote_start_pressed = False
         self._power_on_available: bool = None
+        self._initial_bit_start = False
 
     @cached_property
     def _state_power_off(self):
@@ -199,7 +200,10 @@ class WMDevice(Device):
                 # is the 1st bit of Option2. This probably should be reviewed
                 # to use right address from model_info
                 if key and key == "Start" and dt_key == "Option2":
-                    dt_value = str(int(dt_value) | 1)
+                    if self._initial_bit_start:
+                        dt_value = str(int(dt_value) | 1)
+                    else:
+                        dt_value = str(int(dt_value) ^ (int(dt_value) & 1))
                 str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
             _LOGGER.debug("Command data content: %s", str_data)
             encode = cmd.pop("encode", False)
@@ -245,7 +249,10 @@ class WMDevice(Device):
                     else:
                         cmd_data_set[s_course_key] = "NOT_SELECTED"
                 elif cmd_key == self.getkey("initialBit"):
-                    cmd_data_set[cmd_key] = "INITIAL_BIT_ON"
+                    if self._initial_bit_start:
+                        cmd_data_set[cmd_key] = "INITIAL_BIT_ON"
+                    else:
+                        cmd_data_set[cmd_key] = "INITIAL_BIT_OFF"
                 else:
                     cmd_data_set[cmd_key] = status_data.get(cmd_key, cmd_value)
             res_data_set = {WM_ROOT_DATA: cmd_data_set}
@@ -336,6 +343,9 @@ class WMDevice(Device):
             self._state_power_on_init,
             self._state_pause,
         ]:
+            self._initial_bit_start = (
+                self._status.internal_run_state == self._state_power_on_init
+            )
             return True
         return False
 
