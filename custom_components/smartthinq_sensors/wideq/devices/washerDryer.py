@@ -146,7 +146,6 @@ class WMDevice(Device):
         Save information in the data payload for a specific course
         or default course if not already available.
         """
-        ret_data = data.copy()
         if self.model_info.is_info_v2:
             n_course_key = self.model_info.config_value(self.getkey("courseType"))
             s_course_key = self.model_info.config_value(self.getkey("smartCourseType"))
@@ -160,6 +159,7 @@ class WMDevice(Device):
             s_course_key = "SmartCourse"
             def_course_id = str(self.model_info.config_value("defaultCourseId"))
 
+        ret_data = data.copy()
         course_info = None
         course_set = False
         if course_id is None:
@@ -790,10 +790,14 @@ class WMStatus(DeviceStatus):
     @property
     def standby_state(self):
         """Return standby state."""
+        status = None
         keys = self._getkeys(["Standby", "standby"])
-        if not (key := self.get_model_info_key(keys)):
+        if key := self.get_model_info_key(keys):
+            status = self.lookup_enum(key)
+        if not status and not self.is_info_v2:
+            status = self.lookup_bit(keys[0])
+        if not (status or key):
             return None
-        status = self.lookup_enum(key)
         if not status:
             status = StateOptions.OFF
         return self._update_feature(WashDeviceFeatures.STANDBY, status)

@@ -156,8 +156,12 @@ class ModelInfo(ABC):
             return ref_value.get("name")
         return None
 
-    def bit_name(self, key, bit_index, value) -> str | None:
-        """Look up the friendly name for an encoded bit value."""
+    def bit_name(self, key, bit_index) -> str | None:
+        """Look up the friendly name for an encoded bit based on the bit index."""
+        return None
+
+    def bit_index(self, key, bit_name) -> str | None:
+        """Look up the start index for an encoded bit based on friendly name."""
         return None
 
     def bit_value(self, key, values) -> str | None:
@@ -282,17 +286,27 @@ class ModelInfoV1(ModelInfo):
         """Get the default value, if it exists, for a given value."""
         return self._data.get("Value", {}).get(name, {}).get("default")
 
-    def bit_name(self, key, bit_index, value) -> str | None:
-        """Look up the friendly name for an encoded bit value."""
+    def bit_name(self, key, bit_index) -> str | None:
+        """Look up the friendly name for an encoded bit based on the bit index."""
         if not (values := self.value(key, [TYPE_BIT])):
-            return str(value)
+            return None
 
         options = values.options
-        if not self.value_type(options[bit_index]["value"]):
-            return str(value)
+        if not (bit_info := options.get(bit_index)):
+            return None
+        return bit_info["value"]
 
-        enum_options = self.value(options[bit_index]["value"]).options
-        return enum_options[value]
+    def bit_index(self, key, bit_name) -> str | None:
+        """Look up the start index for an encoded bit based on friendly name."""
+        if not (values := self.value(key, [TYPE_BIT])):
+            return None
+
+        options = values.options
+        for bit_index, bit_info in options.items():
+            if bit_info["value"] == bit_name:
+                return bit_index
+
+        return None
 
     def _get_bit_key(self, key):
         """Get bit values for a specific key."""
