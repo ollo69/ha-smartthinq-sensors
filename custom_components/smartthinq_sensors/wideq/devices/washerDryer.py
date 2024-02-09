@@ -135,6 +135,21 @@ class WMDevice(Device):
         if self._status and value:
             self._status.update_status(key, value)
 
+    def _update_opt_bit(self, opt_name: str, opt_val: str, bit_name: str, bit_val: int):
+        """Update the option bit with correct value."""
+        if self.model_info.is_info_v2:
+            return None
+
+        option_val = int(opt_val)
+        if (bit_index := self.model_info.bit_index(opt_name, bit_name)) is not None:
+            if bit_val:
+                new_val = option_val | (2**bit_index)
+            else:
+                new_val = option_val ^ (option_val & (2**bit_index))
+            return str(new_val)
+
+        return None
+
     def _get_course_info(self, course_key, course_id):
         """Get definition for a specific course ID."""
         if course_key is None:
@@ -159,7 +174,13 @@ class WMDevice(Device):
             s_course_key = "SmartCourse"
             def_course_id = str(self.model_info.config_value("defaultCourseId"))
 
+        # Prepare the course data initializing option for infoV1 device
         ret_data = data.copy()
+        if not self.model_info.is_info_v2:
+            for opt_name in ["Option1", "Option2"]:
+                ret_data[opt_name] = data.get(opt_name, "0")
+
+        # Search valid course Info
         course_info = None
         course_set = False
         if course_id is None:
@@ -176,15 +197,26 @@ class WMDevice(Device):
             course_id = def_course_id
             course_info = self._get_course_info(n_course_key, course_id)
 
-        # save information for specific or default course
+        # Save information for specific or default course
         if course_info:
             if not course_set:
                 ret_data[n_course_key] = course_id
             for func_key in course_info["function"]:
                 key = func_key.get("value")
-                if course_set and key in ret_data:
-                    continue
                 data = func_key.get("default")
+                opt_set = False
+                for opt_name in ["Option1", "Option2"]:
+                    if opt_name not in ret_data:
+                        continue
+                    opt_val = ret_data[opt_name]
+                    new_val = self._update_opt_bit(opt_name, opt_val, key, int(data))
+                    if new_val is not None:
+                        opt_set = True
+                        if not course_set:
+                            ret_data[opt_name] = new_val
+                        break
+                if opt_set or (course_set and key in ret_data):
+                    continue
                 if key and data:
                     ret_data[key] = data
 
@@ -196,14 +228,14 @@ class WMDevice(Device):
             str_data = cmd["data"]
             status_data = self._update_course_info(self._remote_start_status)
             for dt_key, dt_value in status_data.items():
-                # for start command we set initial bit to 1, assuming that
-                # is the 1st bit of Option2. This probably should be reviewed
-                # to use right address from model_info
-                if key and key == "Start" and dt_key == "Option2":
-                    if self._initial_bit_start:
-                        dt_value = str(int(dt_value) | 1)
-                    else:
-                        dt_value = str(int(dt_value) ^ (int(dt_value) & 1))
+                # for start command we set initial bit to 1
+                if key and key == "Start" and dt_key.startswith("Option"):
+                    bit_val = 1 if self._initial_bit_start else 0
+                    new_value = self._update_opt_bit(
+                        dt_key, dt_value, "InitialBit", bit_val
+                    )
+                    if new_value is not None:
+                        dt_value = new_value
                 str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
             _LOGGER.debug("Command data content: %s", str_data)
             encode = cmd.pop("encode", False)
