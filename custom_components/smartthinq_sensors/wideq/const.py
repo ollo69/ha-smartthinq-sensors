@@ -134,6 +134,7 @@ class WashDeviceFeatures(StrEnum):
     HIGHTEMP = "high_temp"
     MEDICRINSE = "medic_rinse"
     NIGHTDRY = "night_dry"
+    PRESTEAM = "pre_steam"
     PREWASH = "pre_wash"
     PRE_STATE = "pre_state"
     PROCESS_STATE = "process_state"

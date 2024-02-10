@@ -1,4 +1,5 @@
 """Support for ThinQ device binary sensors."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -130,6 +131,16 @@ WASH_DEV_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
         key=WashDeviceFeatures.NIGHTDRY,
         name="Night dry",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=WashDeviceFeatures.PRESTEAM,
+        name="Pre steam",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
+        key=WashDeviceFeatures.STEAM,
+        name="Steam",
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(

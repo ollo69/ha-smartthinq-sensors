@@ -29,9 +29,10 @@ BIT_FEATURES = {
     WashDeviceFeatures.EXTRADRY: ["ExtraDry", "extraDry"],
     WashDeviceFeatures.HIGHTEMP: ["HighTemp", "highTemp"],
     WashDeviceFeatures.NIGHTDRY: ["NightDry", "nightDry"],
+    WashDeviceFeatures.PRESTEAM: ["PreSteam", "preSteam"],
     WashDeviceFeatures.RINSEREFILL: ["RinseRefill", "rinseRefill"],
     WashDeviceFeatures.SALTREFILL: ["SaltRefill", "saltRefill"],
-    WashDeviceFeatures.STEAM: ["PreSteam", "preSteam"],
+    WashDeviceFeatures.STEAM: ["Steam", "steam"],
 }
 
 _LOGGER = logging.getLogger(__name__)
