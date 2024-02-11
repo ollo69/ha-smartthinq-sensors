@@ -526,9 +526,9 @@ class WMDevice(Device):
     async def poll(self) -> WMStatus | None:
         """Poll the device's current state."""
 
-        if not self._sub_key:
+        if not self._sub_key or not self._should_poll:
             res = await self._device_poll(self._sub_device or WM_ROOT_DATA)
-            if self._subkey_device:
+            if self._subkey_device and self._should_poll:
                 self._subkey_device.update_internal_state(res)
         else:
             res = self._internal_state
