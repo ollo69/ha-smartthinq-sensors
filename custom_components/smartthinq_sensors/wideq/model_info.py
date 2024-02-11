@@ -9,6 +9,8 @@ import json
 import logging
 from numbers import Number
 
+import xmltodict
+
 from .const import BIT_OFF, BIT_ON
 
 TYPE_BIT = "bit"
@@ -156,6 +158,10 @@ class ModelInfo(ABC):
             return ref_value.get("name")
         return None
 
+    def option_keys(self, subkey: str | None = None) -> list:
+        """Return a list of available option keys."""
+        return []
+
     def bit_name(self, key, bit_index) -> str | None:
         """Look up the friendly name for an encoded bit based on the bit index."""
         return None
@@ -164,7 +170,7 @@ class ModelInfo(ABC):
         """Look up the start index for an encoded bit based on friendly name."""
         return None
 
-    def bit_value(self, key, values) -> str | None:
+    def bit_value(self, key, values, sub_key=None) -> str | None:
         """
         Look up the bit value for a specific key.
         Not used in model V2.
@@ -286,6 +292,21 @@ class ModelInfoV1(ModelInfo):
         """Get the default value, if it exists, for a given value."""
         return self._data.get("Value", {}).get(name, {}).get("default")
 
+    def option_keys(self, subkey: str | None = None) -> list:
+        """Return a list of available option keys."""
+        if not (data := self._data.get("Value")):
+            return []
+
+        opt_key = "Option"
+        if subkey:
+            opt_key = subkey + opt_key
+        ret_keys = []
+        for i in range(1, 4):
+            key_id = f"{opt_key}{str(i)}"
+            if key_id in data:
+                ret_keys.append(key_id)
+        return ret_keys
+
     def bit_name(self, key, bit_index) -> str | None:
         """Look up the friendly name for an encoded bit based on the bit index."""
         if not (values := self.value(key, [TYPE_BIT])):
@@ -308,41 +329,39 @@ class ModelInfoV1(ModelInfo):
 
         return None
 
-    def _get_bit_key(self, key):
+    def _get_bit_key(self, key: str, sub_key: str | None = None):
         """Get bit values for a specific key."""
 
-        def search_bit_key():
+        def search_bit_key(option_keys: list, data: dict | None):
             if not data:
                 return {}
-            for i in range(1, 4):
-                opt_key = f"Option{str(i)}"
-                option = data.get(opt_key)
-                if not option:
+            for opt_key in option_keys:
+                if not (option := data.get(opt_key)):
                     continue
                 for opt in option.get("option", []):
-                    if key == opt.get("value", ""):
-                        start_bit = opt.get("startbit")
-                        length = opt.get("length", 1)
-                        if start_bit is None:
-                            return {}
-                        return {
-                            "option": opt_key,
-                            "startbit": start_bit,
-                            "length": length,
-                        }
+                    if key != opt.get("value", ""):
+                        continue
+                    if (start_bit := opt.get("startbit")) is None:
+                        return {}
+                    return {
+                        "option": opt_key,
+                        "startbit": start_bit,
+                        "length": opt.get("length", 1),
+                    }
+
             return {}
 
-        bit_key = self._bit_keys.get(key)
-        if bit_key is None:
-            data = self._data.get("Value")
-            bit_key = search_bit_key()
-            self._bit_keys[key] = bit_key
+        key_bit = sub_key + key if sub_key else key
+        if (bit_key := self._bit_keys.get(key_bit)) is None:
+            option_keys = self.option_keys(sub_key)
+            bit_key = search_bit_key(option_keys, self._data.get("Value"))
+            self._bit_keys[key_bit] = bit_key
 
         return bit_key
 
-    def bit_value(self, key, values) -> str | None:
+    def bit_value(self, key, values, sub_key=None) -> str | None:
         """Look up the bit value for an specific key."""
-        bit_key = self._get_bit_key(key)
+        bit_key = self._get_bit_key(key, sub_key)
         if not bit_key:
             return None
         value = None if not values else values.get(bit_key["option"])
@@ -429,11 +448,52 @@ class ModelInfoV1(ModelInfo):
             decoded[key] = str(value)
         return decoded
 
-    @staticmethod
-    def decode_monitor_xml(data):
+    def decode_monitor_xml(self, data):
         """Decode a xml that encodes status data."""
-        _LOGGER.warning("Received XML data from device: %s", data)
-        return None
+
+        try:
+            xml_json = xmltodict.parse(data.decode("utf8"))
+        except Exception as ex:  # pylint: disable=broad-except
+            _LOGGER.warning("Failed to decode XML message: [%s] - error: %s", data, ex)
+            return None
+
+        main_tag: str | None = self._data["Monitoring"].get("tag")
+        if not main_tag or main_tag not in xml_json:
+            _LOGGER.warning(
+                "Invalid root tag [%s] for XML message: [%s]", main_tag, xml_json
+            )
+            return None
+
+        decoded = {}
+        dev_vals = xml_json[main_tag]
+        for item in self._data["Monitoring"]["protocol"]:
+            tags: str = item["tag"]
+            tag_list = tags.split(".")
+            tag_key = tag_list[0]
+            if len(tag_list) > 1:
+                value_dict: dict = dev_vals[tag_key]
+                tag_key = tag_list[1]
+            else:
+                value_dict: dict = dev_vals
+
+            if val := value_dict.get(tag_key):
+                key = item["value"]
+                if isinstance(key, list):
+                    if isinstance(val, str):
+                        sub_val = val.split(",")
+                    else:
+                        sub_val = []
+                    for sub_idx, sub_key in enumerate(key):
+                        if not isinstance(sub_key, str):
+                            continue
+                        decoded[sub_key] = (
+                            sub_val[sub_idx] if len(sub_val) > sub_idx else ""
+                        )
+
+                elif isinstance(key, str):
+                    decoded[key] = val
+
+        return decoded
 
     @staticmethod
     def decode_monitor_json(data, mon_type):

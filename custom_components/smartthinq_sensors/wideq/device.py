@@ -13,6 +13,7 @@ from enum import Enum
 import json
 import logging
 from numbers import Number
+import os
 from typing import Any
 
 import aiohttp
@@ -706,6 +707,26 @@ class Device:
             except Exception as exc:  # pylint: disable=broad-except
                 _LOGGER.debug("Error calling additional poll V2 methods: %s", exc)
 
+    def _load_emul_v1_payload(self):
+        """
+        This is used only for debug.
+        Load the payload for V1 device from file "deviceV1.txt".
+        """
+        if not self._client.emulation:
+            return None
+
+        data_file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "deviceV1.txt"
+        )
+        try:
+            with open(data_file, "r", encoding="utf-8") as emu_payload:
+                device_v1 = json.load(emu_payload)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+        if ret_val := device_v1.get(self.device_info.device_id):
+            return str(ret_val).encode()
+        return None
+
     async def _device_poll(
         self,
         snapshot_key="",
@@ -745,7 +766,8 @@ class Device:
             return self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
-        data = await self._mon.refresh()
+        if not (data := self._load_emul_v1_payload()):
+            data = await self._mon.refresh()
         if not data:
             return None
 
@@ -1026,14 +1048,14 @@ class DeviceStatus:
             curr_key, self._data[curr_key], ref_key
         )
 
-    def lookup_bit_enum(self, key):
+    def lookup_bit_enum(self, key, *, sub_key=None):
         """Lookup value for a specific key of type bit enum."""
         if not self._data:
             str_val = ""
         else:
             str_val = self._data.get(key)
             if not str_val:
-                str_val = self._device.model_info.bit_value(key, self._data)
+                str_val = self._device.model_info.bit_value(key, self._data, sub_key)
 
         if str_val is None:
             return None
@@ -1051,9 +1073,9 @@ class DeviceStatus:
 
         return ret_val
 
-    def lookup_bit(self, key, invert=False):
+    def lookup_bit(self, key, *, sub_key=None, invert=False):
         """Lookup bit value for a specific key of type enum."""
-        enum_val = self.lookup_bit_enum(key)
+        enum_val = self.lookup_bit_enum(key, sub_key=sub_key)
         if enum_val is None:
             return None
         bit_val = LOCAL_LANG_PACK.get(enum_val)

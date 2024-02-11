@@ -30,11 +30,11 @@ WM_SUB_KEYS = {"mini": "miniState"}
 
 POWER_STATUS_KEY = ["State", "state"]
 
-CMD_POWER_OFF = [["Control", "WMControl"], ["Power", "WMOff"], ["Off", None]]
-CMD_WAKE_UP = [["Control", "WMWakeup"], ["Operation", "WMWakeup"], ["WakeUp", None]]
-CMD_PAUSE = [["Control", "WMControl"], ["Operation", "WMStop"], ["Stop", None]]
+CMD_POWER_OFF = [[None, "WMControl"], ["PowerOff", "WMOff"], [None, None]]
+CMD_WAKE_UP = [[None, "WMWakeup"], ["OperationWakeUp", "WMWakeup"], [None, None]]
+CMD_PAUSE = [[None, "WMControl"], ["OperationStop", "WMStop"], [None, None]]
 CMD_REMOTE_START = [
-    ["Control", "WMStart"],
+    [None, "WMStart"],
     ["OperationStart", "WMStart"],
     ["Start", "WMStart"],
 ]
@@ -119,6 +119,11 @@ class WMDevice(Device):
         """Return native value for pause state."""
         return self._get_runstate_key(STATE_WM_PAUSE)
 
+    @property
+    def sub_key(self) -> str | None:
+        """Return device sub key."""
+        return self._sub_key
+
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
         if not (key and self._sub_key):
@@ -161,6 +166,9 @@ class WMDevice(Device):
         Save information in the data payload for a specific course
         or default course if not already available.
         """
+        if not data:
+            return {}
+
         if self.model_info.is_info_v2:
             n_course_key = self.model_info.config_value(self.getkey("courseType"))
             s_course_key = self.model_info.config_value(self.getkey("smartCourseType"))
@@ -176,8 +184,9 @@ class WMDevice(Device):
 
         # Prepare the course data initializing option for infoV1 device
         ret_data = data.copy()
+        option_keys = self.model_info.option_keys(self._sub_key)
         if not self.model_info.is_info_v2:
-            for opt_name in ["Option1", "Option2"]:
+            for opt_name in option_keys:
                 ret_data[opt_name] = data.get(opt_name, "0")
 
         # Search valid course Info
@@ -205,7 +214,7 @@ class WMDevice(Device):
                 key = func_key.get("value")
                 data = func_key.get("default")
                 opt_set = False
-                for opt_name in ["Option1", "Option2"]:
+                for opt_name in option_keys:
                     if opt_name not in ret_data:
                         continue
                     opt_val = ret_data[opt_name]
@@ -224,27 +233,34 @@ class WMDevice(Device):
 
     def _prepare_command_v1(self, cmd, key):
         """Prepare command for specific ThinQ1 device."""
+        encode = cmd.pop("encode", False)
+
+        str_data = ""
         if "data" in cmd:
             str_data = cmd["data"]
+            option_keys = self.model_info.option_keys(self._sub_key)
             status_data = self._update_course_info(self._remote_start_status)
+
             for dt_key, dt_value in status_data.items():
+                repl_key = f"{{{{{dt_key}}}}}"
+                if repl_key not in str_data:
+                    continue
                 # for start command we set initial bit to 1
-                if key and key == "Start" and dt_key.startswith("Option"):
+                if key and key == "Start" and dt_key in option_keys:
                     bit_val = 1 if self._initial_bit_start else 0
                     new_value = self._update_opt_bit(
                         dt_key, dt_value, "InitialBit", bit_val
                     )
                     if new_value is not None:
                         dt_value = new_value
-                str_data = str_data.replace(f"{{{{{dt_key}}}}}", dt_value)
+                str_data = str_data.replace(repl_key, dt_value)
             _LOGGER.debug("Command data content: %s", str_data)
-            encode = cmd.pop("encode", False)
             if encode:
                 cmd["format"] = "B64"
                 str_list = json.loads(str_data)
                 str_data = base64.b64encode(bytes(str_list)).decode("ascii")
-            cmd["data"] = str_data
-        return cmd
+
+        return {**cmd, "data": str_data}
 
     def _prepare_command_v2(self, cmd, key: str):
         """Prepare command for specific ThinQ2 device."""
@@ -437,7 +453,7 @@ class WMDevice(Device):
         await super().set(
             self._getcmdkey(ctrl_key),
             self._getcmdkey(command),
-            key=self._getcmdkey(key),
+            key=key,
             value=value,
             data=data,
             ctrl_path=ctrl_path,
@@ -827,7 +843,7 @@ class WMStatus(DeviceStatus):
         if key := self.get_model_info_key(keys):
             status = self.lookup_enum(key)
         if not status and not self.is_info_v2:
-            status = self.lookup_bit(keys[0])
+            status = self.lookup_bit(keys[0], sub_key=self._device.sub_key)
         if not (status or key):
             return None
         if not status:
@@ -839,7 +855,9 @@ class WMStatus(DeviceStatus):
         index = 1 if self.is_info_v2 else 0
         for feature, keys in BIT_FEATURES.items():
             invert = feature in INVERTED_BITS
-            status = self.lookup_bit(self._getkeys(keys[index]), invert)
+            status = self.lookup_bit(
+                self._getkeys(keys[index]), sub_key=self._device.sub_key, invert=invert
+            )
             self._update_feature(feature, status, False)
 
     def _update_features(self):
