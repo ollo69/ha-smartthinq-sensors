@@ -41,6 +41,10 @@ class InvalidCredentialError(APIError):
     """The server rejected connection."""
 
 
+class DelayedResponseError(APIError):
+    """The device delay in the response."""
+
+
 class TokenError(APIError):
     """An authentication token was rejected."""
 
