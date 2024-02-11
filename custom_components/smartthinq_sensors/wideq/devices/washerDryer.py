@@ -91,6 +91,7 @@ class WMDevice(Device):
             self._attr_name += f" {sub_key.capitalize()}"
         self._subkey_device = None
         self._internal_state = None
+        self._run_states: list | None = None
         self._stand_by = False
         self._remote_start_status = None
         self._remote_start_pressed = False
@@ -122,6 +123,13 @@ class WMDevice(Device):
         """Return the available sub key device."""
         return self._subkey_device
 
+    @property
+    def pre_state(self) -> str:
+        """Return calculated pre state."""
+        if not self._run_states:
+            return STATE_WM_POWER_OFF
+        return self._run_states[-1]
+
     async def init_device_info(self) -> bool:
         """Initialize the information for the device"""
         if result := await super().init_device_info():
@@ -152,6 +160,18 @@ class WMDevice(Device):
         if not self._sub_key:
             return
         self._internal_state = state
+
+    def calculate_pre_state(self, run_state: str) -> None:
+        """Calculate the pre state based on run_state."""
+        if STATE_WM_POWER_OFF in run_state:
+            run_state = STATE_WM_POWER_OFF
+        if not self._run_states:
+            self._run_states = [run_state]
+        if run_state == self._run_states[0]:
+            return
+        self._run_states.insert(0, run_state)
+        if len(self._run_states) > 2:
+            self._run_states = self._run_states[:2]
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -585,6 +605,7 @@ class WMStatus(DeviceStatus):
             else:
                 self._internal_run_state = self._data[curr_key]
                 self._run_state = state
+            self._device.calculate_pre_state(self._run_state)
         return self._run_state
 
     def _get_pre_state(self):
@@ -593,9 +614,12 @@ class WMStatus(DeviceStatus):
             keys = self._getkeys(["PreState", "preState"])
             if not (key := self.get_model_info_key(keys)):
                 return None
+            run_state = self._get_run_state()
             state = self.lookup_enum(key)
             if not state:
                 self._pre_state = STATE_WM_POWER_OFF
+            elif state == run_state:
+                self._pre_state = self._device.pre_state
             else:
                 self._pre_state = state
         return self._pre_state
