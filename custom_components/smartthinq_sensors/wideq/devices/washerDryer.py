@@ -26,7 +26,7 @@ STATE_WM_ERROR_NO_ERROR = [
 ]
 
 WM_ROOT_DATA = "washerDryer"
-WM_SUB_KEYS = {"mini": "miniState"}
+WM_SUB_KEYS = {"mini": "miniState", "Sub": "SubState"}
 
 POWER_STATUS_KEY = ["State", "state"]
 
@@ -73,15 +73,6 @@ INVERTED_BITS = [WashDeviceFeatures.DOOROPEN]
 _LOGGER = logging.getLogger(__name__)
 
 
-def get_sub_keys(device_info: DeviceInfo, sub_device: str | None = None) -> list[str]:
-    """Search for valid sub devices and return related sub keys."""
-    if not (snapshot := device_info.snapshot):
-        return []
-    if not (payload := snapshot.get(sub_device or WM_ROOT_DATA)):
-        return []
-    return [k for k, s in WM_SUB_KEYS.items() if s in payload]
-
-
 class WMDevice(Device):
     """A higher-level interface for washer and dryer."""
 
@@ -98,6 +89,8 @@ class WMDevice(Device):
         if sub_key:
             self._attr_unique_id += f"-{sub_key}"
             self._attr_name += f" {sub_key.capitalize()}"
+        self._subkey_device = None
+        self._internal_state = None
         self._stand_by = False
         self._remote_start_status = None
         self._remote_start_pressed = False
@@ -123,6 +116,42 @@ class WMDevice(Device):
     def sub_key(self) -> str | None:
         """Return device sub key."""
         return self._sub_key
+
+    @property
+    def subkey_device(self) -> Device | None:
+        """Return the available sub key device."""
+        return self._subkey_device
+
+    async def init_device_info(self) -> bool:
+        """Initialize the information for the device"""
+        if result := await super().init_device_info():
+            self._init_subkey_device()
+        return result
+
+    def _init_subkey_device(self) -> None:
+        """Initialize the available sub key device."""
+        if self._sub_key or self._subkey_device or not self.model_info:
+            return
+        for key, val in WM_SUB_KEYS.items():
+            if self.model_info.value_exist(val):
+                # we check for value in the snapshot if available
+                if snapshot := self.device_info.snapshot:
+                    if payload := snapshot.get(self._sub_device or WM_ROOT_DATA):
+                        if val not in payload:
+                            continue
+                self._subkey_device = WMDevice(
+                    self.client,
+                    self.device_info,
+                    sub_device=self._sub_device,
+                    sub_key=key,
+                )
+                return
+
+    def update_internal_state(self, state):
+        """Update internal state used by sub key device."""
+        if not self._sub_key:
+            return
+        self._internal_state = state
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -414,7 +443,7 @@ class WMDevice(Device):
     async def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
-        await self.set(keys[0], keys[1], value=keys[2])
+        await self.set(keys[0], keys[1])
         self._remote_start_status = None
         self._update_status(POWER_STATUS_KEY, self._state_power_off)
 
@@ -424,7 +453,7 @@ class WMDevice(Device):
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_WAKE_UP)
-        await self.set(keys[0], keys[1], value=keys[2])
+        await self.set(keys[0], keys[1])
         self._stand_by = False
         self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
 
@@ -443,7 +472,7 @@ class WMDevice(Device):
             raise InvalidDeviceStatus()
 
         keys = self._get_cmd_keys(CMD_PAUSE)
-        await self.set(keys[0], keys[1], value=keys[2])
+        await self.set(keys[0], keys[1])
         self._update_status(POWER_STATUS_KEY, self._state_pause)
 
     async def set(
@@ -480,7 +509,7 @@ class WMDevice(Device):
             stand_by = self._status.device_features.get(WashDeviceFeatures.STANDBY)
             if stand_by is None:
                 standby_enable = self.model_info.config_value("standbyEnable")
-                if standby_enable and not self._should_poll:
+                if standby_enable and not self._should_poll and not self._sub_key:
                     self._stand_by = not self._status.is_on
                 else:
                     self._stand_by = False
@@ -497,7 +526,13 @@ class WMDevice(Device):
     async def poll(self) -> WMStatus | None:
         """Poll the device's current state."""
 
-        res = await self._device_poll(self._sub_device or WM_ROOT_DATA)
+        if not self._sub_key:
+            res = await self._device_poll(self._sub_device or WM_ROOT_DATA)
+            if self._subkey_device:
+                self._subkey_device.update_internal_state(res)
+        else:
+            res = self._internal_state
+
         if not res:
             self._stand_by = False
             return None

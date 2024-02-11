@@ -438,6 +438,11 @@ class Device:
         return self._model_info
 
     @property
+    def subkey_device(self) -> Device | None:
+        """Return the available sub device."""
+        return None
+
+    @property
     def available_features(self) -> dict:
         """Return available features."""
         return self._available_features

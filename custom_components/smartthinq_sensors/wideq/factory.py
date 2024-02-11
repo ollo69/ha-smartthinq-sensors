@@ -23,7 +23,7 @@ from .devices.microwave import MicroWaveDevice
 from .devices.range import RangeDevice
 from .devices.refrigerator import RefrigeratorDevice
 from .devices.styler import StylerDevice
-from .devices.washerDryer import WMDevice, get_sub_keys
+from .devices.washerDryer import WMDevice
 from .devices.waterheater import WaterHeaterDevice
 
 
@@ -71,14 +71,8 @@ def get_lge_device(
     if device_type == DeviceType.WATER_HEATER:
         return [WaterHeaterDevice(client, device_info, temp_unit)]
     if device_type in WM_DEVICE_TYPES:
-        dev_list = []
-        for sub_device in _get_sub_devices(device_type):
-            dev_list.append(WMDevice(client, device_info, sub_device=sub_device))
-            dev_list.extend(
-                [
-                    WMDevice(client, device_info, sub_device=sub_device, sub_key=key)
-                    for key in get_sub_keys(device_info, sub_device)
-                ]
-            )
-        return dev_list
+        return [
+            WMDevice(client, device_info, sub_device=sub_device)
+            for sub_device in _get_sub_devices(device_type)
+        ]
     return None

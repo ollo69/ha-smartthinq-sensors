@@ -348,11 +348,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class LGEDevice:
     """Generic class that represents a LGE device."""
 
-    def __init__(self, device: ThinQDevice, hass: HomeAssistant):
+    def __init__(
+        self, device: ThinQDevice, hass: HomeAssistant, root_dev_id: str | None = None
+    ):
         """initialize a LGE Device."""
 
         self._device = device
         self._hass = hass
+        self._root_dev_id = root_dev_id
         self._name = device.name
         self._device_id = device.unique_id
         self._type = device.device_info.type
@@ -425,8 +428,10 @@ class LGEDevice:
         )
         if self._firmware:
             data["sw_version"] = self._firmware
-        if self._mac:
+        if self._mac and not self._root_dev_id:
             data["connections"] = {(dr.CONNECTION_NETWORK_MAC, self._mac)}
+        if self._root_dev_id:
+            data["via_device"] = (DOMAIN, self._root_dev_id)
 
         return data
 
@@ -558,6 +563,32 @@ async def lge_devices_setup(
     if hass.config.units.temperature_unit != UnitOfTemperature.CELSIUS:
         temp_unit = TemperatureUnit.FAHRENHEIT
 
+    async def init_device(
+        lge_dev: ThinQDevice, device_info: ThinQDeviceInfo, root_dev_id: str
+    ):
+        """Initialize a new device."""
+        root_dev = None if root_dev_id == lge_dev.unique_id else root_dev_id
+        dev = LGEDevice(lge_dev, hass, root_dev)
+        if not await dev.init_device():
+            _LOGGER.error(
+                "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
+                device_info.name,
+                device_info.type.name,
+                device_info.model_info_url,
+            )
+            return False
+
+        new_devices[device_info.device_id].append(dev.device_id)
+        wrapped_devices.setdefault(device_info.type, []).append(dev)
+        _LOGGER.info(
+            "LGE Device added. Name: %s - Type: %s - Model: %s - ID: %s",
+            dev.name,
+            device_info.type.name,
+            device_info.model_name,
+            dev.device_id,
+        )
+        return True
+
     for device_info in client_devices:
         device_id = device_info.device_id
         if device_id in discovered_devices:
@@ -565,43 +596,27 @@ async def lge_devices_setup(
             continue
 
         new_devices[device_id] = []
-        device_name = device_info.name
-        device_type = device_info.type
-        network_type = device_info.network_type
-        model_name = device_info.model_name
         device_count += 1
 
         lge_devs = get_lge_device(client, device_info, temp_unit)
         if not lge_devs:
             _LOGGER.info(
                 "Found unsupported LGE Device. Name: %s - Type: %s - NetworkType: %s",
-                device_name,
-                device_type.name,
-                network_type.name,
+                device_info.name,
+                device_info.type.name,
+                device_info.network_type.name,
             )
-            unsupported_devices.setdefault(device_type, []).append(device_info)
+            unsupported_devices.setdefault(device_info.type, []).append(device_info)
             continue
 
-        for lge_dev in lge_devs:
-            dev = LGEDevice(lge_dev, hass)
-            if not await dev.init_device():
-                _LOGGER.error(
-                    "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",
-                    device_name,
-                    device_type.name,
-                    device_info.model_info_url,
-                )
+        root_dev = None
+        for idx, lge_dev in enumerate(lge_devs):
+            if idx == 0:
+                root_dev = lge_dev.unique_id
+            if not await init_device(lge_dev, device_info, root_dev):
                 break
-
-            new_devices[device_id].append(dev.device_id)
-            wrapped_devices.setdefault(device_type, []).append(dev)
-            _LOGGER.info(
-                "LGE Device added. Name: %s - Type: %s - Model: %s - ID: %s",
-                dev.name,
-                device_type.name,
-                model_name,
-                dev.device_id,
-            )
+            if sub_dev := lge_dev.subkey_device:
+                await init_device(sub_dev, device_info, root_dev)
 
     if device_count > 0:
         _LOGGER.info("Founds %s LGE device(s)", device_count)
