@@ -92,6 +92,7 @@ class WMDevice(Device):
         self._subkey_device = None
         self._internal_state = None
         self._run_states: list | None = None
+        self._is_cycle_finishing = False
         self._stand_by = False
         self._remote_start_status = None
         self._remote_start_pressed = False
@@ -172,6 +173,23 @@ class WMDevice(Device):
         self._run_states.insert(0, run_state)
         if len(self._run_states) > 2:
             self._run_states = self._run_states[:2]
+
+    def is_cycle_finishing(self) -> bool:
+        """Calculate if the cycle is finishing because remain 1 minute."""
+        if not self._status:
+            return self._is_cycle_finishing
+
+        remaining_hours = self._status.remaintime_hour
+        remaining_min = self._status.remaintime_min
+        if remaining_hours is None or remaining_min is None:
+            return self._is_cycle_finishing
+
+        if int(remaining_hours) == 0:
+            if int(remaining_min) == 1:
+                self._is_cycle_finishing = True
+            elif int(remaining_min) > 1:
+                self._is_cycle_finishing = False
+        return self._is_cycle_finishing
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -586,6 +604,7 @@ class WMStatus(DeviceStatus):
         self._pre_state = None
         self._process_state = None
         self._error = None
+        self._is_cycle_finishing = False
         self._tcl_count = tcl_count
 
     def _getkeys(self, keys: str | list[str]) -> str | list[str]:
@@ -606,6 +625,7 @@ class WMStatus(DeviceStatus):
                 self._internal_run_state = self._data[curr_key]
                 self._run_state = state
             self._device.calculate_pre_state(self._run_state)
+            self._is_cycle_finishing = self._device.is_cycle_finishing()
         return self._run_state
 
     def _get_pre_state(self):
@@ -682,11 +702,22 @@ class WMStatus(DeviceStatus):
         pre_state = self._get_pre_state()
         if pre_state is None:
             pre_state = self._get_process_state() or StateOptions.NONE
+
         if any(state in run_state for state in STATE_WM_END) or (
             STATE_WM_POWER_OFF in run_state
             and any(state in pre_state for state in STATE_WM_END)
         ):
             return True
+
+        if (
+            any(state in run_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL])
+            and not any(
+                state in pre_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL]
+            )
+            and self._is_cycle_finishing
+        ):
+            return True
+
         return False
 
     @property
