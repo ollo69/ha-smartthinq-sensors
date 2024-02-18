@@ -276,6 +276,69 @@ class WMDevice(Device):
             return None
         return self.model_info.value(course_key).reference.get(course_id)
 
+    def _prepare_course_info(
+        self,
+        data: dict,
+        course_id: str,
+        course_info: dict,
+        course_type: CourseType,
+        course_set: bool,
+        n_course_key: str,
+        s_course_key: str | None,
+    ) -> dict:
+        """Prepare the course info used to run the command."""
+
+        ret_data = deepcopy(data)
+
+        # Prepare the course data initializing option for infoV1 device
+        option_keys = self.model_info.option_keys(self._sub_key)
+        if not self.model_info.is_info_v2:
+            for opt_name in option_keys:
+                ret_data[opt_name] = data.get(opt_name, "0")
+
+        if _COURSE_TYPE in course_info:
+            ret_data[_COURSE_TYPE] = course_info[_COURSE_TYPE]
+
+        if course_type == CourseType.COURSE:
+            ret_data[n_course_key] = course_id
+            if s_course_key:
+                ret_data[s_course_key] = 0
+        elif course_type == CourseType.SMARTCOURSE:
+            ret_data[n_course_key] = 0
+            ret_data[s_course_key] = course_id
+            for key in ["Course", "APCourse"]:
+                if key in course_info:
+                    ret_data[n_course_key] = course_info[key]
+                    break
+
+        if op_course_key := self.get_course_key(CourseType.OPCOURSE):
+            if "OpCourse" in course_info:
+                ret_data[op_course_key] = course_info["OpCourse"]
+            else:
+                ret_data.pop(op_course_key, None)
+
+        for func_key in course_info["function"]:
+            ckey = func_key.get("value")
+            cdata = func_key.get("default")
+            opt_set = False
+            for opt_name in option_keys:
+                if opt_name not in ret_data:
+                    continue
+                opt_val = ret_data[opt_name]
+                new_val = self._update_opt_bit(opt_name, opt_val, ckey, int(cdata))
+                if new_val is not None:
+                    opt_set = True
+                    if not course_set:
+                        ret_data[opt_name] = new_val
+                    break
+            if opt_set or (course_set and ckey in ret_data):
+                continue
+            if ckey and cdata:
+                ret_data[ckey] = cdata
+
+        _LOGGER.debug("Prepared course data: %s", ret_data)
+        return ret_data
+
     def _update_course_info(self, course_id=None) -> dict:
         """
         Save information in the data payload for a specific course
@@ -293,20 +356,12 @@ class WMDevice(Device):
         course_type = CourseType.COURSE
         n_course_key = self.get_course_key(CourseType.COURSE)
         s_course_key = self.get_course_key(CourseType.SMARTCOURSE)
-        op_course_key = self.get_course_key(CourseType.OPCOURSE)
         if self.model_info.is_info_v2:
             def_course_id = self.model_info.config_value(
                 f"default{self._getcmdkey('Course')}"
             )
         else:
             def_course_id = str(self.model_info.config_value("defaultCourseId"))
-
-        # Prepare the course data initializing option for infoV1 device
-        ret_data = deepcopy(data)
-        option_keys = self.model_info.option_keys(self._sub_key)
-        if not self.model_info.is_info_v2:
-            for opt_name in option_keys:
-                ret_data[opt_name] = data.get(opt_name, "0")
 
         # Search valid course Info
         course_info = None
@@ -316,7 +371,7 @@ class WMDevice(Device):
             for course_key in [n_course_key, s_course_key]:
                 if not course_key:
                     continue
-                course_id = str(ret_data.get(course_key))
+                course_id = str(data.get(course_key))
                 if course_info := self._get_course_info(course_key, course_id):
                     if course_key == s_course_key:
                         course_type = CourseType.SMARTCOURSE
@@ -331,46 +386,17 @@ class WMDevice(Device):
 
         # Save information for specific or default course
         if course_info:
-            if _COURSE_TYPE in course_info:
-                ret_data[_COURSE_TYPE] = course_info[_COURSE_TYPE]
-            if course_type == CourseType.COURSE:
-                ret_data[n_course_key] = course_id
-                if s_course_key:
-                    ret_data[s_course_key] = 0
-            elif course_type == CourseType.SMARTCOURSE:
-                ret_data[n_course_key] = 0
-                ret_data[s_course_key] = course_id
-                for key in ["Course", "APCourse"]:
-                    if key in course_info:
-                        ret_data[n_course_key] = course_info[key]
-                        break
-            if op_course_key:
-                if "OpCourse" in course_info:
-                    ret_data[op_course_key] = course_info["OpCourse"]
-                else:
-                    ret_data.pop(op_course_key, None)
+            return self._prepare_course_info(
+                data,
+                course_id,
+                course_info,
+                course_type,
+                course_set,
+                n_course_key,
+                s_course_key,
+            )
 
-            for func_key in course_info["function"]:
-                ckey = func_key.get("value")
-                cdata = func_key.get("default")
-                opt_set = False
-                for opt_name in option_keys:
-                    if opt_name not in ret_data:
-                        continue
-                    opt_val = ret_data[opt_name]
-                    new_val = self._update_opt_bit(opt_name, opt_val, ckey, int(cdata))
-                    if new_val is not None:
-                        opt_set = True
-                        if not course_set:
-                            ret_data[opt_name] = new_val
-                        break
-                if opt_set or (course_set and ckey in ret_data):
-                    continue
-                if ckey and cdata:
-                    ret_data[ckey] = cdata
-
-        _LOGGER.debug("Prepared course data: %s", ret_data)
-        return ret_data
+        return {}
 
     def _prepare_command_v1(self, cmd, key):
         """Prepare command for specific ThinQ1 device."""
