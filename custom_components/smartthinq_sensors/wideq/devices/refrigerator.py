@@ -1,4 +1,5 @@
 """------------------for Refrigerator"""
+
 from __future__ import annotations
 
 import base64
@@ -106,7 +107,7 @@ class RefrigeratorDevice(Device):
         str_data = cmd.get(data_key)
 
         if str_data:
-            status_data = self._status.data
+            status_data = self._status.as_dict
             for dt_key, dt_value in status_data.items():
                 if dt_key == key:
                     dt_value = value

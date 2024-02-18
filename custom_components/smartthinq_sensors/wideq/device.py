@@ -938,9 +938,9 @@ class DeviceStatus:
         return bool(self._data)
 
     @property
-    def data(self):
+    def as_dict(self):
         """Return status raw data."""
-        return self._data
+        return deepcopy(self._data)
 
     @property
     def is_on(self) -> bool:

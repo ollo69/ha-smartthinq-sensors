@@ -1,4 +1,5 @@
 """Diagnostics support for LG ThinQ."""
+
 from __future__ import annotations
 
 from homeassistant.components.diagnostics import async_redact_data
@@ -83,7 +84,7 @@ def _async_devices_as_dict(
                     device.device_info.as_dict(), TO_REDACT_DEV
                 ),
                 "model_info": device.model_info.as_dict(),
-                "device_status": device.status.data if device.status else None,
+                "device_status": device.status.as_dict if device.status else None,
                 "home_assistant": _async_device_ha_info(
                     hass, device.device_info.device_id
                 ),

@@ -1,4 +1,5 @@
 """------------------for Hood"""
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -89,7 +90,7 @@ class HoodDevice(Device):
         if not self._status:
             return {}
 
-        status_data = self._status.data
+        status_data = self._status.as_dict
         if (vent_level := command.get(CMD_VENTLEVEL)) is None:
             vent_level = status_data.get(STATE_VENTLEVEL, "0")
         if (lamp_level := command.get(CMD_LAMPLEVEL)) is None:
@@ -107,7 +108,7 @@ class HoodDevice(Device):
         if not self._status:
             return {}
 
-        status_data = self._status.data
+        status_data = self._status.as_dict
         vent_level = status_data.get(STATE_VENTLEVEL, "0")
         lamp_level = status_data.get(STATE_LAMPLEVEL, "0")
         return {

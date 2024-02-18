@@ -1,4 +1,5 @@
 """------------------for Microwave"""
+
 from __future__ import annotations
 
 from copy import deepcopy
@@ -136,7 +137,7 @@ class MicroWaveDevice(Device):
         if not self._status:
             return {}
 
-        status_data = self._status.data
+        status_data = self._status.as_dict
         vent_level = status_data.get(STATE_VENTLEVEL, "0")
         lamp_level = status_data.get(STATE_LAMPLEVEL, "0")
         return {
@@ -345,7 +346,7 @@ class MicroWaveStatus(DeviceStatus):
     @property
     def is_clock_display_on(self):
         """Get display clock on/off."""
-        if (status := self.data.get(STATE_CLOCKDISPLAY)) is None:
+        if (status := self._data.get(STATE_CLOCKDISPLAY)) is None:
             return None
         return self._update_feature(
             MicroWaveFeatures.CLOCK_DISPLAY, status == MODE_CLKON, False
@@ -354,7 +355,7 @@ class MicroWaveStatus(DeviceStatus):
     @property
     def is_sound_on(self):
         """Get sound on/off."""
-        if (status := self.data.get(STATE_SOUND)) is None:
+        if (status := self._data.get(STATE_SOUND)) is None:
             return None
         return self._update_feature(
             MicroWaveFeatures.SOUND, status == MODE_VOLON, False
