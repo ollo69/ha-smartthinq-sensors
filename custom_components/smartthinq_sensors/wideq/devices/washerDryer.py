@@ -369,7 +369,7 @@ class WMDevice(Device):
                 if ckey and cdata:
                     ret_data[ckey] = cdata
 
-        _LOGGER.info("Prepared course data: %s", ret_data)
+        _LOGGER.debug("Prepared course data: %s", ret_data)
         return ret_data
 
     def _prepare_command_v1(self, cmd, key):
