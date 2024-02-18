@@ -201,10 +201,11 @@ class WMDevice(Device):
         if not self._status:
             return self._is_cycle_finishing
 
-        remaining_hours = self._status.remaintime_hour
-        remaining_min = self._status.remaintime_min
-        if remaining_hours is None or remaining_min is None:
+        if (remaining_min := self._status.remaintime_min) is None:
             return self._is_cycle_finishing
+
+        # some devices just return minutes, so we set hour to 0 if is None
+        remaining_hours = self._status.remaintime_hour or 0
 
         if int(remaining_hours) == 0:
             if int(remaining_min) == 1:
@@ -833,7 +834,7 @@ class WMStatus(DeviceStatus):
             if not self.is_on:
                 return 0
             return self.int_or_none(self._data.get(self._getkeys(keys[1])))
-        return self._data.get(keys[0])
+        return self.lookup_range(self._getkeys((keys[0])))
 
     @property
     def initialtime_hour(self):
@@ -843,7 +844,9 @@ class WMStatus(DeviceStatus):
     @property
     def initialtime_min(self):
         """Return minute initial time."""
-        return self._get_time_info(["Initial_Time_M", "initialTimeMinute"])
+        return self._get_time_info(
+            [["Initial_Time_M", "Initial_Time"], "initialTimeMinute"]
+        )
 
     @property
     def remaintime_hour(self):
@@ -853,7 +856,9 @@ class WMStatus(DeviceStatus):
     @property
     def remaintime_min(self):
         """Return minute remaining time."""
-        return self._get_time_info(["Remain_Time_M", "remainTimeMinute"])
+        return self._get_time_info(
+            [["Remain_Time_M", "Remain_Time"], "remainTimeMinute"]
+        )
 
     @property
     def reservetime_hour(self):
@@ -863,7 +868,9 @@ class WMStatus(DeviceStatus):
     @property
     def reservetime_min(self):
         """Return minute reserved time."""
-        return self._get_time_info(["Reserve_Time_M", "reserveTimeMinute"])
+        return self._get_time_info(
+            [["Reserve_Time_M", "Reserve_Time"], "reserveTimeMinute"]
+        )
 
     @property
     def run_state(self):
