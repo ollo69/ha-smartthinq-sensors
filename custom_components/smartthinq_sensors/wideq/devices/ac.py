@@ -195,13 +195,13 @@ class ACMode(Enum):
 class ACFanSpeed(Enum):
     """The fan speed for an AC/HVAC device."""
 
-    slow = "@AC_MAIN_WIND_STRENGTH_SLOW_W"
-    slow_LOW = "@AC_MAIN_WIND_STRENGTH_SLOW_LOW_W"
-    off = "@AC_MAIN_WIND_STRENGTH_LOW_W"
+    SLOW = "@AC_MAIN_WIND_STRENGTH_SLOW_W"
+    SLOW_LOW = "@AC_MAIN_WIND_STRENGTH_SLOW_LOW_W"
+    OFF = "@AC_MAIN_WIND_STRENGTH_LOW_W"
     LOW_MID = "@AC_MAIN_WIND_STRENGTH_LOW_MID_W"
-    low = "@AC_MAIN_WIND_STRENGTH_MID_W"
+    LOW = "@AC_MAIN_WIND_STRENGTH_MID_W"
     MID_HIGH = "@AC_MAIN_WIND_STRENGTH_MID_HIGH_W"
-    high = "@AC_MAIN_WIND_STRENGTH_HIGH_W"
+    HIGH = "@AC_MAIN_WIND_STRENGTH_HIGH_W"
     POWER = "@AC_MAIN_WIND_STRENGTH_POWER_W"
     AUTO = "@AC_MAIN_WIND_STRENGTH_AUTO_W"
     NATURE = "@AC_MAIN_WIND_STRENGTH_NATURE_W"
@@ -544,8 +544,8 @@ class AirConditionerDevice(Device):
 
     @cached_property
     def fan_speeds(self):
-        """Return a list of available fan speeds."""
-        return self._get_property_values(SUPPORT_WIND_STRENGTH, ACFanSpeed)
+        """Return a list of available fan speeds, converted to lowercase for HomeKit compatibility."""
+        return list(map(str.lower, self._get_property_values(SUPPORT_WIND_STRENGTH, ACFanSpeed)))
 
     @cached_property
     def horizontal_step_modes(self):
@@ -690,6 +690,8 @@ class AirConditionerDevice(Device):
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
         if speed not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
+        # Necessary for HomeKit compatibility
+        speed = speed.upper()
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
         speed_value = self.model_info.enum_value(keys[2], ACFanSpeed[speed].value)
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
@@ -1070,7 +1072,8 @@ class AirConditionerStatus(DeviceStatus):
         if (value := self.lookup_enum(key, True)) is None:
             return None
         try:
-            return ACFanSpeed(value).name
+            # Lowercase necessary for HomeKit compatibility
+            return ACFanSpeed(value).name.lower()
         except ValueError:
             return None
 
