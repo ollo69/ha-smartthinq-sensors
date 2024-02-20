@@ -299,9 +299,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning(
                 "Connection not available. ThinQ platform not ready", exc_info=True
             )
+        await client.close()
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     if discovered_devices is None:
+        await client.close()
         raise ConfigEntryNotReady("ThinQ platform not ready: no devices found.")
 
     # remove device not available anymore

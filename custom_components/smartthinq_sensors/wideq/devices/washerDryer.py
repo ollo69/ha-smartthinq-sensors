@@ -105,7 +105,12 @@ class WMDevice(Device):
         sub_device: str | None = None,
         sub_key: str | None = None,
     ):
-        super().__init__(client, device_info, WMStatus(self), sub_device=sub_device)
+        super().__init__(
+            client,
+            device_info,
+            WMStatus(self, init_run_state=False),
+            sub_device=sub_device,
+        )
         self._sub_key = sub_key
         if sub_key:
             self._attr_unique_id += f"-{sub_key}"
@@ -113,6 +118,7 @@ class WMDevice(Device):
         self._subkey_device = None
         self._internal_state = None
         self._run_states: list | None = None
+        self._is_run_completed = False
         self._course_keys: dict[CourseType, str | None] | None = None
         self._is_cycle_finishing = False
         self._stand_by = False
@@ -147,11 +153,43 @@ class WMDevice(Device):
         return self._subkey_device
 
     @property
+    def run_state(self) -> str:
+        """Return calculated pre state."""
+        if not self._run_states:
+            return STATE_WM_POWER_OFF
+        return self._run_states[0]
+
+    @property
     def pre_state(self) -> str:
         """Return calculated pre state."""
         if not self._run_states:
             return STATE_WM_POWER_OFF
         return self._run_states[-1]
+
+    @property
+    def is_run_completed(self) -> bool:
+        """Return device run completed state."""
+        result = self._status.is_run_completed if self._status else False
+        if result:
+            self._is_run_completed = True
+            return True
+
+        run_state = self.run_state
+        pre_state = self.pre_state
+        if self._is_run_completed and STATE_WM_POWER_OFF in run_state:
+            return True
+
+        self._is_run_completed = False
+        if (
+            any(state in run_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL])
+            and not any(
+                state in pre_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL]
+            )
+            and self._is_cycle_finishing
+        ):
+            self._is_run_completed = True
+
+        return self._is_run_completed
 
     async def init_device_info(self) -> bool:
         """Initialize the information for the device"""
@@ -184,35 +222,25 @@ class WMDevice(Device):
             return
         self._internal_state = state
 
-    def calculate_pre_state(self, run_state: str) -> None:
+    def save_run_states(self, run_state: str, is_pre_state=False) -> None:
         """Calculate the pre state based on run_state."""
         if STATE_WM_POWER_OFF in run_state:
             run_state = STATE_WM_POWER_OFF
         if not self._run_states:
+            if is_pre_state:
+                return
             self._run_states = [run_state]
+        if is_pre_state:
+            if len(self._run_states) > 1:
+                self._run_states[1] = run_state
+            else:
+                self._run_states.append(run_state)
+            return
         if run_state == self._run_states[0]:
             return
         self._run_states.insert(0, run_state)
         if len(self._run_states) > 2:
             self._run_states = self._run_states[:2]
-
-    def is_cycle_finishing(self) -> bool:
-        """Calculate if the cycle is finishing because remain 1 minute."""
-        if not self._status:
-            return self._is_cycle_finishing
-
-        if (remaining_min := self._status.remaintime_min) is None:
-            return self._is_cycle_finishing
-
-        # some devices just return minutes, so we set hour to 0 if is None
-        remaining_hours = self._status.remaintime_hour or 0
-
-        if int(remaining_hours) == 0:
-            if int(remaining_min) == 1:
-                self._is_cycle_finishing = True
-            elif int(remaining_min) > 1:
-                self._is_cycle_finishing = False
-        return self._is_cycle_finishing
 
     def getkey(self, key: str | None) -> str | None:
         """Add subkey prefix to a key if required."""
@@ -465,10 +493,7 @@ class WMDevice(Device):
                     else:
                         cmd_data_set[cmd_key] = "NOT_SELECTED"
                 elif cmd_key == self.getkey("initialBit"):
-                    if self._sub_key:
-                        prefix = f"{self._sub_key.upper()}_"
-                    else:
-                        prefix = ""
+                    prefix = f"{self._sub_key.upper()}_" if self._sub_key else ""
                     if self._initial_bit_start:
                         cmd_data_set[cmd_key] = f"{prefix}INITIAL_BIT_ON"
                     else:
@@ -669,6 +694,23 @@ class WMDevice(Device):
         else:
             self._remote_start_status = None
 
+    def _set_cycle_finishing(self) -> None:
+        """Calculate if the cycle is finishing because remain 1 minute."""
+        if not self._status:
+            return
+
+        if (remaining_min := self._status.remaintime_min) is None:
+            return
+
+        # some devices just return minutes, so we set hour to 0 if is None
+        remaining_hours = self._status.remaintime_hour or 0
+
+        if int(remaining_hours) == 0:
+            if int(remaining_min) == 1:
+                self._is_cycle_finishing = True
+            elif int(remaining_min) > 1:
+                self._is_cycle_finishing = False
+
     async def poll(self) -> WMStatus | None:
         """Poll the device's current state."""
 
@@ -685,6 +727,7 @@ class WMDevice(Device):
 
         self._status = WMStatus(self, res)
         self._set_remote_start_opt()
+        self._set_cycle_finishing()
         return self._status
 
 
@@ -704,6 +747,7 @@ class WMStatus(DeviceStatus):
         data: dict | None = None,
         *,
         tcl_count: str | None = None,
+        init_run_state=True,
     ):
         """Initialize device status."""
         super().__init__(device, data)
@@ -712,8 +756,10 @@ class WMStatus(DeviceStatus):
         self._pre_state = None
         self._process_state = None
         self._error = None
-        self._is_cycle_finishing = False
         self._tcl_count = tcl_count
+        if init_run_state:
+            # we call get_run_state to update device states
+            self._get_run_state()
 
     def _getkeys(self, keys: str | list[str]) -> str | list[str]:
         """Add subkey prefix to a key or a list of keys if required."""
@@ -732,8 +778,7 @@ class WMStatus(DeviceStatus):
             else:
                 self._internal_run_state = self._data[curr_key]
                 self._run_state = state
-            self._device.calculate_pre_state(self._run_state)
-            self._is_cycle_finishing = self._device.is_cycle_finishing()
+            self._device.save_run_states(self._run_state)
         return self._run_state
 
     def _get_pre_state(self):
@@ -750,6 +795,7 @@ class WMStatus(DeviceStatus):
                 self._pre_state = self._device.pre_state
             else:
                 self._pre_state = state
+                self._device.save_run_states(state, True)
         return self._pre_state
 
     def _get_process_state(self):
@@ -814,15 +860,6 @@ class WMStatus(DeviceStatus):
         if any(state in run_state for state in STATE_WM_END) or (
             STATE_WM_POWER_OFF in run_state
             and any(state in pre_state for state in STATE_WM_END)
-        ):
-            return True
-
-        if (
-            any(state in run_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL])
-            and not any(
-                state in pre_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL]
-            )
-            and self._is_cycle_finishing
         ):
             return True
 

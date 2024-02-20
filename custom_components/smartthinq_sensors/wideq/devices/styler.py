@@ -1,4 +1,5 @@
 """------------------for Styler"""
+
 from __future__ import annotations
 
 from ..const import StateOptions, WashDeviceFeatures
@@ -28,6 +29,11 @@ class StylerDevice(Device):
 
     def __init__(self, client: ClientAsync, device_info: DeviceInfo):
         super().__init__(client, device_info, StylerStatus(self))
+
+    @property
+    def is_run_completed(self) -> bool:
+        """Return device run completed state."""
+        return self._status.is_run_completed if self._status else False
 
     def reset_status(self):
         self._status = StylerStatus(self)
