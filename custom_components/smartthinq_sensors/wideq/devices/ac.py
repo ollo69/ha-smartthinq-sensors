@@ -1,4 +1,5 @@
 """------------------for AC"""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -545,7 +546,9 @@ class AirConditionerDevice(Device):
     @cached_property
     def fan_speeds(self):
         """Return a list of available fan speeds, converted to lowercase for HomeKit compatibility."""
-        return list(map(str.lower, self._get_property_values(SUPPORT_WIND_STRENGTH, ACFanSpeed)))
+        return list(
+            map(str.lower, self._get_property_values(SUPPORT_WIND_STRENGTH, ACFanSpeed))
+        )
 
     @cached_property
     def horizontal_step_modes(self):
@@ -688,11 +691,13 @@ class AirConditionerDevice(Device):
 
     async def set_fan_speed(self, speed):
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
-        if speed.lower() not in self.fan_speeds:
+        if not speed or speed.lower() not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
         # Convert upper() necessary for HomeKit compatibility
-        speed_value = self.model_info.enum_value(keys[2], ACFanSpeed[speed.upper()].value)
+        speed_value = self.model_info.enum_value(
+            keys[2], ACFanSpeed[speed.upper()].value
+        )
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
     async def set_horizontal_step_mode(self, mode):
