@@ -688,7 +688,7 @@ class AirConditionerDevice(Device):
 
     async def set_fan_speed(self, speed):
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
-        if speed not in self.fan_speeds:
+        if speed.lower() not in self.fan_speeds:
             raise ValueError(f"Invalid fan speed: {speed}")
         keys = self._get_cmd_keys(CMD_STATE_WIND_STRENGTH)
         # Convert upper() necessary for HomeKit compatibility
