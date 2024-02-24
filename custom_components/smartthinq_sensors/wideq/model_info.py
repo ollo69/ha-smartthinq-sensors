@@ -170,9 +170,16 @@ class ModelInfo(ABC):
         """Look up the start index for an encoded bit based on friendly name."""
         return None
 
-    def bit_value(self, key, values, sub_key=None) -> str | None:
+    def bit_value(self, key, bit_name, value) -> int | None:
         """
         Look up the bit value for a specific key.
+        Not used in model V2.
+        """
+        return None
+
+    def option_bit_value(self, key, values, sub_key=None) -> str | None:
+        """
+        Look up the bit value for a specific option key.
         Not used in model V2.
         """
         return None
@@ -329,6 +336,31 @@ class ModelInfoV1(ModelInfo):
 
         return None
 
+    def bit_value(self, key, bit_name, value) -> int | None:
+        """Look up the bit value for a specific key."""
+        if not (values := self.value(key, [TYPE_BIT])):
+            return None
+
+        options = values.options
+        for bit_index, bit_info in options.items():
+            if bit_info["value"] == bit_name:
+                return self._get_bit_value(value, bit_index, bit_info["length"])
+
+        return None
+
+    def option_bit_value(self, key, values, sub_key=None) -> str | None:
+        """Look up the bit value for an specific key."""
+        bit_key = self._get_bit_key(key, sub_key)
+        if not bit_key:
+            return None
+        value = None if not values else values.get(bit_key["option"])
+        if not value:
+            return "0"
+        bit_val = self._get_bit_value(
+            int(value), bit_key["startbit"], bit_key["length"]
+        )
+        return str(bit_val)
+
     def _get_bit_key(self, key: str, sub_key: str | None = None):
         """Get bit values for a specific key."""
 
@@ -359,23 +391,15 @@ class ModelInfoV1(ModelInfo):
 
         return bit_key
 
-    def bit_value(self, key, values, sub_key=None) -> str | None:
-        """Look up the bit value for an specific key."""
-        bit_key = self._get_bit_key(key, sub_key)
-        if not bit_key:
-            return None
-        value = None if not values else values.get(bit_key["option"])
-        if not value:
-            return "0"
-        bit_value = int(value)
-        start_bit = bit_key["startbit"]
-        length = bit_key["length"]
+    @staticmethod
+    def _get_bit_value(value: int, start_bit: int, length: int = 1):
+        """Return bit value inside byte."""
         val = 0
         for i in range(0, length):
             bit_index = 2 ** (start_bit + i)
-            bit = 1 if bit_value & bit_index else 0
+            bit = 1 if value & bit_index else 0
             val += bit * (2**i)
-        return str(val)
+        return val
 
     @property
     def binary_control_data(self):

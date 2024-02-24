@@ -1,4 +1,5 @@
 """------------------for Oven"""
+
 from __future__ import annotations
 
 from ..const import BIT_OFF, RangeFeatures, StateOptions, TemperatureUnit
@@ -51,6 +52,49 @@ class RangeStatus(DeviceStatus):
         """Initialize device status."""
         super().__init__(device, data)
         self._oven_temp_unit = None
+        self._oven_target_temps: list | None = None
+
+    def _get_target_temps(self):
+        """Get oven target temps."""
+        if self._oven_target_temps is not None:
+            return
+        lower = self._get_oven_lower_target_temp()
+        upper = self._get_oven_upper_target_temp()
+        self._oven_target_temps = [lower, upper]
+
+    def _get_oven_lower_target_temp(self):
+        """Return oven lower target temperature."""
+        if (status := self._get_bit_target_temp("LowerTargetTemp")) is not None:
+            return status or None
+
+        unit = self._get_oven_temp_unit()
+        if unit == TemperatureUnit.FAHRENHEIT:
+            key = "LowerTargetTemp_F"
+        elif unit == TemperatureUnit.CELSIUS:
+            key = "LowerTargetTemp_C"
+        else:
+            return None
+        status = self.to_int_or_none(self._data.get(key))
+        if not status:  # 0 means not available
+            status = None
+        return status
+
+    def _get_oven_upper_target_temp(self):
+        """Return oven upper target temperature."""
+        if (status := self._get_bit_target_temp("UpperTargetTemp")) is not None:
+            return status or None
+
+        unit = self._get_oven_temp_unit()
+        if unit == TemperatureUnit.FAHRENHEIT:
+            key = "UpperTargetTemp_F"
+        elif unit == TemperatureUnit.CELSIUS:
+            key = "UpperTargetTemp_C"
+        else:
+            return None
+        status = self.to_int_or_none(self._data.get(key))
+        if not status:  # 0 means not available
+            status = None
+        return status
 
     def _get_oven_temp_unit(self):
         """Get the used temperature unit."""
@@ -64,6 +108,25 @@ class RangeStatus(DeviceStatus):
                 )
         return self._oven_temp_unit
 
+    def _get_bit_target_temp(self, key: str):
+        """Get the target temperature coded as bits."""
+        if self.is_info_v2 or key not in self._data:
+            return None
+        if not (bit_name := self._device.model_info.bit_name(key, 0)):
+            return None
+        byte_val = int(self._data[key])
+        target_temp = self._device.model_info.bit_value(key, bit_name, byte_val)
+        if target_temp is None:
+            return None
+        if "MonTempUnit" not in self._data:
+            temp_unit = self._device.model_info.bit_value(key, "MonTempUnit", byte_val)
+            if temp_unit is not None:
+                self._data["MonTempUnit"] = str(temp_unit)
+                self._oven_temp_unit = None
+                self._get_oven_temp_unit()
+
+        return target_temp
+
     @property
     def is_on(self):
         """Return if device is on."""
@@ -72,6 +135,7 @@ class RangeStatus(DeviceStatus):
     @property
     def oven_temp_unit(self):
         """Return used temperature unit."""
+        self._get_target_temps()
         return self._get_oven_temp_unit()
 
     @property
@@ -193,32 +257,14 @@ class RangeStatus(DeviceStatus):
     @property
     def oven_lower_target_temp(self):
         """Return oven lower target temperature."""
-        unit = self.oven_temp_unit
-        if unit == TemperatureUnit.FAHRENHEIT:
-            key = "LowerTargetTemp_F"
-        elif unit == TemperatureUnit.CELSIUS:
-            key = "LowerTargetTemp_C"
-        else:
-            return None
-        status = self.to_int_or_none(self._data.get(key))
-        if not status:  # 0 means not available
-            status = None
-        return status
+        self._get_target_temps()
+        return self._oven_target_temps[0]
 
     @property
     def oven_upper_target_temp(self):
         """Return oven upper target temperature."""
-        unit = self.oven_temp_unit
-        if unit == TemperatureUnit.FAHRENHEIT:
-            key = "UpperTargetTemp_F"
-        elif unit == TemperatureUnit.CELSIUS:
-            key = "UpperTargetTemp_C"
-        else:
-            return None
-        status = self.to_int_or_none(self._data.get(key))
-        if not status:  # 0 means not available
-            status = None
-        return status
+        self._get_target_temps()
+        return self._oven_target_temps[1]
 
     @property
     def oven_lower_current_temp(self):

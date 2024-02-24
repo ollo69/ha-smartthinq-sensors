@@ -1060,7 +1060,9 @@ class DeviceStatus:
         else:
             str_val = self._data.get(key)
             if not str_val:
-                str_val = self._device.model_info.bit_value(key, self._data, sub_key)
+                str_val = self._device.model_info.option_bit_value(
+                    key, self._data, sub_key
+                )
 
         if str_val is None:
             return None
