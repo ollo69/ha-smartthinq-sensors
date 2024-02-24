@@ -349,7 +349,7 @@ class ModelInfoV1(ModelInfo):
         return None
 
     def option_bit_value(self, key, values, sub_key=None) -> str | None:
-        """Look up the bit value for an specific key."""
+        """Look up the bit value for an specific option key."""
         bit_key = self._get_bit_key(key, sub_key)
         if not bit_key:
             return None
