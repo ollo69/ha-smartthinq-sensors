@@ -13,6 +13,11 @@ from homeassistant.components.climate.const import (
     ATTR_HVAC_MODE,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
+    FAN_AUTO,
+    FAN_DIFFUSE,
+    FAN_LOW,
+    FAN_MEDIUM,
+    FAN_HIGH,
     PRESET_ECO,
     PRESET_NONE,
     ClimateEntityFeature,
@@ -29,7 +34,13 @@ from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice
 from .wideq import AirConditionerFeatures, DeviceType, TemperatureUnit
-from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, ACMode, AirConditionerDevice
+from .wideq.devices.ac import (
+    AWHP_MAX_TEMP,
+    AWHP_MIN_TEMP,
+    ACFanSpeed,
+    ACMode,
+    AirConditionerDevice,
+)
 
 # general ac attributes
 ATTR_FRIDGE = "fridge"
@@ -46,6 +57,15 @@ HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
     ACMode.FAN.name: HVACMode.FAN_ONLY,
     ACMode.ACO.name: HVACMode.HEAT_COOL,
 }
+
+FAN_MODE_LOOKUP: dict[str, str] = {
+    ACFanSpeed.AUTO.name: FAN_AUTO,
+    ACFanSpeed.HIGH.name: FAN_HIGH,
+    ACFanSpeed.LOW.name: FAN_LOW,
+    ACFanSpeed.MID.name: FAN_MEDIUM,
+    ACFanSpeed.NATURE.name: FAN_DIFFUSE,
+}
+FAN_MODE_REVERSE_LOOKUP = {v: k for k, v in FAN_MODE_LOOKUP.items()}
 
 PRESET_MODE_LOOKUP: dict[str, dict[str, HVACMode]] = {
     ACMode.ENERGY_SAVING.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
@@ -181,7 +201,9 @@ class LGEACClimate(LGEClimate):
         super().__init__(api)
         self._device: AirConditionerDevice = api.device
         self._attr_unique_id = f"{api.unique_id}-AC"
-        self._attr_fan_modes = self._device.fan_speeds
+        self._attr_fan_modes = [
+            FAN_MODE_LOOKUP.get(s, s) for s in self._device.fan_speeds
+        ]
         self._attr_swing_modes = [
             f"{SWING_PREFIX[0]}{mode}" for mode in self._device.vertical_step_modes
         ] + [f"{SWING_PREFIX[1]}{mode}" for mode in self._device.horizontal_step_modes]
@@ -365,13 +387,15 @@ class LGEACClimate(LGEClimate):
     @property
     def fan_mode(self) -> str | None:
         """Return the fan setting."""
-        return self._api.state.fan_speed
+        speed = self._api.state.fan_speed
+        return FAN_MODE_LOOKUP.get(speed, speed)
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         if fan_mode not in self.fan_modes:
             raise ValueError(f"Invalid fan mode [{fan_mode}]")
-        await self._device.set_fan_speed(fan_mode)
+        lg_fan_mode = FAN_MODE_REVERSE_LOOKUP.get(fan_mode, fan_mode)
+        await self._device.set_fan_speed(lg_fan_mode)
         self._api.async_set_updated()
 
     @property
