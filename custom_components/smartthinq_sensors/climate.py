@@ -392,9 +392,9 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
-        if fan_mode not in self.fan_modes:
-            raise ValueError(f"Invalid fan mode [{fan_mode}]")
         lg_fan_mode = FAN_MODE_REVERSE_LOOKUP.get(fan_mode, fan_mode)
+        if lg_fan_mode not in self._device.fan_speeds:
+            raise ValueError(f"Invalid fan mode [{fan_mode}]")
         await self._device.set_fan_speed(lg_fan_mode)
         self._api.async_set_updated()
 
