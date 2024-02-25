@@ -391,9 +391,12 @@ class WMDevice(Device):
                     break
 
         if op_course_key := self.get_course_key(CourseType.OPCOURSE):
-            if "OpCourse" in course_info:
-                ret_data[op_course_key] = course_info["OpCourse"]
-            else:
+            ref_opcourse_key = (
+                "OpCourse" if self.model_info.is_info_v2 else op_course_key
+            )
+            if ref_opcourse_key in course_info:
+                ret_data[op_course_key] = course_info[ref_opcourse_key]
+            elif self.model_info.is_info_v2:
                 ret_data.pop(op_course_key, None)
 
         for func_key in course_info["function"]:
