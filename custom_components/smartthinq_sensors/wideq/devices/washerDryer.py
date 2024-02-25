@@ -698,10 +698,11 @@ class WMDevice(Device):
     @property
     def select_course_enabled(self) -> bool:
         """Return if selecr course is enabled."""
-        enabled = self.remote_start_enabled and self._initial_bit_start
         if not self._select_course_enabled:
             enabled = False
             self._select_course_enabled = True
+        else:
+            enabled = self.remote_start_enabled and self._initial_bit_start
         if not enabled and self._selected_course:
             self._selected_course = None
         return enabled
