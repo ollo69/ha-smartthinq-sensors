@@ -399,6 +399,8 @@ class WMDevice(Device):
         for func_key in course_info["function"]:
             ckey = func_key.get("value")
             cdata = func_key.get("default")
+            if not ckey or cdata is None:
+                continue
             opt_set = False
             for opt_name in option_keys:
                 if opt_name not in ret_data:
@@ -412,8 +414,7 @@ class WMDevice(Device):
                     break
             if opt_set or (course_set and ckey in ret_data):
                 continue
-            if ckey and cdata:
-                ret_data[ckey] = cdata
+            ret_data[ckey] = cdata
 
         if not course_set:
             ret_data[VT_CTRL_COURSE_INFO] = course_info
@@ -494,7 +495,7 @@ class WMDevice(Device):
                 ckey = func_key.get("value")
                 defdata = func_key.get("default")
                 cdata = course_data.get(ckey, defdata)
-                if not (ckey or cdata):
+                if not ckey or cdata is None:
                     continue
                 vt_cmd_data.append(
                     {"cmd": ckey, "type": "ABSOLUTE", "value": str(cdata)}
