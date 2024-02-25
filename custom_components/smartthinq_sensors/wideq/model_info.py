@@ -143,6 +143,14 @@ class ModelInfo(ABC):
 
         return [str(i) for i in range(values.min, values.max + 1, values.step)]
 
+    def reference_values(self, key) -> dict | None:
+        """Look up the reference section."""
+        if not (values := self.value(key, [TYPE_REFERENCE])):
+            return None
+
+        reference: dict = values.reference
+        return reference
+
     def reference_name(self, key, value, ref_key="_comment") -> str | None:
         """Look up the friendly name for an encoded reference value."""
         if not (values := self.value(key, [TYPE_REFERENCE])):

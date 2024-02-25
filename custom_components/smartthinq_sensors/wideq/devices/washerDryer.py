@@ -42,11 +42,12 @@ CMD_REMOTE_START = [
 ]
 
 VT_CTRL_CMD = {
-    "WMOff": [{"cmd": "power", "type": "ABSOLUTE", "value": "POWER_OFF"}],
-    "WMWakeup": [{"cmd": "power", "type": "ABSOLUTE", "value": "POWER_ON"}],
-    "WMStop": [{"cmd": "wmControl", "type": "ABSOLUTE", "value": "PAUSE"}],
-    "WMStart": [{"cmd": "wmControl", "type": "ABSOLUTE", "value": "START"}],
+    "WMOff": {"cmd": "power", "type": "ABSOLUTE", "value": "POWER_OFF"},
+    "WMWakeup": {"cmd": "power", "type": "ABSOLUTE", "value": "POWER_ON"},
+    "WMStop": {"cmd": "wmControl", "type": "ABSOLUTE", "value": "PAUSE"},
+    "WMStart": {"cmd": "wmControl", "type": "ABSOLUTE", "value": "START"},
 }
+VT_CTRL_COURSE_INFO = "vt_ctrl_course_info"
 
 BIT_FEATURES = {
     WashDeviceFeatures.ANTICREASE: ["AntiCrease", "antiCrease"],
@@ -92,6 +93,7 @@ _COURSE_KEYS = {
     ],
 }
 _COURSE_TYPE = "courseType"
+_CURRENT_COURSE = "Current course"
 
 
 class WMDevice(Device):
@@ -120,12 +122,15 @@ class WMDevice(Device):
         self._run_states: list | None = None
         self._is_run_completed = False
         self._course_keys: dict[CourseType, str | None] | None = None
+        self._course_infos: dict[str, str] | None = None
+        self._selected_course: str | None = None
+        self._select_course_enabled = True
         self._is_cycle_finishing = False
         self._stand_by = False
         self._remote_start_status: dict | None = None
         self._remote_start_pressed = False
         self._power_on_available: bool = None
-        self._initial_bit_start = False
+        self._initial_bit_start: bool = False
 
     @cached_property
     def _state_power_off(self):
@@ -151,6 +156,17 @@ class WMDevice(Device):
     def subkey_device(self) -> Device | None:
         """Return the available sub key device."""
         return self._subkey_device
+
+    @cached_property
+    def course_list(self) -> list:
+        """Return a list of available course."""
+        course_infos = self._get_course_infos()
+        return [_CURRENT_COURSE, *course_infos.keys()]
+
+    @property
+    def selected_course(self) -> str:
+        """Return current selected course."""
+        return self._selected_course or _CURRENT_COURSE
 
     @property
     def run_state(self) -> str:
@@ -306,11 +322,38 @@ class WMDevice(Device):
             self._course_keys = {key: self._get_course_key(key) for key in _COURSE_KEYS}
         return self._course_keys[course_type]
 
-    def _get_course_info(self, course_key, course_id):
+    def _get_course_infos(self) -> dict:
+        """Return a dict with available courses."""
+        if self._course_infos is not None:
+            return self._course_infos
+
+        if not (course_key := self.get_course_key(CourseType.COURSE)):
+            self._course_infos = {}
+            return {}
+        if not (course_infos := self.model_info.reference_values(course_key)):
+            self._course_infos = {}
+            return {}
+
+        ret_val = {}
+        for key, value in course_infos.items():
+            if enum_name := value.get("name"):
+                name = self.get_enum_text(enum_name)
+                if name == enum_name:
+                    name = value.get("_comment", enum_name)
+            else:
+                name = value.get("_comment", key)
+            ret_val[name] = key
+
+        self._course_infos = ret_val
+        return ret_val
+
+    def _get_course_details(self, course_key, course_id):
         """Get definition for a specific course ID."""
         if course_key is None:
             return None
-        return self.model_info.value(course_key).reference.get(course_id)
+        if courses := self.model_info.reference_values(course_key):
+            return courses.get(course_id)
+        return None
 
     def _prepare_course_info(
         self,
@@ -372,10 +415,13 @@ class WMDevice(Device):
             if ckey and cdata:
                 ret_data[ckey] = cdata
 
+        if not course_set:
+            ret_data[VT_CTRL_COURSE_INFO] = course_info
+
         _LOGGER.debug("Prepared course data: %s", ret_data)
         return ret_data
 
-    def _update_course_info(self, course_id=None) -> dict:
+    def _update_course_info(self) -> dict:
         """
         Save information in the data payload for a specific course
         or default course if not already available.
@@ -384,10 +430,11 @@ class WMDevice(Device):
         if self._initial_bit_start:
             data = self._remote_start_status
         elif self._status:
+            self._selected_course = None
             data = self._status.as_dict
 
         if not data:
-            return {}
+            raise ValueError("Course info not available")
 
         course_type = CourseType.COURSE
         n_course_key = self.get_course_key(CourseType.COURSE)
@@ -400,6 +447,10 @@ class WMDevice(Device):
             def_course_id = str(self.model_info.config_value("defaultCourseId"))
 
         # Search valid course Info
+        if self._selected_course:
+            course_id = self._get_course_infos().get(self._selected_course)
+        else:
+            course_id = None
         course_info = None
         course_set = False
         if course_id is None:
@@ -408,31 +459,48 @@ class WMDevice(Device):
                 if not course_key:
                     continue
                 course_id = str(data.get(course_key))
-                if course_info := self._get_course_info(course_key, course_id):
+                if course_info := self._get_course_details(course_key, course_id):
                     if course_key == s_course_key:
                         course_type = CourseType.SMARTCOURSE
                     course_set = True
                     break
         else:
-            course_info = self._get_course_info(n_course_key, course_id)
+            course_info = self._get_course_details(n_course_key, course_id)
 
         if not course_info:
             course_id = def_course_id
-            course_info = self._get_course_info(n_course_key, course_id)
+            course_info = self._get_course_details(n_course_key, course_id)
+
+        if not course_info:
+            raise ValueError("Course info not available")
 
         # Save information for specific or default course
-        if course_info:
-            return self._prepare_course_info(
-                data,
-                course_id,
-                course_info,
-                course_type,
-                course_set,
-                n_course_key,
-                s_course_key,
-            )
+        return self._prepare_course_info(
+            data,
+            course_id,
+            course_info,
+            course_type,
+            course_set,
+            n_course_key,
+            s_course_key,
+        )
 
-        return {}
+    def _prepare_vtctrl_course_info(self) -> list:
+        """Prepare course info for vtctrl command."""
+        vt_cmd_data = []
+        course_data = self._update_course_info()
+        if course_info := course_data.get(VT_CTRL_COURSE_INFO):
+            for func_key in course_info["function"]:
+                ckey = func_key.get("value")
+                defdata = func_key.get("default")
+                cdata = course_data.get(ckey, defdata)
+                if not (ckey or cdata):
+                    continue
+                vt_cmd_data.append(
+                    {"cmd": ckey, "type": "ABSOLUTE", "value": str(cdata)}
+                )
+
+        return vt_cmd_data
 
     def _prepare_command_v1(self, cmd, key):
         """Prepare command for specific ThinQ1 device."""
@@ -525,6 +593,13 @@ class WMDevice(Device):
             return cmd
 
         cmd_data_set = {}
+        vt_cmd_data = []
+        if self._initial_bit_start and command == "WMStart":
+            if vt_course_data := self._prepare_vtctrl_course_info():
+                vt_cmd_data = vt_course_data
+
+        vt_cmd_data.append(VT_CTRL_CMD[command])
+
         ctrl_target = None if not self._sub_device else self._sub_device.upper()
         for cmd_key, cmd_val in data_set.items():
             if cmd_key == "ctrlTarget":
@@ -534,7 +609,7 @@ class WMDevice(Device):
             elif cmd_key == "vtData":
                 vt_data = {}
                 for dt_key in cmd_val.keys():
-                    vt_data[ctrl_target or dt_key] = VT_CTRL_CMD[command]
+                    vt_data[ctrl_target or dt_key] = vt_cmd_data
                 cmd_data_set[cmd_key] = vt_data
             else:
                 cmd_data_set[cmd_key] = cmd_val
@@ -616,6 +691,29 @@ class WMDevice(Device):
             return True
         return False
 
+    @property
+    def select_course_enabled(self) -> bool:
+        """Return if selecr course is enabled."""
+        enabled = self.remote_start_enabled and self._initial_bit_start
+        if not self._select_course_enabled:
+            enabled = False
+            self._select_course_enabled = True
+        if not enabled and self._selected_course:
+            self._selected_course = None
+        return enabled
+
+    async def select_start_course(self, course_name: str) -> None:
+        """Select a secific course for remote start."""
+        if not self.select_course_enabled:
+            raise InvalidDeviceStatus()
+
+        if course_name == _CURRENT_COURSE:
+            self._selected_course = None
+            return
+        if course_name not in self.course_list:
+            raise ValueError(f"Invalid course: {course_name}")
+        self._selected_course = course_name
+
     async def power_off(self):
         """Power off the device."""
         keys = self._get_cmd_keys(CMD_POWER_OFF)
@@ -640,6 +738,7 @@ class WMDevice(Device):
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
+        self._select_course_enabled = False
         self._remote_start_pressed = True
 
     async def pause(self):

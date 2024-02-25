@@ -1,4 +1,5 @@
 """Support for ThinQ device selects."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -15,7 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import DeviceType, MicroWaveFeatures
+from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,10 +39,21 @@ class ThinQSelectEntityDescription(
     value_fn: Callable[[Any], str] | None = None
 
 
+WASH_DEV_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
+    ThinQSelectEntityDescription(
+        key="course_selection",
+        name="Course selection",
+        icon="mdi:pin-outline",
+        options_fn=lambda x: x.device.course_list,
+        select_option_fn=lambda x, option: x.device.select_start_course(option),
+        available_fn=lambda x: x.device.select_course_enabled,
+        value_fn=lambda x: x.device.selected_course,
+    ),
+)
 MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ThinQSelectEntityDescription(
         key=MicroWaveFeatures.DISPLAY_SCROLL_SPEED,
-        name="Display Scroll Speed",
+        name="Display scroll speed",
         icon="mdi:format-pilcrow-arrow-right",
         entity_category=EntityCategory.CONFIG,
         options_fn=lambda x: x.device.display_scroll_speeds,
@@ -49,7 +61,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ),
     ThinQSelectEntityDescription(
         key=MicroWaveFeatures.WEIGHT_UNIT,
-        name="Weight Unit",
+        name="Weight unit",
         icon="mdi:weight",
         entity_category=EntityCategory.CONFIG,
         options_fn=lambda x: x.device.defrost_weight_units,
@@ -59,6 +71,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
 
 SELECT_ENTITIES = {
     DeviceType.MICROWAVE: MICROWAVE_SELECT,
+    **{dev_type: WASH_DEV_SELECT for dev_type in WM_DEVICE_TYPES},
 }
 
 
