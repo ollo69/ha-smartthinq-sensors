@@ -9,5 +9,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ollo69/ha-smartthinq-sensors/issues",
   "requirements": ["pycountry<23.0.0,>=22.1.10", "xmltodict>=0.13.0", "charset_normalizer>=3.2.0"],
-  "version": "0.38.5"
+  "version": "0.38.6"
 }
