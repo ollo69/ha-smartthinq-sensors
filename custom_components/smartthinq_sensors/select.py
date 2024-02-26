@@ -43,7 +43,7 @@ WASH_DEV_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ThinQSelectEntityDescription(
         key="course_selection",
         name="Course selection",
-        icon="mdi:pin-outline",
+        icon="mdi:tune-vertical-variant",
         options_fn=lambda x: x.device.course_list,
         select_option_fn=lambda x, option: x.device.select_start_course(option),
         available_fn=lambda x: x.device.select_course_enabled,

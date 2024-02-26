@@ -50,6 +50,7 @@ WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
     ThinQButtonEntityDescription(
         key=ATTR_REMOTE_START,
         name="Remote Start",
+        icon="mdi:play-circle-outline",
         device_class=ButtonDeviceClass.UPDATE,
         press_action_fn=lambda x: x.device.remote_start(),
         available_fn=lambda x: x.device.remote_start_enabled,
@@ -58,6 +59,7 @@ WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
     ThinQButtonEntityDescription(
         key=ATTR_PAUSE,
         name="Pause",
+        icon="mdi:pause-circle-outline",
         device_class=ButtonDeviceClass.UPDATE,
         press_action_fn=lambda x: x.device.pause(),
         available_fn=lambda x: x.device.pause_enabled,
