@@ -663,28 +663,23 @@ class WMDevice(Device):
     @property
     def remote_start_enabled(self) -> bool:
         """Return if remote start is enabled."""
-        if self._remote_start_pressed:
+        if self._remote_start_pressed or self.stand_by or not self._status.is_on:
             return False
-        if not self._status.is_on:
-            return False
-        if self._remote_start_status is None or self._stand_by:
+        if self._remote_start_status is None:
             return False
         if self._status.internal_run_state in [
             self._state_power_on_init,
             self._state_pause,
         ]:
-            self._initial_bit_start = (
-                self._status.internal_run_state == self._state_power_on_init
-            )
             return True
         return False
 
     @property
     def pause_enabled(self) -> bool:
         """Return if pause is enabled."""
-        if not self._status.is_on:
+        if self.stand_by or not self._status.is_on:
             return False
-        if self._remote_start_status is None or self._stand_by:
+        if self._remote_start_status is None:
             return False
         if self._status.internal_run_state not in [
             self._state_power_on_init,
@@ -799,8 +794,12 @@ class WMDevice(Device):
         if remote_start == StateOptions.ON:
             if self._remote_start_status is None:
                 self._remote_start_status = self._status.as_dict
+            self._initial_bit_start = (
+                self._status.internal_run_state == self._state_power_on_init
+            )
         else:
             self._remote_start_status = None
+            self._initial_bit_start = False
 
     def _set_cycle_finishing(self) -> None:
         """Calculate if the cycle is finishing because remain 1 minute."""
