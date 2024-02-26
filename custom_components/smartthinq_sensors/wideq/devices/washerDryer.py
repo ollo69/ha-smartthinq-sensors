@@ -124,7 +124,6 @@ class WMDevice(Device):
         self._course_keys: dict[CourseType, str | None] | None = None
         self._course_infos: dict[str, str] | None = None
         self._selected_course: str | None = None
-        self._select_course_enabled = True
         self._is_cycle_finishing = False
         self._stand_by = False
         self._remote_start_status: dict | None = None
@@ -665,7 +664,6 @@ class WMDevice(Device):
     def remote_start_enabled(self) -> bool:
         """Return if remote start is enabled."""
         if self._remote_start_pressed:
-            self._remote_start_pressed = False
             return False
         if not self._status.is_on:
             return False
@@ -698,11 +696,7 @@ class WMDevice(Device):
     @property
     def select_course_enabled(self) -> bool:
         """Return if selecr course is enabled."""
-        if not self._select_course_enabled:
-            enabled = False
-            self._select_course_enabled = True
-        else:
-            enabled = self.remote_start_enabled and self._initial_bit_start
+        enabled = self.remote_start_enabled and self._initial_bit_start
         if not enabled and self._selected_course:
             self._selected_course = None
         return enabled
@@ -743,7 +737,6 @@ class WMDevice(Device):
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
-        self._select_course_enabled = False
         self._remote_start_pressed = True
 
     async def pause(self):
@@ -780,6 +773,9 @@ class WMDevice(Device):
 
     def _set_remote_start_opt(self):
         """Save the status to use for remote start."""
+        if self._remote_start_pressed:
+            self._remote_start_pressed = False
+
         if self._power_on_available is None:
             if self.model_info.config_value("powerOnButtonAvailable"):
                 self._power_on_available = True
