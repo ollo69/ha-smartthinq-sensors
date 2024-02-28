@@ -69,12 +69,14 @@ from .wideq import (
 # service definition
 SERVICE_REMOTE_START = "remote_start"
 SERVICE_WAKE_UP = "wake_up"
+SERVICE_PAUSE = "pause"
 SERVICE_SET_TIME = "set_time"
 
 # supported features
-SUPPORT_REMOTE_START = 1
-SUPPORT_WAKE_UP = 2
-SUPPORT_SET_TIME = 4
+# this is used to limit the device's entities
+# used to call the specific service
+SUPPORT_WM_SERVICES = 1
+SUPPORT_SET_TIME = 2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -583,15 +585,21 @@ async def async_setup_entry(
     platform = current_platform.get()
     platform.async_register_entity_service(
         SERVICE_REMOTE_START,
-        {},
+        {vol.Optional("course"): str},
         "async_remote_start",
-        [SUPPORT_REMOTE_START],
+        [SUPPORT_WM_SERVICES],
     )
     platform.async_register_entity_service(
         SERVICE_WAKE_UP,
         {},
         "async_wake_up",
-        [SUPPORT_WAKE_UP],
+        [SUPPORT_WM_SERVICES],
+    )
+    platform.async_register_entity_service(
+        SERVICE_PAUSE,
+        {},
+        "async_pause",
+        [SUPPORT_WM_SERVICES],
     )
     platform.async_register_entity_service(
         SERVICE_SET_TIME,
@@ -632,7 +640,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         features = 0
         if self._is_default:
             if self._api.type in WM_DEVICE_TYPES:
-                features |= SUPPORT_REMOTE_START | SUPPORT_WAKE_UP
+                features |= SUPPORT_WM_SERVICES
             if self._api.type in SET_TIME_DEVICE_TYPES:
                 features |= SUPPORT_SET_TIME
         return features
@@ -695,17 +703,23 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
         return None
 
-    async def async_remote_start(self):
+    async def async_remote_start(self, course: str | None = None):
         """Call the remote start command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
-        await self._api.device.remote_start()
+        await self._api.device.remote_start(course)
 
     async def async_wake_up(self):
         """Call the wakeup command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.wake_up()
+
+    async def async_pause(self):
+        """Call the pause command for WM devices."""
+        if self._api.type not in WM_DEVICE_TYPES:
+            raise NotImplementedError()
+        await self._api.device.pause()
 
     async def async_set_time(self, time_wanted: time | None = None):
         """Call the set time command for Microwave devices."""

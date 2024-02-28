@@ -691,7 +691,7 @@ class WMDevice(Device):
     @property
     def select_course_enabled(self) -> bool:
         """Return if selecr course is enabled."""
-        enabled = self.remote_start_enabled and self._initial_bit_start
+        enabled = self._initial_bit_start and self.remote_start_enabled
         if not enabled and self._selected_course:
             self._selected_course = None
         return enabled
@@ -725,10 +725,13 @@ class WMDevice(Device):
         self._stand_by = False
         self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
 
-    async def remote_start(self):
+    async def remote_start(self, course_name: str | None = None) -> None:
         """Remote start the device."""
         if not self.remote_start_enabled:
             raise InvalidDeviceStatus()
+
+        if course_name and self._initial_bit_start:
+            await self.select_start_course(course_name)
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
