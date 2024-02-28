@@ -69,7 +69,6 @@ from .wideq import (
 # service definition
 SERVICE_REMOTE_START = "remote_start"
 SERVICE_WAKE_UP = "wake_up"
-SERVICE_PAUSE = "pause"
 SERVICE_SET_TIME = "set_time"
 
 # supported features
@@ -596,12 +595,6 @@ async def async_setup_entry(
         [SUPPORT_WM_SERVICES],
     )
     platform.async_register_entity_service(
-        SERVICE_PAUSE,
-        {},
-        "async_pause",
-        [SUPPORT_WM_SERVICES],
-    )
-    platform.async_register_entity_service(
         SERVICE_SET_TIME,
         {vol.Optional("time_wanted"): cv.time},
         "async_set_time",
@@ -714,12 +707,6 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.wake_up()
-
-    async def async_pause(self):
-        """Call the pause command for WM devices."""
-        if self._api.type not in WM_DEVICE_TYPES:
-            raise NotImplementedError()
-        await self._api.device.pause()
 
     async def async_set_time(self, time_wanted: time | None = None):
         """Call the set time command for Microwave devices."""
