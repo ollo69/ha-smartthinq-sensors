@@ -124,6 +124,11 @@ class WMDevice(Device):
         self._course_keys: dict[CourseType, str | None] | None = None
         self._course_infos: dict[str, str] | None = None
         self._selected_course: str | None = None
+        self._course_overrides: dict | None = {}
+        self._course_overrides_lists: dict | None = {
+            'temp': ['TEMP_COLD', 'TEMP_20', 'TEMP_30', 'TEMP_40', 'TEMP_60', 'TEMP_95'],
+            'spin': ['NO_SPIN', 'SPIN_400', 'SPIN_800', 'SPIN_1000', 'SPIN_Max'],
+            'rinse':  ['RINSE_NORMAL', 'RINSE_PLUS']}
         self._is_cycle_finishing = False
         self._stand_by = False
         self._remote_start_status: dict | None = None
@@ -159,13 +164,59 @@ class WMDevice(Device):
     @cached_property
     def course_list(self) -> list:
         """Return a list of available course."""
+        #jl
+        _LOGGER.debug("course_list()")
         course_infos = self._get_course_infos()
+        #jl
+        _LOGGER.debug("course_list->: %s",[_CURRENT_COURSE, *course_infos.keys()])
         return [_CURRENT_COURSE, *course_infos.keys()]
 
     @property
     def selected_course(self) -> str:
         """Return current selected course."""
         return self._selected_course or _CURRENT_COURSE
+
+    @property
+    def temps_list(self) -> list:
+        """Return a list of available water temperatures for the selected course."""
+        #jl
+        _LOGGER.debug("temps_list->: %s", self._course_overrides_lists.get('temp'))
+        return self._course_overrides_lists.get('temp')
+        
+    @property
+    def selected_temp(self) -> str:
+        """Return current selected water temperature."""
+        #jl
+        _LOGGER.debug("selected_temp->: %s", self._course_overrides.get('temp'))
+        return self._course_overrides.get('temp')
+
+    @property
+    def rinses_list(self) -> list:
+        """Return a list of available rinse options for the selected course."""
+        #jl
+        _LOGGER.debug("rinses_list->: %s", self._course_overrides_lists.get('rinse'))
+        return self._course_overrides_lists.get('rinse')
+
+    @property
+    def selected_rinse(self) -> str:
+        """Return current selected rinse option."""
+        #jl
+        _LOGGER.debug("selected_rinse->: %s", self._course_overrides.get('rinse'))
+        return self._course_overrides.get('rinse')
+
+    @property
+    def spins_list(self) -> list:
+        """Return a list of available spin speeds for the selected course."""
+        #jl
+        _LOGGER.debug("spins_list->: %s", self._course_overrides_lists.get('spin'))
+        return self._course_overrides_lists.get('spin')
+
+    @property
+    def selected_spin(self) -> str:
+        """Return current selected spin speed."""
+        #jl
+        _LOGGER.debug("selected_spin->: %s", self._course_overrides.get('spin'))
+        return self._course_overrides.get('spin')
 
     @property
     def run_state(self) -> str:
@@ -278,6 +329,8 @@ class WMDevice(Device):
         return f"{self._sub_key.capitalize()}{key}"
 
     def _update_status(self, key, value):
+        #jl
+        _LOGGER.debug("_update_status(key, value): %s:%s", key, value)
         if self._status and value:
             self._status.update_status(key, value)
 
@@ -297,6 +350,8 @@ class WMDevice(Device):
         return None
 
     def _get_course_key(self, course_type: CourseType) -> str | None:
+        #jl
+        # _LOGGER.debug("_get_course_key(course_type): %s", course_type)
         """Return the course key for specific device."""
         if self.model_info.is_info_v2:
             course_type_keys = _COURSE_KEYS[course_type][1]
@@ -314,6 +369,8 @@ class WMDevice(Device):
         return None
 
     def get_course_key(self, course_type: CourseType) -> str | None:
+        #jl
+        # _LOGGER.debug("get_course_key(course_type): %s", course_type)
         """Return the course key for specific device."""
         if self._course_keys is None:
             if not self.model_info:
@@ -322,6 +379,8 @@ class WMDevice(Device):
         return self._course_keys[course_type]
 
     def _get_course_infos(self) -> dict:
+        #jl
+        # _LOGGER.debug("_get_course_infos()")
         """Return a dict with available courses."""
         if self._course_infos is not None:
             return self._course_infos
@@ -347,10 +406,15 @@ class WMDevice(Device):
         return ret_val
 
     def _get_course_details(self, course_key, course_id):
+        #jl
+        # _LOGGER.debug("_get_course_details(course_key): %s", course_key)
+        # _LOGGER.debug("_get_course_details(course_id): %s", course_id)
         """Get definition for a specific course ID."""
         if course_key is None:
             return None
         if courses := self.model_info.reference_values(course_key):
+            #jl
+            # _LOGGER.debug("_get_course_details->: %s", courses.get(course_id))
             return courses.get(course_id)
         return None
 
@@ -365,7 +429,7 @@ class WMDevice(Device):
         s_course_key: str | None,
     ) -> dict:
         """Prepare the course info used to run the command."""
-
+        
         ret_data = deepcopy(data)
 
         # Prepare the course data initializing option for infoV1 device
@@ -399,12 +463,18 @@ class WMDevice(Device):
                 ret_data.pop(op_course_key, None)
 
         for func_key in course_info["function"]:
+            #jl
+            # _LOGGER.debug("_prepare_course_info,func_key): %s", func_key)
             ckey = func_key.get("value")
             cdata = func_key.get("default")
             if not ckey or cdata is None:
                 continue
             opt_set = False
+            #jl
+            # _LOGGER.debug("_prepare_course_info,option_keys): %s", option_keys)
             for opt_name in option_keys:
+                #jl
+                _LOGGER.debug("_prepare_course_info,opt_name): %s", opt_name)
                 if opt_name not in ret_data:
                     continue
                 opt_val = ret_data[opt_name]
@@ -418,6 +488,11 @@ class WMDevice(Device):
                 continue
             ret_data[ckey] = cdata
 
+            # If an override is defeined then apply it
+            if override_value := self._course_overrides.get(ckey):
+                ret_data[ckey] = override_value
+                _LOGGER.debug("_prepare_course_info, course data override: %s: %s", ckey, ret_data[ckey])
+
         if not course_set:
             ret_data[VT_CTRL_COURSE_INFO] = course_info
 
@@ -429,6 +504,8 @@ class WMDevice(Device):
         Save information in the data payload for a specific course
         or default course if not already available.
         """
+        #jl
+        _LOGGER.debug("_update_course_info()")
         data = None
         if self._initial_bit_start:
             data = self._remote_start_status
@@ -490,6 +567,8 @@ class WMDevice(Device):
 
     def _prepare_vtctrl_course_info(self) -> list:
         """Prepare course info for vtctrl command."""
+        #jl
+        _LOGGER.debug("_prepare_vtctrl_course_info")
         vt_cmd_data = []
         course_data = self._update_course_info()
         if course_info := course_data.get(VT_CTRL_COURSE_INFO):
@@ -502,11 +581,14 @@ class WMDevice(Device):
                 vt_cmd_data.append(
                     {"cmd": ckey, "type": "ABSOLUTE", "value": str(cdata)}
                 )
-
+        #jl
+        _LOGGER.debug("_prepare_vtctrl_course_info->: %s", vt_cmd_data)
         return vt_cmd_data
 
     def _prepare_command_v1(self, cmd, key):
         """Prepare command for specific ThinQ1 device."""
+        #jl
+        _LOGGER.debug("_prepare_command_v1(cmd): %s", cmd)
         encode = cmd.pop("encode", False)
 
         str_data = ""
@@ -538,8 +620,13 @@ class WMDevice(Device):
 
     def _prepare_command_v2(self, cmd, key: str):
         """Prepare command for specific ThinQ2 device."""
+        #jl
+        _LOGGER.debug("_prepare_command_v2(cmd): %s", cmd)
+        _LOGGER.debug("_prepare_command_v2(key): %s", key)
         data_set = cmd.pop("data", None)
         if not data_set:
+            #jl
+            _LOGGER.debug("_prepare_command_v2.1->: %s", cmd)
             return cmd
 
         res_data_set = None
@@ -580,7 +667,13 @@ class WMDevice(Device):
                 else:
                     cmd_data_set[cmd_key] = status_data.get(cmd_key, cmd_value)
             res_data_set = {WM_ROOT_DATA: cmd_data_set}
+            #jl
+            _LOGGER.debug("_prepare_command_v2.2, cmd: %s", cmd)
 
+        #jl
+        _LOGGER.debug("_prepare_command_v2.3->, cmd: %s", cmd)
+        _LOGGER.debug("_prepare_command_v2.3->, res_data_set: %s", res_data_set)
+        _LOGGER.debug("_prepare_command_v2.3->, data_set: %s", data_set)
         return {
             **cmd,
             "dataKey": None,
@@ -591,6 +684,9 @@ class WMDevice(Device):
 
     def _prepare_command_vtctrl(self, cmd: dict, command: str):
         """Prepare vtCtrl command for specific ThinQ2 device."""
+        #jl
+        _LOGGER.debug("_prepare_command_vtctrl(command): %s", command)
+        _LOGGER.debug("_prepare_command_vtctrl(cmd): %s", cmd)
         data_set: dict = cmd.pop("data", None)
         if not data_set:
             return cmd
@@ -627,6 +723,9 @@ class WMDevice(Device):
 
     def _prepare_command(self, ctrl_key, command, key, value):
         """Prepare command for specific device."""
+        #jl
+        _LOGGER.debug("_prepare_command(ctrl_key): %s", ctrl_key)
+        #_LOGGER.debug("_prepare_command, self.model_info: %s", self.model_info)
         cmd = None
         vt_ctrl = True
         if command in VT_CTRL_CMD:
@@ -698,6 +797,9 @@ class WMDevice(Device):
 
     async def select_start_course(self, course_name: str) -> None:
         """Select a secific course for remote start."""
+        #jl
+        _LOGGER.debug("select_start_course(course_name): %s", course_name)
+
         if not self.select_course_enabled:
             raise InvalidDeviceStatus()
 
@@ -707,6 +809,75 @@ class WMDevice(Device):
         if course_name not in self.course_list:
             raise ValueError(f"Invalid course: {course_name}")
         self._selected_course = course_name
+
+        # For the selected course save the permitted values for water temperature
+        course_id = self._get_course_infos().get(self._selected_course)
+        n_course_key = self.get_course_key(CourseType.COURSE)
+        course_info = self._get_course_details(n_course_key, course_id)
+        if not course_info:
+            raise ValueError("Course info not available")
+        # _LOGGER.debug("select_start_course, course_info: %s", course_info)
+
+        self._course_overrides.clear()
+        self._course_overrides_lists.clear()
+        for func_key in course_info["function"]:
+            value = func_key.get("value")
+            default = func_key.get("default")
+            selectable = func_key.get("selectable")
+
+            if selectable is None:
+                continue
+
+            _LOGGER.debug("select_start_course, set overrides for %s - default: %s, selectable: %s", value, default, selectable)
+            self._course_overrides[value] = default
+            self._course_overrides_lists[value] = selectable
+
+
+    def _select_enabled(self, select_name: str) -> bool:
+        """Return if specified select is enabled."""
+        enabled = self.select_course_enabled and self._selected_course and self._course_overrides_lists.get(select_name)
+        if (not enabled) and (select_name in self._course_overrides):
+            del self._course_overrides[select_name]
+        return enabled
+
+    def _select_start_option(self, option: str, option_name: str) -> None:
+        """Select a secific option for remote start."""
+        #jl
+        _LOGGER.debug("_select_start_option(option, option_name): %s: %s", option, option_name)
+        # list = self._course_overrides_lists.get(option)
+        _LOGGER.debug("_select_start_option(list): %s", list)
+        # if option_name:
+        if list and option_name in list: ##self._course_overrides_lists[option]:
+            self._course_overrides[option] = option_name
+        #jl
+        # _LOGGER.debug("_select_start_option, self._course_overrides: %s", self._course_overrides)
+
+    @property
+    def select_temp_enabled(self) -> bool:
+        """Return if select temp is enabled."""
+        return self._select_enabled('temp')
+        
+    async def select_start_temp(self, temp_name: str) -> None:
+        """Select a secific water temperature for remote start."""
+        self._select_start_option('temp',temp_name)
+
+    @property
+    def select_rinse_enabled(self) -> bool:
+        """Return if select rinse is enabled."""
+        return self._select_enabled('rinse')
+
+    async def select_start_rinse(self, rinse_name: str) -> None:
+        """Select a secific rinse option for remote start."""
+        self._select_start_option('rinse',rinse_name)
+
+    @property
+    def select_spin_enabled(self) -> bool:
+        """Return if select spin is enabled."""
+        return self._select_enabled('spin')
+        
+    async def select_start_spin(self, spin_name: str) -> None:
+        """Select a secific spin for remote start."""
+        self._select_start_option('spin',spin_name)
 
     async def power_off(self):
         """Power off the device."""
@@ -727,13 +898,19 @@ class WMDevice(Device):
 
     async def remote_start(self, course_name: str | None = None) -> None:
         """Remote start the device."""
+        #jl
+        _LOGGER.debug("async remote_start")
         if not self.remote_start_enabled:
             raise InvalidDeviceStatus()
 
         if course_name and self._initial_bit_start:
+            #jl
+            _LOGGER.debug("async remote_start, await self.select_start_course(%s)", course_name)
             await self.select_start_course(course_name)
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
+        #jl
+        _LOGGER.debug("async remote_start, keys: %s", keys)
         await self.set(keys[0], keys[1], key=keys[2])
         self._remote_start_pressed = True
 
@@ -753,6 +930,8 @@ class WMDevice(Device):
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
     ):
         """Set a device's control for `key` to `value`."""
+        #jl
+        _LOGGER.debug("async washerDryer.set")
         await super().set(
             self._getcmdkey(ctrl_key),
             self._getcmdkey(command),

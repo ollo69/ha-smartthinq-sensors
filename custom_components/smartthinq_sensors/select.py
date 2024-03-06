@@ -42,12 +42,40 @@ class ThinQSelectEntityDescription(
 WASH_DEV_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
     ThinQSelectEntityDescription(
         key="course_selection",
-        name="Course selection",
+        # Changed the name so that course controls are grouped together on the UI. name="Course selection",
+        name="Set Course",
         icon="mdi:tune-vertical-variant",
         options_fn=lambda x: x.device.course_list,
         select_option_fn=lambda x, option: x.device.select_start_course(option),
         available_fn=lambda x: x.device.select_course_enabled,
         value_fn=lambda x: x.device.selected_course,
+    ),
+        ThinQSelectEntityDescription(
+        key="temp_selection",
+        name="Set Water Temp",
+        icon="mdi:tune-vertical-variant",
+        options_fn=lambda x: x.device.temps_list,
+        select_option_fn=lambda x, option: x.device.select_start_temp(option),
+        available_fn=lambda x: x.device.select_temp_enabled,
+        value_fn=lambda x: x.device.selected_temp,
+    ),
+        ThinQSelectEntityDescription(
+        key="rinse_selection",
+        name="Set Rinse Option",
+        icon="mdi:tune-vertical-variant",
+        options_fn=lambda x: x.device.rinses_list,
+        select_option_fn=lambda x, option: x.device.select_start_rinse(option),
+        available_fn=lambda x: x.device.select_rinse_enabled,
+        value_fn=lambda x: x.device.selected_rinse,
+    ),
+        ThinQSelectEntityDescription(
+        key="spin_selection",
+        name="Set Spin Speed",
+        icon="mdi:tune-vertical-variant",
+        options_fn=lambda x: x.device.spins_list,
+        select_option_fn=lambda x, option: x.device.select_start_spin(option),
+        available_fn=lambda x: x.device.select_spin_enabled,
+        value_fn=lambda x: x.device.selected_spin,
     ),
 )
 MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
