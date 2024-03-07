@@ -129,6 +129,8 @@ class WMDevice(Device):
             'temp': ['TEMP_COLD', 'TEMP_20', 'TEMP_30', 'TEMP_40', 'TEMP_60', 'TEMP_95'],
             'spin': ['NO_SPIN', 'SPIN_400', 'SPIN_800', 'SPIN_1000', 'SPIN_Max'],
             'rinse':  ['RINSE_NORMAL', 'RINSE_PLUS']}
+            # Need to initialise this list so that the UI can setup the select drop down.
+            # A better solution would be to generate this information from the data returned ThinQ API.
         self._is_cycle_finishing = False
         self._stand_by = False
         self._remote_start_status: dict | None = None
@@ -400,7 +402,6 @@ class WMDevice(Device):
         s_course_key: str | None,
     ) -> dict:
         """Prepare the course info used to run the command."""
-        
         ret_data = deepcopy(data)
 
         # Prepare the course data initializing option for infoV1 device
@@ -469,7 +470,6 @@ class WMDevice(Device):
         Save information in the data payload for a specific course
         or default course if not already available.
         """
-
         data = None
         if self._initial_bit_start:
             data = self._remote_start_status
@@ -531,7 +531,6 @@ class WMDevice(Device):
 
     def _prepare_vtctrl_course_info(self) -> list:
         """Prepare course info for vtctrl command."""
-
         vt_cmd_data = []
         course_data = self._update_course_info()
         if course_info := course_data.get(VT_CTRL_COURSE_INFO):
@@ -740,7 +739,6 @@ class WMDevice(Device):
 
     async def select_start_course(self, course_name: str) -> None:
         """Select a secific course for remote start."""
-
         if not self.select_course_enabled:
             raise InvalidDeviceStatus()
 
@@ -786,13 +784,7 @@ class WMDevice(Device):
         permitted_options = self._course_overrides_lists.get(option)
         if permitted_options and option_name in permitted_options:
             self._course_overrides[option] = option_name
-        else:
-            # self._raise_error(
-                    # "Invalid option",
-                    # not_logged=True,
-                    # exc=exc,
-                # )
-            super().__init__("not a permitted option")
+        # TO DO - display a pop up message if option_name is not valid.  Did try self._raise_error, but the message poor.
 
     @property
     def select_temp_enabled(self) -> bool:
