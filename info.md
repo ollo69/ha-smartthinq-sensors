@@ -30,6 +30,17 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 
 **Note**: some device status may not be correctly detected, this depends on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.
 
+**Washer-Dryer remote start**: The component provides entities to select a course and override some of the course settings, before remotely starting the machine. The permitted values for each override depends on the selected course. Attempts to set an invalid value for an override are ignored.  To remotely start the washer perform the following steps in order:
+
+- Turn on the washer and enable remote start using its front panel.  This is an LG safety feature that is also required for the LG app.
+- Select a course
+- Optionally, select a value for the course setting (e.g. water temperature) you would like to override.
+- "Press" the Washer Remote Start button.
+
+Nothing will happen/change on the washer and the component sensor entities will not show your selected course or overrides, until you press Remote Start.  This is the same behaviour as the LG app.
+
+Please note, the remote start feature overrides were developed for use in scripts and automations. If you are using the UI and select an invalid override value, it will incorrectly be shown as selected.  In fact it has been ignored and you must refresh the page to see the currently selected value.  Pull requests that fix that issue are welcome. 
+
 ## Component configuration
 
 Once the component has been installed, you need to configure it using the web interface in order to make it work.
