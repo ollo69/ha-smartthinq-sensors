@@ -1,6 +1,8 @@
 """------------------for Washer and Dryer"""
 
 from __future__ import annotations
+#jl
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 import base64
 from copy import deepcopy
@@ -779,12 +781,13 @@ class WMDevice(Device):
             del self._course_overrides[select_name]
         return enabled
 
-    def _select_start_option(self, option: str, option_name: str) -> None:
+    def _select_start_option(self, option: str, option_friendly_name: str, option_selected: str) -> None:
         """Select a secific option for remote start."""
         permitted_options = self._course_overrides_lists.get(option)
-        if permitted_options and option_name in permitted_options:
-            self._course_overrides[option] = option_name
-        # TO DO - display a pop up message if option_name is not valid.  Did try self._raise_error, but the message poor.
+        if permitted_options and option_selected in permitted_options:
+            self._course_overrides[option] = option_selected
+        else:
+            raise ServiceValidationError(f"{option_selected} is invalid and will be ignored. {option_friendly_name} must be one of {permitted_options}")
 
     @property
     def select_temp_enabled(self) -> bool:
@@ -793,7 +796,7 @@ class WMDevice(Device):
         
     async def select_start_temp(self, temp_name: str) -> None:
         """Select a secific water temperature for remote start."""
-        self._select_start_option('temp',temp_name)
+        self._select_start_option('temp', 'Water Temp', temp_name)
 
     @property
     def select_rinse_enabled(self) -> bool:
@@ -802,7 +805,7 @@ class WMDevice(Device):
 
     async def select_start_rinse(self, rinse_name: str) -> None:
         """Select a secific rinse option for remote start."""
-        self._select_start_option('rinse',rinse_name)
+        self._select_start_option('rinse', 'Rinse Option', rinse_name)
 
     @property
     def select_spin_enabled(self) -> bool:
@@ -811,7 +814,7 @@ class WMDevice(Device):
         
     async def select_start_spin(self, spin_name: str) -> None:
         """Select a secific spin for remote start."""
-        self._select_start_option('spin',spin_name)
+        self._select_start_option('spin', 'Spin Speed', spin_name)
 
     async def power_off(self):
         """Power off the device."""
