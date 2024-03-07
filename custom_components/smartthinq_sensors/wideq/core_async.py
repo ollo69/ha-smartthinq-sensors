@@ -1705,8 +1705,6 @@ class ClientAsync:
             if not (model_url_info := await self._load_json_info(url)):
                 return None
             self._model_url_info[url] = model_url_info
-        #jl
-        # _LOGGER.debug("model_url_info, self._model_url_info[url], %s", self._model_url_info[url])
         return self._model_url_info[url]
 
     def dump(self) -> dict[str, Any]:
