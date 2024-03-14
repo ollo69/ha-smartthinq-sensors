@@ -12,7 +12,13 @@ remote_start:
       required: false
       selector:
         text:
-
+    overrides:
+      name: overrides
+      description: Overrides (JSON dictionary containing the setting to override and their new value)
+      required: false
+      selector:
+        text:
+        
 wake_up:
   name: WakeUp
   description: Send to ThinQ device the wakeup command.

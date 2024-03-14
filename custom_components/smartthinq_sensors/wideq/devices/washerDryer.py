@@ -748,7 +748,7 @@ class WMDevice(Device):
             self._selected_course = None
             return
         if course_name not in self.course_list:
-            raise ValueError(f"Invalid course: {course_name}")
+            raise ServiceValidationError(f"The course name '{course_name}' is invalid. Permitted names are: {self.course_list}.")
         self._selected_course = course_name
 
         # For the selected course save the permitted values for water temperature
@@ -787,7 +787,7 @@ class WMDevice(Device):
         if permitted_options and option_selected in permitted_options:
             self._course_overrides[option] = option_selected
         else:
-            raise ServiceValidationError(f"{option_selected} is invalid and will be ignored. {option_friendly_name} must be one of {permitted_options}")
+            raise ServiceValidationError(f"{option_selected} is invalid and will be ignored. {option_friendly_name} must be one of {permitted_options}.")
 
     @property
     def select_temp_enabled(self) -> bool:
@@ -833,14 +833,30 @@ class WMDevice(Device):
         self._stand_by = False
         self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
 
-    async def remote_start(self, course_name: str | None = None) -> None:
+    async def remote_start(self, course_name: str | None = None, overrides_json: str | None = None) -> None:
+        #jl
+        _LOGGER.debug("async def remote_start(%s, %s)", course_name, overrides_json)
+        
         """Remote start the device."""
         if not self.remote_start_enabled:
-            raise InvalidDeviceStatus()
+            raise ServiceValidationError("Cannot remote start.  Please wake machine or enable remote start at the machine.")
 
         if course_name and self._initial_bit_start:
             await self.select_start_course(course_name)
 
+        if overrides_json:
+            if not course_name: raise ServiceValidationError("Course name required if overrides are specified.")
+            try: overrides = json.loads(overrides_json)
+            except: raise ServiceValidationError("'overrides' contains invalid JSON.")
+            allowed_overrides = self._course_overrides_lists.keys()
+            if not overrides: raise ServiceValidationError(f"'overrides' must contain one key from {str(list(allowed_overrides))}.")
+            for key in overrides:
+                if key in allowed_overrides:
+                    value = overrides.get(key)
+                    self._select_start_option(key, key, value)
+                else:
+                    raise ServiceValidationError(f"Course '{course_name}' does not allow the setting '{key}' to be overridden. Permitted overrides are: {str(list(allowed_overrides))}.")
+        
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
         self._remote_start_pressed = True
