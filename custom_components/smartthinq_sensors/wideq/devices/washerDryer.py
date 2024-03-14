@@ -1,7 +1,6 @@
 """------------------for Washer and Dryer"""
 
 from __future__ import annotations
-#jl
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 
 import base64
@@ -751,13 +750,12 @@ class WMDevice(Device):
             raise ServiceValidationError(f"The course name '{course_name}' is invalid. Permitted names are: {self.course_list}.")
         self._selected_course = course_name
 
-        # For the selected course save the permitted values for water temperature
+        # For the selected course save the permitted values for setting that can be overridden
         course_id = self._get_course_infos().get(self._selected_course)
         n_course_key = self.get_course_key(CourseType.COURSE)
         course_info = self._get_course_details(n_course_key, course_id)
         if not course_info:
             raise ValueError("Course info not available")
-        # _LOGGER.debug("select_start_course, course_info: %s", course_info)
 
         self._course_overrides.clear()
         self._course_overrides_lists.clear()
@@ -834,9 +832,6 @@ class WMDevice(Device):
         self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
 
     async def remote_start(self, course_name: str | None = None, overrides_json: str | None = None) -> None:
-        #jl
-        _LOGGER.debug("async def remote_start(%s, %s)", course_name, overrides_json)
-        
         """Remote start the device."""
         if not self.remote_start_enabled:
             raise ServiceValidationError("Cannot remote start.  Please wake machine or enable remote start at the machine.")
