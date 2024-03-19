@@ -6,6 +6,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import base64
 from copy import deepcopy
 from enum import IntEnum
+from collections import namedtuple
 import json
 import logging
 
@@ -96,6 +97,8 @@ _COURSE_KEYS = {
 _COURSE_TYPE = "courseType"
 _CURRENT_COURSE = "Current course"
 
+FriendlyName = namedtuple("FriendlyName", ["internal", "friendly"])
+
 
 class WMDevice(Device):
     """A higher-level interface for washer and dryer."""
@@ -125,20 +128,103 @@ class WMDevice(Device):
         self._course_keys: dict[CourseType, str | None] | None = None
         self._course_infos: dict[str, str] | None = None
         self._selected_course: str | None = None
-        self._course_overrides: dict | None = {}
-        self._course_overrides_lists: dict | None = {
-            'temp': ['TEMP_COLD', 'TEMP_20', 'TEMP_30', 'TEMP_40', 'TEMP_60', 'TEMP_95'],
-            'spin': ['NO_SPIN', 'SPIN_400', 'SPIN_800', 'SPIN_1000', 'SPIN_Max'],
-            'rinse':  ['RINSE_NORMAL', 'RINSE_PLUS']}
-            # Need to initialise this list so that the UI can setup the select drop down.
-            # A better solution would be to generate this information from the data returned ThinQ API.
+        # For the selected course, the options that can be overridden and the override value. 
+        # Uses internal names. {'option internal name': value internal name, ...}
+        # Initialised by select_start_course and _select_start_option. read in selected_*, _select_start_option and _prepare_course_info
+        self._course_overrides: dict | None = {} 
+        # For the selected course, the permitted values for each option that can be overridden.
+        # Uses internal names. {'option internal name': [value internal name, ...], ...}
+        # Initialised by select_start_course, _select_start_option. read in _select_option_enabled, _select_start_option and remote_start
+        self._course_overrides_lists: dict | None = {}
+        # For some options and their values, map the internal name to and from a friendly name.
+        # The friendly name is extracted from the machine info language pack
+        # {'option internal name': {'friendly_name': option friendly name,
+        #                         'enum_values': {'value internal name': 'value friendly name', ...} 
+        self._option_friendly_names: dict | None = {}
         self._is_cycle_finishing = False
         self._stand_by = False
         self._remote_start_status: dict | None = None
         self._remote_start_pressed = False
         self._power_on_available: bool = None
         self._initial_bit_start: bool = False
+ 
+    def _build_friendly_enum_value(self, option: str):
+        """Add to friendly names dictionary the enum friendly values."""
+        if not self.model_info.is_enum_type(option):
+            return
 
+        # Some emums (e.g. spin) are not incrementally indexed
+        friendly_enum_values = {}
+        for index in range(256):
+            if encoded_value := self.model_info.enum_index(option, index):
+                internal_value = self.model_info.enum_value(option, encoded_value)
+                friendly_value = self.get_enum_text(encoded_value)
+                friendly_enum_values[internal_value] = friendly_value
+
+        friendly_enum = {}
+        friendly_enum['friendly_name'] = self.get_enum_text(
+            self.model_info._data_root(option).get('label', option))
+        friendly_enum['enum_values'] = friendly_enum_values
+        self._option_friendly_names[option] = friendly_enum
+
+    def _convert_option_name(self, option_str: str) -> FriendlyName | None:
+        """Convert an option name to its internal and friendly forms."""
+        # If option matches a key, it is the internal name
+        internal_name = option_str
+        if friendly_name := self._option_friendly_names.get(internal_name):
+            return FriendlyName(internal_name, 
+                friendly_name.get('friendly_name', internal_name))
+    
+        # Search for a matching friendly name
+        friendly_name = option_str
+        for internal_name in self._option_friendly_names:
+            if self._option_friendly_names[internal_name].get('friendly_name','') == friendly_name:
+                return FriendlyName(internal_name, friendly_name)
+        
+        # option does not match an internal or friendly option name
+        return None
+    
+    def _convert_option_value(self, option_str: str, value_str: str) -> FriendlyName | None:
+        """Convert an option value to its internal and friendly forms."""
+        if not(option := self._convert_option_name(option_str)):
+            return None
+    
+        if friendly_names := self._option_friendly_names.get(option.internal):
+            enum_values = friendly_names['enum_values']
+            
+            #If value matches a key, it is the internal value
+            internal_value = value_str
+            if internal_value in enum_values:
+                return FriendlyName(internal_value, 
+                    enum_values.get(internal_value, ''))
+
+            # Search for a matching friendly name
+            friendly_value = value_str
+            for key in enum_values:
+                if enum_values[key] == friendly_value:
+                    return FriendlyName(key, friendly_value)
+
+        # value does not match an internal or friendly option name
+        return None
+        
+    def _get_friendly_names_list(self, internal_names: list) -> list | None:
+        """Convert a list of internal enum names to list of friendly names."""
+        friendly_names = []
+        for internal_name in internal_names:
+            if option := self._convert_option_name(internal_name):
+               friendly_names.append(option.friendly)
+        return friendly_names
+
+    def _get_friendly_values_list(self, option_str: str, internal_values: list) -> list | None:
+        """Convert a list of enum internal values to list of friendly values."""
+        if not(option := self._convert_option_name(option_str)):
+            return None
+        friendly_values = []
+        for value_str in internal_values:
+            if value := self._convert_option_value(option.internal, value_str):
+               friendly_values.append(value.friendly)
+        return friendly_values
+        
     @cached_property
     def _state_power_off(self):
         """Return native value for power off state."""
@@ -175,35 +261,41 @@ class WMDevice(Device):
         """Return current selected course."""
         return self._selected_course or _CURRENT_COURSE
 
-    @property
+    @cached_property
     def temps_list(self) -> list:
         """Return a list of available water temperatures for the selected course."""
-        return self._course_overrides_lists.get('temp')
+        self._build_friendly_enum_value('temp')
+        return list(self._option_friendly_names['temp']['enum_values'].values())
         
     @property
     def selected_temp(self) -> str:
         """Return current selected water temperature."""
-        return self._course_overrides.get('temp')
+        value = self._convert_option_value('temp', self._course_overrides.get('temp'))
+        return value.friendly
 
-    @property
+    @cached_property
     def rinses_list(self) -> list:
         """Return a list of available rinse options for the selected course."""
-        return self._course_overrides_lists.get('rinse')
+        self._build_friendly_enum_value('rinse')
+        return list(self._option_friendly_names['rinse']['enum_values'].values())
 
     @property
     def selected_rinse(self) -> str:
         """Return current selected rinse option."""
-        return self._course_overrides.get('rinse')
+        value = self._convert_option_value('rinse', self._course_overrides.get('rinse'))
+        return value.friendly
 
-    @property
+    @cached_property
     def spins_list(self) -> list:
         """Return a list of available spin speeds for the selected course."""
-        return self._course_overrides_lists.get('spin')
+        self._build_friendly_enum_value('spin')
+        return list(self._option_friendly_names['spin']['enum_values'].values()) 
 
     @property
     def selected_spin(self) -> str:
         """Return current selected spin speed."""
-        return self._course_overrides.get('spin')
+        value = self._convert_option_value('spin', self._course_overrides.get('spin'))
+        return value.friendly
 
     @property
     def run_state(self) -> str:
@@ -747,7 +839,7 @@ class WMDevice(Device):
             self._selected_course = None
             return
         if course_name not in self.course_list:
-            raise ServiceValidationError(f"The course name '{course_name}' is invalid. Permitted names are: {self.course_list}.")
+            raise ServiceValidationError(f"The programme (course name) '{course_name}' is invalid. Permitted names are: {list(self.course_list)}.")
         self._selected_course = course_name
 
         # For the selected course save the permitted values for setting that can be overridden
@@ -771,48 +863,55 @@ class WMDevice(Device):
             self._course_overrides[value] = default
             self._course_overrides_lists[value] = selectable
 
-
-    def _select_enabled(self, select_name: str) -> bool:
-        """Return if specified select is enabled."""
+    def _select_option_enabled(self, select_name: str) -> bool:
+        """Return if specified option select is enabled."""
         enabled = self.select_course_enabled and self._selected_course and self._course_overrides_lists.get(select_name)
         if (not enabled) and (select_name in self._course_overrides):
             del self._course_overrides[select_name]
         return enabled
 
-    def _select_start_option(self, option: str, option_friendly_name: str, option_selected: str) -> None:
-        """Select a secific option for remote start."""
-        permitted_options = self._course_overrides_lists.get(option)
-        if permitted_options and option_selected in permitted_options:
-            self._course_overrides[option] = option_selected
+    def _select_start_option(self, option_str: str, value_str: str) -> None:
+        """
+        Add option to the list of remote start overrides and set its value.
+            - option may be a friendly or internal name
+            - value may be a friendly or internal name
+        """
+        option = self._convert_option_name(option_str)
+        value = self._convert_option_value(option.internal, value_str)
+        
+        # _course_overrides_lists, _course_overrides and permitted_options use internal names
+        permitted_options = self._course_overrides_lists.get(option.internal)
+        if value and permitted_options and (value.internal in permitted_options):
+            self._course_overrides[option.internal] = value.internal
         else:
-            raise ServiceValidationError(f"{option_selected} is invalid and will be ignored. {option_friendly_name} must be one of {permitted_options}.")
+            raise ServiceValidationError(f"The value '{value_str}' is invalid and has been ignored. The value for the option '{option.friendly}' must be one of: {self._get_friendly_values_list(option.internal, permitted_options)} or {permitted_options}.")
 
     @property
     def select_temp_enabled(self) -> bool:
         """Return if select temp is enabled."""
-        return self._select_enabled('temp')
+        return self._select_option_enabled('temp')
         
     async def select_start_temp(self, temp_name: str) -> None:
         """Select a secific water temperature for remote start."""
-        self._select_start_option('temp', 'Water Temp', temp_name)
+        self._select_start_option('temp', temp_name)
 
     @property
     def select_rinse_enabled(self) -> bool:
         """Return if select rinse is enabled."""
-        return self._select_enabled('rinse')
+        return self._select_option_enabled('rinse')
 
     async def select_start_rinse(self, rinse_name: str) -> None:
         """Select a secific rinse option for remote start."""
-        self._select_start_option('rinse', 'Rinse Option', rinse_name)
+        self._select_start_option('rinse', rinse_name)
 
     @property
     def select_spin_enabled(self) -> bool:
         """Return if select spin is enabled."""
-        return self._select_enabled('spin')
+        return self._select_option_enabled('spin')
         
     async def select_start_spin(self, spin_name: str) -> None:
         """Select a secific spin for remote start."""
-        self._select_start_option('spin', 'Spin Speed', spin_name)
+        self._select_start_option('spin', spin_name)
 
     async def power_off(self):
         """Power off the device."""
@@ -834,24 +933,26 @@ class WMDevice(Device):
     async def remote_start(self, course_name: str | None = None, overrides_json: str | None = None) -> None:
         """Remote start the device."""
         if not self.remote_start_enabled:
-            raise ServiceValidationError("Cannot remote start.  Please wake machine or enable remote start at the machine.")
+            raise ServiceValidationError("Machine is off, asleep or running, or remote start is not enabled.")
 
         if course_name and self._initial_bit_start:
             await self.select_start_course(course_name)
 
         if overrides_json:
-            if not course_name: raise ServiceValidationError("Course name required if overrides are specified.")
+            if not course_name: raise ServiceValidationError("Programme (course) name required if overrides are specified.")
             try: overrides = json.loads(overrides_json)
             except: raise ServiceValidationError("'overrides' contains invalid JSON.")
+
             allowed_overrides = self._course_overrides_lists.keys()
-            if not overrides: raise ServiceValidationError(f"'overrides' must contain one key from {str(list(allowed_overrides))}.")
-            for key in overrides:
-                if key in allowed_overrides:
-                    value = overrides.get(key)
-                    self._select_start_option(key, key, value)
+            if not overrides: raise ServiceValidationError(f"'overrides' must contain one option from {self._get_friendly_names_list(list(allowed_overrides))} or {list(allowed_overrides)}.")
+            for option_str in overrides:
+                option = self._convert_option_name(option_str)
+                if option and (option.internal in allowed_overrides):
+                    value_str = overrides.get(option_str)
+                    self._select_start_option(option.internal, value_str)
                 else:
-                    raise ServiceValidationError(f"Course '{course_name}' does not allow the setting '{key}' to be overridden. Permitted overrides are: {str(list(allowed_overrides))}.")
-        
+                    raise ServiceValidationError(f"The programme '{course_name}' does not allow the option '{option_str}' to be overridden. Permitted options are: {self._get_friendly_names_list(list(allowed_overrides))} or {list(allowed_overrides)}.")
+
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
         self._remote_start_pressed = True

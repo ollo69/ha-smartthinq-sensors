@@ -14,7 +14,7 @@ remote_start:
         text:
     overrides:
       name: overrides
-      description: Overrides (JSON dictionary containing the setting to override and their new value)
+      description: Overrides (JSON dictionary containing the options to override and their new value)
       required: false
       selector:
         text:
