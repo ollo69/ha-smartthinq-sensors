@@ -128,14 +128,13 @@ class WMDevice(Device):
         self._course_keys: dict[CourseType, str | None] | None = None
         self._course_infos: dict[str, str] | None = None
         self._selected_course: str | None = None
-        # For the selected course, the options that can be overridden and the override value. 
-        # Uses internal names. {'option internal name': value internal name, ...}
-        # Initialised by select_start_course and _select_start_option. read in selected_*, _select_start_option and _prepare_course_info
+        # For the selected course, the options that can be overridden their permitted values
+        # and current value. Uses internal names. 
+        # {'option internal name': { 'currently': value internal name,
+        #                            'permitted: [value internal name, ...]}, ...}
+        # Initialised by select_start_course and _select_start_option. read in selected_*,
+        # _select_option_enabled, _select_start_option, _prepare_course_info and remote_start.
         self._course_overrides: dict | None = {} 
-        # For the selected course, the permitted values for each option that can be overridden.
-        # Uses internal names. {'option internal name': [value internal name, ...], ...}
-        # Initialised by select_start_course, _select_start_option. read in _select_option_enabled, _select_start_option and remote_start
-        self._course_overrides_lists: dict | None = {}
         # For some options and their values, map the internal name to and from a friendly name.
         # The friendly name is extracted from the machine info language pack
         # {'option internal name': {'friendly_name': option friendly name,
@@ -270,7 +269,9 @@ class WMDevice(Device):
     @property
     def selected_temp(self) -> str:
         """Return current selected water temperature."""
-        value = self._convert_option_value('temp', self._course_overrides.get('temp'))
+        value = self._convert_option_value(
+            'temp', 
+            self._course_overrides.get('temp',{}).get('currently'))
         return value.friendly
 
     @cached_property
@@ -282,7 +283,9 @@ class WMDevice(Device):
     @property
     def selected_rinse(self) -> str:
         """Return current selected rinse option."""
-        value = self._convert_option_value('rinse', self._course_overrides.get('rinse'))
+        value = self._convert_option_value(
+            'rinse', 
+            self._course_overrides.get('rinse',{}).get('currently'))
         return value.friendly
 
     @cached_property
@@ -294,7 +297,9 @@ class WMDevice(Device):
     @property
     def selected_spin(self) -> str:
         """Return current selected spin speed."""
-        value = self._convert_option_value('spin', self._course_overrides.get('spin'))
+        value = self._convert_option_value(
+            'spin', 
+            self._course_overrides.get('spin',{}).get('currently'))
         return value.friendly
 
     @property
@@ -548,7 +553,7 @@ class WMDevice(Device):
             ret_data[ckey] = cdata
 
             # If an override is defeined then apply it
-            if override_value := self._course_overrides.get(ckey):
+            if override_value := self._course_overrides.get(ckey,{}).get('currently'):
                 ret_data[ckey] = override_value
                 _LOGGER.debug("_prepare_course_info, course data override: %s: %s", ckey, ret_data[ckey])
 
@@ -850,22 +855,19 @@ class WMDevice(Device):
             raise ValueError("Course info not available")
 
         self._course_overrides.clear()
-        self._course_overrides_lists.clear()
         for func_key in course_info["function"]:
             value = func_key.get("value")
             default = func_key.get("default")
             selectable = func_key.get("selectable")
-
             if selectable is None:
                 continue
 
             _LOGGER.debug("select_start_course(%s), set overrides for %s - default: %s, selectable: %s", course_name, value, default, selectable)
-            self._course_overrides[value] = default
-            self._course_overrides_lists[value] = selectable
+            self._course_overrides[value] = {'currently': default, 'permitted': selectable}
 
     def _select_option_enabled(self, select_name: str) -> bool:
         """Return if specified option select is enabled."""
-        enabled = self.select_course_enabled and self._selected_course and self._course_overrides_lists.get(select_name)
+        enabled = self.select_course_enabled and self._selected_course and self._course_overrides.get(select_name)
         if (not enabled) and (select_name in self._course_overrides):
             del self._course_overrides[select_name]
         return enabled
@@ -880,9 +882,9 @@ class WMDevice(Device):
         value = self._convert_option_value(option.internal, value_str)
         
         # _course_overrides_lists, _course_overrides and permitted_options use internal names
-        permitted_options = self._course_overrides_lists.get(option.internal)
+        permitted_options = self._course_overrides.get(option.internal,{}).get('permitted')
         if value and permitted_options and (value.internal in permitted_options):
-            self._course_overrides[option.internal] = value.internal
+            self._course_overrides[option.internal]['currently'] = value.internal
         else:
             raise ServiceValidationError(f"The value '{value_str}' is invalid and has been ignored. The value for the option '{option.friendly}' must be one of: {self._get_friendly_values_list(option.internal, permitted_options)} or {permitted_options}.")
 
@@ -943,7 +945,7 @@ class WMDevice(Device):
             try: overrides = json.loads(overrides_json)
             except: raise ServiceValidationError("'overrides' contains invalid JSON.")
 
-            allowed_overrides = self._course_overrides_lists.keys()
+            allowed_overrides = self._course_overrides.keys()
             if not overrides: raise ServiceValidationError(f"'overrides' must contain one option from {self._get_friendly_names_list(list(allowed_overrides))} or {list(allowed_overrides)}.")
             for option_str in overrides:
                 option = self._convert_option_name(option_str)
