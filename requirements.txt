@@ -9,4 +9,4 @@ isort==5.12.0
 black==23.1.0
 xmltodict>=0.13.0
 charset_normalizer>=3.2.0
-pycountry<23.0.0,>=22.1.10
+pycountry<24.0.0,>=22.1.10
