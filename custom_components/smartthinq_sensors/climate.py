@@ -45,6 +45,10 @@ from .wideq.devices.ac import (
 # general ac attributes
 ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
+ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
+ATTR_SWING_VERTICAL = "swing_mode_vertical"
+HVAC_MODE_NONE = "--"
+SWING_PREFIX = ["Vertical", "Horizontal"]
 
 # service definitions
 SERVICE_SET_SLEEP_TIME = "set_sleep_time"
@@ -72,10 +76,11 @@ PRESET_MODE_LOOKUP: dict[str, dict[str, HVACMode]] = {
     ACMode.ENERGY_SAVER.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
 }
 
-HVAC_MODE_NONE = "--"
-ATTR_SWING_HORIZONTAL = "swing_mode_horizontal"
-ATTR_SWING_VERTICAL = "swing_mode_vertical"
-SWING_PREFIX = ["Vertical", "Horizontal"]
+DEFAULT_AC_FEATURES = (
+    ClimateEntityFeature.TARGET_TEMPERATURE
+    | ClimateEntityFeature.TURN_OFF
+    | ClimateEntityFeature.TURN_ON
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -174,6 +179,8 @@ async def async_setup_entry(
 class LGEClimate(CoordinatorEntity, ClimateEntity):
     """Base climate device."""
 
+    _enable_turn_on_off_backwards_compatibility = False
+
     def __init__(self, api: LGEDevice):
         """Initialize the climate."""
         super().__init__(api.coordinator)
@@ -259,7 +266,7 @@ class LGEACClimate(LGEClimate):
     @property
     def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
-        features = ClimateEntityFeature.TARGET_TEMPERATURE
+        features = DEFAULT_AC_FEATURES
         if len(self.fan_modes) > 0:
             features |= ClimateEntityFeature.FAN_MODE
         if self.preset_modes:
