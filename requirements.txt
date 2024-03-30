@@ -1,7 +1,7 @@
 # Home Assistant Core
-colorlog==6.7.0
-homeassistant==2023.12.3
-pip>=21.0,<23.2
+colorlog==6.8.2
+homeassistant==2024.2.4
+pip>=21.3.1
 ruff==0.0.261
 pre-commit==3.0.0
 flake8==6.0.0
@@ -9,4 +9,4 @@ isort==5.12.0
 black==23.1.0
 xmltodict>=0.13.0
 charset_normalizer>=3.2.0
-pycountry<23.0.0,>=22.1.10
+pycountry>=23.0.0
