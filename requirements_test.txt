@@ -6,4 +6,4 @@ pytest-homeassistant-custom-component==0.13.85
 # From our manifest.json for our custom component
 xmltodict>=0.13.0
 charset_normalizer>=3.2.0
-pycountry<23.0.0,>=22.1.10
+pycountry<24.0.0,>=22.1.10
