@@ -1,6 +1,6 @@
 {
 	"name": "SmartThinQ Sensors Component",
-    "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3.11-bullseye",
+    "image": "mcr.microsoft.com/devcontainers/python:1-3.12",
     "postCreateCommand": "scripts/setup",
     "forwardPorts": [
         8123
