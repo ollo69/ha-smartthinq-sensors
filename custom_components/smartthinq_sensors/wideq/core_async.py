@@ -165,6 +165,7 @@ class CoreAsync:
         timeout: int = DEFAULT_TIMEOUT,
         oauth_url: str | None = None,
         session: aiohttp.ClientSession | None = None,
+        client_id: str | None = None,
     ):
         """
         Create the CoreAsync object
@@ -180,7 +181,7 @@ class CoreAsync:
         self._language = language
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._oauth_url = oauth_url
-        self._client_id = None
+        self._client_id = client_id
         self._lang_pack_url = None
 
         if session:
@@ -191,12 +192,12 @@ class CoreAsync:
             self._managed_session = True
 
     @property
-    def country(self):
+    def country(self) -> str:
         """Return the used country."""
         return self._country
 
     @property
-    def language(self):
+    def language(self) -> str:
         """Return the used language."""
         return self._language
 
@@ -204,6 +205,11 @@ class CoreAsync:
     def lang_pack_url(self):
         """Return the used language."""
         return self._lang_pack_url
+
+    @property
+    def client_id(self) -> str | None:
+        """Return the associated client_id."""
+        return self._client_id
 
     async def close(self):
         """Close the managed session on exit."""
@@ -220,6 +226,7 @@ class CoreAsync:
     def _get_client_id(self, user_number: str | None = None) -> str:
         """Generate a new clent ID or return existing."""
         if self._client_id is not None:
+            _LOGGER.info("Client ID: %s", self._client_id)
             return self._client_id
         if user_number is None:
             return None
@@ -1426,6 +1433,13 @@ class ClientAsync:
         return self._auth
 
     @property
+    def client_id(self) -> str | None:
+        """Return the associated client_id."""
+        if not self._auth:
+            return None
+        return self._auth.gateway.core.client_id
+
+    @property
     def session(self) -> Session:
         """Return the Session object associated to this client."""
         if not self._session:
@@ -1506,6 +1520,7 @@ class ClientAsync:
         language: str = DEFAULT_LANGUAGE,
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
+        client_id: str | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1517,7 +1532,11 @@ class ClientAsync:
         """
 
         core = CoreAsync(
-            country, language, oauth_url=oauth_url, session=aiohttp_session
+            country,
+            language,
+            oauth_url=oauth_url,
+            session=aiohttp_session,
+            client_id=client_id,
         )
         try:
             gateway = await Gateway.discover(core)
@@ -1545,6 +1564,7 @@ class ClientAsync:
         language: str = DEFAULT_LANGUAGE,
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
+        client_id: str | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1556,7 +1576,11 @@ class ClientAsync:
         """
 
         core = CoreAsync(
-            country, language, oauth_url=oauth_url, session=aiohttp_session
+            country,
+            language,
+            oauth_url=oauth_url,
+            session=aiohttp_session,
+            client_id=client_id,
         )
         try:
             gateway = await Gateway.discover(core)
