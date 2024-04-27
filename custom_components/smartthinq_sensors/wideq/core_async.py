@@ -226,7 +226,6 @@ class CoreAsync:
     def _get_client_id(self, user_number: str | None = None) -> str:
         """Generate a new clent ID or return existing."""
         if self._client_id is not None:
-            _LOGGER.info("Client ID: %s", self._client_id)
             return self._client_id
         if user_number is None:
             return None
