@@ -27,7 +27,7 @@ from urllib.parse import (
 import uuid
 
 import aiohttp
-from charset_normalizer import detect
+from charset_normalizer import from_bytes
 import xmltodict
 
 from . import core_exceptions as exc
@@ -1656,10 +1656,9 @@ class ClientAsync:
 
         content = await self._auth.gateway.core.http_get_bytes(info_url)
 
-        # we use charset_normalizer to detect correct encoding and convert to unicode string
-        encoding = detect(content)["encoding"]
         try:
-            str_content = str(content, encoding, errors="replace")
+            # we use charset_normalizer to detect correct encoding and convert to unicode string
+            str_content = str(from_bytes(content).best(), errors="replace")
         except (LookupError, TypeError):
             # A LookupError is raised if the encoding was not found which could
             # indicate a misspelling or similar mistake.
