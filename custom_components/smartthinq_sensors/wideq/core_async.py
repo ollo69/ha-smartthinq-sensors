@@ -1656,26 +1656,30 @@ class ClientAsync:
 
         content = await self._auth.gateway.core.http_get_bytes(info_url)
 
-        try:
-            # we use charset_normalizer to detect correct encoding and convert to unicode string
-            str_content = str(from_bytes(content).best(), errors="replace")
-        except (LookupError, TypeError):
-            # A LookupError is raised if the encoding was not found which could
-            # indicate a misspelling or similar mistake.
-            #
-            # A TypeError can be raised if encoding is None
-            #
-            # So we try blindly encoding.
-            str_content = str(content, errors="replace")
+        def _load_json_content():
+            """Decode and load as json the received content."""
+            try:
+                # we use charset_normalizer to detect correct encoding and convert to unicode string
+                str_content = str(from_bytes(content).best(), errors="replace")
+            except (LookupError, TypeError):
+                # A LookupError is raised if the encoding was not found which could
+                # indicate a misspelling or similar mistake.
+                #
+                # A TypeError can be raised if encoding is None
+                #
+                # So we try blindly encoding.
+                str_content = str(content, errors="replace")
 
-        enc_resp = str_content.encode()
-        try:
-            return json.loads(enc_resp)
-        except json.JSONDecodeError as ex:
-            _LOGGER.warning(
-                "Failed to load json info file: %s - error: %s", info_url, ex
-            )
-            return None
+            enc_resp = str_content.encode()
+            try:
+                return json.loads(enc_resp)
+            except json.JSONDecodeError as ex:
+                _LOGGER.warning(
+                    "Failed to load json info file: %s - error: %s", info_url, ex
+                )
+                return None
+
+        return await asyncio.to_thread(_load_json_content)
 
     async def common_lang_pack(self):
         """Load JSON common lang pack from specific url."""
