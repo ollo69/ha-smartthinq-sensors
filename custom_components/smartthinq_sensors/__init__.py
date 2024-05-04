@@ -11,6 +11,7 @@ from homeassistant.config_entries import (
     SOURCE_IMPORT,
     SOURCE_REAUTH,
     ConfigEntry,
+    current_entry,
 )
 from homeassistant.const import (
     CONF_CLIENT_ID,
@@ -22,7 +23,6 @@ from homeassistant.const import (
     UnitOfTemperature,
     __version__,
 )
-from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
@@ -478,7 +478,7 @@ class LGEDevice:
         _ = self._state.device_features
 
         # abort polling on unload
-        if config_entry := config_entries.current_entry.get():
+        if config_entry := current_entry.get():
             config_entry.async_on_unload(self._device.abort_poll)
 
         return True
