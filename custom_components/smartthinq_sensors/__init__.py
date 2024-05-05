@@ -17,13 +17,14 @@ from homeassistant.const import (
     CONF_CLIENT_ID,
     CONF_REGION,
     CONF_TOKEN,
+    EVENT_HOMEASSISTANT_STOP,
     MAJOR_VERSION,
     MINOR_VERSION,
     Platform,
     UnitOfTemperature,
     __version__,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -477,9 +478,20 @@ class LGEDevice:
         # Initialize device features
         _ = self._state.device_features
 
-        # abort polling on unload
+        # abort polling on unload and shutdown
         if config_entry := current_entry.get():
+
             config_entry.async_on_unload(self._device.abort_poll)
+
+            async def abort_dev_poll(event: Event) -> None:
+                """Abort device polling."""
+                self._device.abort_poll()
+
+            config_entry.async_on_unload(
+                self._hass.bus.async_listen_once(
+                    EVENT_HOMEASSISTANT_STOP, abort_dev_poll
+                )
+            )
 
         return True
 
