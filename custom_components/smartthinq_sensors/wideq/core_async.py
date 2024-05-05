@@ -27,7 +27,7 @@ from urllib.parse import (
 import uuid
 
 import aiohttp
-from charset_normalizer import detect
+from charset_normalizer import from_bytes
 import xmltodict
 
 from . import core_exceptions as exc
@@ -165,6 +165,7 @@ class CoreAsync:
         timeout: int = DEFAULT_TIMEOUT,
         oauth_url: str | None = None,
         session: aiohttp.ClientSession | None = None,
+        client_id: str | None = None,
     ):
         """
         Create the CoreAsync object
@@ -180,7 +181,7 @@ class CoreAsync:
         self._language = language
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._oauth_url = oauth_url
-        self._client_id = None
+        self._client_id = client_id
         self._lang_pack_url = None
 
         if session:
@@ -191,12 +192,12 @@ class CoreAsync:
             self._managed_session = True
 
     @property
-    def country(self):
+    def country(self) -> str:
         """Return the used country."""
         return self._country
 
     @property
-    def language(self):
+    def language(self) -> str:
         """Return the used language."""
         return self._language
 
@@ -204,6 +205,11 @@ class CoreAsync:
     def lang_pack_url(self):
         """Return the used language."""
         return self._lang_pack_url
+
+    @property
+    def client_id(self) -> str | None:
+        """Return the associated client_id."""
+        return self._client_id
 
     async def close(self):
         """Close the managed session on exit."""
@@ -1426,6 +1432,13 @@ class ClientAsync:
         return self._auth
 
     @property
+    def client_id(self) -> str | None:
+        """Return the associated client_id."""
+        if not self._auth:
+            return None
+        return self._auth.gateway.core.client_id
+
+    @property
     def session(self) -> Session:
         """Return the Session object associated to this client."""
         if not self._session:
@@ -1506,6 +1519,7 @@ class ClientAsync:
         language: str = DEFAULT_LANGUAGE,
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
+        client_id: str | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1517,7 +1531,11 @@ class ClientAsync:
         """
 
         core = CoreAsync(
-            country, language, oauth_url=oauth_url, session=aiohttp_session
+            country,
+            language,
+            oauth_url=oauth_url,
+            session=aiohttp_session,
+            client_id=client_id,
         )
         try:
             gateway = await Gateway.discover(core)
@@ -1545,6 +1563,7 @@ class ClientAsync:
         language: str = DEFAULT_LANGUAGE,
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
+        client_id: str | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1556,7 +1575,11 @@ class ClientAsync:
         """
 
         core = CoreAsync(
-            country, language, oauth_url=oauth_url, session=aiohttp_session
+            country,
+            language,
+            oauth_url=oauth_url,
+            session=aiohttp_session,
+            client_id=client_id,
         )
         try:
             gateway = await Gateway.discover(core)
@@ -1633,27 +1656,30 @@ class ClientAsync:
 
         content = await self._auth.gateway.core.http_get_bytes(info_url)
 
-        # we use charset_normalizer to detect correct encoding and convert to unicode string
-        encoding = detect(content)["encoding"]
-        try:
-            str_content = str(content, encoding, errors="replace")
-        except (LookupError, TypeError):
-            # A LookupError is raised if the encoding was not found which could
-            # indicate a misspelling or similar mistake.
-            #
-            # A TypeError can be raised if encoding is None
-            #
-            # So we try blindly encoding.
-            str_content = str(content, errors="replace")
+        def _load_json_content():
+            """Decode and load as json the received content."""
+            try:
+                # we use charset_normalizer to detect correct encoding and convert to unicode string
+                str_content = str(from_bytes(content).best(), errors="replace")
+            except (LookupError, TypeError):
+                # A LookupError is raised if the encoding was not found which could
+                # indicate a misspelling or similar mistake.
+                #
+                # A TypeError can be raised if encoding is None
+                #
+                # So we try blindly encoding.
+                str_content = str(content, errors="replace")
 
-        enc_resp = str_content.encode()
-        try:
-            return json.loads(enc_resp)
-        except json.JSONDecodeError as ex:
-            _LOGGER.warning(
-                "Failed to load json info file: %s - error: %s", info_url, ex
-            )
-            return None
+            enc_resp = str_content.encode()
+            try:
+                return json.loads(enc_resp)
+            except json.JSONDecodeError as ex:
+                _LOGGER.warning(
+                    "Failed to load json info file: %s - error: %s", info_url, ex
+                )
+                return None
+
+        return await asyncio.to_thread(_load_json_content)
 
     async def common_lang_pack(self):
         """Load JSON common lang pack from specific url."""

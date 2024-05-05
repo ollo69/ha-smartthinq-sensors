@@ -1,4 +1,5 @@
 """Test the SmartThinQ sensors config flow."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -7,6 +8,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from homeassistant import config_entries, data_entry_flow
 from homeassistant.const import (
     CONF_BASE,
+    CONF_CLIENT_ID,
     CONF_PASSWORD,
     CONF_REGION,
     CONF_TOKEN,
@@ -28,6 +30,7 @@ from custom_components.smartthinq_sensors.wideq.core_exceptions import (
 TEST_USER = "test-email@test-domain.com"
 TEST_TOKEN = "test-token"
 TEST_URL = "test-url"
+TEST_CLIENT_ID = "abcde"
 
 CONFIG_DATA = {
     CONF_USERNAME: TEST_USER,
@@ -41,6 +44,7 @@ CONFIG_RESULT = {
     CONF_LANGUAGE: "en-US",
     CONF_USE_API_V2: True,
     CONF_TOKEN: TEST_TOKEN,
+    CONF_CLIENT_ID: TEST_CLIENT_ID,
     CONF_OAUTH2_URL: TEST_URL,
 }
 
@@ -51,6 +55,7 @@ class MockClient:
     def __init__(self, has_devices=True):
         """Initialize a fake client to test config flow."""
         self.has_devices = has_devices
+        self.client_id = TEST_CLIENT_ID
 
     async def close(self):
         """Fake close method."""

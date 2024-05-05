@@ -39,7 +39,7 @@ CMD_VENTLAMP_V2_DICT = {
     "ctrlKey": CMD_SET_VENTLAMP,
     KEY_DATASET: {
         KEY_HOODSTATE: {
-            "contentType": 22,
+            "contentType": 34,
             "dataLength": 5,
             CMD_VENTTIMER: 0,
         }
