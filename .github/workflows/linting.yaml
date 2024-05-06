@@ -27,4 +27,4 @@ jobs:
       - name: isort
         run: isort --diff --check .
       - name: Black
-        run: black --line-length 88 --check .
+        run: black --line-length 88 --diff --check .

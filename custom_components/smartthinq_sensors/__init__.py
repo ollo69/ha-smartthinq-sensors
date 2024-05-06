@@ -480,7 +480,6 @@ class LGEDevice:
 
         # abort polling on unload and shutdown
         if config_entry := current_entry.get():
-
             config_entry.async_on_unload(self._device.abort_poll)
 
             async def abort_dev_poll(event: Event) -> None:
