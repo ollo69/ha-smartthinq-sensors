@@ -34,6 +34,7 @@ SUPPORT_VANE_VSWING = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_SWING_UP_DO
 SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
+SUPPORT_REMOVE_MOISTURE = [SUPPORT_RAC_MODE, "@AUTODRY"]
 SUPPORT_POWER_SAVE = [SUPPORT_RAC_MODE, "@ENERGYSAVING"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, ["@HOTWATER", "@HOTWATER_ONLY"]]
 SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
@@ -72,6 +73,7 @@ STATE_DUCT_ZONE = ["ZoneControl", "airState.ductZone.state"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
+STATE_MODE_REMOVE_MOISTURE = ["RemoveMoisture", "airState.miscFuncState.autoDry"]
 STATE_MODE_POWER_SAVE = ["PowerSave", "airState.powerSave.basic"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
@@ -104,6 +106,7 @@ CMD_STATE_WDIR_HSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_HSWING]
 CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
+CMD_STATE_MODE_REMOVE_MOISTURE = [CTRL_BASIC, "Set", STATE_MODE_REMOVE_MOISTURE]
 CMD_STATE_MODE_POWER_SAVE = [CTRL_BASIC, "Set", STATE_MODE_POWER_SAVE]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
@@ -592,6 +595,11 @@ class AirConditionerDevice(Device):
         return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
     @cached_property
+    def is_mode_remove_moisture_supported(self):
+        """Return if RemoveMoisture mode is supported."""
+        return self._is_mode_supported(SUPPORT_REMOVE_MOISTURE)
+
+    @cached_property
     def is_mode_power_save_supported(self):
         """Return if PowerSave mode is supported."""
         return self._is_mode_supported(SUPPORT_POWER_SAVE)
@@ -754,6 +762,16 @@ class AirConditionerDevice(Device):
 
         keys = self._get_cmd_keys(CMD_STATE_MODE_AIRCLEAN)
         mode_key = MODE_AIRCLEAN_ON if status else MODE_AIRCLEAN_OFF
+        mode = self.model_info.enum_value(keys[2], mode_key)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_mode_remove_moisture(self, status: bool):
+        """Set the RemoveMoisture mode on or off."""
+        if not self.is_mode_remove_moisture_supported:
+            raise ValueError("RemoveMoisture mode not supported")
+
+        keys = self._get_cmd_keys(CMD_STATE_MODE_REMOVE_MOISTURE)
+        mode_key = MODE_ON if status else MODE_OFF
         mode = self.model_info.enum_value(keys[2], mode_key)
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
@@ -1206,6 +1224,17 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
     @property
+    def mode_remove_moisture(self):
+        """Return RemoveMoisture Mode status."""
+        if not self._device.is_mode_remove_moisture_supported:
+            return None
+        key = self._get_state_key(STATE_MODE_REMOVE_MOISTURE)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == MODE_ON
+        return self._update_feature(AirConditionerFeatures.MODE_REMOVE_MOISTURE, status, False)
+
+    @property
     def mode_power_save(self):
         """Return PowerSave Mode status."""
         if not self._device.is_mode_power_save_supported:
@@ -1425,6 +1454,7 @@ class AirConditionerStatus(DeviceStatus):
             self.pm25,
             self.pm1,
             self.mode_airclean,
+            self.mode_remove_moisture,
             self.mode_power_save,
             self.mode_jet,
             self.lighting_display,
