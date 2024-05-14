@@ -1,4 +1,5 @@
 """Config flow for LG SmartThinQ."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -12,6 +13,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import (
     CONF_BASE,
+    CONF_CLIENT_ID,
     CONF_PASSWORD,
     CONF_REGION,
     CONF_TOKEN,
@@ -75,6 +77,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self._region: str | None = None
         self._language: str | None = None
         self._token: str | None = None
+        self._client_id: str | None = None
         self._oauth2_url: str | None = None
         self._use_ha_session = False
 
@@ -242,6 +245,7 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if not client.has_devices:
             return RESULT_NO_DEV
 
+        self._client_id = client.client_id
         return RESULT_SUCCESS
 
     async def _manage_error(self, error_code: int, is_user_step=False) -> FlowResult:
@@ -269,6 +273,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_TOKEN: self._token,
             CONF_USE_API_V2: True,
         }
+        if self._client_id:
+            data[CONF_CLIENT_ID] = self._client_id
         if self._oauth2_url:
             data[CONF_OAUTH2_URL] = self._oauth2_url
         if self._use_ha_session:
