@@ -23,7 +23,7 @@ jobs:
         run: |
           pip install -r requirements.txt
       - name: flake8
-        run: flake8 .
+        run: flake8 --extend-ignore=E704 .
       - name: isort
         run: isort --diff --check .
       - name: Black
