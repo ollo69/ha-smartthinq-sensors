@@ -11,7 +11,6 @@ from homeassistant.config_entries import (
     SOURCE_IMPORT,
     SOURCE_REAUTH,
     ConfigEntry,
-    current_entry,
 )
 from homeassistant.const import (
     CONF_CLIENT_ID,
