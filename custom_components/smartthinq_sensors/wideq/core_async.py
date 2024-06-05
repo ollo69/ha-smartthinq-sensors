@@ -1372,6 +1372,7 @@ class ClientAsync:
         # The three steps required to get access to call the API.
         self._auth: Auth = auth
         self._session: Session | None = session
+        self._connected = True
         self._last_device_update = datetime.utcnow()
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
@@ -1441,6 +1442,7 @@ class ClientAsync:
     @property
     def session(self) -> Session:
         """Return the Session object associated to this client."""
+        self._check_connected()
         if not self._session:
             self._session = self.auth.start_session()
         return self._session
@@ -1481,7 +1483,16 @@ class ClientAsync:
 
     async def close(self):
         """Close the active managed core http session."""
+        if not self._connected:
+            return
+        self._connected = False
+        self._session = None
         await self._auth.gateway.close()
+
+    def _check_connected(self):
+        """Check that client is in connected status."""
+        if not self._connected:
+            raise exc.ClientDisconnected()
 
     async def refresh_devices(self):
         """Refresh the devices' information for this client."""
@@ -1495,6 +1506,7 @@ class ClientAsync:
 
     async def refresh(self, refresh_gateway=False) -> None:
         """Refresh client connection."""
+        self._check_connected()
         if refresh_gateway:
             gateway = await Gateway.discover(self.auth.gateway.core)
             self.auth.refresh_gateway(gateway)
@@ -1651,6 +1663,7 @@ class ClientAsync:
 
     async def _load_json_info(self, info_url: str):
         """Load JSON data from specific url."""
+        self._check_connected()
         if not info_url:
             return {}
 
