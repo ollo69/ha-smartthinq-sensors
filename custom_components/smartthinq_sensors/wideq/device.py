@@ -495,7 +495,7 @@ class Device:
 
         # load local language pack
         if self._local_lang_pack is None:
-            self._local_lang_pack = self._client.local_lang_pack()
+            self._local_lang_pack = await self._client.local_lang_pack()
 
         return True
 

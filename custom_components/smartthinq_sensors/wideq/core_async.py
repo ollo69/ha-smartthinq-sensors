@@ -1393,7 +1393,7 @@ class ClientAsync:
         env_emulation = os.environ.get("thinq2_emulation", "") == "ENABLED"
         self._emulation = env_emulation or enable_emulation
 
-    def _load_emul_devices(self):
+    def _load_emul_devices(self) -> dict | None:
         """This is used only for debug."""
         data_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
@@ -1414,7 +1414,7 @@ class ClientAsync:
                 return
             if self.emulation:
                 # for debug
-                if emul_device := self._load_emul_devices():
+                if emul_device := await asyncio.to_thread(self._load_emul_devices):
                     new_devices.extend(emul_device)
             self._devices = {
                 d[KEY_DEVICE_ID]: d for d in new_devices if KEY_DEVICE_ID in d
@@ -1704,25 +1704,29 @@ class ClientAsync:
             ).get("pack", {})
         return self._common_lang_pack
 
-    def local_lang_pack(self) -> dict[str, str]:
+    async def local_lang_pack(self) -> dict[str, str]:
         """Load JSON local lang pack from local."""
         if self._local_lang_pack is not None:
             return self._local_lang_pack
 
-        result = {}
-        data_file = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), _LOCAL_LANG_FILE
-        )
-        try:
-            with open(data_file, "r", encoding="utf-8") as lang_file:
-                lang_pack = json.load(lang_file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self._local_lang_pack = {}
-            return {}
+        def _load_local_lang_pack() -> dict[str, dict]:
+            """Load content of local lang pack."""
+            data_file = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), _LOCAL_LANG_FILE
+            )
+            try:
+                with open(data_file, "r", encoding="utf-8") as lang_file:
+                    return json.load(lang_file)
+            except (FileNotFoundError, json.JSONDecodeError):
+                return {}
+
+        lang_pack = await asyncio.to_thread(_load_local_lang_pack)
+
         if self._language in lang_pack:
             result = lang_pack[self._language]
         else:
             result = lang_pack.get(DEFAULT_LANGUAGE, {})
+
         self._local_lang_pack = result
         return result
 
