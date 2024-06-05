@@ -1,4 +1,5 @@
 """------------------for Air Purifier"""
+
 from __future__ import annotations
 
 from enum import Enum

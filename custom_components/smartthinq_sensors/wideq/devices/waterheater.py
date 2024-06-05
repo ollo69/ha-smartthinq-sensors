@@ -1,4 +1,5 @@
 """------------------for WATER HEATER"""
+
 from __future__ import annotations
 
 from enum import Enum
