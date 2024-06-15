@@ -1372,6 +1372,7 @@ class ClientAsync:
         # The three steps required to get access to call the API.
         self._auth: Auth = auth
         self._session: Session | None = session
+        self._connected = True
         self._last_device_update = datetime.utcnow()
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
@@ -1392,7 +1393,7 @@ class ClientAsync:
         env_emulation = os.environ.get("thinq2_emulation", "") == "ENABLED"
         self._emulation = env_emulation or enable_emulation
 
-    def _load_emul_devices(self):
+    def _load_emul_devices(self) -> dict | None:
         """This is used only for debug."""
         data_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
@@ -1413,7 +1414,7 @@ class ClientAsync:
                 return
             if self.emulation:
                 # for debug
-                if emul_device := self._load_emul_devices():
+                if emul_device := await asyncio.to_thread(self._load_emul_devices):
                     new_devices.extend(emul_device)
             self._devices = {
                 d[KEY_DEVICE_ID]: d for d in new_devices if KEY_DEVICE_ID in d
@@ -1441,6 +1442,7 @@ class ClientAsync:
     @property
     def session(self) -> Session:
         """Return the Session object associated to this client."""
+        self._check_connected()
         if not self._session:
             self._session = self.auth.start_session()
         return self._session
@@ -1481,7 +1483,16 @@ class ClientAsync:
 
     async def close(self):
         """Close the active managed core http session."""
+        if not self._connected:
+            return
+        self._connected = False
+        self._session = None
         await self._auth.gateway.close()
+
+    def _check_connected(self):
+        """Check that client is in connected status."""
+        if not self._connected:
+            raise exc.ClientDisconnected()
 
     async def refresh_devices(self):
         """Refresh the devices' information for this client."""
@@ -1495,6 +1506,7 @@ class ClientAsync:
 
     async def refresh(self, refresh_gateway=False) -> None:
         """Refresh client connection."""
+        self._check_connected()
         if refresh_gateway:
             gateway = await Gateway.discover(self.auth.gateway.core)
             self.auth.refresh_gateway(gateway)
@@ -1651,6 +1663,7 @@ class ClientAsync:
 
     async def _load_json_info(self, info_url: str):
         """Load JSON data from specific url."""
+        self._check_connected()
         if not info_url:
             return {}
 
@@ -1691,25 +1704,29 @@ class ClientAsync:
             ).get("pack", {})
         return self._common_lang_pack
 
-    def local_lang_pack(self) -> dict[str, str]:
+    async def local_lang_pack(self) -> dict[str, str]:
         """Load JSON local lang pack from local."""
         if self._local_lang_pack is not None:
             return self._local_lang_pack
 
-        result = {}
-        data_file = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), _LOCAL_LANG_FILE
-        )
-        try:
-            with open(data_file, "r", encoding="utf-8") as lang_file:
-                lang_pack = json.load(lang_file)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self._local_lang_pack = {}
-            return {}
+        def _load_local_lang_pack() -> dict[str, dict]:
+            """Load content of local lang pack."""
+            data_file = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), _LOCAL_LANG_FILE
+            )
+            try:
+                with open(data_file, "r", encoding="utf-8") as lang_file:
+                    return json.load(lang_file)
+            except (FileNotFoundError, json.JSONDecodeError):
+                return {}
+
+        lang_pack = await asyncio.to_thread(_load_local_lang_pack)
+
         if self._language in lang_pack:
             result = lang_pack[self._language]
         else:
             result = lang_pack.get(DEFAULT_LANGUAGE, {})
+
         self._local_lang_pack = result
         return result
 

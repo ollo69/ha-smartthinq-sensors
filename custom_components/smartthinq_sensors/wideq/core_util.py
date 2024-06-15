@@ -1,4 +1,5 @@
 """Support for LG SmartThinQ device."""
+
 import uuid
 
 

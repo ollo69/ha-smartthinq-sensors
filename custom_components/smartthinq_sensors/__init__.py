@@ -11,7 +11,6 @@ from homeassistant.config_entries import (
     SOURCE_IMPORT,
     SOURCE_REAUTH,
     ConfigEntry,
-    current_entry,
 )
 from homeassistant.const import (
     CONF_CLIENT_ID,
@@ -344,6 +343,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_dispatcher_connect(hass, SIGNAL_RELOAD_ENTRY, _async_call_reload_entry)
     )
 
+    async def _close_lg_client(event: Event) -> None:
+        """Close client to abort pollong."""
+        await client.close()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close_lg_client)
+    )
+
     hass.data[DOMAIN] = {
         CLIENT: client,
         LGE_DEVICES: lge_devices,
@@ -477,20 +484,6 @@ class LGEDevice:
 
         # Initialize device features
         _ = self._state.device_features
-
-        # abort polling on unload and shutdown
-        if config_entry := current_entry.get():
-            config_entry.async_on_unload(self._device.abort_poll)
-
-            async def abort_dev_poll(event: Event) -> None:
-                """Abort device polling."""
-                self._device.abort_poll()
-
-            config_entry.async_on_unload(
-                self._hass.bus.async_listen_once(
-                    EVENT_HOMEASSISTANT_STOP, abort_dev_poll
-                )
-            )
 
         return True
 
