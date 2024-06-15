@@ -28,7 +28,18 @@ If during configuration you receive the message "No SmartThinQ devices found", p
 
 **Important 2**: If you receive an "Invalid Credential" error during component configuration/startup, check in the LG mobile app if is requested to accept new Term Of Service.
 
-**Note**: some device status may not be correctly detected, this depends on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.
+**Note**: some device status may not be correctly detected, this depend on the model. I'm working to map all possible status developing the component in a way to allow to configure model option in the simplest possible way and provide update using Pull Requests. I will provide a guide on how update this information.
+
+**Washer-Dryer remote start**: The component provides entities to select a course and override some of the course settings, before remotely starting the machine. The overrides available and their permitted values depend on the selected course. Attempts to set an invalid value for an override are ignored and result in an error message pop-up on the lovelace UI.  To remotely start the washer perform the following steps in order:
+
+- Turn on the washer and enable remote start using its front panel.  This is an LG safety feature that is also required for the LG app.
+- Select a course.
+- Optionally, select a value for the course setting (e.g. water temperature) you would like to override.
+- "Press" the Washer Remote Start button.
+
+Nothing will happen/change on the washer and the component sensor entities will not show your selected course or overrides, until you press Remote Start.  This is the same behaviour as the LG app.
+
+Please note, remote start feature override was developed for use in scripts and automations. If you use the locelace UI and select an invalid override value, it will incorrectly be shown as selected.  In fact, it has been ignored and you must refresh the page to see the currently selected value.  Pull requests that fix this issue are welcome. 
 
 ## Component configuration
 
