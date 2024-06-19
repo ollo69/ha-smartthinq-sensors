@@ -11,19 +11,19 @@ from homeassistant.config_entries import (
     SOURCE_IMPORT,
     SOURCE_REAUTH,
     ConfigEntry,
-    current_entry,
 )
 from homeassistant.const import (
     CONF_CLIENT_ID,
     CONF_REGION,
     CONF_TOKEN,
+    EVENT_HOMEASSISTANT_STOP,
     MAJOR_VERSION,
     MINOR_VERSION,
     Platform,
     UnitOfTemperature,
     __version__,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -343,6 +343,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_dispatcher_connect(hass, SIGNAL_RELOAD_ENTRY, _async_call_reload_entry)
     )
 
+    async def _close_lg_client(event: Event) -> None:
+        """Close client to abort pollong."""
+        await client.close()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close_lg_client)
+    )
+
     hass.data[DOMAIN] = {
         CLIENT: client,
         LGE_DEVICES: lge_devices,
@@ -476,10 +484,6 @@ class LGEDevice:
 
         # Initialize device features
         _ = self._state.device_features
-
-        # abort polling on unload
-        if config_entry := current_entry.get():
-            config_entry.async_on_unload(self._device.abort_poll)
 
         return True
 

@@ -82,7 +82,6 @@ class Monitor:
         self._has_error = False
         self._invalid_credential_count = 0
         self._error_log_count = 0
-        self._abort_refresh = False
 
     def _raise_error(
         self,
@@ -153,29 +152,19 @@ class Monitor:
         Monitor._not_logged_count = 0
         return True
 
-    def abort_refresh(self):
-        """Force exit from refresh loop."""
-        self._abort_refresh = True
-
     async def refresh(self, query_device=False) -> Any | None:
         """Update device state"""
         _LOGGER.debug("Updating ThinQ device %s", self._device_descr)
         invalid_credential_count = self._invalid_credential_count
         self._invalid_credential_count = 0
-        self._abort_refresh = False
 
         state = None
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration
 
-            if self._abort_refresh:
-                return None
-
             if iteration > 0:
                 await asyncio.sleep(SLEEP_BETWEEN_RETRIES)
-                if self._abort_refresh:
-                    return None
 
             try:
                 if refresh_auth := await self._refresh_auth():
@@ -195,6 +184,9 @@ class Monitor:
                 if iteration >= 1:  # just retry 2 times
                     raise
                 continue
+
+            except core_exc.ClientDisconnected:
+                return None
 
             except core_exc.FailedRequestError:
                 self._raise_error("Status update request failed", debug_count=2)
@@ -298,9 +290,6 @@ class Monitor:
         Get the current status data (a bytestring) or None if the
         device is not yet ready.
         """
-        if self._abort_refresh:
-            return None, False
-
         if self._platform_type == PlatformType.THINQ1:
             return await self._poll_v1()
         return await self._poll_v2(query_device)
@@ -506,7 +495,7 @@ class Device:
 
         # load local language pack
         if self._local_lang_pack is None:
-            self._local_lang_pack = self._client.local_lang_pack()
+            self._local_lang_pack = await self._client.local_lang_pack()
 
         return True
 
@@ -804,11 +793,6 @@ class Device:
     async def poll(self) -> DeviceStatus | None:
         """Poll the device's current state."""
         return None
-
-    def abort_poll(self):
-        """Force exit from refresh loop."""
-        if self._mon:
-            self._mon.abort_refresh()
 
     def _get_feature_title(self, feature_name, item_key):
         """Override this function to manage feature title per device type."""
