@@ -144,12 +144,20 @@ def _oauth_info_from_result(result_info: dict) -> dict:
     return result
 
 
-def lg_client_session() -> aiohttp.ClientSession:
-    """Create an aiohttp client session to use with LG ThinQ."""
+def _create_lg_ssl_context() -> ssl.SSLContext:
+    """Create a SSL context for LG ThinQ."""
     context = ssl.create_default_context()
     context.set_ciphers(_LG_SSL_CIPHERS)
+    return context
+
+
+_SSL_CONTEXT = _create_lg_ssl_context()
+
+
+def lg_client_session() -> aiohttp.ClientSession:
+    """Create an aiohttp client session to use with LG ThinQ."""
     connector = aiohttp.TCPConnector(
-        enable_cleanup_closed=ENABLE_CLEANUP_CLOSED, ssl_context=context
+        enable_cleanup_closed=ENABLE_CLEANUP_CLOSED, ssl_context=_SSL_CONTEXT
     )
     return aiohttp.ClientSession(connector=connector)
 
