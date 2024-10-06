@@ -4,7 +4,7 @@
             "single_instance_allowed": "Somente uma única configuração de sensores SmartThinQ LGE é permitida.",
             "no_smartthinq_devices": "Nenhum dispositivo SmartThinQ encontrado. Configuração do componente abortada.",
             "unsupported_version": "Esta integração requer pelo menos a versão {req_ver} do HomeAssistant, você está executando a versão {run_ver}.",
-			"reconfigured": "Configuração concluída com sucesso."
+            "reconfigured": "Configuração concluída com sucesso."
         },
         "error": {
             "error_connect": "Erro ao conectar ao SmartThinQ. Tente novamente e certifique-se de que você pode acessar o aplicativo ThinQ no seu telefone.",
@@ -15,7 +15,7 @@
             "invalid_credentials": "Credenciais SmartThinQ inválidas. Use o aplicativo LG no seu dispositivo móvel para verificar se há Termos de Serviço para aceitar. Contas baseadas em redes sociais não são suportadas e, na maioria dos casos, não funcionam com essa integração.",
             "invalid_config": "Configuração inválida encontrada, reconfigure.",
             "no_user_info": "Usuário e senha são obrigatórios.",
-			"unknown": "Erro desconhecido."
+            "unknown": "Erro desconhecido."
         },
         "step": {
             "user": {
@@ -25,7 +25,7 @@
                     "region": "Código do país",
                     "language": "Código do idioma",
                     "use_redirect": "Use o método de autenticação de URL de redirecionamento.",
-					"use_ha_session": "Compartilhe a conexão HTTP do Home Assistant (pode causar erros de SSL)",
+                    "use_ha_session": "Compartilhe a conexão HTTP do Home Assistant (pode causar erros de SSL)",
                     "use_tls_v1": "Forçar o uso do protocolo TLSv1 (às vezes é necessário)",
                     "exclude_dh": "Não use a cifra DH (no caso do erro 'chave dh muito pequena')"
                 },
