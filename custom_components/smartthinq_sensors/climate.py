@@ -513,20 +513,15 @@ class LGERefrigeratorClimate(LGEClimate):
         return UnitOfTemperature.CELSIUS
 
     @property
-    def current_temperature(self) -> float | None:
-        """Return the current temperature."""
-        curr_temp = self.entity_description.temp_fn(self._wrap_device)
-        if curr_temp is None:
-            return None
-        try:
-            return int(curr_temp)
-        except ValueError:
-            return None
-
-    @property
     def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
-        return self.current_temperature
+        target_temp = self.entity_description.temp_fn(self._wrap_device)
+        if target_temp is None:
+            return None
+        try:
+            return int(target_temp)
+        except ValueError:
+            return None
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
