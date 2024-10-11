@@ -283,14 +283,10 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         # if an entry exists, we are reconfiguring
         if entries := self._async_current_entries():
             entry = entries[0]
-            self.hass.config_entries.async_update_entry(
+            return self.async_update_reload_and_abort(
                 entry=entry,
                 data=data,
             )
-            self.hass.async_create_task(
-                self.hass.config_entries.async_reload(entry.entry_id)
-            )
-            return self.async_abort(reason="reconfigured")
 
         return self.async_create_entry(title="LGE Devices", data=data)
 
