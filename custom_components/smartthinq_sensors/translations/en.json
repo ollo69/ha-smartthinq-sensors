@@ -48,5 +48,28 @@
             }
         },
         "title": "SmartThinQ LGE Sensors"
+    },
+    "exceptions": {
+        "remote_start_disabled": {
+            "message": "Machine is off, asleep or running, or remote start is not enabled."
+        },
+        "course_name_required": {
+            "message": "Programme required if option overrides are specified."
+        },
+        "invalid_json": {
+            "message": "Option overrides contains invalid JSON. {error}"
+        },
+        "option_missing": {
+            "message": "Option overrides must contain at least one option from {friendly_list} or {internal_list}."
+        },
+        "option_cannot_be_overridden": {
+            "message": "The programme {course} does not allow the option {option} to be overridden. Permitted options are: {friendly_list} or {internal_list}."
+        },
+        "invalid_programme": {
+            "message": "The programme {name} is invalid. Permitted programmes are: {permitted}."
+        },
+        "invalid_option_value": {
+            "message": "The value {value} is invalid and has been ignored. The value for the option {option} must be one of: {friendly_list} or {internal_list}."
+        }
     }
 }

@@ -7,14 +7,14 @@ remote_start:
       domain: sensor
   fields:
     course:
-      name: course
-      description: Course (if not set will use current)
+      name: Programme
+      description: The wash programme (course), if not set will use current.
       required: false
       selector:
         text:
     overrides:
-      name: overrides
-      description: Overrides (JSON dictionary containing the options to override and their new value)
+      name: Option overrides
+      description: A JSON dictionary containing the options to override and their new value as name:value pairs.
       required: false
       selector:
         text:

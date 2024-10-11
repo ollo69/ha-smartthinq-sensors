@@ -16,6 +16,7 @@ from ..core_async import ClientAsync
 from ..core_exceptions import InvalidDeviceStatus
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo, DeviceType
+from ...const import DOMAIN
 
 STATE_WM_POWER_OFF = "STATE_POWER_OFF"
 STATE_WM_INITIAL = "STATE_INITIAL"
@@ -135,6 +136,7 @@ class WMDevice(Device):
         # Initialised by select_start_course and _select_start_option. read in selected_*,
         # _select_option_enabled, _select_start_option, _prepare_course_info and remote_start.
         self._course_overrides: dict | None = {} 
+        
         # For some options and their values, map the internal name to and from a friendly name.
         # The friendly name is extracted from the machine info language pack
         # {'option internal name': {'friendly_name': option friendly name,
@@ -844,7 +846,14 @@ class WMDevice(Device):
             self._selected_course = None
             return
         if course_name not in self.course_list:
-            raise ServiceValidationError(f"The programme (course name) '{course_name}' is invalid. Permitted names are: {list(self.course_list)}.")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_programme",
+                translation_placeholders={
+                    "name": "'"+str(course_name)+"'",
+                    "permitted": str(list(self.course_list))
+                }
+            ) 
         self._selected_course = course_name
 
         # For the selected course save the permitted values for setting that can be overridden
@@ -862,9 +871,9 @@ class WMDevice(Device):
             if selectable is None:
                 continue
 
-            _LOGGER.debug("select_start_course(%s), set overrides for %s - default: %s, selectable: %s", course_name, value, default, selectable)
             self._course_overrides[value] = {'currently': default, 'permitted': selectable}
-
+            _LOGGER.debug("select_start_course(%s), set overrides for %s to %s", course_name, value, self._course_overrides[value])
+            
     def _select_option_enabled(self, select_name: str) -> bool:
         """Return if specified option select is enabled."""
         enabled = self.select_course_enabled and self._selected_course and self._course_overrides.get(select_name)
@@ -886,7 +895,16 @@ class WMDevice(Device):
         if value and permitted_options and (value.internal in permitted_options):
             self._course_overrides[option.internal]['currently'] = value.internal
         else:
-            raise ServiceValidationError(f"The value '{value_str}' is invalid and has been ignored. The value for the option '{option.friendly}' must be one of: {self._get_friendly_values_list(option.internal, permitted_options)} or {permitted_options}.")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_option_value",
+                translation_placeholders={
+                    "value": "'"+str(value_str)+"'",
+                    "option": str(option.friendly),
+                    "friendly_list": str(self._get_friendly_values_list(option.internal, permitted_options)),
+                    "internal_list": str(list(permitted_options))
+                }
+            )
 
     @property
     def select_temp_enabled(self) -> bool:
@@ -935,25 +953,56 @@ class WMDevice(Device):
     async def remote_start(self, course_name: str | None = None, overrides_json: str | None = None) -> None:
         """Remote start the device."""
         if not self.remote_start_enabled:
-            raise ServiceValidationError("Machine is off, asleep or running, or remote start is not enabled.")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="remote_start_disabled"
+            )
 
         if course_name and self._initial_bit_start:
             await self.select_start_course(course_name)
 
         if overrides_json:
-            if not course_name: raise ServiceValidationError("Programme (course) name required if overrides are specified.")
+            if not course_name: 
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="course_name_required"
+                )
+
             try: overrides = json.loads(overrides_json)
-            except: raise ServiceValidationError("'overrides' contains invalid JSON.")
+            except json.JSONDecodeError as error: 
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="invalid_json",
+                    translation_placeholders={"error": str(error)}
+                ) from error
 
             allowed_overrides = self._course_overrides.keys()
-            if not overrides: raise ServiceValidationError(f"'overrides' must contain one option from {self._get_friendly_names_list(list(allowed_overrides))} or {list(allowed_overrides)}.")
+            if not overrides: 
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="option_missing",
+                    translation_placeholders={
+                        "friendly_list": str(self._get_friendly_names_list(list(allowed_overrides))),
+                        "internal_list": str(list(allowed_overrides))
+                    }
+                )
+
             for option_str in overrides:
                 option = self._convert_option_name(option_str)
                 if option and (option.internal in allowed_overrides):
                     value_str = overrides.get(option_str)
                     self._select_start_option(option.internal, value_str)
                 else:
-                    raise ServiceValidationError(f"The programme '{course_name}' does not allow the option '{option_str}' to be overridden. Permitted options are: {self._get_friendly_names_list(list(allowed_overrides))} or {list(allowed_overrides)}.")
+                    raise ServiceValidationError(
+                        translation_domain=DOMAIN,
+                        translation_key="option_cannot_be_overridden",
+                        translation_placeholders={
+                            "course": str(course_name),
+                            "option": "'"+str(option_str)+"'",
+                            "friendly_list": str(self._get_friendly_names_list(list(allowed_overrides))),
+                            "internal_list": str(list(allowed_overrides))
+                        }
+                    )
 
         keys = self._get_cmd_keys(CMD_REMOTE_START)
         await self.set(keys[0], keys[1], key=keys[2])
