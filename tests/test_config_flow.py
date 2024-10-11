@@ -166,7 +166,7 @@ async def test_token_refresh(hass, connect):
         await hass.async_block_till_done()
 
     assert result2["type"] == data_entry_flow.FlowResultType.ABORT
-    assert result2["reason"] == "reconfigured"
+    assert result2["reason"] == "reauth_successful"
     assert len(mock_setup_entry.mock_calls) == 1
 
     entries = hass.config_entries.async_entries(DOMAIN)
