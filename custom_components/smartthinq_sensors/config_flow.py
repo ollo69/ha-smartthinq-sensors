@@ -45,6 +45,7 @@ from .const import (
 from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
 
 CONF_LOGIN = "login_url"
+CONF_REAUTH_CRED = "reauth_cred"
 CONF_URL = "callback_url"
 
 RESULT_SUCCESS = 0
@@ -173,6 +174,8 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             self._language += f"-{region}"
 
         if not use_redirect and not (username and password):
+            if self.source == config_entries.SOURCE_REAUTH and not (username or password):
+                return await self.async_step_reauth_confirm()
             return self._show_form(errors="no_user_info")
 
         lge_auth = LGEAuthentication(
@@ -340,7 +343,24 @@ class SmartThinQFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> FlowResult:
         """Perform reauth upon an API authentication error."""
-        return await self.async_step_user()
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Dialog that informs the user that reauth is required."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_confirm",
+                data_schema=vol.Schema(
+                    {vol.Required(CONF_REAUTH_CRED, default=False): bool}
+                )
+            )
+
+        if user_input[CONF_REAUTH_CRED] is True:
+            return await self.async_step_user()
+        entries = self._async_current_entries()
+        return self.async_update_reload_and_abort(entries[0])
 
 
 def _dict_to_select(opt_dict: dict) -> SelectSelectorConfig:
