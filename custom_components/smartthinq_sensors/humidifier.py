@@ -66,7 +66,7 @@ async def async_setup_entry(
     platform = current_platform.get()
     platform.async_register_entity_service(
         SERVICE_SET_FAN_MODE,
-        vol.Schema({vol.Required(ATTR_FAN_MODE): cv.string}),
+        {vol.Required(ATTR_FAN_MODE): cv.string},
         "async_set_fan_mode",
     )
 

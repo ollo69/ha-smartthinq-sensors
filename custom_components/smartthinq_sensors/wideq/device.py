@@ -159,6 +159,7 @@ class Monitor:
         self._invalid_credential_count = 0
 
         state = None
+        retry = False
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration

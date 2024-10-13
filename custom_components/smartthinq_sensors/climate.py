@@ -384,11 +384,13 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
-        if (new_temp := kwargs.get(ATTR_TEMPERATURE)) is not None:
-            await self._device.set_target_temp(new_temp)
         if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
             await self.async_set_hvac_mode(HVACMode(hvac_mode))
-        else:
+            if hvac_mode == HVACMode.OFF:
+                return
+
+        if (new_temp := kwargs.get(ATTR_TEMPERATURE)) is not None:
+            await self._device.set_target_temp(new_temp)
             self._api.async_set_updated()
 
     @property
@@ -511,20 +513,15 @@ class LGERefrigeratorClimate(LGEClimate):
         return UnitOfTemperature.CELSIUS
 
     @property
-    def current_temperature(self) -> float | None:
-        """Return the current temperature."""
-        curr_temp = self.entity_description.temp_fn(self._wrap_device)
-        if curr_temp is None:
-            return None
-        try:
-            return int(curr_temp)
-        except ValueError:
-            return None
-
-    @property
     def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
-        return self.current_temperature
+        target_temp = self.entity_description.temp_fn(self._wrap_device)
+        if target_temp is None:
+            return None
+        try:
+            return int(target_temp)
+        except ValueError:
+            return None
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""

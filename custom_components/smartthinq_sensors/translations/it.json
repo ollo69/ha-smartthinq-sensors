@@ -1,52 +1,60 @@
 {
-    "config": {
-        "abort": {
-            "single_instance_allowed": "E' consentita una sola configurazione di SmartThinQ LGE Sensors.",
-            "no_smartthinq_devices": "Nessun dispositivo SmartThinQ trovato. Component setup interrotto.",
-            "unsupported_version": "Questa integrazione richiede almeno la versione {req_ver} di HomeAssistant, tu stai usando la versione {run_ver}.",
-            "reconfigured": "Configurazione completata con successo."
+  "config": {
+    "abort": {
+      "single_instance_allowed": "E' consentita una sola configurazione di SmartThinQ LGE Sensors.",
+      "no_smartthinq_devices": "Nessun dispositivo SmartThinQ trovato. Component setup interrotto.",
+      "unsupported_version": "Questa integrazione richiede almeno la versione {req_ver} di HomeAssistant, tu stai usando la versione {run_ver}.",
+      "reauth_successful": "Configurazione completata con successo.",
+      "reconfigured": "Configurazione completata con successo."
+    },
+    "error": {
+      "error_connect": "Errore di connessione a SmartThinQ. Riprova, assicurandoti prima di poter accedere dall'applicazione ThinQ sul telefono",
+      "error_url": "Errore nel recuperare l'URL di login da ThinQ.",
+      "invalid_region": "Formato Paese non valido.",
+      "invalid_language": "Formato lingua non valido.",
+      "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone.",
+      "invalid_credentials": "Credenziali SmartThinQ non valide. Utilizza l'applicazione ThinQ sul telefono per verificare che non siano presenti Condizioni di Servizio da accettare. Gli account basati su social network non sono supportati e nella maggior parte dei casi non funzionano con questa integrazione.",
+      "invalid_config": "Trovata configurazione non valida, riconfigurare.",
+      "no_user_info": "Nome utente e Password sono campi obbligatori.",
+      "unknown": "Errore sconosciuto."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "username": "Nome utente account LG",
+          "password": "Password",
+          "region": "Codice Paese",
+          "language": "Codice Lingua",
+          "use_redirect": "Usa l'autenticazione basata su URL redirect",
+          "use_ha_session": "Utilizza la connessione HTTP di Home Assistant (può cause errori SSL)",
+          "use_tls_v1": "Forza l'utilizzo del protocollo TLSv1 (richiesto in alcuni casi)",
+          "exclude_dh": "Non utilizzare il cypher DH (in caso di errore 'dh key too small')"
         },
-        "error": {
-            "error_connect": "Errore di connessione a SmartThinQ. Riprova, assicurandoti prima di poter accedere dall'applicazione ThinQ sul telefono",
-            "error_url": "Errore nel recuperare l'URL di login da ThinQ.",
-            "invalid_region": "Formato Paese non valido.",
-            "invalid_language": "Formato lingua non valido.",
-            "invalid_url": "URL di reindizzamento non valido. Accertati di poter accedere alla app ThinQ sul tuo smartphone.",
-            "invalid_credentials": "Credenziali SmartThinQ non valide. Utilizza l'applicazione ThinQ sul telefono per verificare che non siano presenti Condizioni di Servizio da accettare. Gli account basati su social network non sono supportati e nella maggior parte dei casi non funzionano con questa integrazione.",
-            "invalid_config": "Trovata configurazione non valida, riconfigurare.",
-            "no_user_info": "Nome utente e Password sono campi obbligatori.",
-            "unknown": "Errore sconosciuto."
+        "description": "Imposta le informazioni di accesso del tuo account SmartThinQ."
+      },
+      "url": {
+        "data": {
+          "login_url": "URL di accesso a SmartThinQ",
+          "callback_url": "URL di reindirizzamento"
         },
-        "step": {
-            "user": {
-                "data": {
-                    "username": "Nome utente account LG",
-                    "password": "Password",
-                    "region": "Codice Paese",
-                    "language": "Codice Lingua",
-                    "use_redirect": "Usa l'autenticazione basata su URL redirect",
-                    "use_ha_session": "Utilizza la connessione HTTP di Home Assistant (può cause errori SSL)",
-                    "use_tls_v1": "Forza l'utilizzo del protocollo TLSv1 (richiesto in alcuni casi)",
-                    "exclude_dh": "Non utilizzare il cypher DH (in caso di errore 'dh key too small')"
-                },
-                "description": "Imposta le informazioni di accesso del tuo account SmartThinQ."
-            },
-            "url": {
-                "data": {
-                    "login_url": "URL di accesso a SmartThinQ",
-                    "callback_url": "URL di reindirizzamento"
-                },
-                "description": "Utilizzare l'URL del primo campo per eseguire l'accesso con le proprie credenziali a SmartThinQ, poi incollare l'URL in cui si viene reindirizzati con il browser dopo l'accesso nel secondo campo. Condividi i tuoi feedback sul setup [qui](https://git.io/JU166).",
-                "title": "SmartThinQ LGE Sensors - Autenticazione"
-            },
-            "token": {
-                "data": {
-                    "token": "Aggiornamento Token"
-                },
-                "description": "Salvare il token generato per un utilizzo futuro, poi confermare per completare la configurazione.",
-                "title": "SmartThinQ LGE Sensors - Nuovo aggiornamento Token"
-            }
+        "description": "Utilizzare l'URL del primo campo per eseguire l'accesso con le proprie credenziali a SmartThinQ, poi incollare l'URL in cui si viene reindirizzati con il browser dopo l'accesso nel secondo campo. Condividi i tuoi feedback sul setup [qui](https://git.io/JU166).",
+        "title": "SmartThinQ LGE Sensors - Autenticazione"
+      },
+      "token": {
+        "data": {
+          "token": "Aggiornamento Token"
         },
-        "title": "SmartThinQ LGE Sensors"
-    }
+        "description": "Salvare il token generato per un utilizzo futuro, poi confermare per completare la configurazione.",
+        "title": "SmartThinQ LGE Sensors - Nuovo aggiornamento Token"
+      },
+      "reauth_confirm": {
+        "data": {
+          "reauth_cred": "Seleziona questa opzione se devi reimpostare le credenziali ThinQ"
+        },
+        "title": "SmartThinQ LGE Sensors - Reauth",
+        "description": "Errore nelle credenziali ThinQ, avvio integrazione abortito. Utilizza l'app LG sul tuo dispositivo mobile e verifica se ci sono nuovi Termini di servizio da accettare, quindi premi OK per ricaricare l'integrazione."
+      }
+    },
+    "title": "SmartThinQ LGE Sensors"
+  }
 }
