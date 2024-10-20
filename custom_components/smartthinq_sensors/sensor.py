@@ -62,6 +62,7 @@ from .wideq import (
     DeviceType,
     MicroWaveFeatures,
     RangeFeatures,
+    RefrigeratorFeatures,
     WashDeviceFeatures,
     WaterHeaterFeatures,
 )
@@ -202,6 +203,20 @@ REFRIGERATOR_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.temp_unit,
         value_fn=lambda x: x.temp_freezer,
+    ),
+    ThinQSensorEntityDescription(
+        key=RefrigeratorFeatures.FRESHAIRFILTER_REMAIN_PERC,
+        name="Fresh air filter remaining",
+        icon="mdi:air-filter",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    ThinQSensorEntityDescription(
+        key=RefrigeratorFeatures.WATERFILTER_REMAIN_PERC,
+        name="Water filter remaining",
+        icon="mdi:waves",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
     ),
 )
 AC_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (

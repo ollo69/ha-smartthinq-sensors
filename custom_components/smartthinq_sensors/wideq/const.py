@@ -105,9 +105,11 @@ class RefrigeratorFeatures(StrEnum):
     EXPRESSMODE = "express_mode"
     EXPRESSFRIDGE = "express_fridge"
     FRESHAIRFILTER = "fresh_air_filter"
+    FRESHAIRFILTER_REMAIN_PERC = "fresh_air_filter_remain_perc"
     ICEPLUS = "ice_plus"
     SMARTSAVINGMODE = "smart_saving_mode"
     WATERFILTERUSED_MONTH = "water_filter_used_month"
+    WATERFILTER_REMAIN_PERC = "water_filter_remain_perc"
 
 
 class WashDeviceFeatures(StrEnum):
