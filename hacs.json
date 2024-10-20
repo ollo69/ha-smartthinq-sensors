@@ -1,5 +1,7 @@
 {
   "name": "SmartThinQ LGE Sensors",
   "content_in_root": false,
+  "zip_release": true,
+  "filename": "smartthinq_sensors.zip",
   "homeassistant": "2024.8.0"
 }
