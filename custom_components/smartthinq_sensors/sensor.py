@@ -20,6 +20,7 @@ from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
     STATE_UNAVAILABLE,
+    EntityCategory,
     UnitOfPower,
     UnitOfTime,
 )
@@ -553,6 +554,7 @@ COMMON_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         key="ssid",
         name="SSID",
         icon="mdi:access-point-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda x: x.ssid,
     ),
 )
