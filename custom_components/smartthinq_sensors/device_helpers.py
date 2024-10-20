@@ -117,6 +117,11 @@ class LGEBaseDevice:
             return STATE_ON
         return STATE_OFF
 
+    @property
+    def ssid(self):
+        """The device network SSID."""
+        return self._api.device.device_info.ssid
+
     def get_features_attributes(self):
         """Return a dict with device features and name."""
         ret_val = {}

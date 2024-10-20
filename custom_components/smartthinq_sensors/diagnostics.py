@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.components.diagnostics import REDACTED, async_redact_data
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN
 from homeassistant.core import HomeAssistant, callback
@@ -14,6 +14,7 @@ from .wideq.device import Device as ThinQDevice
 
 TO_REDACT = {CONF_TOKEN}
 TO_REDACT_DEV = {"macAddress", "ssid", "userNo"}
+TO_REDACT_STATE = {"macAddress", "ssid"}
 
 
 async def async_get_config_entry_diagnostics(
@@ -136,6 +137,12 @@ def _async_device_ha_info(hass: HomeAssistant, lg_device_id: str) -> dict | None
             state_dict.pop("entity_id", None)
             # The context doesn't provide useful information in this case.
             state_dict.pop("context", None)
+
+        if state_dict and "state" in state_dict:
+            for to_redact in TO_REDACT_STATE:
+                if entity_entry.entity_id.endswith(f"_{to_redact}"):
+                    state_dict["state"] = REDACTED
+                    break
 
         data["entities"][entity_entry.entity_id] = {
             "name": entity_entry.name,

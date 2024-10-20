@@ -252,6 +252,11 @@ class DeviceInfo:
         return self._data.get("deviceState")
 
     @property
+    def ssid(self) -> str | None:
+        """Return the network ssid associated to the device."""
+        return self._data.get("ssid")
+
+    @property
     def snapshot(self) -> dict[str, Any] | None:
         """Return the snapshot data associated to the device."""
         return self._data.get("snapshot")
