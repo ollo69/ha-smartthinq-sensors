@@ -1,16 +1,21 @@
 {
     "config": {
         "abort": {
-            "single_instance_allowed": "É apenas permitida uma única configuração do SmartThinQ LGE Sensors.",
-            "no_smartthinq_devices": "Não foram encontrados dispositivos SmartThinQ. Configuração do componente interrompida.",
-            "unsupported_version": "Esta integração requer pelo menos a versão {req_ver} do HomeAssistant, você está na versão {run_ver}."
+            "single_instance_allowed": "Somente uma única configuração de sensores SmartThinQ LGE é permitida.",
+            "no_smartthinq_devices": "Nenhum dispositivo SmartThinQ encontrado. Configuração do componente abortada.",
+            "unsupported_version": "Esta integração requer pelo menos a versão {req_ver} do HomeAssistant, você está executando a versão {run_ver}.",
+            "reconfigured": "Configuração concluída com sucesso."
         },
         "error": {
-            "error_url": "Ocorreu um erro na tentativa de encontrar o endereço ThinQ.",
+            "error_connect": "Erro ao conectar ao SmartThinQ. Tente novamente e certifique-se de que você pode acessar o aplicativo ThinQ no seu telefone.",
+            "error_url": "Erro ao recuperar URL de login do ThinQ.",
             "invalid_region": "Formato de região inválido.",
             "invalid_language": "Formato de idioma inválido.",
-            "invalid_url": "URL de redirecionamento inválida. Certifique-se que tem acesso ao app ThinQ através do smartphone.",
-            "no_user_info": "Usuário e Senha são requiridos."
+            "invalid_url": "URL de redirecionamento inválida. Certifique-se de que você pode acessar o aplicativo ThinQ no seu telefone.",
+            "invalid_credentials": "Credenciais SmartThinQ inválidas. Use o aplicativo LG no seu dispositivo móvel para verificar se há Termos de Serviço para aceitar. Contas baseadas em redes sociais não são suportadas e, na maioria dos casos, não funcionam com essa integração.",
+            "invalid_config": "Configuração inválida encontrada, reconfigure.",
+            "no_user_info": "Usuário e senha são obrigatórios.",
+            "unknown": "Erro desconhecido."
         },
         "step": {
             "user": {
@@ -20,27 +25,28 @@
                     "region": "Código do país",
                     "language": "Código do idioma",
                     "use_redirect": "Use o método de autenticação de URL de redirecionamento.",
+                    "use_ha_session": "Compartilhe a conexão HTTP do Home Assistant (pode causar erros de SSL)",
                     "use_tls_v1": "Forçar o uso do protocolo TLSv1 (às vezes é necessário)",
-                    "exclude_dh": "Não use a cifra DH (no caso de erro 'chave dh muito pequena')"
+                    "exclude_dh": "Não use a cifra DH (no caso do erro 'chave dh muito pequena')"
                 },
-                "description": "Selecione a localização da sua conta SmartThinQ."
+                "description": "Insira as informações de acesso da sua conta SmartThinQ."
             },
             "url": {
                 "data": {
                     "login_url": "URL de login SmartThinQ",
                     "callback_url": "URL de redirecionamento"
                 },
-                "description": "Copie a URL do primeiro campo no seu navegador e use para efetuar login na sua conta SmartThinQ. Após o login será redirecionado, copie a URL de redirecionamento do navegador e cole no segundo campo. Deixe seu feedback [aqui](https://git.io/JU166).",
-                "title": "SmartThinQ LGE Sensors - Autenticação"
+                "description": "Use a URL no primeiro campo para fazer login no SmartThinQ com suas credenciais, depois cole a URL para onde o navegador é redirecionado após o login no segundo campo. Compartilhe feedback sobre sua configuração [aqui](https://git.io/JU166).",
+                "title": "Sensores SmartThinQ LGE - Autenticação"
             },
             "token": {
                 "data": {
                     "token": "Atualizar Token"
                 },
-                "description": "Guarde o token gerado para uso no futuro e confirme para concluir a configuração.",
-                "title": "SmartThinQ LGE Sensors - Atualizar token"
+                "description": "Salve o token gerado para uso futuro e confirme para concluir a configuração.",
+                "title": "Sensores SmartThinQ LGE - Atualizar token"
             }
         },
-        "title": "SmartThinQ LGE Sensors"
+        "title": "Sensores SmartThinQ LGE"
     }
 }

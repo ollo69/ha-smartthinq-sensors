@@ -6,12 +6,7 @@ from datetime import timedelta
 import logging
 
 from homeassistant.components import persistent_notification
-from homeassistant.config_entries import (
-    RECONFIGURE_NOTIFICATION_ID,
-    SOURCE_IMPORT,
-    SOURCE_REAUTH,
-    ConfigEntry,
-)
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_CLIENT_ID,
     CONF_REGION,
@@ -79,7 +74,7 @@ SMARTTHINQ_PLATFORMS = [
 ]
 
 AUTH_RETRY = "auth_retry"
-MAX_AUTH_RETRY = 5
+MAX_AUTH_RETRY = 4
 
 MAX_DISC_COUNT = 4
 SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
@@ -242,16 +237,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         return False
 
-    # if we reload the entry, we abort existing reauth flow and dismiss
-    # related notification
-    for progress_flow in hass.config_entries.flow.async_progress_by_handler(
-        entry.domain,
-        match_context={"entry_id": entry.entry_id, "source": SOURCE_REAUTH},
-    ):
-        if "flow_id" in progress_flow:
-            hass.config_entries.flow.async_abort(progress_flow["flow_id"])
-            persistent_notification.async_dismiss(hass, RECONFIGURE_NOTIFICATION_ID)
-
     log_info: bool = hass.data.get(DOMAIN, {}).get(SIGNAL_RELOAD_ENTRY, 0) < 2
     if log_info:
         hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: 2}
@@ -273,25 +258,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
             hass.data.pop(DOMAIN)
             # Launch config entries reauth setup
-            raise ConfigEntryAuthFailed from exc
+            raise ConfigEntryAuthFailed("ThinQ authentication failed") from exc
 
         hass.data[DOMAIN][AUTH_RETRY] = auth_retry + 1
         msg = (
             "Invalid ThinQ credential error, integration setup aborted."
             " Please use the LG App on your mobile device to ensure your"
-            " credentials are correct or there are new Term of Service to accept."
-            " If your credential changed, you must reconfigure integration."
-            " Account based on social network are not supported and in most"
-            " case do not work with this integration."
+            " credentials are correct or there are new Term of Service to accept"
         )
-        _notify_message(hass, "inv_credential", "SmartThinQ Sensors", msg)
         if log_info:
             _LOGGER.warning(msg, exc_info=True)
-        msg2 = (
-            "Invalid ThinQ credential error, integration setup aborted."
-            " Please use the LG App on your mobile device to verify credential."
-        )
-        raise ConfigEntryNotReady(msg2) from exc
+        raise ConfigEntryNotReady(msg) from exc
 
     except Exception as exc:
         if log_info:
@@ -299,9 +276,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Connection not available. ThinQ platform not ready", exc_info=True
             )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
-
-    # if the connection is ok, we dismiss related notification
-    persistent_notification.async_dismiss(hass, f"{DOMAIN}.inv_credential")
 
     if not client.has_devices:
         _LOGGER.error("No ThinQ devices found. Component setup aborted")

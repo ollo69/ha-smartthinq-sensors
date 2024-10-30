@@ -20,6 +20,7 @@ from homeassistant.const import (
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
     STATE_UNAVAILABLE,
+    EntityCategory,
     UnitOfPower,
     UnitOfTime,
 )
@@ -62,6 +63,7 @@ from .wideq import (
     DeviceType,
     MicroWaveFeatures,
     RangeFeatures,
+    RefrigeratorFeatures,
     WashDeviceFeatures,
     WaterHeaterFeatures,
 )
@@ -202,6 +204,20 @@ REFRIGERATOR_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.temp_unit,
         value_fn=lambda x: x.temp_freezer,
+    ),
+    ThinQSensorEntityDescription(
+        key=RefrigeratorFeatures.FRESHAIRFILTER_REMAIN_PERC,
+        name="Fresh air filter remaining",
+        icon="mdi:air-filter",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    ThinQSensorEntityDescription(
+        key=RefrigeratorFeatures.WATERFILTER_REMAIN_PERC,
+        name="Water filter remaining",
+        icon="mdi:waves",
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
     ),
 )
 AC_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
@@ -533,6 +549,16 @@ SENSOR_ENTITIES = {
     **{dev_type: WASH_DEV_SENSORS for dev_type in WASH_DEVICE_TYPES},
 }
 
+COMMON_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
+    ThinQSensorEntityDescription(
+        key="ssid",
+        name="SSID",
+        icon="mdi:access-point-network",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda x: x.ssid,
+    ),
+)
+
 
 def _sensor_exist(
     lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription
@@ -572,7 +598,14 @@ async def async_setup_entry(
             if _sensor_exist(lge_device, sensor_desc)
         ]
 
-        async_add_entities(lge_sensors)
+        lge_common_sensors = [
+            LGESensor(lge_device, sensor_desc, get_wrapper_device(lge_device, dev_type))
+            for sensor_desc in COMMON_SENSORS
+            for dev_type in lge_devices.keys()
+            for lge_device in lge_devices.get(dev_type, [])
+        ]
+
+        async_add_entities(lge_sensors + lge_common_sensors)
 
     _async_discover_device(lge_cfg_devices)
 

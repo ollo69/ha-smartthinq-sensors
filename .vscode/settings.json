@@ -1,5 +1,9 @@
 {
   //"editor.formatOnSave": true
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  },
   // Added --no-cov to work around TypeError: message must be set
   // https://github.com/microsoft/vscode-python/issues/14067
   "python.testing.pytestArgs": ["--no-cov"],
