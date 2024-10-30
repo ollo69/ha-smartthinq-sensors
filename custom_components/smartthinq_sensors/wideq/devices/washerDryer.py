@@ -151,6 +151,8 @@ class WMDevice(Device):
  
     def _build_friendly_enum_value(self, option: str):
         """Add to friendly names dictionary the enum friendly values."""
+        ##jl
+        _LOGGER.debug('self.model_info._data: %s',self.model_info._data)
         if not self.model_info.is_enum_type(option):
             return
 
@@ -255,6 +257,8 @@ class WMDevice(Device):
     def course_list(self) -> list:
         """Return a list of available course."""
         course_infos = self._get_course_infos()
+        ##JL
+        _LOGGER.debug('course_list: %s', course_infos)
         return [_CURRENT_COURSE, *course_infos.keys()]
 
     @property
@@ -266,6 +270,8 @@ class WMDevice(Device):
     def temps_list(self) -> list:
         """Return a list of available water temperatures for the selected course."""
         self._build_friendly_enum_value('temp')
+        ##JL
+        _LOGGER.debug('_option_friendly_names: %s', self._option_friendly_names)
         return list(self._option_friendly_names['temp']['enum_values'].values())
         
     @property
