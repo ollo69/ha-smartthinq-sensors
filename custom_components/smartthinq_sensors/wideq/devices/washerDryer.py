@@ -129,7 +129,7 @@ class WMDevice(Device):
         self._course_keys: dict[CourseType, str | None] | None = None
         self._course_infos: dict[str, str] | None = None
         self._selected_course: str | None = None
-        # For the selected course, the options that can be overridden their permitted values
+        # For the selected course, the options that can be overridden, their permitted values
         # and current value. Uses internal names. 
         # {'option internal name': { 'currently': value internal name,
         #                            'permitted: [value internal name, ...]}, ...}
@@ -150,9 +150,12 @@ class WMDevice(Device):
         self._initial_bit_start: bool = False
  
     def _build_friendly_enum_value(self, option: str):
-        """Add to friendly names dictionary the enum friendly values."""
+        """Add to friendly names dictionary the enum friendly values for 'option'."""
         ##jl
-        _LOGGER.debug('self.model_info._data: %s',self.model_info._data)
+        ##_LOGGER.debug('self.model_info._data: %s',self.model_info._data)
+        if self._option_friendly_names.get(option) != None :
+            return
+
         if not self.model_info.is_enum_type(option):
             return
 
@@ -169,6 +172,8 @@ class WMDevice(Device):
             self.model_info._data_root(option).get('label', option))
         friendly_enum['enum_values'] = friendly_enum_values
         self._option_friendly_names[option] = friendly_enum
+        ##jl
+        _LOGGER.debug('self._option_friendly_names: %s',self._option_friendly_names)
 
     def _convert_option_name(self, option_str: str) -> FriendlyName | None:
         """Convert an option name to its internal and friendly forms."""
@@ -257,8 +262,6 @@ class WMDevice(Device):
     def course_list(self) -> list:
         """Return a list of available course."""
         course_infos = self._get_course_infos()
-        ##JL
-        _LOGGER.debug('course_list: %s', course_infos)
         return [_CURRENT_COURSE, *course_infos.keys()]
 
     @property
@@ -266,49 +269,49 @@ class WMDevice(Device):
         """Return current selected course."""
         return self._selected_course or _CURRENT_COURSE
 
-    @cached_property
-    def temps_list(self) -> list:
-        """Return a list of available water temperatures for the selected course."""
-        self._build_friendly_enum_value('temp')
-        ##JL
-        _LOGGER.debug('_option_friendly_names: %s', self._option_friendly_names)
-        return list(self._option_friendly_names['temp']['enum_values'].values())
+    # @cached_property
+    # def temps_list(self) -> list:
+        # """Return a list of available water temperatures for the selected course."""
+        # self._build_friendly_enum_value('temp')
+        #JL
+        # _LOGGER.debug('_option_friendly_names: %s', self._option_friendly_names)
+        # return list(self._option_friendly_names['temp']['enum_values'].values())
         
-    @property
-    def selected_temp(self) -> str:
-        """Return current selected water temperature."""
-        value = self._convert_option_value(
-            'temp', 
-            self._course_overrides.get('temp',{}).get('currently'))
-        return value.friendly
+    # @property
+    # def selected_temp(self) -> str:
+        # """Return current selected water temperature."""
+        # value = self._convert_option_value(
+            # 'temp', 
+            # self._course_overrides.get('temp',{}).get('currently'))
+        # return value.friendly
 
-    @cached_property
-    def rinses_list(self) -> list:
-        """Return a list of available rinse options for the selected course."""
-        self._build_friendly_enum_value('rinse')
-        return list(self._option_friendly_names['rinse']['enum_values'].values())
+    # @cached_property
+    # def rinses_list(self) -> list:
+        # """Return a list of available rinse options for the selected course."""
+        # self._build_friendly_enum_value('rinse')
+        # return list(self._option_friendly_names['rinse']['enum_values'].values())
 
-    @property
-    def selected_rinse(self) -> str:
-        """Return current selected rinse option."""
-        value = self._convert_option_value(
-            'rinse', 
-            self._course_overrides.get('rinse',{}).get('currently'))
-        return value.friendly
+    # @property
+    # def selected_rinse(self) -> str:
+        # """Return current selected rinse option."""
+        # value = self._convert_option_value(
+            # 'rinse', 
+            # self._course_overrides.get('rinse',{}).get('currently'))
+        # return value.friendly
 
-    @cached_property
-    def spins_list(self) -> list:
-        """Return a list of available spin speeds for the selected course."""
-        self._build_friendly_enum_value('spin')
-        return list(self._option_friendly_names['spin']['enum_values'].values()) 
+    # @cached_property
+    # def spins_list(self) -> list:
+        # """Return a list of available spin speeds for the selected course."""
+        # self._build_friendly_enum_value('spin')
+        # return list(self._option_friendly_names['spin']['enum_values'].values()) 
 
-    @property
-    def selected_spin(self) -> str:
-        """Return current selected spin speed."""
-        value = self._convert_option_value(
-            'spin', 
-            self._course_overrides.get('spin',{}).get('currently'))
-        return value.friendly
+    # @property
+    # def selected_spin(self) -> str:
+        # """Return current selected spin speed."""
+        # value = self._convert_option_value(
+            # 'spin', 
+            # self._course_overrides.get('spin',{}).get('currently'))
+        # return value.friendly
 
     @property
     def run_state(self) -> str:
@@ -877,6 +880,7 @@ class WMDevice(Device):
             if selectable is None:
                 continue
 
+            self._build_friendly_enum_value(value)
             self._course_overrides[value] = {'currently': default, 'permitted': selectable}
             _LOGGER.debug("select_start_course(%s), set overrides for %s to %s", course_name, value, self._course_overrides[value])
             
@@ -912,32 +916,32 @@ class WMDevice(Device):
                 }
             )
 
-    @property
-    def select_temp_enabled(self) -> bool:
-        """Return if select temp is enabled."""
-        return self._select_option_enabled('temp')
+    # @property
+    # def select_temp_enabled(self) -> bool:
+        # """Return if select temp is enabled."""
+        # return self._select_option_enabled('temp')
         
-    async def select_start_temp(self, temp_name: str) -> None:
-        """Select a secific water temperature for remote start."""
-        self._select_start_option('temp', temp_name)
+    # async def select_start_temp(self, temp_name: str) -> None:
+        # """Select a secific water temperature for remote start."""
+        # self._select_start_option('temp', temp_name)
 
-    @property
-    def select_rinse_enabled(self) -> bool:
-        """Return if select rinse is enabled."""
-        return self._select_option_enabled('rinse')
+    # @property
+    # def select_rinse_enabled(self) -> bool:
+        # """Return if select rinse is enabled."""
+        # return self._select_option_enabled('rinse')
 
-    async def select_start_rinse(self, rinse_name: str) -> None:
-        """Select a secific rinse option for remote start."""
-        self._select_start_option('rinse', rinse_name)
+    # async def select_start_rinse(self, rinse_name: str) -> None:
+        # """Select a secific rinse option for remote start."""
+        # self._select_start_option('rinse', rinse_name)
 
-    @property
-    def select_spin_enabled(self) -> bool:
-        """Return if select spin is enabled."""
-        return self._select_option_enabled('spin')
+    # @property
+    # def select_spin_enabled(self) -> bool:
+        # """Return if select spin is enabled."""
+        # return self._select_option_enabled('spin')
         
-    async def select_start_spin(self, spin_name: str) -> None:
-        """Select a secific spin for remote start."""
-        self._select_start_option('spin', spin_name)
+    # async def select_start_spin(self, spin_name: str) -> None:
+        # """Select a secific spin for remote start."""
+        # self._select_start_option('spin', spin_name)
 
     async def power_off(self):
         """Power off the device."""
