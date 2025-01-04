@@ -5,6 +5,7 @@
         "@WM_STATE_INITIAL_W": "Standby",
         "@WM_STATE_PAUSE_W": "Paused",
         "@WM_STATE_RESERVE_W": "Delay Set",
+        "@CP_UX30_CARD_DELAY_SET": "Delay Set",
         "@WM_STATE_DETECTING_W": "Detecting",
         "@WM_STATE_RUNNING_W": "Washing",
         "@WM_STATE_RINSING_W": "Rinsing",
