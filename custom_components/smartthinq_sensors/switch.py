@@ -124,7 +124,7 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_HOT_WATER_POWER,
         name="Hot Water Power mode",
-        icon="mdi:ear-hearing-off",
+        icon="mdi:water-sync",
         turn_off_fn=lambda x: x.device.set_mode_hot_water_power(False),
         turn_on_fn=lambda x: x.device.set_mode_hot_water_power(True),
         available_fn=lambda x: x.is_power_on,
