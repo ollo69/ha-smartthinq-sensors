@@ -211,13 +211,11 @@ class LGEACClimate(LGEClimate):
 
         self._use_h_mode = False
         self._attr_swing_modes = self._device.vertical_step_modes or None
-        if not self._attr_swing_modes:
-            self._attr_swing_modes = self._device.horizontal_step_modes or None
-            self._use_h_mode = self._attr_swing_modes is not None
-        else:
-            self._attr_swing_horizontal_modes = (
-                self._device.horizontal_step_modes or None
-            )
+        self._attr_swing_horizontal_modes = self._device.horizontal_step_modes or None
+        if not self._attr_swing_modes and self._attr_swing_horizontal_modes:
+            self._attr_swing_modes = self._attr_swing_horizontal_modes
+            self._attr_swing_horizontal_modes = None
+            self._use_h_mode = True
 
         self._attr_preset_mode = None
 
