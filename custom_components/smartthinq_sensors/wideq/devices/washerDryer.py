@@ -57,6 +57,7 @@ BIT_FEATURES = {
     WashDeviceFeatures.CHILDLOCK: ["ChildLock", "childLock"],
     WashDeviceFeatures.CREASECARE: ["CreaseCare", "creaseCare"],
     WashDeviceFeatures.DAMPDRYBEEP: ["DampDryBeep", "dampDryBeep"],
+    WashDeviceFeatures.DELAYSTART: ["DelayStart", "delayStart"],
     WashDeviceFeatures.DETERGENT: ["DetergentStatus", "ezDetergentState"],
     WashDeviceFeatures.DETERGENTLOW: ["DetergentRemaining", "detergentRemaining"],
     WashDeviceFeatures.DOOROPEN: ["DoorClose", "doorClose"],
