@@ -1,8 +1,8 @@
 # Strictly for tests
-pytest==8.3.1
+pytest==8.3.4
 #pytest-cov==2.9.0
 #pytest-homeassistant
-pytest-homeassistant-custom-component==0.13.155
+pytest-homeassistant-custom-component==0.13.201
 # From our manifest.json for our custom component
 xmltodict>=0.13.0
 charset_normalizer>=3.2.0

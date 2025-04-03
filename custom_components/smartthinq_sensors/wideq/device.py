@@ -776,7 +776,10 @@ class Device:
             return self._model_info.decode_snapshot(snapshot, snapshot_key)
 
         # ThinQ V1 - Monitor data must be polled """
-        if not (data := self._load_emul_v1_payload()):
+        data = None
+        if self._client.emulation:
+            data = await asyncio.to_thread(self._load_emul_v1_payload)
+        if not data:
             data = await self._mon.refresh()
         if not data:
             return None

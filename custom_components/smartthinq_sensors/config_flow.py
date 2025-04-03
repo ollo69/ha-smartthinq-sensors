@@ -368,8 +368,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input[CONF_REAUTH_CRED] is True:
             return await self.async_step_user()
-        entries = self._async_current_entries()
-        return self.async_update_reload_and_abort(entries[0])
+        return self.async_update_reload_and_abort(self._get_reauth_entry())
 
 
 def _dict_to_select(opt_dict: dict) -> SelectSelectorConfig:
