@@ -336,8 +336,7 @@ class DeHumidifierStatus(DeviceStatus):
             else:
                 ntf_light_bool_val = False
         return self._update_feature(
-            DehumidifierFeatures.NOTIFICATION_LIGHT,
-            ntf_light_bool_val
+            DehumidifierFeatures.NOTIFICATION_LIGHT, ntf_light_bool_val
         )
 
     def _update_features(self):
