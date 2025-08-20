@@ -1387,6 +1387,12 @@ class AirConditionerStatus(DeviceStatus):
             AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False
         )
 
+    @property
+    def power(self):
+        """Return power status."""
+        status = self.is_on
+        return self._update_feature(AirConditionerFeatures.POWER, status, False)
+
     def _update_features(self):
         _ = [
             self.room_temp,
@@ -1404,4 +1410,5 @@ class AirConditionerStatus(DeviceStatus):
             self.mode_awhp_silent,
             self.hot_water_current_temp,
             self.reservation_sleep_time,
+            self.power,
         ]

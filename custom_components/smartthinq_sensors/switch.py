@@ -92,6 +92,14 @@ REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
 )
 AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.POWER,
+        name="Power",
+        icon="mdi:power",
+        turn_off_fn=lambda x: x.device.power(False),
+        turn_on_fn=lambda x: x.device.power(True),
+        value_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AIRCLEAN,
         name="Ionizer",
         icon="mdi:pine-tree",
