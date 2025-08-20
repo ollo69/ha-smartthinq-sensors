@@ -601,7 +601,7 @@ class AirConditionerDevice(Device):
         return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
     @cached_property
-    def is_mode_uvnano_supported(self):
+    def is_uv_nano_supported(self):
         """Return if UVnano mode is supported."""
         supported = self._is_mode_supported(SUPPORT_UVNANO)
         _LOGGER.debug("UVnano support check: %s (support key: %s)", supported, SUPPORT_UVNANO)
@@ -768,9 +768,9 @@ class AirConditionerDevice(Device):
         mode = self.model_info.enum_value(keys[2], mode_key)
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
-    async def set_mode_uvnano(self, status: bool):
+    async def set_uv_nano(self, status: bool):
         """Set the UVnano mode on or off."""
-        # if not self.is_mode_uvnano_supported:
+        # if not self.is_uv_nano_supported:
         #     raise ValueError("UVnano mode not supported")
 
         keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
@@ -1217,9 +1217,9 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
     @property
-    def mode_uvnano(self):
+    def uv_nano(self):
         """Return UVnano Mode status."""
-        # if not self._device.is_mode_uvnano_supported:
+        # if not self._device.is_uv_nano_supported:
         #     return None
         key = self._get_state_key(STATE_UV_NANO)
         if (value := self.lookup_enum(key, True)) is None:
@@ -1442,7 +1442,7 @@ class AirConditionerStatus(DeviceStatus):
             self.pm25,
             self.pm1,
             self.mode_airclean,
-            self.mode_uvnano,
+            self.uv_nano,
             self.mode_jet,
             self.lighting_display,
             self.water_in_current_temp,
