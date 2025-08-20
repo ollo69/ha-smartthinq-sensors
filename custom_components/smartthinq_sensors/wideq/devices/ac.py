@@ -35,7 +35,12 @@ SUPPORT_VANE_VSWING = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_SWING_UP_DO
 SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
-SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UVNANO"]
+# Try different possible support keys for UVnano
+# SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UVNANO"]
+# Alternative support keys to try if the above doesn't work:
+SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UV_NANO"] 
+# SUPPORT_UVNANO = [SUPPORT_RAC_SUBMODE, "@UV_NANO"]
+# SUPPORT_UVNANO = ["SupportUVnano", "support.uvnano"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, ["@HOTWATER", "@HOTWATER_ONLY"]]
 SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
 SUPPORT_LIGHT_INV_SWITCH = [SUPPORT_LIGHT, "@BRIGHTNESS_CONTROL"]
@@ -74,7 +79,7 @@ STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
-STATE_UV_NANO = ["UVnano", "airState.wMode.uvnano"]
+STATE_UV_NANO = ["UVNano", "airState.miscFuncState.Uvnano"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
@@ -598,7 +603,9 @@ class AirConditionerDevice(Device):
     @cached_property
     def is_mode_uvnano_supported(self):
         """Return if UVnano mode is supported."""
-        return self._is_mode_supported(SUPPORT_UVNANO)
+        supported = self._is_mode_supported(SUPPORT_UVNANO)
+        _LOGGER.debug("UVnano support check: %s (support key: %s)", supported, SUPPORT_UVNANO)
+        return supported
 
     @cached_property
     def supported_ligth_modes(self):
@@ -767,7 +774,7 @@ class AirConditionerDevice(Device):
             raise ValueError("UVnano mode not supported")
 
         keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
-        mode_key = MODE_UVNANO_ON if status else MODE_UVNANO_OFF
+        mode_key = UV_NANO_ON if status else UV_NANO_OFF
         mode = self.model_info.enum_value(keys[2], mode_key)
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
@@ -1217,7 +1224,7 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(STATE_UV_NANO)
         if (value := self.lookup_enum(key, True)) is None:
             return None
-        status = value == MODE_UVNANO_ON
+        status = value == UV_NANO_ON
         return self._update_feature(AirConditionerFeatures.UVNANO, status, False)
 
     @property
