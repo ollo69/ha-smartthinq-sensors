@@ -775,7 +775,18 @@ class AirConditionerDevice(Device):
 
         keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
         mode_key = UV_NANO_ON if status else UV_NANO_OFF
-        mode = self.model_info.enum_value(keys[2], mode_key)
+        
+        # Try direct value first (since we're using "0" and "1")
+        mode = mode_key
+        
+        # Fallback to enum lookup if needed
+        if mode == UV_NANO_ON or mode == UV_NANO_OFF:
+            enum_mode = self.model_info.enum_value(keys[2], mode_key)
+            if enum_mode is not None:
+                mode = enum_mode
+        
+        _LOGGER.debug("UVnano set command - keys: %s, mode_key: %s, final_mode: %s", keys, mode_key, mode)
+            
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
     async def set_mode_jet(self, status: bool):
@@ -1222,9 +1233,16 @@ class AirConditionerStatus(DeviceStatus):
         # if not self._device.is_uv_nano_supported:
         #     return None
         key = self._get_state_key(STATE_UV_NANO)
-        if (value := self.lookup_enum(key, True)) is None:
+        value = self.lookup_enum(key, True)
+        
+        _LOGGER.debug("UVnano status - key: %s, raw_value: %s", key, value)
+        
+        if value is None:
             return None
         status = value == UV_NANO_ON
+        
+        _LOGGER.debug("UVnano status - processed: %s (raw: %s, expected_on: %s)", status, value, UV_NANO_ON)
+        
         return self._update_feature(AirConditionerFeatures.UVNANO, status, False)
 
     @property
