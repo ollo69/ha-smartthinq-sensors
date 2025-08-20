@@ -110,8 +110,8 @@ AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         key=AirConditionerFeatures.UVNANO,
         name="UVnano",
         icon="mdi:flash",
-        turn_off_fn=lambda x: x.device.set_mode_uvnano(False),
-        turn_on_fn=lambda x: x.device.set_mode_uvnano(True),
+        turn_off_fn=lambda x: x.device.set_uv_nano(False),
+        turn_on_fn=lambda x: x.device.set_uv_nano(True),
         available_fn=lambda x: x.is_power_on,
     ),
     ThinQSwitchEntityDescription(
