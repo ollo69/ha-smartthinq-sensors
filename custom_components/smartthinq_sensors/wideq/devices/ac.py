@@ -74,7 +74,7 @@ STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
-STATE_MODE_UVNANO = ["UVnano", "airState.wMode.uvnano"]
+STATE_UV_NANO = ["UVnano", "airState.wMode.uvnano"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
@@ -106,7 +106,7 @@ CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
-CMD_STATE_MODE_UVNANO = [CTRL_BASIC, "Set", STATE_MODE_UVNANO]
+CMD_STATE_UV_NANO = [CTRL_BASIC, "Set", STATE_UV_NANO]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
@@ -766,7 +766,7 @@ class AirConditionerDevice(Device):
         if not self.is_mode_uvnano_supported:
             raise ValueError("UVnano mode not supported")
 
-        keys = self._get_cmd_keys(CMD_STATE_MODE_UVNANO)
+        keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
         mode_key = MODE_UVNANO_ON if status else MODE_UVNANO_OFF
         mode = self.model_info.enum_value(keys[2], mode_key)
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
@@ -1214,7 +1214,7 @@ class AirConditionerStatus(DeviceStatus):
         """Return UVnano Mode status."""
         if not self._device.is_mode_uvnano_supported:
             return None
-        key = self._get_state_key(STATE_MODE_UVNANO)
+        key = self._get_state_key(STATE_UV_NANO)
         if (value := self.lookup_enum(key, True)) is None:
             return None
         status = value == MODE_UVNANO_ON
