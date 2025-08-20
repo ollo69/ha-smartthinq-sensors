@@ -160,8 +160,8 @@ MODE_ON = "@ON"
 MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
 MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
 
-UV_NANO_OFF = "0"
-UV_NANO_ON = "1"
+UV_NANO_OFF = "@OFF"
+UV_NANO_ON = "@ON"
 
 AWHP_MODE_AIR = "@AIR"
 AWHP_MODE_WATER = "@WATER"
@@ -775,17 +775,13 @@ class AirConditionerDevice(Device):
 
         keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
         mode_key = UV_NANO_ON if status else UV_NANO_OFF
-        
-        # Try direct value first (since we're using "0" and "1")
-        mode = mode_key
-        
-        # Fallback to enum lookup if needed
-        if mode == UV_NANO_ON or mode == UV_NANO_OFF:
-            enum_mode = self.model_info.enum_value(keys[2], mode_key)
-            if enum_mode is not None:
-                mode = enum_mode
+        mode = self.model_info.enum_value(keys[2], mode_key)
         
         _LOGGER.debug("UVnano set command - keys: %s, mode_key: %s, final_mode: %s", keys, mode_key, mode)
+        
+        if mode is None:
+            _LOGGER.error("UVnano mode value not found in model info for key: %s", mode_key)
+            raise ValueError(f"UVnano mode value not found for key: {mode_key}")
             
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
@@ -1233,25 +1229,14 @@ class AirConditionerStatus(DeviceStatus):
         # if not self._device.is_uv_nano_supported:
         #     return None
         key = self._get_state_key(STATE_UV_NANO)
-        
-        # Try both enum lookup and direct data access
         value = self.lookup_enum(key, True)
-        if value is None:
-            # Fallback to direct data access
-            value = self._data.get(key)
         
-        _LOGGER.debug("UVnano status - key: %s, raw_value: %s, data_keys: %s", key, value, list(self._data.keys()) if hasattr(self, '_data') else 'No data')
+        _LOGGER.debug("UVnano status - key: %s, raw_value: %s", key, value)
         
         if value is None:
             return None
             
-        # Handle different possible value formats
-        if isinstance(value, str):
-            status = value == UV_NANO_ON or value == "1" or value.lower() == "on"
-        elif isinstance(value, (int, float)):
-            status = value == 1
-        else:
-            status = bool(value)
+        status = value == UV_NANO_ON
         
         _LOGGER.debug("UVnano status - processed: %s (raw: %s, expected_on: %s)", status, value, UV_NANO_ON)
         
