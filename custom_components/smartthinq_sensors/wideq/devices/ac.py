@@ -1233,13 +1233,25 @@ class AirConditionerStatus(DeviceStatus):
         # if not self._device.is_uv_nano_supported:
         #     return None
         key = self._get_state_key(STATE_UV_NANO)
-        value = self.lookup_enum(key, True)
         
-        _LOGGER.debug("UVnano status - key: %s, raw_value: %s", key, value)
+        # Try both enum lookup and direct data access
+        value = self.lookup_enum(key, True)
+        if value is None:
+            # Fallback to direct data access
+            value = self._data.get(key)
+        
+        _LOGGER.debug("UVnano status - key: %s, raw_value: %s, data_keys: %s", key, value, list(self._data.keys()) if hasattr(self, '_data') else 'No data')
         
         if value is None:
             return None
-        status = value == UV_NANO_ON
+            
+        # Handle different possible value formats
+        if isinstance(value, str):
+            status = value == UV_NANO_ON or value == "1" or value.lower() == "on"
+        elif isinstance(value, (int, float)):
+            status = value == 1
+        else:
+            status = bool(value)
         
         _LOGGER.debug("UVnano status - processed: %s (raw: %s, expected_on: %s)", status, value, UV_NANO_ON)
         
