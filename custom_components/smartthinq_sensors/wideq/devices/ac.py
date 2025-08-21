@@ -770,8 +770,8 @@ class AirConditionerDevice(Device):
 
     async def set_uv_nano(self, status: bool):
         """Set the UVnano mode on or off."""
-        # if not self.is_uv_nano_supported:
-        #     raise ValueError("UVnano mode not supported")
+        if not self.is_uv_nano_supported:
+            raise ValueError("UVnano mode not supported")
 
         keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
         mode_key = UV_NANO_ON if status else UV_NANO_OFF
@@ -1226,8 +1226,8 @@ class AirConditionerStatus(DeviceStatus):
     @property
     def uv_nano(self):
         """Return UVnano Mode status."""
-        # if not self._device.is_uv_nano_supported:
-        #     return None
+        if not self._device.is_uv_nano_supported:
+            return None
         key = self._get_state_key(STATE_UV_NANO)
         value = self.lookup_enum(key, True)
         
