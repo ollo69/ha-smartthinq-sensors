@@ -177,6 +177,11 @@ def _switch_exist(
     if feature in lge_device.available_features:
         return True
 
+    # Special case for UVnano - check if device supports it directly
+    if feature == AirConditionerFeatures.UVNANO:
+        if hasattr(lge_device.device, 'is_uv_nano_supported'):
+            return lge_device.device.is_uv_nano_supported
+    
     return False
 
 

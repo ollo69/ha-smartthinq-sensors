@@ -37,9 +37,10 @@ SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
 # Try different possible support keys for UVnano
 # SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UVNANO"]
-# Alternative support keys to try if the above doesn't work:
-SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UV_NANO"] 
+# SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UV_NANO"] 
 # SUPPORT_UVNANO = [SUPPORT_RAC_SUBMODE, "@UV_NANO"]
+# Alternative based on miscFuncState location:
+SUPPORT_UVNANO = ["SupportMiscFuncState", "support.miscFuncState"]
 # SUPPORT_UVNANO = ["SupportUVnano", "support.uvnano"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, ["@HOTWATER", "@HOTWATER_ONLY"]]
 SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
@@ -603,8 +604,18 @@ class AirConditionerDevice(Device):
     @cached_property
     def is_uv_nano_supported(self):
         """Return if UVnano mode is supported."""
+        # First try the traditional support check
         supported = self._is_mode_supported(SUPPORT_UVNANO)
-        _LOGGER.debug("UVnano support check: %s (support key: %s)", supported, SUPPORT_UVNANO)
+        _LOGGER.debug("UVnano support check via model: %s (support key: %s)", supported, SUPPORT_UVNANO)
+        
+        # If traditional check fails, check if the data is present in the device status
+        if not supported and self._status:
+            key = self._get_state_key(STATE_UV_NANO)
+            data_present = key in self._status._data if hasattr(self._status, '_data') else False
+            _LOGGER.debug("UVnano support check via data presence: %s (key: %s)", data_present, key)
+            supported = data_present
+            
+        _LOGGER.debug("UVnano final support decision: %s", supported)
         return supported
 
     @cached_property
