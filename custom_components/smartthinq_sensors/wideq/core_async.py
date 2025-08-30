@@ -60,7 +60,9 @@ V2_THINQ_APP_VER = "LG ThinQ/5.0.12120"
 
 # new
 V2_GATEWAY_URL = "https://route.lgthinq.com:46030/v1/service/application/gateway-uri"
+V2_GATEWAY_URI_KEY = "uris"
 V2_AUTH_PATH = "/oauth/1.0/oauth2/token"
+V2_OAUTH_URL_KEY = "empOauthBaseUri"
 V2_USER_INFO = "/users/profile"
 V2_EMP_SESS_URL = "https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession"
 OAUTH_LOGIN_HOST = "us.m.lgaccount.com"
@@ -69,6 +71,7 @@ OAUTH_REDIRECT_PATH = "login/iabClose"
 OAUTH_REDIRECT_URI = f"https://kr.m.lgaccount.com/{OAUTH_REDIRECT_PATH}"
 APPLICATION_KEY = "6V1V8H2BN5P9ZQGOI5DAQ92YZBDO3EK9"  # for spx login
 OAUTH_CLIENT_KEY = "LGAO722A02"
+OAUTH_URL_KEY = "oauthUri"
 EMP_REDIRECT_URL = "lgaccount.lgsmartthinq:/"
 THIRD_PART_LOGIN = {
     "GGL": "google",
@@ -435,6 +438,51 @@ class CoreAsync:
         if self._oauth_url:
             return self._oauth_url
 
+        _LOGGER.debug("Try to retrieve oauth url using APIv2")
+        try:
+            await self.gateway_info()
+        except exc.APIError as ex:
+            _LOGGER.debug("Failed to retrieve oauth url using APIv2: %s", ex.message)
+
+        if not self._oauth_url:
+            _LOGGER.info(
+                "Failed to retrieve oauth url using APIv2 gateway, "
+                "try to retrieve oauth url using APIv1 gateway"
+            )
+            self._oauth_url = await self._get_apiv1_oauth_url()
+
+        _LOGGER.debug("Oauth url retrieved: %s", self._oauth_url)
+
+        return self._oauth_url
+
+    def _get_oauth_url_from_gateway_v2_info(self, gateway_v2_info: dict) -> str | None:
+        """Extract oauth url from gateway v2 info."""
+
+        _LOGGER.debug("Extracting OAuth url from gateway info")
+        oauth_base = None
+        if gateway_v2_info and isinstance(gateway_v2_info, dict):
+
+            lang_pack = None
+            if uris := gateway_v2_info.get(V2_GATEWAY_URI_KEY):
+                if isinstance(uris, dict):
+                    oauth_base = uris.get(V2_OAUTH_URL_KEY)
+                    lang_pack = uris.get(_COMMON_LANG_URI_ID)
+
+            if not oauth_base:
+                oauth_base = gateway_v2_info.get(V2_OAUTH_URL_KEY)
+            if not lang_pack:
+                lang_pack = gateway_v2_info.get(_COMMON_LANG_URI_ID)
+
+            if lang_pack and self._lang_pack_url is None:
+                # probably this is not available with APIv2
+                self._lang_pack_url = lang_pack
+                _LOGGER.debug("Common lang pack url: %s", self._lang_pack_url)
+
+        return oauth_base
+
+    async def _get_apiv1_oauth_url(self):
+        """Return url used for oauth2 authentication using APIv1."""
+
         headers = {
             "Accept": "application/json",
             "x-thinq-application-key": "wideq",
@@ -453,16 +501,22 @@ class CoreAsync:
             out = await resp.json()
 
         gateway_result = self._manage_lge_result(out)
-        _LOGGER.debug("Gateway info: %s", gateway_result)
-        self._oauth_url = gateway_result["oauthUri"]
+        _LOGGER.debug("Gateway info from APIv1: %s", gateway_result)
+        oauth_url = gateway_result[OAUTH_URL_KEY]
+
         if self._lang_pack_url is None and _COMMON_LANG_URI_ID in gateway_result:
             self._lang_pack_url = gateway_result[_COMMON_LANG_URI_ID]
-        return self._oauth_url
+            _LOGGER.debug("Common lang pack url: %s", self._lang_pack_url)
+
+        return oauth_url
 
     async def gateway_info(self):
         """Return ThinQ gateway information."""
         result = await self.thinq2_get(V2_GATEWAY_URL)
         _LOGGER.debug("GatewayV2 info: %s", result)
+        if not self._oauth_url:
+            self._oauth_url = self._get_oauth_url_from_gateway_v2_info(result)
+
         return result
 
     async def auth_user_login(
