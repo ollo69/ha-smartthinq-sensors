@@ -35,6 +35,13 @@ SUPPORT_VANE_VSWING = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_SWING_UP_DO
 SUPPORT_JET_COOL = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_COOL_JET_W"]
 SUPPORT_JET_HEAT = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_MODE_HEAT_JET_W"]
 SUPPORT_AIRCLEAN = [SUPPORT_RAC_MODE, "@AIRCLEAN"]
+# Try different possible support keys for UVnano
+# SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UVNANO"]
+# SUPPORT_UVNANO = [SUPPORT_RAC_MODE, "@UV_NANO"] 
+# SUPPORT_UVNANO = [SUPPORT_RAC_SUBMODE, "@UV_NANO"]
+# Alternative based on miscFuncState location:
+SUPPORT_UVNANO = ["SupportMiscFuncState", "support.miscFuncState"]
+# SUPPORT_UVNANO = ["SupportUVnano", "support.uvnano"]
 SUPPORT_HOT_WATER = [SUPPORT_PAC_MODE, ["@HOTWATER", "@HOTWATER_ONLY"]]
 SUPPORT_LIGHT_SWITCH = [SUPPORT_LIGHT, "@RAC_88_DISPLAY_CONTROL"]
 SUPPORT_LIGHT_INV_SWITCH = [SUPPORT_LIGHT, "@BRIGHTNESS_CONTROL"]
@@ -73,6 +80,7 @@ STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 STATE_HUMIDITY = ["SensorHumidity", "airState.humidity.current"]
 STATE_MODE_AIRCLEAN = ["AirClean", "airState.wMode.airClean"]
 STATE_MODE_JET = ["Jet", "airState.wMode.jet"]
+STATE_UV_NANO = ["UVNano", "airState.miscFuncState.Uvnano"]
 STATE_LIGHTING_DISPLAY = ["DisplayControl", "airState.lightingState.displayControl"]
 STATE_AIRSENSORMON = ["SensorMon", "airState.quality.sensorMon"]
 STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
@@ -104,6 +112,7 @@ CMD_STATE_WDIR_VSWING = [CTRL_WIND_DIRECTION, "Set", STATE_WDIR_VSWING]
 CMD_STATE_DUCT_ZONES = [CTRL_MISC, "Set", [DUCT_ZONE_V1, "airState.ductZone.control"]]
 CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
+CMD_STATE_UV_NANO = [CTRL_BASIC, "Set", STATE_UV_NANO]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
 
@@ -151,6 +160,9 @@ MODE_ON = "@ON"
 
 MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
 MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
+
+UV_NANO_OFF = "@OFF"
+UV_NANO_ON = "@ON"
 
 AWHP_MODE_AIR = "@AIR"
 AWHP_MODE_WATER = "@WATER"
@@ -590,6 +602,23 @@ class AirConditionerDevice(Device):
         return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
     @cached_property
+    def is_uv_nano_supported(self):
+        """Return if UVnano mode is supported."""
+        # First try the traditional support check
+        supported = self._is_mode_supported(SUPPORT_UVNANO)
+        _LOGGER.debug("UVnano support check via model: %s (support key: %s)", supported, SUPPORT_UVNANO)
+        
+        # If traditional check fails, check if the data is present in the device status
+        if not supported and self._status:
+            key = self._get_state_key(STATE_UV_NANO)
+            data_present = key in self._status._data if hasattr(self._status, '_data') else False
+            _LOGGER.debug("UVnano support check via data presence: %s (key: %s)", data_present, key)
+            supported = data_present
+            
+        _LOGGER.debug("UVnano final support decision: %s", supported)
+        return supported
+
+    @cached_property
     def supported_ligth_modes(self):
         """Return light switch modes supported."""
         if self._is_mode_supported(SUPPORT_LIGHT_SWITCH):
@@ -748,6 +777,23 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_MODE_AIRCLEAN)
         mode_key = MODE_AIRCLEAN_ON if status else MODE_AIRCLEAN_OFF
         mode = self.model_info.enum_value(keys[2], mode_key)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_uv_nano(self, status: bool):
+        """Set the UVnano mode on or off."""
+        if not self.is_uv_nano_supported:
+            raise ValueError("UVnano mode not supported")
+
+        keys = self._get_cmd_keys(CMD_STATE_UV_NANO)
+        mode_key = UV_NANO_ON if status else UV_NANO_OFF
+        mode = self.model_info.enum_value(keys[2], mode_key)
+        
+        _LOGGER.debug("UVnano set command - keys: %s, mode_key: %s, final_mode: %s", keys, mode_key, mode)
+        
+        if mode is None:
+            _LOGGER.error("UVnano mode value not found in model info for key: %s", mode_key)
+            raise ValueError(f"UVnano mode value not found for key: {mode_key}")
+            
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
     async def set_mode_jet(self, status: bool):
@@ -1189,6 +1235,25 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
     @property
+    def uv_nano(self):
+        """Return UVnano Mode status."""
+        if not self._device.is_uv_nano_supported:
+            return None
+        key = self._get_state_key(STATE_UV_NANO)
+        value = self.lookup_enum(key, True)
+        
+        _LOGGER.debug("UVnano status - key: %s, raw_value: %s", key, value)
+        
+        if value is None:
+            return None
+            
+        status = value == UV_NANO_ON
+        
+        _LOGGER.debug("UVnano status - processed: %s (raw: %s, expected_on: %s)", status, value, UV_NANO_ON)
+        
+        return self._update_feature(AirConditionerFeatures.UVNANO, status, False)
+
+    @property
     def mode_jet(self):
         """Return Jet Mode status."""
         if self._device.supported_mode_jet == JetModeSupport.NONE:
@@ -1387,6 +1452,12 @@ class AirConditionerStatus(DeviceStatus):
             AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False
         )
 
+    @property
+    def power(self):
+        """Return power status."""
+        status = self.is_on
+        return self._update_feature(AirConditionerFeatures.POWER, status, False)
+
     def _update_features(self):
         _ = [
             self.room_temp,
@@ -1397,6 +1468,7 @@ class AirConditionerStatus(DeviceStatus):
             self.pm25,
             self.pm1,
             self.mode_airclean,
+            self.uv_nano,
             self.mode_jet,
             self.lighting_display,
             self.water_in_current_temp,
@@ -1404,4 +1476,5 @@ class AirConditionerStatus(DeviceStatus):
             self.mode_awhp_silent,
             self.hot_water_current_temp,
             self.reservation_sleep_time,
+            self.power,
         ]
