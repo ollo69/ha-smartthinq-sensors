@@ -28,6 +28,7 @@ STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
 STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
 STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
 STATE_TANK_LIGHT = ["WatertankLight", "airState.miscFuncState.watertankLight"]
+STATE_NOTIFICATION_LIGHT = ["NotificationLight", "airState.notificationExt"]
 
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 
@@ -314,9 +315,34 @@ class DeHumidifierStatus(DeviceStatus):
             return None
         return self._update_feature(DehumidifierFeatures.WATER_TANK_FULL, value)
 
+    @property
+    def notification_light(self) -> bool | None:
+        """Return notification light status."""
+        try:
+            key = self._get_state_key(STATE_NOTIFICATION_LIGHT)
+        except KeyError:
+            key = None
+        if key is None:
+            ntf_real_value = None
+            ntf_light_int_value = None
+            ntf_light_bool_val = None
+        else:
+            ntf_real_value = self.lookup_range(key)
+            ntf_light_int_value = self.to_int_or_none(ntf_real_value)
+            if ntf_light_int_value is None:
+                ntf_light_bool_val = None
+            elif ntf_light_int_value > 0:
+                ntf_light_bool_val = True
+            else:
+                ntf_light_bool_val = False
+        return self._update_feature(
+            DehumidifierFeatures.NOTIFICATION_LIGHT, ntf_light_bool_val
+        )
+
     def _update_features(self):
         _ = [
             self.current_humidity,
             self.target_humidity,
             self.water_tank_full,
+            self.notification_light,
         ]
