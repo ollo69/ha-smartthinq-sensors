@@ -96,6 +96,14 @@ class RangeFeatures(StrEnum):
     OVEN_UPPER_CURRENT_TEMP = "oven_upper_current_temp"
     OVEN_UPPER_MODE = "oven_upper_mode"
     OVEN_UPPER_STATE = "oven_upper_state"
+    OVEN_UPPER_TIMER_TIME = "oven_upper_timer"
+    OVEN_UPPER_COOK_TIMER_TIME = "oven_upper_cook_time"
+    OVEN_LOWER_TIMER_TIME = "oven_lower_timer"
+    OVEN_LOWER_COOK_TIMER_TIME = "oven_lower_cook_time"
+    OVEN_UPPER_TIMER_STATE = "oven_upper_timer_state"
+    OVEN_UPPER_COOK_TIMER_STATE = "oven_upper_cook_timer_state"
+    OVEN_LOWER_TIMER_STATE = "oven_lower_timer_state"
+    OVEN_LOWER_COOK_TIMER_STATE = "oven_lower_cook_timer_state"
 
 
 class RefrigeratorFeatures(StrEnum):
