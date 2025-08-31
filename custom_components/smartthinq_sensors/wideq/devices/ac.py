@@ -1169,9 +1169,9 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(STATE_HUMIDITY)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
-        # some V1 device return humidity with value = 0
+        # some V1 and V2 devices return humidity with value = 0
         # when humidity sensor is not available
-        if not self.is_info_v2 and value == 0:
+        if value == 0:
             return None
         if value >= 100:
             value = value / 10
