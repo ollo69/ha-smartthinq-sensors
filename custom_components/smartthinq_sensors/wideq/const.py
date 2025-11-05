@@ -48,6 +48,19 @@ class AirConditionerFeatures(StrEnum):
     ROOM_TEMP = "room_temperature"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
+    # Second circuit features
+    SECOND_CIRCUIT_ONOFF = "second_circuit_onoff"
+    SECOND_CIRCUIT_OPERATION = "second_circuit_operation"
+    SECOND_CIRCUIT_CURRENT_TEMP = "second_circuit_current_temp"
+    SECOND_CIRCUIT_TARGET_TEMP = "second_circuit_target_temp"
+    SECOND_CIRCUIT_WATER_OUT_TEMP = "second_circuit_water_out_temp"
+    SECOND_CIRCUIT_TEMP_MODE = "second_circuit_temp_mode"
+    # ESS (Energy Storage System) features
+    ESS_BATTERY_REMAIN = "ess_battery_remain"
+    ESS_BATTERY_POWER = "ess_battery_power"
+    ESS_SOLAR_POWER = "ess_solar_power"
+    ESS_GRID_POWER = "ess_grid_power"
+    ESS_CONSUME_POWER = "ess_consume_power"
 
 
 class AirPurifierFeatures(StrEnum):
