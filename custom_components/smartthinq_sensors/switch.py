@@ -74,6 +74,14 @@ REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         available_fn=lambda x: x.device.set_values_allowed,
     ),
     ThinQSwitchEntityDescription(
+        key=RefrigeratorFeatures.SABBATH,
+        name="Sabbath mode",
+        icon="mdi:candle",
+        turn_off_fn=lambda x: x.device.set_sabbath_mode(False),
+        turn_on_fn=lambda x: x.device.set_sabbath_mode(True),
+        available_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
         key=RefrigeratorFeatures.EXPRESSMODE,
         name="Express mode",
         icon="mdi:snowflake",
