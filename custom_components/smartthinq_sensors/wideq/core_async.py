@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import datetime
 import hashlib
 import hmac
 import json
@@ -14,6 +13,8 @@ import logging
 import os
 import ssl
 import sys
+import uuid
+from datetime import datetime
 from typing import Any
 from urllib.parse import (
     ParseResult,
@@ -24,11 +25,10 @@ from urllib.parse import (
     urlparse,
     urlunparse,
 )
-import uuid
 
 import aiohttp
-from charset_normalizer import from_bytes
 import xmltodict
+from charset_normalizer import from_bytes
 
 from . import core_exceptions as exc
 from .const import DEFAULT_COUNTRY, DEFAULT_LANGUAGE, DEFAULT_TIMEOUT
@@ -645,6 +645,7 @@ class CoreAsync:
         sess_urls.append("https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession")
 
         for sess_url in sess_urls:
+            _LOGGER.debug("EMP token-session try: %s", sess_url)
             parse_url = urlparse(sess_url)
             timestamp = datetime.utcnow().strftime(DATE_FORMAT)
             req_url = f"{parse_url.path}?{urlencode(emp_data)}"
@@ -677,8 +678,11 @@ class CoreAsync:
                 except Exception:
                     token_data = {"status": -1, "message": await resp.text()}
             if LOG_AUTH_INFO:
-                _LOGGER.debug("auth_user_login - token_data from %s: %s", sess_url, token_data)
+                _LOGGER.debug(
+                    "auth_user_login - token_data from %s: %s", sess_url, token_data
+                )
             if token_data.get("status", -1) == 1:
+                _LOGGER.debug("EMP token-session success: %s", sess_url)
                 break
             last_error = (sess_url, token_data)
 
@@ -686,7 +690,9 @@ class CoreAsync:
             _LOGGER.debug("auth_user_login - token_data: %s", token_data)
 
         if token_data.get("status", -1) != 1:
-            _LOGGER.error("auth_user_login - token session failed, last error: %s", last_error)
+            _LOGGER.error(
+                "auth_user_login - token session failed, last error: %s", last_error
+            )
             raise exc.TokenError()
 
         return token_data
