@@ -64,7 +64,11 @@ V2_GATEWAY_URI_KEY = "uris"
 V2_AUTH_PATH = "/oauth/1.0/oauth2/token"
 V2_OAUTH_URL_KEY = "empOauthBaseUri"
 V2_USER_INFO = "/users/profile"
-V2_EMP_SESS_URL = "https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession"
+V2_EMP_SESS_PATHS = [
+    "/oauth/1.0/oauth2/tokensession",
+    "/oauth/1.0/tokensession",
+    "/emp/oauth2/token/empsession",
+]
 OAUTH_LOGIN_HOST = "us.m.lgaccount.com"
 OAUTH_LOGIN_PATH = "login/signIn"
 OAUTH_REDIRECT_PATH = "login/iabClose"
@@ -632,39 +636,57 @@ class CoreAsync:
             "username": account["userID"],
         }
 
-        parse_url = urlparse(V2_EMP_SESS_URL)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
-        req_url = f"{parse_url.path}?{urlencode(emp_data)}"
-        signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
+        token_data = None
+        last_error = None
+        oauth_url = await self.get_oauth_url()
+        sess_urls = []
+        if oauth_url:
+            sess_urls.extend(urljoin(oauth_url, p) for p in V2_EMP_SESS_PATHS[:2])
+        sess_urls.append("https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession")
 
-        emp_headers = {
-            "lgemp-x-app-key": OAUTH_CLIENT_KEY,
-            "lgemp-x-date": timestamp,
-            "lgemp-x-session-key": account["loginSessionID"],
-            "lgemp-x-signature": signature,
-            "Accept": "application/json",
-            "X-Device-Type": "M01",
-            "X-Device-Platform": "ADR",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Access-Control-Allow-Origin": "*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.9",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.44",
-        }
+        for sess_url in sess_urls:
+            parse_url = urlparse(sess_url)
+            timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+            req_url = f"{parse_url.path}?{urlencode(emp_data)}"
+            signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
-        async with self._get_session().post(
-            url=V2_EMP_SESS_URL,
-            headers=emp_headers,
-            data=emp_data,
-            timeout=self._timeout,
-            raise_for_status=False,
-        ) as resp:
-            token_data = await resp.json()
+            emp_headers = {
+                "lgemp-x-app-key": OAUTH_CLIENT_KEY,
+                "lgemp-x-date": timestamp,
+                "lgemp-x-session-key": account["loginSessionID"],
+                "lgemp-x-signature": signature,
+                "Accept": "application/json",
+                "X-Device-Type": "M01",
+                "X-Device-Platform": "ADR",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Access-Control-Allow-Origin": "*",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "en-US,en;q=0.9",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36 Edg/93.0.961.44",
+            }
+
+            async with self._get_session().post(
+                url=sess_url,
+                headers=emp_headers,
+                data=emp_data,
+                timeout=self._timeout,
+                raise_for_status=False,
+            ) as resp:
+                try:
+                    token_data = await resp.json()
+                except Exception:
+                    token_data = {"status": -1, "message": await resp.text()}
+            if LOG_AUTH_INFO:
+                _LOGGER.debug("auth_user_login - token_data from %s: %s", sess_url, token_data)
+            if token_data.get("status", -1) == 1:
+                break
+            last_error = (sess_url, token_data)
 
         if LOG_AUTH_INFO:
             _LOGGER.debug("auth_user_login - token_data: %s", token_data)
 
         if token_data.get("status", -1) != 1:
+            _LOGGER.error("auth_user_login - token session failed, last error: %s", last_error)
             raise exc.TokenError()
 
         return token_data
