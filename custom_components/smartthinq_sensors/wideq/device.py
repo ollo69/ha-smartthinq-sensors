@@ -160,6 +160,7 @@ class Monitor:
 
         state = None
         retry = False
+        err9012raised = False
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration
@@ -185,6 +186,19 @@ class Monitor:
                 if iteration >= 1:  # just retry 2 times
                     raise
                 continue
+
+            except core_exc.UseOfficialAPIError as exc:
+                # When this exception comes, we retry 1 time before raising
+                if not err9012raised:
+                    err9012raised = True
+                    continue
+
+                self._raise_error(
+                    "Received error 9012 multiple time while updating device status",
+                    not_logged=True,
+                    exc=exc,
+                    exc_info=True,
+                )
 
             except core_exc.ClientDisconnected:
                 return None
