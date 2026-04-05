@@ -37,6 +37,8 @@ CONF_OAUTH2_URL = "oauth2_url"
 CONF_USE_API_V2 = "use_api_v2"
 CONF_USE_HA_SESSION = "use_ha_session"
 CONF_USE_REDIRECT = "use_redirect"
+CONF_OFFICIAL_PAT = "official_pat"
+CONF_OFFICIAL_CLIENT_ID = "official_client_id"
 
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"

@@ -52,6 +52,10 @@ V2_API_KEY = "VGhpblEyLjAgU0VSVklDRQ=="
 # V2_CLIENT_ID = "65260af7e8e6547b51fdccf930097c51eb9885a508d3fddfa9ee6cdec22ae1bd"
 V2_CLIENT_ID = "c713ea8e50f657534ff8b9d373dfebfc2ed70b88285c26b8ade49868c0b164d9"
 V2_SVC_PHASE = "OP"
+
+# Official PAT-host request contract (mirrors vendored thinqconnect).
+OFFICIAL_API_KEY = "v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3"
+OFFICIAL_API_PHASE = "OP"
 V2_APP_LEVEL = "PRD"
 V2_APP_OS = "ANDROID"  # "LINUX"
 V2_APP_TYPE = "NUTS"
@@ -1443,6 +1447,299 @@ class Session:
         await self.post("rti/delControlPermission", {"deviceId": device_id})
 
 
+OFFICIAL_REGION_EIC_COUNTRIES = {
+    "AL",
+    "AT",
+    "BA",
+    "BE",
+    "BG",
+    "BW",
+    "CH",
+    "CY",
+    "CZ",
+    "DE",
+    "DK",
+    "EE",
+    "EG",
+    "ES",
+    "FI",
+    "FR",
+    "GB",
+    "GE",
+    "GR",
+    "HR",
+    "HU",
+    "IE",
+    "IL",
+    "IS",
+    "IT",
+    "JO",
+    "KE",
+    "KZ",
+    "LT",
+    "LU",
+    "LV",
+    "MA",
+    "ME",
+    "MK",
+    "MT",
+    "MZ",
+    "NA",
+    "NG",
+    "NL",
+    "NO",
+    "OM",
+    "PL",
+    "PT",
+    "QA",
+    "RO",
+    "RS",
+    "RU",
+    "RW",
+    "SA",
+    "SD",
+    "SE",
+    "SI",
+    "SK",
+    "SL",
+    "SN",
+    "SO",
+    "ST",
+    "SY",
+    "TD",
+    "TG",
+    "TN",
+    "TR",
+    "TZ",
+    "UA",
+    "UG",
+    "UZ",
+    "XK",
+    "YE",
+    "ZA",
+    "ZM",
+}
+
+
+def _get_official_region_from_country(country: str | None) -> str:
+    code = (country or DEFAULT_COUNTRY).upper()
+    if code in OFFICIAL_REGION_EIC_COUNTRIES:
+        return "eic"
+    return code.lower()
+
+
+class DeviceRepository:
+    """Backend abstraction for device discovery/state sources."""
+
+    async def list_devices(self) -> list[dict] | None:
+        raise NotImplementedError
+
+
+class LegacyDeviceRepository(DeviceRepository):
+    """Legacy/session-backed device repository."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    async def list_devices(self) -> list[dict] | None:
+        return await self._session.get_devices()
+
+
+class DiscoveryCapability(DeviceRepository):
+    """Ordered discovery strategy runner with fallback."""
+
+    def __init__(self, strategies: list[DeviceRepository]) -> None:
+        self._strategies = strategies
+
+    async def list_devices(self) -> list[dict] | None:
+        for strategy in self._strategies:
+            try:
+                devices = await strategy.list_devices()
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.warning(
+                    "LG device discovery strategy %s failed: %s",
+                    strategy.__class__.__name__,
+                    exc,
+                )
+                continue
+            if devices:
+                _LOGGER.warning(
+                    "LG device discovery strategy %s returned %s devices",
+                    strategy.__class__.__name__,
+                    len(devices),
+                )
+                return devices
+        return None
+
+
+class OfficialDashboardDeviceRepository(DeviceRepository):
+    """Safe probe strategy for dashboard-backed official discovery."""
+
+    def __init__(
+        self,
+        core: CoreAsync,
+        access_token: str,
+        country: str,
+        client_id: str,
+        region: str | None = None,
+    ) -> None:
+        self._core = core
+        self._access_token = access_token
+        self._country = country
+        self._client_id = client_id
+        self._region = region or _get_official_region_from_country(country)
+        self._disabled = False
+        self._probed = False
+
+    async def list_devices(self) -> list[dict] | None:
+        """Probe the official dashboard API shape without changing behavior yet."""
+        if self._disabled or self._probed:
+            return None
+
+        self._probed = True
+        url = f"https://api-{self._region}.lgthinq.com/service/application/dashboard"
+        headers = {
+            "Authorization": f"Bearer {self._access_token}",
+            "x-country": self._country,
+            "x-message-id": gen_uuid(),
+            "x-client-id": self._client_id,
+            "x-api-key": V2_API_KEY,
+            "x-service-phase": V2_SVC_PHASE,
+        }
+        try:
+            async with self._core._get_session().get(
+                url=url,
+                headers=headers,
+                timeout=self._core._timeout,
+                raise_for_status=False,
+            ) as resp:
+                body = await resp.text(errors="replace")
+                preview = body[:1000]
+                _LOGGER.warning(
+                    "LG official dashboard probe status=%s region=%s country=%s client_id=%s body=%s",
+                    resp.status,
+                    self._region,
+                    self._country,
+                    self._client_id,
+                    preview,
+                )
+        except aiohttp.ClientError as exc:
+            _LOGGER.warning(
+                "LG official dashboard probe failed: %s",
+                exc,
+            )
+        return None
+
+
+class OfficialDeviceRepository(DeviceRepository):
+    """Official API-backed repository for device discovery."""
+
+    def __init__(
+        self,
+        core: CoreAsync,
+        access_token: str,
+        country: str,
+        client_id: str,
+        region: str | None = None,
+    ) -> None:
+        self._core = core
+        self._access_token = access_token
+        self._country = country
+        self._client_id = client_id
+        self._region = region or _get_official_region_from_country(country)
+        self._disabled = False
+        self._warned_unauthorized = False
+        self._logged_request_context = False
+
+    async def list_devices(self) -> list[dict] | None:
+        """List devices from the official LG ThinQ API and normalize to DeviceInfo shape."""
+        if self._disabled:
+            return None
+
+        url = f"https://api-{self._region}.lgthinq.com/devices"
+        headers = {
+            "Authorization": f"Bearer {self._access_token}",
+            "x-country": self._country,
+            "x-message-id": gen_uuid(),
+            "x-client-id": self._client_id,
+            "x-api-key": OFFICIAL_API_KEY,
+            "x-service-phase": OFFICIAL_API_PHASE,
+        }
+        try:
+            if not self._logged_request_context:
+                token_prefix = self._access_token[:20] if self._access_token else ""
+                _LOGGER.warning(
+                    "LG official devices request context region=%s country=%s client_id=%s token_prefix=%s token_length=%s api_key=%s phase=%s",
+                    self._region,
+                    self._country,
+                    self._client_id,
+                    token_prefix,
+                    len(self._access_token) if self._access_token else 0,
+                    headers.get("x-api-key"),
+                    headers.get("x-service-phase"),
+                )
+                self._logged_request_context = True
+            async with self._core._get_session().get(
+                url=url,
+                headers=headers,
+                timeout=self._core._timeout,
+                raise_for_status=False,
+            ) as resp:
+                if resp.status == 401:
+                    body = await resp.text(errors="replace")
+                    if not self._warned_unauthorized:
+                        _LOGGER.warning(
+                            "LG official devices API unauthorized (region=%s, country=%s, client_id=%s): %s",
+                            self._region,
+                            self._country,
+                            self._client_id,
+                            body,
+                        )
+                        self._warned_unauthorized = True
+                    self._disabled = True
+                    return None
+                payload = await self._core._get_json_resp(resp)
+        except aiohttp.ClientError as exc:
+            _LOGGER.warning(
+                "LG official devices API request failed: %s",
+                exc,
+            )
+            return None
+
+        result = payload.get("response") if isinstance(payload, dict) else None
+        if not isinstance(result, list):
+            _LOGGER.warning(
+                "LG official devices API returned invalid device information: '%s'",
+                payload,
+            )
+            return None
+
+        devices = []
+        for item in result:
+            if not isinstance(item, dict):
+                continue
+            device_id = item.get("deviceId")
+            device_info = item.get("deviceInfo") or {}
+            if not device_id or not isinstance(device_info, dict):
+                continue
+            devices.append({"deviceId": device_id, **device_info})
+
+        if devices:
+            sample = devices[0]
+            _LOGGER.warning(
+                "LG official devices sample keys=%s modelJsonUrl=%s modelJsonUri=%s langPackModelUrl=%s langPackModelUri=%s langPackProductTypeUrl=%s langPackProductTypeUri=%s snapshot_keys=%s",
+                sorted(sample.keys()),
+                sample.get("modelJsonUrl"),
+                sample.get("modelJsonUri"),
+                sample.get("langPackModelUrl"),
+                sample.get("langPackModelUri"),
+                sample.get("langPackProductTypeUrl"),
+                sample.get("langPackProductTypeUri"),
+                sorted(sample.get("snapshot", {}).keys()) if isinstance(sample.get("snapshot"), dict) else None,
+            )
+        return devices
+
+
 class ClientAsync:
     """
     A higher-level API wrapper that provides a session more easily
@@ -1462,18 +1759,26 @@ class ClientAsync:
         # The three steps required to get access to call the API.
         self._auth: Auth = auth
         self._session: Session | None = session
+        self._device_repository: DeviceRepository | None = None
         self._connected = True
         self._last_device_update = datetime.utcnow()
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
         self._devices = None
+        self._official_discovered_devices: list[dict[str, Any]] = []
 
         # Cached model info data. This is a mapping from URLs to JSON
         # responses.
         self._model_url_info: dict[str, Any] = {}
         self._common_lang_pack = None
         self._local_lang_pack = None
+
+        # Official PAT-host context, used for official per-device helper calls.
+        self._official_access_token: str | None = None
+        self._official_client_id: str | None = None
+        self._official_country: str | None = None
+        self._official_region: str | None = None
 
         # Locale information used to discover a gateway, if necessary.
         self._country = country
@@ -1499,9 +1804,18 @@ class ClientAsync:
     async def _load_devices(self, force_update: bool = False):
         """Load dict with available devices."""
         if self._session and (self._devices is None or force_update):
-            if (new_devices := await self._session.get_devices()) is None:
+            repository = self.device_repository
+            if (new_devices := await repository.list_devices()) is None:
                 self._devices = None
                 return
+            sample_device_id = None
+            if new_devices:
+                sample_device_id = str(new_devices[0].get(KEY_DEVICE_ID, ""))
+            looks_official_ids = bool(
+                sample_device_id and "-" not in sample_device_id and len(sample_device_id) >= 32
+            )
+            if looks_official_ids:
+                self._official_discovered_devices = new_devices.copy()
             if self.emulation:
                 # for debug
                 if emul_device := await asyncio.to_thread(self._load_emul_devices):
@@ -1536,6 +1850,211 @@ class ClientAsync:
         if not self._session:
             self._session = self.auth.start_session()
         return self._session
+
+    @property
+    def device_repository(self) -> DeviceRepository:
+        """Return the active repository used for device discovery."""
+        self._check_connected()
+        if self._device_repository is None:
+            self._device_repository = LegacyDeviceRepository(self.session)
+        return self._device_repository
+
+    def set_device_repository(self, repository: DeviceRepository) -> None:
+        """Override the repository used for device discovery."""
+        self._device_repository = repository
+
+    def set_official_device_repository(
+        self,
+        access_token: str,
+        country: str,
+        client_id: str,
+        region: str | None = None,
+    ) -> None:
+        """Use an official-first discovery chain with legacy fallback."""
+        official_region = region or _get_official_region_from_country(country)
+        self._official_access_token = access_token
+        self._official_client_id = client_id
+        self._official_country = country
+        self._official_region = official_region
+        self._device_repository = DiscoveryCapability(
+            [
+                OfficialDashboardDeviceRepository(
+                    self.auth.gateway.core,
+                    access_token=access_token,
+                    country=country,
+                    client_id=client_id,
+                    region=official_region,
+                ),
+                OfficialDeviceRepository(
+                    self.auth.gateway.core,
+                    access_token=access_token,
+                    country=country,
+                    client_id=client_id,
+                    region=official_region,
+                ),
+                LegacyDeviceRepository(self.session),
+            ]
+        )
+
+    @staticmethod
+    def _official_match_key_from_dict(data: dict[str, Any]) -> tuple[str, str]:
+        """Build a simple official-device match key from a normalized device dict."""
+        return (
+            str(data.get("alias") or "").strip().lower(),
+            str(data.get("modelName") or data.get("modelNm") or "").strip().lower(),
+        )
+
+    @staticmethod
+    def _community_match_key(device_info: DeviceInfo) -> tuple[str, str]:
+        """Build a match key from the higher-level community device object."""
+        return (
+            str(device_info.name or "").strip().lower(),
+            str(device_info.model_name or "").strip().lower(),
+        )
+
+    def official_device_id_for(self, device_info: DeviceInfo) -> str | None:
+        """Resolve an official discovered device id for a community device."""
+        key = self._community_match_key(device_info)
+        _LOGGER.warning(
+            "LG official id mapping community_device=%s name=%s model=%s key=%s official_cache_size=%s",
+            device_info.device_id,
+            device_info.name,
+            device_info.model_name,
+            key,
+            len(self._official_discovered_devices),
+        )
+        for device in self._official_discovered_devices:
+            candidate_key = self._official_match_key_from_dict(device)
+            _LOGGER.warning(
+                "LG official id candidate official_device=%s alias=%s model=%s key=%s",
+                device.get("deviceId"),
+                device.get("alias"),
+                device.get("modelName") or device.get("modelNm"),
+                candidate_key,
+            )
+            if candidate_key == key:
+                return device.get("deviceId")
+        return None
+
+    async def refresh_official_discovery_cache(self) -> None:
+        """Explicitly refresh the official discovered-device cache."""
+        repository = self.device_repository
+        devices = await repository.list_devices()
+        if not devices:
+            return
+        sample_device_id = str(devices[0].get(KEY_DEVICE_ID, ""))
+        looks_official_ids = bool(
+            sample_device_id and "-" not in sample_device_id and len(sample_device_id) >= 32
+        )
+        if looks_official_ids:
+            self._official_discovered_devices = devices.copy()
+            _LOGGER.warning(
+                "LG official discovery cache primed with %s devices; sample_device_id=%s",
+                len(devices),
+                sample_device_id,
+            )
+
+    async def official_get_device_profile(self, device_id: str) -> dict | None:
+        """Fetch official PAT-host device profile metadata for a device."""
+        if (
+            not self._official_access_token
+            or not self._official_client_id
+            or not self._official_country
+            or not self._official_region
+        ):
+            return None
+
+        url = (
+            f"https://api-{self._official_region}.lgthinq.com/"
+            f"devices/{device_id}/profile"
+        )
+        headers = {
+            "Authorization": f"Bearer {self._official_access_token}",
+            "x-country": self._official_country,
+            "x-message-id": gen_uuid(),
+            "x-client-id": self._official_client_id,
+            "x-api-key": OFFICIAL_API_KEY,
+            "x-service-phase": OFFICIAL_API_PHASE,
+        }
+        core = self.auth.gateway.core
+        try:
+            async with core._get_session().get(
+                url=url,
+                headers=headers,
+                timeout=core._timeout,
+                raise_for_status=False,
+            ) as resp:
+                if resp.status != 200:
+                    body = await resp.text(errors="replace")
+                    _LOGGER.warning(
+                        "LG official device profile failed for %s status=%s body=%s",
+                        device_id,
+                        resp.status,
+                        body[:400],
+                    )
+                    return None
+                payload = await core._get_json_resp(resp)
+        except aiohttp.ClientError as exc:
+            _LOGGER.warning(
+                "LG official device profile request failed for %s: %s",
+                device_id,
+                exc,
+            )
+            return None
+
+        response = payload.get("response") if isinstance(payload, dict) else None
+        return response if isinstance(response, dict) else None
+
+    async def official_get_device_state(self, device_id: str) -> dict | None:
+        """Fetch official PAT-host device state for a device."""
+        if (
+            not self._official_access_token
+            or not self._official_client_id
+            or not self._official_country
+            or not self._official_region
+        ):
+            return None
+
+        url = (
+            f"https://api-{self._official_region}.lgthinq.com/"
+            f"devices/{device_id}/state"
+        )
+        headers = {
+            "Authorization": f"Bearer {self._official_access_token}",
+            "x-country": self._official_country,
+            "x-message-id": gen_uuid(),
+            "x-client-id": self._official_client_id,
+            "x-api-key": OFFICIAL_API_KEY,
+            "x-service-phase": OFFICIAL_API_PHASE,
+        }
+        core = self.auth.gateway.core
+        try:
+            async with core._get_session().get(
+                url=url,
+                headers=headers,
+                timeout=core._timeout,
+                raise_for_status=False,
+            ) as resp:
+                if resp.status != 200:
+                    body = await resp.text(errors="replace")
+                    _LOGGER.warning(
+                        "LG official device state failed for %s status=%s body=%s",
+                        device_id,
+                        resp.status,
+                        body[:400],
+                    )
+                    return None
+                payload = await core._get_json_resp(resp)
+        except aiohttp.ClientError as exc:
+            _LOGGER.warning(
+                "LG official device state request failed for %s: %s",
+                device_id,
+                exc,
+            )
+            return None
+
+        response = payload.get("response") if isinstance(payload, dict) else None
+        return response if isinstance(response, dict) else None
 
     @property
     def has_devices(self) -> bool:
@@ -1602,6 +2121,8 @@ class ClientAsync:
             self.auth.refresh_gateway(gateway)
         self._auth = await self.auth.refresh(True)
         self._session = self.auth.start_session()
+        if isinstance(self._device_repository, LegacyDeviceRepository):
+            self._device_repository = LegacyDeviceRepository(self._session)
         await self._load_devices()
 
     async def refresh_auth(self) -> None:
@@ -1666,6 +2187,9 @@ class ClientAsync:
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
+        official_pat: str | None = None,
+        official_client_id: str | None = None,
+        official_region: str | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1693,6 +2217,13 @@ class ClientAsync:
                 enable_emulation=enable_emulation,
             )
             await client.refresh()
+            if official_pat and official_client_id:
+                client.set_official_device_repository(
+                    access_token=official_pat,
+                    country=country,
+                    client_id=official_client_id,
+                    region=official_region,
+                )
         except Exception:  # pylint: disable=broad-except
             await core.close()
             raise

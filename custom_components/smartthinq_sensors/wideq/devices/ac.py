@@ -168,6 +168,63 @@ FILTER_STATUS_MAP = {
 _LOGGER = logging.getLogger(__name__)
 
 
+def _dget(data, *keys, default=None):
+    """Safely traverse nested dict keys."""
+    cur = data
+    for key in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(key)
+    return cur if cur is not None else default
+
+
+def normalize_official_ac_read(profile: dict | None, state: dict | None) -> dict:
+    """Normalize official AC profile/state payloads into a compact read model."""
+    supported_hvac_modes = (
+        _dget(profile, "property", "airConJobMode", "currentJobMode", "value", "w")
+        or _dget(profile, "property", "airConJobMode", "currentJobMode", "value", "r")
+        or []
+    )
+    temp_range = (
+        _dget(profile, "property", "temperature", "targetTemperature", "value", "w")
+        or _dget(profile, "property", "temperature", "targetTemperature", "value", "r")
+        or _dget(profile, "property", "temperature", "coolTargetTemperature", "value", "w")
+        or _dget(profile, "property", "temperature", "heatTargetTemperature", "value", "w")
+        or {}
+    )
+    supported_fan_modes = (
+        _dget(profile, "property", "airFlow", "windStrength", "value", "w")
+        or _dget(profile, "property", "airFlow", "windStrength", "value", "r")
+        or []
+    )
+    supports_swing_vertical = (
+        _dget(profile, "property", "windDirection", "rotateUpDown") is not None
+    )
+    supports_swing_horizontal = (
+        _dget(profile, "property", "windDirection", "rotateLeftRight") is not None
+    )
+    power_state = _dget(state, "operation", "airConOperationMode")
+    return {
+        "run_state": _dget(state, "runState", "currentState"),
+        "power_state": power_state,
+        "is_on": power_state == "POWER_ON",
+        "hvac_mode": _dget(state, "airConJobMode", "currentJobMode"),
+        "supported_hvac_modes": list(supported_hvac_modes) if isinstance(supported_hvac_modes, list) else [],
+        "current_temperature": _dget(state, "temperature", "currentTemperature"),
+        "target_temperature": _dget(state, "temperature", "targetTemperature"),
+        "temperature_unit": _dget(state, "temperature", "unit"),
+        "min_target_temperature": temp_range.get("min") if isinstance(temp_range, dict) else None,
+        "max_target_temperature": temp_range.get("max") if isinstance(temp_range, dict) else None,
+        "target_temperature_step": temp_range.get("step") if isinstance(temp_range, dict) else None,
+        "fan_mode": _dget(state, "airFlow", "windStrength"),
+        "supported_fan_modes": list(supported_fan_modes) if isinstance(supported_fan_modes, list) else [],
+        "supports_swing_vertical": supports_swing_vertical,
+        "supports_swing_horizontal": supports_swing_horizontal,
+        "swing_vertical_enabled": _dget(state, "windDirection", "rotateUpDown"),
+        "swing_horizontal_enabled": _dget(state, "windDirection", "rotateLeftRight"),
+    }
+
+
 class ACOp(Enum):
     """Whether a device is on or off."""
 
@@ -295,6 +352,7 @@ class AirConditionerDevice(Device):
         self._duct_zones = {}
 
         self._current_power = None
+        self._official_normalized = None
         self._current_power_supported = True
 
         self._filter_status = None
@@ -541,16 +599,25 @@ class AirConditionerDevice(Device):
     @cached_property
     def op_modes(self):
         """Return a list of available operation modes."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("supported_hvac_modes"):
+            return official["supported_hvac_modes"]
         return self._get_property_values(SUPPORT_OPERATION_MODE, ACMode)
 
     @cached_property
     def fan_speeds(self):
         """Return a list of available fan speeds."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("supported_fan_modes"):
+            return official["supported_fan_modes"]
         return self._get_property_values(SUPPORT_WIND_STRENGTH, ACFanSpeed)
 
     @cached_property
     def horizontal_step_modes(self):
         """Return a list of available horizontal step modes."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("supports_swing_horizontal") is False:
+            return []
         if not self._is_mode_supported(SUPPORT_VANE_HSTEP):
             return []
         return self._get_property_values(STATE_WDIR_HSTEP, ACHStepMode)
@@ -558,6 +625,9 @@ class AirConditionerDevice(Device):
     @cached_property
     def vertical_step_modes(self):
         """Return a list of available vertical step modes."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("supports_swing_vertical") is False:
+            return []
         if not self._is_mode_supported(SUPPORT_VANE_VSTEP):
             return []
         return self._get_property_values(STATE_WDIR_VSTEP, ACVStepMode)
@@ -570,17 +640,26 @@ class AirConditionerDevice(Device):
     @property
     def target_temperature_step(self):
         """Return target temperature step used."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("target_temperature_step") is not None:
+            return official["target_temperature_step"]
         return self._temperature_step
 
     @property
     def target_temperature_min(self):
         """Return minimum value for target temperature."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("min_target_temperature") is not None:
+            return self.conv_temp_unit(official["min_target_temperature"])
         temp_range = self._temperature_range
         return self.conv_temp_unit(temp_range[0])
 
     @property
     def target_temperature_max(self):
         """Return maximum value for target temperature."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("max_target_temperature") is not None:
+            return self.conv_temp_unit(official["max_target_temperature"])
         temp_range = self._temperature_range
         return self.conv_temp_unit(temp_range[1])
 

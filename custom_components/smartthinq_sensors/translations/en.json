@@ -14,6 +14,7 @@
       "invalid_language": "Invalid language format.",
       "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone.",
       "invalid_credentials": "Invalid SmartThinQ credentials. Use the LG App on your mobile device to verify if there are Term of Service to accept. Account based on social network are not supported and in most case do not work with this integration.",
+      "invalid_official_pat": "Invalid ThinQ Personal Access Token format.",
       "invalid_config": "Found invalid configuration, please reconfigure.",
       "no_user_info": "User Name and Password are required.",
       "unknown": "Unknown error."
@@ -27,6 +28,7 @@
           "language": "Language Code",
           "use_redirect": "Use URL redirect authentication method",
           "use_ha_session": "Share Home Assistant HTTP connection (may cause SSL errors)",
+          "official_pat": "Official ThinQ Personal Access Token",
           "use_tls_v1": "Force use of protocol TLSv1 (sometimes required)",
           "exclude_dh": "Do not use DH cypher (in case 'dh key too small' error)"
         },
@@ -53,6 +55,13 @@
         },
         "title": "SmartThinQ LGE Sensors - Reauth",
         "description": "Invalid ThinQ credential error, integration setup aborted. Please use the LG App on your mobile device and check if there are new Term of Service to accept, then press ok to reload integration."
+      },
+      "reauth_official_pat": {
+        "data": {
+          "official_pat": "Official ThinQ Personal Access Token"
+        },
+        "title": "SmartThinQ LGE Sensors - Official API Migration",
+        "description": "This integration now uses official ThinQ API paths where available to reduce legacy API usage. Enter an official ThinQ Personal Access Token to continue in hybrid official/community mode."
       }
     },
     "title": "SmartThinQ LGE Sensors"

@@ -33,6 +33,8 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .const import (
     CLIENT,
     CONF_LANGUAGE,
+    CONF_OFFICIAL_CLIENT_ID,
+    CONF_OFFICIAL_PAT,
     CONF_OAUTH2_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
@@ -59,6 +61,7 @@ from .wideq.core_exceptions import (
     NotConnectedError,
 )
 from .wideq.device import Device as ThinQDevice
+from .wideq.devices.ac import normalize_official_ac_read
 
 SMARTTHINQ_PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -142,7 +145,12 @@ class LGEAuthentication:
         return None
 
     async def create_client_from_token(
-        self, token: str, oauth_url: str | None = None, client_id: str | None = None
+        self,
+        token: str,
+        oauth_url: str | None = None,
+        client_id: str | None = None,
+        official_pat: str | None = None,
+        official_client_id: str | None = None,
     ) -> ClientAsync:
         """Create a new client using refresh token."""
         return await ClientAsync.from_token(
@@ -152,6 +160,8 @@ class LGEAuthentication:
             oauth_url=oauth_url,
             aiohttp_session=self._client_session,
             client_id=client_id,
+            official_pat=official_pat,
+            official_client_id=official_client_id,
         )
 
 
@@ -174,6 +184,12 @@ def _notify_message(
     persistent_notification.async_create(
         hass, message, title, f"{DOMAIN}.{notification_id}"
     )
+
+
+@callback
+def _needs_official_pat_migration(entry: ConfigEntry) -> bool:
+    """Return True when the entry still needs official PAT migration."""
+    return not bool(entry.data.get(CONF_OFFICIAL_PAT))
 
 
 @callback
@@ -222,6 +238,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     refresh_token = entry.data[CONF_TOKEN]
     oauth2_url = None  # entry.data.get(CONF_OAUTH2_URL)
     client_id: str | None = entry.data.get(CONF_CLIENT_ID)
+    official_pat: str | None = entry.data.get(CONF_OFFICIAL_PAT)
+    official_client_id: str | None = entry.data.get(CONF_OFFICIAL_CLIENT_ID)
     use_api_v2 = entry.data.get(CONF_USE_API_V2, False)
     use_ha_session = entry.data.get(CONF_USE_HA_SESSION, False)
 
@@ -247,12 +265,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             language,
         )
 
+    if _needs_official_pat_migration(entry):
+        raise ConfigEntryAuthFailed(
+            "Official ThinQ Personal Access Token required to migrate this entry to hybrid official/community API mode"
+        )
+
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
     lge_auth = LGEAuthentication(hass, region, language, use_ha_session)
     try:
         client = await lge_auth.create_client_from_token(
-            refresh_token, oauth2_url, client_id
+            refresh_token,
+            oauth2_url,
+            client_id,
+            official_pat,
+            official_client_id,
         )
     except (AuthenticationError, InvalidCredentialError) as exc:
         if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
@@ -271,10 +298,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(msg) from exc
 
     except Exception as exc:
-        if log_info:
-            _LOGGER.warning(
-                "Connection not available. ThinQ platform not ready", exc_info=True
-            )
+        _LOGGER.exception(
+            "ThinQ client creation failed during setup (region=%s, language=%s, has_official_pat=%s, has_official_client_id=%s)",
+            region,
+            language,
+            bool(official_pat),
+            bool(official_client_id),
+            exc_info=exc,
+        )
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     if not client.has_devices:
@@ -291,16 +322,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass, client
         )
     except Exception as exc:
-        if log_info:
-            _LOGGER.warning(
-                "Connection not available. ThinQ platform not ready", exc_info=True
-            )
+        _LOGGER.exception(
+            "ThinQ device setup failed after client creation",
+            exc_info=exc,
+        )
         await client.close()
         raise ConfigEntryNotReady("ThinQ platform not ready") from exc
 
     if discovered_devices is None:
         await client.close()
         raise ConfigEntryNotReady("ThinQ platform not ready: no devices found.")
+
+    await _enrich_official_ac_profiles(client, lge_devices)
 
     # remove device not available anymore
     dev_ids = [v for ids in discovered_devices.values() for v in ids]
@@ -536,6 +569,77 @@ class LGEDevice:
             # _LOGGER.debug('Status attributes: %s', l)
             self._disc_count = 0
             self._state = state
+
+
+async def _enrich_official_ac_profiles(
+    client: ClientAsync,
+    lge_devices: dict[DeviceType, list[LGEDevice]],
+) -> None:
+    """Fetch official PAT-host AC profiles after device setup, when official cache is ready."""
+    if not client._official_discovered_devices:
+        await client.refresh_official_discovery_cache()
+
+    for lge_dev in lge_devices.get(DeviceType.AC, []):
+        dev = lge_dev.device
+        official_device_id = client.official_device_id_for(dev.device_info)
+        if not official_device_id:
+            _LOGGER.warning(
+                "LG official AC post-setup mapping failed for community_device=%s",
+                dev.device_info.device_id,
+            )
+            continue
+
+        profile = await client.official_get_device_profile(official_device_id)
+        if not isinstance(profile, dict):
+            _LOGGER.warning(
+                "LG official AC post-setup profile fetch failed for community_device=%s official_device=%s",
+                dev.device_info.device_id,
+                official_device_id,
+            )
+            continue
+
+        dev._official_profile = profile
+        props = profile.get("property", {})
+        _LOGGER.warning(
+            "LG official AC post-setup profile community_device=%s official_device=%s property_keys=%s has_operation=%s has_job_mode=%s has_temperature=%s has_airflow=%s has_wind_direction=%s",
+            dev.device_info.device_id,
+            official_device_id,
+            sorted(props.keys()) if isinstance(props, dict) else None,
+            isinstance(props, dict) and "operation" in props,
+            isinstance(props, dict) and "airConJobMode" in props,
+            isinstance(props, dict) and "temperature" in props,
+            isinstance(props, dict) and "airFlow" in props,
+            isinstance(props, dict) and "windDirection" in props,
+        )
+
+        state = await client.official_get_device_state(official_device_id)
+        if isinstance(state, dict):
+            normalized = normalize_official_ac_read(profile, state)
+            dev._official_normalized = normalized
+            _LOGGER.warning(
+                "LG official AC post-setup state community_device=%s official_device=%s run_state=%s op_mode=%s current_temp=%s target_temp=%s fan=%s swing_ud=%s swing_lr=%s",
+                dev.device_info.device_id,
+                official_device_id,
+                (state.get("runState") or {}).get("currentState"),
+                ((state.get("operation") or {}).get("airConOperationMode") or (state.get("airConJobMode") or {}).get("currentJobMode")),
+                (state.get("temperature") or {}).get("currentTemperature"),
+                (state.get("temperature") or {}).get("targetTemperature"),
+                (state.get("airFlow") or {}).get("windStrength"),
+                (state.get("windDirection") or {}).get("rotateUpDown"),
+                (state.get("windDirection") or {}).get("rotateLeftRight"),
+            )
+            _LOGGER.warning(
+                "LG official AC normalized community_device=%s official_device=%s data=%s",
+                dev.device_info.device_id,
+                official_device_id,
+                normalized,
+            )
+        else:
+            _LOGGER.warning(
+                "LG official AC post-setup state fetch failed for community_device=%s official_device=%s",
+                dev.device_info.device_id,
+                official_device_id,
+            )
 
 
 async def lge_devices_setup(

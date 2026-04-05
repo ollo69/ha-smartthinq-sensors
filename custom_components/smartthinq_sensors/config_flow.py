@@ -6,7 +6,9 @@ from collections.abc import Mapping
 import logging
 import re
 from typing import Any
+import uuid
 
+from thinqconnect import ThinQApi
 from pycountry import countries as py_countries, languages as py_languages
 import voluptuous as vol
 
@@ -27,6 +29,7 @@ from homeassistant.const import (
     __version__,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
     SelectOptionDict,
     SelectSelector,
@@ -40,6 +43,8 @@ from homeassistant.helpers.selector import (
 from . import LGEAuthentication, is_valid_ha_version
 from .const import (
     CONF_LANGUAGE,
+    CONF_OFFICIAL_CLIENT_ID,
+    CONF_OFFICIAL_PAT,
     CONF_OAUTH2_URL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
@@ -50,6 +55,8 @@ from .const import (
 from .wideq.core_exceptions import AuthenticationError, InvalidCredentialError
 
 CONF_LOGIN = "login_url"
+CONF_REAUTH_MODE = "reauth_mode"
+CONF_REAUTH_MODE_OFFICIAL_PAT = "official_pat"
 CONF_REAUTH_CRED = "reauth_cred"
 CONF_URL = "callback_url"
 
@@ -57,8 +64,31 @@ RESULT_SUCCESS = 0
 RESULT_FAIL = 1
 RESULT_NO_DEV = 2
 RESULT_CRED_FAIL = 3
+RESULT_INVALID_OFFICIAL_PAT = 4
 
 _LOGGER = logging.getLogger(__name__)
+_OFFICIAL_PAT_RE = re.compile(r"^thinqpat_[A-Za-z0-9]+$")
+
+
+def _normalize_official_pat(value: str | None) -> str | None:
+    """Normalize user-provided official PAT input."""
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    if value.startswith("thinqpat_"):
+        return value
+    return f"thinqpat_{value}"
+
+
+def _is_valid_official_pat_format(value: str | None) -> bool:
+    """Validate the basic format of an official ThinQ PAT."""
+    if not value:
+        return False
+    if any(ch.isspace() for ch in value):
+        return False
+    return bool(_OFFICIAL_PAT_RE.fullmatch(value))
 
 COUNTRIES = {
     country.alpha_2: f"{country.name} - {country.alpha_2}"
@@ -84,6 +114,8 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         self._language: str | None = None
         self._token: str | None = None
         self._client_id: str | None = None
+        self._official_pat: str | None = None
+        self._official_client_id: str | None = None
         self._oauth2_url: str | None = None
         self._use_ha_session = False
 
@@ -91,6 +123,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         self._login_url: str | None = None
         self._error: str | None = None
         self._is_import = False
+        self._reauth_mode: str | None = None
 
     @staticmethod
     def _validate_region_language(region: str, language: str) -> str | None:
@@ -169,6 +202,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         language = user_input[CONF_LANGUAGE]
         use_redirect = user_input[CONF_USE_REDIRECT]
         self._use_ha_session = user_input.get(CONF_USE_HA_SESSION, False)
+        self._official_pat = user_input.get(CONF_OFFICIAL_PAT) or None
 
         if error := self._validate_region_language(region, language):
             return self._show_form(errors=error)
@@ -254,6 +288,25 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
             return RESULT_NO_DEV
 
         self._client_id = client.client_id
+
+        self._official_pat = _normalize_official_pat(self._official_pat)
+        if self._official_pat:
+            if not _is_valid_official_pat_format(self._official_pat):
+                return RESULT_INVALID_OFFICIAL_PAT
+            self._official_client_id = f"home-assistant-{uuid.uuid4()!s}"
+            try:
+                await ThinQApi(
+                    session=async_get_clientsession(self.hass),
+                    access_token=self._official_pat,
+                    country_code=self._region,
+                    client_id=self._official_client_id,
+                ).async_get_device_list()
+            except Exception as exc:  # pylint: disable=broad-except
+                _LOGGER.exception(
+                    "Error validating official ThinQ PAT",
+                    exc_info=exc,
+                )
+                return RESULT_FAIL
         return RESULT_SUCCESS
 
     async def _manage_error(
@@ -268,6 +321,8 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
             self._error = "error_connect"
         elif error_code == RESULT_CRED_FAIL:
             self._error = "invalid_credentials"
+        elif error_code == RESULT_INVALID_OFFICIAL_PAT:
+            self._error = "invalid_official_pat"
 
         if is_user_step:
             return self._show_form()
@@ -289,6 +344,10 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
             data[CONF_OAUTH2_URL] = self._oauth2_url
         if self._use_ha_session:
             data[CONF_USE_HA_SESSION] = True
+        if self._official_pat:
+            data[CONF_OFFICIAL_PAT] = self._official_pat
+        if self._official_client_id:
+            data[CONF_OFFICIAL_CLIENT_ID] = self._official_client_id
 
         # if an entry exists, we are reconfiguring
         if entries := self._async_current_entries():
@@ -330,7 +389,10 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         )
         if self.show_advanced_options:
             schema = schema.extend(
-                {vol.Required(CONF_USE_HA_SESSION, default=False): bool}
+                {
+                    vol.Required(CONF_USE_HA_SESSION, default=False): bool,
+                    vol.Optional(CONF_OFFICIAL_PAT, default=""): str,
+                }
             )
 
         return schema
@@ -351,13 +413,24 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]
     ) -> ConfigFlowResult:
-        """Perform reauth upon an API authentication error."""
+        """Perform reauth to collect missing official API credentials."""
+        self._reauth_mode = CONF_REAUTH_MODE_OFFICIAL_PAT
+        self._region = entry_data.get(CONF_REGION)
+        if language := entry_data.get(CONF_LANGUAGE):
+            self._user_lang = language[0:2]
+            self._language = language
+        self._token = entry_data.get(CONF_TOKEN)
+        self._oauth2_url = entry_data.get(CONF_OAUTH2_URL)
+        self._client_id = entry_data.get(CONF_CLIENT_ID)
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Dialog that informs the user that reauth is required."""
+        if self._reauth_mode == CONF_REAUTH_MODE_OFFICIAL_PAT:
+            return await self.async_step_reauth_official_pat(user_input)
+
         if user_input is None:
             return self.async_show_form(
                 step_id="reauth_confirm",
@@ -369,6 +442,33 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         if user_input[CONF_REAUTH_CRED] is True:
             return await self.async_step_user()
         return self.async_update_reload_and_abort(self._get_reauth_entry())
+
+    async def async_step_reauth_official_pat(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Collect official ThinQ API credentials for hybrid mode."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_official_pat",
+                data_schema=vol.Schema({vol.Required(CONF_OFFICIAL_PAT): str}),
+            )
+
+        self._official_pat = user_input[CONF_OFFICIAL_PAT]
+        lge_auth = LGEAuthentication(
+            self.hass, self._region, self._language, self._use_ha_session
+        )
+        result = await self._check_connection(lge_auth)
+        if result != RESULT_SUCCESS:
+            if result == RESULT_INVALID_OFFICIAL_PAT:
+                return self._show_form(
+                    errors="invalid_official_pat",
+                    step_id="reauth_official_pat",
+                )
+            return self._show_form(
+                errors="error_connect",
+                step_id="reauth_official_pat",
+            )
+        return self._save_config_entry()
 
 
 def _dict_to_select(opt_dict: dict) -> SelectSelectorConfig:

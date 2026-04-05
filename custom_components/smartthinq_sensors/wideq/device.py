@@ -21,7 +21,7 @@ import aiohttp
 from . import core_exceptions as core_exc
 from .const import BIT_OFF, BIT_ON, StateOptions
 from .core_async import ClientAsync
-from .device_info import DeviceInfo, PlatformType
+from .device_info import DeviceInfo, DeviceType, PlatformType
 from .model_info import ModelInfo
 
 LANG_PACK = "pack"
@@ -399,6 +399,7 @@ class Device:
         self._model_lang_pack = None
         self._product_lang_pack = None
         self._local_lang_pack = None
+        self._official_profile = None
         self._should_poll = device_info.platform_type == PlatformType.THINQ1
         self._mon = Monitor(client, device_info)
         self._control_set = 0
@@ -451,6 +452,11 @@ class Device:
     def available_features(self) -> dict:
         """Return available features."""
         return self._available_features
+
+    @property
+    def official_profile(self):
+        """Return cached official device profile, if available."""
+        return self._official_profile
 
     @property
     def status(self) -> DeviceStatus | None:
