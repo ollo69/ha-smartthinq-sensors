@@ -1563,11 +1563,6 @@ class DiscoveryCapability(DeviceRepository):
                 )
                 continue
             if devices:
-                _LOGGER.warning(
-                    "LG device discovery strategy %s returned %s devices",
-                    strategy.__class__.__name__,
-                    len(devices),
-                )
                 return devices
         return None
 
@@ -1613,16 +1608,7 @@ class OfficialDashboardDeviceRepository(DeviceRepository):
                 timeout=self._core._timeout,
                 raise_for_status=False,
             ) as resp:
-                body = await resp.text(errors="replace")
-                preview = body[:1000]
-                _LOGGER.warning(
-                    "LG official dashboard probe status=%s region=%s country=%s client_id=%s body=%s",
-                    resp.status,
-                    self._region,
-                    self._country,
-                    self._client_id,
-                    preview,
-                )
+                await resp.text(errors="replace")
         except aiohttp.ClientError as exc:
             _LOGGER.warning(
                 "LG official dashboard probe failed: %s",
@@ -1667,17 +1653,6 @@ class OfficialDeviceRepository(DeviceRepository):
         }
         try:
             if not self._logged_request_context:
-                token_prefix = self._access_token[:20] if self._access_token else ""
-                _LOGGER.warning(
-                    "LG official devices request context region=%s country=%s client_id=%s token_prefix=%s token_length=%s api_key=%s phase=%s",
-                    self._region,
-                    self._country,
-                    self._client_id,
-                    token_prefix,
-                    len(self._access_token) if self._access_token else 0,
-                    headers.get("x-api-key"),
-                    headers.get("x-service-phase"),
-                )
                 self._logged_request_context = True
             async with self._core._get_session().get(
                 url=url,
@@ -1724,19 +1699,6 @@ class OfficialDeviceRepository(DeviceRepository):
                 continue
             devices.append({"deviceId": device_id, **device_info})
 
-        if devices:
-            sample = devices[0]
-            _LOGGER.warning(
-                "LG official devices sample keys=%s modelJsonUrl=%s modelJsonUri=%s langPackModelUrl=%s langPackModelUri=%s langPackProductTypeUrl=%s langPackProductTypeUri=%s snapshot_keys=%s",
-                sorted(sample.keys()),
-                sample.get("modelJsonUrl"),
-                sample.get("modelJsonUri"),
-                sample.get("langPackModelUrl"),
-                sample.get("langPackModelUri"),
-                sample.get("langPackProductTypeUrl"),
-                sample.get("langPackProductTypeUri"),
-                sorted(sample.get("snapshot", {}).keys()) if isinstance(sample.get("snapshot"), dict) else None,
-            )
         return devices
 
 
@@ -1915,23 +1877,8 @@ class ClientAsync:
     def official_device_id_for(self, device_info: DeviceInfo) -> str | None:
         """Resolve an official discovered device id for a community device."""
         key = self._community_match_key(device_info)
-        _LOGGER.warning(
-            "LG official id mapping community_device=%s name=%s model=%s key=%s official_cache_size=%s",
-            device_info.device_id,
-            device_info.name,
-            device_info.model_name,
-            key,
-            len(self._official_discovered_devices),
-        )
         for device in self._official_discovered_devices:
             candidate_key = self._official_match_key_from_dict(device)
-            _LOGGER.warning(
-                "LG official id candidate official_device=%s alias=%s model=%s key=%s",
-                device.get("deviceId"),
-                device.get("alias"),
-                device.get("modelName") or device.get("modelNm"),
-                candidate_key,
-            )
             if candidate_key == key:
                 return device.get("deviceId")
         return None

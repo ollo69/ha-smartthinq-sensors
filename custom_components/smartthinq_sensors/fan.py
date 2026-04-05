@@ -31,6 +31,13 @@ DEFAULT_KEY = "default"
 
 _LOGGER = logging.getLogger(__name__)
 
+CANONICAL_FAN_SPEED_ORDER = {
+    "LOW": 0,
+    "MID": 1,
+    "HIGH": 2,
+    "TURBO": 3,
+}
+
 
 @dataclass
 class LGEFanWrapperDescription:
@@ -193,6 +200,8 @@ class LGEFanWrapper:
         avl_speeds = self._description.fanspeeds_fn(self._api).copy()
         if self._description.turn_off_fn is None:
             self._turn_off_speed = avl_speeds.pop(0)
+        if all(speed in CANONICAL_FAN_SPEED_ORDER for speed in avl_speeds):
+            avl_speeds.sort(key=lambda speed: CANONICAL_FAN_SPEED_ORDER[speed])
         return avl_speeds
 
     @property

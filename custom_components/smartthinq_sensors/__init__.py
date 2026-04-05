@@ -62,6 +62,7 @@ from .wideq.core_exceptions import (
 )
 from .wideq.device import Device as ThinQDevice
 from .wideq.devices.ac import normalize_official_ac_read
+from .wideq.devices.fan import normalize_official_fan_read
 
 SMARTTHINQ_PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -334,6 +335,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady("ThinQ platform not ready: no devices found.")
 
     await _enrich_official_ac_profiles(client, lge_devices)
+    await _enrich_official_fan_profiles(client, lge_devices)
 
     # remove device not available anymore
     dev_ids = [v for ids in discovered_devices.values() for v in ids]
@@ -640,6 +642,61 @@ async def _enrich_official_ac_profiles(
                 dev.device_info.device_id,
                 official_device_id,
             )
+
+
+async def _enrich_official_fan_profiles(
+    client: ClientAsync,
+    lge_devices: dict[DeviceType, list[LGEDevice]],
+) -> None:
+    """Fetch official PAT-host fan profiles/state after device setup."""
+    if not client._official_discovered_devices:
+        await client.refresh_official_discovery_cache()
+
+    for lge_dev in lge_devices.get(DeviceType.FAN, []):
+        dev = lge_dev.device
+        official_device_id = client.official_device_id_for(dev.device_info)
+        if not official_device_id:
+            _LOGGER.warning(
+                "LG official fan post-setup mapping failed for community_device=%s",
+                dev.device_info.device_id,
+            )
+            continue
+
+        profile = await client.official_get_device_profile(official_device_id)
+        if not isinstance(profile, dict):
+            _LOGGER.warning(
+                "LG official fan post-setup profile fetch failed for community_device=%s official_device=%s",
+                dev.device_info.device_id,
+                official_device_id,
+            )
+            continue
+
+        state = await client.official_get_device_state(official_device_id)
+        if not isinstance(state, dict):
+            _LOGGER.warning(
+                "LG official fan post-setup state fetch failed for community_device=%s official_device=%s",
+                dev.device_info.device_id,
+                official_device_id,
+            )
+            continue
+
+        normalized = normalize_official_fan_read(profile, state)
+        dev._official_profile = profile
+        dev._official_normalized = normalized
+
+        props = profile.get("property", {})
+        _LOGGER.warning(
+            "LG official fan post-setup profile community_device=%s official_device=%s property_keys=%s",
+            dev.device_info.device_id,
+            official_device_id,
+            sorted(props.keys()) if isinstance(props, dict) else None,
+        )
+        _LOGGER.warning(
+            "LG official fan normalized community_device=%s official_device=%s data=%s",
+            dev.device_info.device_id,
+            official_device_id,
+            normalized,
+        )
 
 
 async def lge_devices_setup(

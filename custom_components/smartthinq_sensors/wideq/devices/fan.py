@@ -26,6 +26,34 @@ CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 _LOGGER = logging.getLogger(__name__)
 
 
+def _dget(data, *keys, default=None):
+    """Safely traverse nested dict keys."""
+    cur = data
+    for key in keys:
+        if not isinstance(cur, dict):
+            return default
+        cur = cur.get(key)
+    return cur if cur is not None else default
+
+
+def normalize_official_fan_read(profile: dict | None, state: dict | None) -> dict:
+    """Normalize official fan profile/state payloads into a compact read model."""
+    supported_fan_modes = (
+        _dget(profile, "property", "airFlow", "windStrength", "value", "w")
+        or _dget(profile, "property", "airFlow", "windStrength", "value", "r")
+        or []
+    )
+    power_state = _dget(state, "operation", "ceilingfanOperationMode")
+    return {
+        "power_state": power_state,
+        "is_on": power_state == "POWER_ON",
+        "fan_mode": _dget(state, "airFlow", "windStrength"),
+        "supported_fan_modes": list(supported_fan_modes)
+        if isinstance(supported_fan_modes, list)
+        else [],
+    }
+
+
 class FanOp(Enum):
     """Whether a device is on or off."""
 
@@ -57,10 +85,14 @@ class FanDevice(Device):
 
     def __init__(self, client: ClientAsync, device_info: DeviceInfo):
         super().__init__(client, device_info, FanStatus(self))
+        self._official_normalized = None
 
     @cached_property
     def fan_speeds(self) -> list:
         """Available fan speeds."""
+        official = getattr(self, "_official_normalized", None)
+        if official and official.get("supported_fan_modes"):
+            return official["supported_fan_modes"]
         return self._get_property_values(SUPPORT_WIND_STRENGTH, FanSpeed)
 
     @property
