@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import timedelta
 import logging
 
@@ -142,7 +143,11 @@ class LGEAuthentication:
         return None
 
     async def create_client_from_token(
-        self, token: str, oauth_url: str | None = None, client_id: str | None = None
+        self,
+        token: str,
+        oauth_url: str | None = None,
+        client_id: str | None = None,
+        update_clientid_callback: Callable[[str], None] | None = None,
     ) -> ClientAsync:
         """Create a new client using refresh token."""
         return await ClientAsync.from_token(
@@ -152,6 +157,7 @@ class LGEAuthentication:
             oauth_url=oauth_url,
             aiohttp_session=self._client_session,
             client_id=client_id,
+            update_clientid_callback=update_clientid_callback,
         )
 
 
@@ -187,19 +193,6 @@ def _migrate_old_config_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     new_data = {k: v for k, v in entry.data.items() if k != old_key}
     hass.config_entries.async_update_entry(
         entry, data={**new_data, CONF_OAUTH2_URL: oauth2_url}
-    )
-
-
-@callback
-def _add_clientid_config_entry(
-    hass: HomeAssistant, entry: ConfigEntry, client_id: str
-) -> None:
-    """Add the client id to the config entry, so it can be reused."""
-    if CONF_CLIENT_ID in entry.data or not client_id:
-        return
-
-    hass.config_entries.async_update_entry(
-        entry, data={**entry.data, CONF_CLIENT_ID: client_id}
     )
 
 
@@ -247,12 +240,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             language,
         )
 
+    def _update_clientid_callback(client_id: str) -> None:
+        """Update config entry with the new client id."""
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_CLIENT_ID: client_id}
+        )
+
     # if network is not connected we can have some error
     # raising ConfigEntryNotReady platform setup will be retried
     lge_auth = LGEAuthentication(hass, region, language, use_ha_session)
     try:
         client = await lge_auth.create_client_from_token(
-            refresh_token, oauth2_url, client_id
+            refresh_token, oauth2_url, client_id, _update_clientid_callback
         )
     except (AuthenticationError, InvalidCredentialError) as exc:
         if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
@@ -282,9 +281,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
 
     _LOGGER.debug("ThinQ client connected")
-
-    if not client_id:
-        _add_clientid_config_entry(hass, entry, client.client_id)
 
     try:
         lge_devices, unsupported_devices, discovered_devices = await lge_devices_setup(

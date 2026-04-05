@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections.abc import Callable
 from datetime import datetime
 import hashlib
 import hmac
@@ -97,6 +98,7 @@ API2_ERRORS = {
     "0110": exc.InvalidCredentialError,
     "0111": exc.DelayedResponseError,
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
+    "9012": exc.UseOfficialAPIError,
     "9995": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
     "9999": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
 }
@@ -177,6 +179,7 @@ class CoreAsync:
         oauth_url: str | None = None,
         session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
+        update_clientid_callback: Callable[[str], None] | None = None,
     ):
         """
         Create the CoreAsync object
@@ -193,6 +196,7 @@ class CoreAsync:
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._oauth_url = oauth_url
         self._client_id = client_id
+        self._update_clientid_callback = update_clientid_callback
         self._lang_pack_url = None
 
         if session:
@@ -234,18 +238,22 @@ class CoreAsync:
             self._session = lg_client_session()
         return self._session
 
-    def _get_client_id(self, user_number: str | None = None) -> str:
+    def _get_client_id(
+        self, user_number: str | None = None, force_refresh: bool = False
+    ) -> str:
         """Generate a new clent ID or return existing."""
-        if self._client_id is not None:
+        if self._client_id is not None and not force_refresh:
             return self._client_id
         if user_number is None:
-            return None
+            return self._client_id
 
         hash_object = hashlib.sha256()
         hash_object.update(
             (user_number + datetime.utcnow().strftime("%Y%m%d%H%M%S")).encode("utf8")
         )
         self._client_id = hash_object.hexdigest()
+        if self._update_clientid_callback is not None:
+            self._update_clientid_callback(self._client_id)
         return self._client_id
 
     @staticmethod
@@ -366,7 +374,7 @@ class CoreAsync:
         if "resultCode" not in out:
             raise exc.APIError("-1", out)
 
-        return self._manage_lge_result(out, True)
+        return self._manage_lge_result(out, True, user_number)
 
     async def lgedm2_post(
         self,
@@ -401,16 +409,23 @@ class CoreAsync:
 
         _LOGGER.debug("lgedm2_post after: %s", out)
 
-        return self._manage_lge_result(out, is_api_v2)
+        return self._manage_lge_result(out, is_api_v2, user_number)
 
-    @staticmethod
-    def _manage_lge_result(result: dict, is_api_v2=False) -> dict:
+    def _manage_lge_result(
+        self, result: dict, is_api_v2=False, user_number: str | None = None
+    ) -> dict:
         """Manage the result from a get or a post to lge server."""
 
         if is_api_v2:
             if "resultCode" in result:
                 code = result["resultCode"]
                 if code != "0000":
+                    if code == "9012":  # this is message "consider using native API"
+                        # we refresh the client_id as work-around for message 9012
+                        _LOGGER.info(
+                            "Refreshing client ID after receiving msg 9012: %s", result
+                        )
+                        self._get_client_id(user_number, True)
                     message = result.get("result") or "ThinQ APIv2 error"
                     if code in API2_ERRORS:
                         raise API2_ERRORS[code](message)
@@ -1638,6 +1653,7 @@ class ClientAsync:
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
+        update_clientid_callback: Callable[[str], None] | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1654,6 +1670,7 @@ class ClientAsync:
             oauth_url=oauth_url,
             session=aiohttp_session,
             client_id=client_id,
+            update_clientid_callback=update_clientid_callback,
         )
         try:
             gateway = await Gateway.discover(core)
