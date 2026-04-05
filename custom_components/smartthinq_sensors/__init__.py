@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 from typing import Any, Callable
 
@@ -100,6 +100,19 @@ _LOGGER = logging.getLogger(__name__)
 OfficialNormalizer = Callable[[dict[str, Any] | None, dict[str, Any] | None], dict[str, Any]]
 
 
+@dataclass
+class LGERuntimeState:
+    """Canonical in-memory runtime state for one wrapped ThinQ device."""
+
+    official_profile: dict[str, Any] | None = None
+    official_state: dict[str, Any] | None = None
+    official_normalized: dict[str, Any] | None = None
+    community_state: Any | None = None
+    last_official_refresh: datetime | None = None
+    last_community_refresh: datetime | None = None
+    last_mqtt_refresh: datetime | None = None
+
+
 @dataclass(frozen=True)
 class OfficialFamilySpec:
     """Configuration for official family enrichment."""
@@ -111,6 +124,10 @@ class OfficialFamilySpec:
     store_state: bool = False
     runtime_primary: bool = False
     community_poll_interval: int = 1
+    force_community_refresh: bool = False
+    official_refresh_window_seconds: int = 60
+    community_refresh_window_seconds: int = 120
+    mqtt_refresh_window_seconds: int = 30
 
 
 OFFICIAL_FAMILY_SPECS: dict[DeviceType, OfficialFamilySpec] = {
@@ -122,6 +139,7 @@ OFFICIAL_FAMILY_SPECS: dict[DeviceType, OfficialFamilySpec] = {
         store_state=True,
         runtime_primary=True,
         community_poll_interval=1,
+        force_community_refresh=True,
     ),
     DeviceType.FAN: OfficialFamilySpec(
         label="fan",
@@ -131,6 +149,7 @@ OFFICIAL_FAMILY_SPECS: dict[DeviceType, OfficialFamilySpec] = {
         store_state=True,
         runtime_primary=True,
         community_poll_interval=4,
+        force_community_refresh=False,
     ),
 }
 
@@ -489,6 +508,8 @@ class LGEDevice:
         self._device = device
         self._hass = hass
         self._client = client
+        self._runtime_state = LGERuntimeState()
+        self._device.bind_runtime_state(self._runtime_state)
         self._root_dev_id = root_dev_id
         self._name = device.name
         self._device_id = device.unique_id
@@ -571,6 +592,60 @@ class LGEDevice:
         return data
 
     @property
+    def runtime_state(self) -> LGERuntimeState:
+        """Return canonical runtime state for this wrapped device."""
+        return self._runtime_state
+
+    def _is_recent(self, timestamp: datetime | None, seconds: int) -> bool:
+        """Return if a timestamp is within the recent threshold."""
+        if timestamp is None:
+            return False
+        return (datetime.utcnow() - timestamp).total_seconds() <= seconds
+
+    def has_recent_official_refresh(self, seconds: int | None = None) -> bool:
+        """Return if official state was refreshed recently."""
+        if seconds is None:
+            spec = OFFICIAL_FAMILY_SPECS.get(self._type)
+            seconds = spec.official_refresh_window_seconds if spec else 60
+        return self._is_recent(self.runtime_state.last_official_refresh, seconds)
+
+    def has_recent_community_refresh(self, seconds: int | None = None) -> bool:
+        """Return if community state was refreshed recently."""
+        if seconds is None:
+            spec = OFFICIAL_FAMILY_SPECS.get(self._type)
+            seconds = spec.community_refresh_window_seconds if spec else 120
+        return self._is_recent(self.runtime_state.last_community_refresh, seconds)
+
+    def has_recent_mqtt_refresh(self, seconds: int | None = None) -> bool:
+        """Return if MQTT-triggered refresh happened recently."""
+        if seconds is None:
+            spec = OFFICIAL_FAMILY_SPECS.get(self._type)
+            seconds = spec.mqtt_refresh_window_seconds if spec else 30
+        return self._is_recent(self.runtime_state.last_mqtt_refresh, seconds)
+
+    def should_prefer_official_runtime(self) -> bool:
+        """Return if official runtime should be treated as the preferred live source."""
+        spec = OFFICIAL_FAMILY_SPECS.get(self._type)
+        if spec is None or not spec.runtime_primary:
+            return False
+        if self.has_recent_mqtt_refresh():
+            return True
+        if self.has_recent_official_refresh():
+            return True
+        return False
+
+    def should_force_community_refresh(self) -> bool:
+        """Return if community refresh should be forced for this device."""
+        if self._state is None:
+            return True
+        spec = OFFICIAL_FAMILY_SPECS.get(self._type)
+        if spec and spec.force_community_refresh:
+            return True
+        if not self.should_prefer_official_runtime():
+            return True
+        return False
+
+    @property
     def coordinator(self) -> DataUpdateCoordinator | None:
         """Return the DataUpdateCoordinator used by this device."""
         return self._coordinator
@@ -638,14 +713,15 @@ class LGEDevice:
                     )
                     self._available = True
                     self._disc_count = 0
-                    self._community_poll_counter += 1
-                    should_poll_community = (
-                        self._state is None
-                        or self._community_poll_counter >= spec.community_poll_interval
-                    )
-                    if not should_poll_community:
-                        return
-                    self._community_poll_counter = 0
+                    if self.should_prefer_official_runtime():
+                        self._community_poll_counter += 1
+                        should_poll_community = (
+                            self.should_force_community_refresh()
+                            or self._community_poll_counter >= spec.community_poll_interval
+                        )
+                        if not should_poll_community:
+                            return
+                        self._community_poll_counter = 0
 
             # method poll should return None if status is not yet available
             # or due to temporary connection failure that will be restored
@@ -691,6 +767,8 @@ class LGEDevice:
             # _LOGGER.debug('Status attributes: %s', l)
             self._disc_count = 0
             self._state = state
+            self.runtime_state.community_state = state
+            self.runtime_state.last_community_refresh = datetime.utcnow()
 
 
 async def _refresh_official_lge_device(
@@ -729,6 +807,7 @@ async def _refresh_official_lge_device(
             )
             return False
         dev._official_profile = profile
+        lge_device.runtime_state.official_profile = profile
 
     state = await client.official_get_device_state(official_device_id)
     if spec.require_state and not isinstance(state, dict):
@@ -763,7 +842,10 @@ async def _refresh_official_lge_device(
 
     if spec.store_state:
         dev._official_state = state
+        lge_device.runtime_state.official_state = state
     dev._official_normalized = normalized
+    lge_device.runtime_state.official_normalized = normalized
+    lge_device.runtime_state.last_official_refresh = datetime.utcnow()
 
     if spec.label == "AC":
         _LOGGER.info(

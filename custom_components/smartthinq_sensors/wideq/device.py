@@ -402,6 +402,7 @@ class Device:
         self._official_profile = None
         self._official_state = None
         self._official_normalized = None
+        self._lge_runtime_state = None
         self._should_poll = device_info.platform_type == PlatformType.THINQ1
         self._mon = Monitor(client, device_info)
         self._control_set = 0
@@ -455,26 +456,37 @@ class Device:
         """Return available features."""
         return self._available_features
 
+    def bind_runtime_state(self, runtime_state) -> None:
+        """Bind canonical wrapped runtime state to this raw device."""
+        self._lge_runtime_state = runtime_state
+
     @property
     def official_profile(self):
         """Return cached official device profile, if available."""
+        if self._lge_runtime_state and self._lge_runtime_state.official_profile is not None:
+            return self._lge_runtime_state.official_profile
         return self._official_profile
 
     @property
     def official_state(self):
         """Return cached official device state, if available."""
+        if self._lge_runtime_state and self._lge_runtime_state.official_state is not None:
+            return self._lge_runtime_state.official_state
         return self._official_state
 
     @property
     def official_normalized(self):
         """Return cached normalized official data, if available."""
+        if self._lge_runtime_state and self._lge_runtime_state.official_normalized is not None:
+            return self._lge_runtime_state.official_normalized
         return self._official_normalized
 
     def official_normalized_value(self, key: str, default=None):
         """Return one normalized official value by key."""
-        if not isinstance(self._official_normalized, dict):
+        official = self.official_normalized
+        if not isinstance(official, dict):
             return default
-        return self._official_normalized.get(key, default)
+        return official.get(key, default)
 
     @property
     def status(self) -> DeviceStatus | None:

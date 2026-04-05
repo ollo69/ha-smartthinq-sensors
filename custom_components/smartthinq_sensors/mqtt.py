@@ -171,4 +171,5 @@ class ThinQMQTTHandler:
 
         refreshed = await self._refresh_callback(self._client, lge_dev)
         if refreshed:
+            lge_dev.runtime_state.last_mqtt_refresh = datetime.utcnow()
             lge_dev.async_set_updated()
