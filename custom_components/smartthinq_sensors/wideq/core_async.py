@@ -1984,6 +1984,20 @@ class ClientAsync:
             ) as resp:
                 if resp.status != 200:
                     body = await resp.text(errors="replace")
+                    if resp.status == 416:
+                        parsed = None
+                        try:
+                            parsed = json.loads(body)
+                        except json.JSONDecodeError:
+                            parsed = None
+                        error = parsed.get("error") if isinstance(parsed, dict) else None
+                        if isinstance(error, dict) and str(error.get("code")) == "1222":
+                            _LOGGER.debug(
+                                "LG official device state unavailable for %s (not connected/off): %s",
+                                device_id,
+                                body[:400],
+                            )
+                            return None
                     _LOGGER.warning(
                         "LG official device state failed for %s status=%s body=%s",
                         device_id,

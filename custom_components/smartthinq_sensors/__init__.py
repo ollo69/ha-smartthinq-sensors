@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import timedelta
 import logging
+from typing import Any, Callable
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
@@ -30,6 +32,8 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
+from thinqconnect import ThinQApi, ThinQAPIException
+
 from .const import (
     CLIENT,
     CONF_LANGUAGE,
@@ -43,9 +47,13 @@ from .const import (
     LGE_DISCOVERY_NEW,
     MIN_HA_MAJ_VER,
     MIN_HA_MIN_VER,
+    MQTT_SUBSCRIPTION_INTERVAL,
+    OFFICIAL_LGE_DEVICES,
     STARTUP,
+    THINQ_MQTT,
     __min_ha_version__,
 )
+from .mqtt import ThinQMQTTHandler
 from .wideq import (
     DeviceInfo as ThinQDeviceInfo,
     DeviceType,
@@ -88,6 +96,43 @@ UNSUPPORTED_DEVICES = "unsupported_devices"
 
 SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
+
+OfficialNormalizer = Callable[[dict[str, Any] | None, dict[str, Any] | None], dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class OfficialFamilySpec:
+    """Configuration for official family enrichment."""
+
+    label: str
+    normalize: OfficialNormalizer
+    require_profile: bool = True
+    require_state: bool = True
+    store_state: bool = False
+    runtime_primary: bool = False
+    community_poll_interval: int = 1
+
+
+OFFICIAL_FAMILY_SPECS: dict[DeviceType, OfficialFamilySpec] = {
+    DeviceType.AC: OfficialFamilySpec(
+        label="AC",
+        normalize=normalize_official_ac_read,
+        require_profile=True,
+        require_state=True,
+        store_state=True,
+        runtime_primary=False,
+        community_poll_interval=1,
+    ),
+    DeviceType.FAN: OfficialFamilySpec(
+        label="fan",
+        normalize=normalize_official_fan_read,
+        require_profile=True,
+        require_state=True,
+        store_state=True,
+        runtime_primary=True,
+        community_poll_interval=4,
+    ),
+}
 
 
 class LGEAuthentication:
@@ -334,8 +379,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await client.close()
         raise ConfigEntryNotReady("ThinQ platform not ready: no devices found.")
 
-    await _enrich_official_ac_profiles(client, lge_devices)
-    await _enrich_official_fan_profiles(client, lge_devices)
+    await _enrich_official_families(client, lge_devices)
+    official_lge_devices = _build_official_lge_device_map(client, lge_devices)
 
     # remove device not available anymore
     dev_ids = [v for ids in discovered_devices.values() for v in ids]
@@ -365,8 +410,48 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         LGE_DEVICES: lge_devices,
         UNSUPPORTED_DEVICES: unsupported_devices,
         DISCOVERED_DEVICES: discovered_devices,
+        OFFICIAL_LGE_DEVICES: official_lge_devices,
     }
     await hass.config_entries.async_forward_entry_setups(entry, SMARTTHINQ_PLATFORMS)
+
+    if official_pat and official_client_id:
+        thinq_api = ThinQApi(
+            session=async_get_clientsession(hass),
+            access_token=official_pat,
+            country_code=region,
+            client_id=official_client_id,
+        )
+        mqtt_handler = ThinQMQTTHandler(
+            hass=hass,
+            official_api=thinq_api,
+            client=client,
+            official_client_id=official_client_id,
+            refresh_callback=_refresh_official_lge_device_runtime,
+        )
+        try:
+            mqtt_connected = await mqtt_handler.async_connect()
+        except (AttributeError, ThinQAPIException, TypeError, ValueError) as exc:
+            _LOGGER.warning("Failed to set up ThinQ MQTT connection: %s", exc)
+        else:
+            if mqtt_connected:
+                await mqtt_handler.async_start_subscribes()
+                hass.data[DOMAIN][THINQ_MQTT] = mqtt_handler
+                entry.async_on_unload(
+                    async_track_time_interval(
+                        hass,
+                        mqtt_handler.async_refresh_subscribe,
+                        MQTT_SUBSCRIPTION_INTERVAL,
+                        cancel_on_shutdown=True,
+                    )
+                )
+                entry.async_on_unload(
+                    hass.bus.async_listen_once(
+                        EVENT_HOMEASSISTANT_STOP,
+                        mqtt_handler.async_disconnect,
+                    )
+                )
+            else:
+                _LOGGER.error("Failed to set up ThinQ MQTT connection")
 
     start_devices_discovery(hass, entry, client)
 
@@ -380,6 +465,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     ):
         data = hass.data.pop(DOMAIN)
         reload = data.get(SIGNAL_RELOAD_ENTRY, 0)
+        mqtt_handler = data.get(THINQ_MQTT)
+        if mqtt_handler is not None:
+            await mqtt_handler.async_disconnect()
         if reload > 0:
             hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: reload}
         await data[CLIENT].close()
@@ -390,12 +478,17 @@ class LGEDevice:
     """Generic class that represents a LGE device."""
 
     def __init__(
-        self, device: ThinQDevice, hass: HomeAssistant, root_dev_id: str | None = None
+        self,
+        device: ThinQDevice,
+        hass: HomeAssistant,
+        client: ClientAsync,
+        root_dev_id: str | None = None,
     ):
         """initialize a LGE Device."""
 
         self._device = device
         self._hass = hass
+        self._client = client
         self._root_dev_id = root_dev_id
         self._name = device.name
         self._device_id = device.unique_id
@@ -411,6 +504,7 @@ class LGEDevice:
         self._state = None
         self._coordinator: DataUpdateCoordinator | None = None
         self._disc_count = 0
+        self._community_poll_counter = 0
         self._available = True
 
     @property
@@ -526,7 +620,33 @@ class LGEDevice:
         if self._disc_count < MAX_DISC_COUNT:
             self._disc_count += 1
 
+        client = self._client
+        spec = OFFICIAL_FAMILY_SPECS.get(self._type)
+
         try:
+            if spec and spec.runtime_primary:
+                refreshed = await _refresh_official_lge_device(
+                    client=client,
+                    lge_device=self,
+                    spec=spec,
+                    include_profile=self._device.official_profile is None,
+                )
+                if refreshed:
+                    _LOGGER.debug(
+                        "ThinQ official runtime state updated for %s",
+                        self._name,
+                    )
+                    self._available = True
+                    self._disc_count = 0
+                    self._community_poll_counter += 1
+                    should_poll_community = (
+                        self._state is None
+                        or self._community_poll_counter >= spec.community_poll_interval
+                    )
+                    if not should_poll_community:
+                        return
+                    self._community_poll_counter = 0
+
             # method poll should return None if status is not yet available
             # or due to temporary connection failure that will be restored
             state = await self._device.poll()
@@ -573,75 +693,227 @@ class LGEDevice:
             self._state = state
 
 
-async def _enrich_official_ac_profiles(
+async def _refresh_official_lge_device(
     client: ClientAsync,
-    lge_devices: dict[DeviceType, list[LGEDevice]],
-) -> None:
-    """Fetch official PAT-host AC profiles after device setup, when official cache is ready."""
+    lge_device: LGEDevice,
+    spec: OfficialFamilySpec,
+    *,
+    include_profile: bool = False,
+) -> bool:
+    """Refresh official profile/state and normalized data for one wrapped LGE device."""
+    dev = lge_device.device
+    community_device_id = dev.device_info.device_id
+
     if not client._official_discovered_devices:
         await client.refresh_official_discovery_cache()
 
-    for lge_dev in lge_devices.get(DeviceType.AC, []):
+    official_device_id = client.official_device_id_for(dev.device_info)
+    if not official_device_id:
+        _LOGGER.debug(
+            "LG official %s runtime mapping unavailable for community_device=%s",
+            spec.label,
+            community_device_id,
+        )
+        return False
+
+    profile = dev.official_profile
+    if include_profile or (spec.require_profile and not isinstance(profile, dict)):
+        profile = await client.official_get_device_profile(official_device_id)
+        if spec.require_profile and not isinstance(profile, dict):
+            _LOGGER.warning(
+                "LG official %s runtime profile missing/invalid for community_device=%s official_device=%s profile=%r",
+                spec.label,
+                community_device_id,
+                official_device_id,
+                profile,
+            )
+            return False
+        dev._official_profile = profile
+
+    state = await client.official_get_device_state(official_device_id)
+    if spec.require_state and not isinstance(state, dict):
+        if spec.label == "fan":
+            _LOGGER.info(
+                "LG official %s runtime state unavailable for community_device=%s official_device=%s state=%r",
+                spec.label,
+                community_device_id,
+                official_device_id,
+                state,
+            )
+        else:
+            _LOGGER.warning(
+                "LG official %s runtime state missing/invalid for community_device=%s official_device=%s state=%r",
+                spec.label,
+                community_device_id,
+                official_device_id,
+                state,
+            )
+        return False
+
+    try:
+        normalized = spec.normalize(profile, state)
+    except Exception:
+        _LOGGER.exception(
+            "LG official %s runtime normalize failed for community_device=%s official_device=%s",
+            spec.label,
+            community_device_id,
+            official_device_id,
+        )
+        return False
+
+    if spec.store_state:
+        dev._official_state = state
+    dev._official_normalized = normalized
+
+    _LOGGER.debug(
+        "LG official %s runtime refresh community_device=%s official_device=%s is_on=%s fan_mode=%s hvac_mode=%s",
+        spec.label,
+        community_device_id,
+        official_device_id,
+        normalized.get("is_on") if isinstance(normalized, dict) else None,
+        normalized.get("fan_mode") if isinstance(normalized, dict) else None,
+        normalized.get("hvac_mode") if isinstance(normalized, dict) else None,
+    )
+    return True
+
+
+def _build_official_lge_device_map(
+    client: ClientAsync,
+    lge_devices: dict[DeviceType, list[LGEDevice]],
+) -> dict[str, LGEDevice]:
+    """Build a lookup map from official device ID to wrapped LGEDevice."""
+    official_devices: dict[str, LGEDevice] = {}
+
+    for dev_list in lge_devices.values():
+        for lge_dev in dev_list:
+            official_device_id = client.official_device_id_for(
+                lge_dev.device.device_info
+            )
+            if official_device_id:
+                official_devices[official_device_id] = lge_dev
+
+    return official_devices
+
+
+async def _refresh_official_lge_device_runtime(
+    client: ClientAsync,
+    lge_device: LGEDevice,
+) -> bool:
+    """Refresh official runtime data for one wrapped device using family spec."""
+    spec = OFFICIAL_FAMILY_SPECS.get(lge_device.type)
+    if spec is None:
+        return False
+
+    return await _refresh_official_lge_device(
+        client=client,
+        lge_device=lge_device,
+        spec=spec,
+        include_profile=lge_device.device.official_profile is None,
+    )
+
+
+async def _enrich_official_family(
+    client: ClientAsync,
+    lge_devices: dict[DeviceType, list[LGEDevice]],
+    device_type: DeviceType,
+    spec: OfficialFamilySpec,
+) -> None:
+    """Fetch official profile/state and attach normalized data for one device family."""
+    if not client._official_discovered_devices:
+        await client.refresh_official_discovery_cache()
+
+    for lge_dev in lge_devices.get(device_type, []):
         dev = lge_dev.device
+        community_device_id = dev.device_info.device_id
+
         official_device_id = client.official_device_id_for(dev.device_info)
         if not official_device_id:
             _LOGGER.warning(
-                "LG official AC post-setup mapping failed for community_device=%s",
-                dev.device_info.device_id,
+                "LG official %s mapping failed for community_device=%s",
+                spec.label,
+                community_device_id,
             )
             continue
 
         profile = await client.official_get_device_profile(official_device_id)
-        if not isinstance(profile, dict):
+        if spec.require_profile and not isinstance(profile, dict):
             _LOGGER.warning(
-                "LG official AC post-setup profile fetch failed for community_device=%s official_device=%s",
-                dev.device_info.device_id,
+                "LG official %s profile missing/invalid for community_device=%s official_device=%s profile=%r",
+                spec.label,
+                community_device_id,
+                official_device_id,
+                profile,
+            )
+            continue
+
+        state = await client.official_get_device_state(official_device_id)
+        if spec.require_state and not isinstance(state, dict):
+            _LOGGER.warning(
+                "LG official %s state missing/invalid for community_device=%s official_device=%s state=%r",
+                spec.label,
+                community_device_id,
+                official_device_id,
+                state,
+            )
+            continue
+
+        try:
+            normalized = spec.normalize(profile, state)
+        except Exception:
+            _LOGGER.exception(
+                "LG official %s normalize failed for community_device=%s official_device=%s",
+                spec.label,
+                community_device_id,
                 official_device_id,
             )
             continue
 
         dev._official_profile = profile
-        props = profile.get("property", {})
-        _LOGGER.warning(
-            "LG official AC post-setup profile community_device=%s official_device=%s property_keys=%s has_operation=%s has_job_mode=%s has_temperature=%s has_airflow=%s has_wind_direction=%s",
-            dev.device_info.device_id,
+        if spec.store_state:
+            dev._official_state = state
+        dev._official_normalized = normalized
+
+        _LOGGER.debug(
+            "LG official %s normalized community_device=%s official_device=%s data=%s",
+            spec.label,
+            community_device_id,
             official_device_id,
-            sorted(props.keys()) if isinstance(props, dict) else None,
-            isinstance(props, dict) and "operation" in props,
-            isinstance(props, dict) and "airConJobMode" in props,
-            isinstance(props, dict) and "temperature" in props,
-            isinstance(props, dict) and "airFlow" in props,
-            isinstance(props, dict) and "windDirection" in props,
+            normalized,
         )
 
-        state = await client.official_get_device_state(official_device_id)
-        if isinstance(state, dict):
-            normalized = normalize_official_ac_read(profile, state)
-            dev._official_normalized = normalized
-            _LOGGER.warning(
-                "LG official AC post-setup state community_device=%s official_device=%s run_state=%s op_mode=%s current_temp=%s target_temp=%s fan=%s swing_ud=%s swing_lr=%s",
-                dev.device_info.device_id,
-                official_device_id,
-                (state.get("runState") or {}).get("currentState"),
-                ((state.get("operation") or {}).get("airConOperationMode") or (state.get("airConJobMode") or {}).get("currentJobMode")),
-                (state.get("temperature") or {}).get("currentTemperature"),
-                (state.get("temperature") or {}).get("targetTemperature"),
-                (state.get("airFlow") or {}).get("windStrength"),
-                (state.get("windDirection") or {}).get("rotateUpDown"),
-                (state.get("windDirection") or {}).get("rotateLeftRight"),
-            )
-            _LOGGER.warning(
-                "LG official AC normalized community_device=%s official_device=%s data=%s",
-                dev.device_info.device_id,
-                official_device_id,
-                normalized,
-            )
-        else:
-            _LOGGER.warning(
-                "LG official AC post-setup state fetch failed for community_device=%s official_device=%s",
-                dev.device_info.device_id,
-                official_device_id,
-            )
+
+async def _enrich_official_families(
+    client: ClientAsync,
+    lge_devices: dict[DeviceType, list[LGEDevice]],
+    device_types: list[DeviceType] | None = None,
+) -> None:
+    """Fetch official profile/state and attach normalized data for supported families."""
+    target_types = device_types or list(OFFICIAL_FAMILY_SPECS.keys())
+
+    for device_type in target_types:
+        spec = OFFICIAL_FAMILY_SPECS.get(device_type)
+        if spec is None:
+            continue
+
+        await _enrich_official_family(
+            client=client,
+            lge_devices=lge_devices,
+            device_type=device_type,
+            spec=spec,
+        )
+
+
+async def _enrich_official_ac_profiles(
+    client: ClientAsync,
+    lge_devices: dict[DeviceType, list[LGEDevice]],
+) -> None:
+    """Fetch official PAT-host AC profiles after device setup."""
+    await _enrich_official_family(
+        client=client,
+        lge_devices=lge_devices,
+        device_type=DeviceType.AC,
+        spec=OFFICIAL_FAMILY_SPECS[DeviceType.AC],
+    )
 
 
 async def _enrich_official_fan_profiles(
@@ -649,54 +921,12 @@ async def _enrich_official_fan_profiles(
     lge_devices: dict[DeviceType, list[LGEDevice]],
 ) -> None:
     """Fetch official PAT-host fan profiles/state after device setup."""
-    if not client._official_discovered_devices:
-        await client.refresh_official_discovery_cache()
-
-    for lge_dev in lge_devices.get(DeviceType.FAN, []):
-        dev = lge_dev.device
-        official_device_id = client.official_device_id_for(dev.device_info)
-        if not official_device_id:
-            _LOGGER.warning(
-                "LG official fan post-setup mapping failed for community_device=%s",
-                dev.device_info.device_id,
-            )
-            continue
-
-        profile = await client.official_get_device_profile(official_device_id)
-        if not isinstance(profile, dict):
-            _LOGGER.warning(
-                "LG official fan post-setup profile fetch failed for community_device=%s official_device=%s",
-                dev.device_info.device_id,
-                official_device_id,
-            )
-            continue
-
-        state = await client.official_get_device_state(official_device_id)
-        if not isinstance(state, dict):
-            _LOGGER.warning(
-                "LG official fan post-setup state fetch failed for community_device=%s official_device=%s",
-                dev.device_info.device_id,
-                official_device_id,
-            )
-            continue
-
-        normalized = normalize_official_fan_read(profile, state)
-        dev._official_profile = profile
-        dev._official_normalized = normalized
-
-        props = profile.get("property", {})
-        _LOGGER.warning(
-            "LG official fan post-setup profile community_device=%s official_device=%s property_keys=%s",
-            dev.device_info.device_id,
-            official_device_id,
-            sorted(props.keys()) if isinstance(props, dict) else None,
-        )
-        _LOGGER.warning(
-            "LG official fan normalized community_device=%s official_device=%s data=%s",
-            dev.device_info.device_id,
-            official_device_id,
-            normalized,
-        )
+    await _enrich_official_family(
+        client=client,
+        lge_devices=lge_devices,
+        device_type=DeviceType.FAN,
+        spec=OFFICIAL_FAMILY_SPECS[DeviceType.FAN],
+    )
 
 
 async def lge_devices_setup(
@@ -735,7 +965,7 @@ async def lge_devices_setup(
     ):
         """Initialize a new device."""
         root_dev = None if root_dev_id == lge_dev.unique_id else root_dev_id
-        dev = LGEDevice(lge_dev, hass, root_dev)
+        dev = LGEDevice(lge_dev, hass, client, root_dev)
         if not await dev.init_device():
             _LOGGER.error(
                 "Error initializing LGE Device. Name: %s - Type: %s - InfoUrl: %s",

@@ -1,5 +1,7 @@
 """Constants for LGE ThinQ custom component."""
 
+from datetime import timedelta
+
 __version__ = "0.41.2"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
 ISSUE_URL = f"{PROJECT_URL}issues"
@@ -42,6 +44,10 @@ CONF_OFFICIAL_CLIENT_ID = "official_client_id"
 
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"
+OFFICIAL_LGE_DEVICES = "official_lge_devices"
+THINQ_MQTT = "thinq_mqtt"
+
+MQTT_SUBSCRIPTION_INTERVAL = timedelta(hours=12)
 
 LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
 

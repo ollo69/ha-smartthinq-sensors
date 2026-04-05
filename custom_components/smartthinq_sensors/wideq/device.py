@@ -400,6 +400,8 @@ class Device:
         self._product_lang_pack = None
         self._local_lang_pack = None
         self._official_profile = None
+        self._official_state = None
+        self._official_normalized = None
         self._should_poll = device_info.platform_type == PlatformType.THINQ1
         self._mon = Monitor(client, device_info)
         self._control_set = 0
@@ -457,6 +459,22 @@ class Device:
     def official_profile(self):
         """Return cached official device profile, if available."""
         return self._official_profile
+
+    @property
+    def official_state(self):
+        """Return cached official device state, if available."""
+        return self._official_state
+
+    @property
+    def official_normalized(self):
+        """Return cached normalized official data, if available."""
+        return self._official_normalized
+
+    def official_normalized_value(self, key: str, default=None):
+        """Return one normalized official value by key."""
+        if not isinstance(self._official_normalized, dict):
+            return default
+        return self._official_normalized.get(key, default)
 
     @property
     def status(self) -> DeviceStatus | None:

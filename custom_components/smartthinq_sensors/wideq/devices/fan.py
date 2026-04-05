@@ -43,11 +43,19 @@ def normalize_official_fan_read(profile: dict | None, state: dict | None) -> dic
         or _dget(profile, "property", "airFlow", "windStrength", "value", "r")
         or []
     )
-    power_state = _dget(state, "operation", "ceilingfanOperationMode")
+    power_state = (
+        _dget(state, "operation", "ceilingfanOperationMode")
+        or _dget(state, "operation", "fanOperationMode")
+        or _dget(state, "operation", "currentOperation")
+    )
+    fan_mode = (
+        _dget(state, "airFlow", "windStrength")
+        or _dget(state, "airFlow", "fanSpeed")
+    )
     return {
         "power_state": power_state,
         "is_on": power_state == "POWER_ON",
-        "fan_mode": _dget(state, "airFlow", "windStrength"),
+        "fan_mode": fan_mode,
         "supported_fan_modes": list(supported_fan_modes)
         if isinstance(supported_fan_modes, list)
         else [],
@@ -85,14 +93,12 @@ class FanDevice(Device):
 
     def __init__(self, client: ClientAsync, device_info: DeviceInfo):
         super().__init__(client, device_info, FanStatus(self))
-        self._official_normalized = None
 
     @cached_property
     def fan_speeds(self) -> list:
         """Available fan speeds."""
-        official = getattr(self, "_official_normalized", None)
-        if official and official.get("supported_fan_modes"):
-            return official["supported_fan_modes"]
+        if supported_fan_modes := self.official_normalized_value("supported_fan_modes"):
+            return supported_fan_modes
         return self._get_property_values(SUPPORT_WIND_STRENGTH, FanSpeed)
 
     @property
@@ -188,6 +194,8 @@ class FanStatus(DeviceStatus):
     @property
     def is_on(self):
         """Return if device is on."""
+        if (official_is_on := self._device.official_normalized_value("is_on")) is not None:
+            return official_is_on
         op_mode = self._get_operation()
         if not op_mode:
             return False
@@ -204,6 +212,8 @@ class FanStatus(DeviceStatus):
     @property
     def fan_speed(self):
         """Return current fan speed."""
+        if official_fan_mode := self._device.official_normalized_value("fan_mode"):
+            return official_fan_mode
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
