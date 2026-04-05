@@ -120,7 +120,7 @@ OFFICIAL_FAMILY_SPECS: dict[DeviceType, OfficialFamilySpec] = {
         require_profile=True,
         require_state=True,
         store_state=True,
-        runtime_primary=False,
+        runtime_primary=True,
         community_poll_interval=1,
     ),
     DeviceType.FAN: OfficialFamilySpec(
@@ -765,15 +765,27 @@ async def _refresh_official_lge_device(
         dev._official_state = state
     dev._official_normalized = normalized
 
-    _LOGGER.debug(
-        "LG official %s runtime refresh community_device=%s official_device=%s is_on=%s fan_mode=%s hvac_mode=%s",
-        spec.label,
-        community_device_id,
-        official_device_id,
-        normalized.get("is_on") if isinstance(normalized, dict) else None,
-        normalized.get("fan_mode") if isinstance(normalized, dict) else None,
-        normalized.get("hvac_mode") if isinstance(normalized, dict) else None,
-    )
+    if spec.label == "AC":
+        _LOGGER.info(
+            "LG official AC runtime refresh community_device=%s official_device=%s is_on=%s hvac_mode=%s current_temperature=%s target_temperature=%s fan_mode=%s",
+            community_device_id,
+            official_device_id,
+            normalized.get("is_on") if isinstance(normalized, dict) else None,
+            normalized.get("hvac_mode") if isinstance(normalized, dict) else None,
+            normalized.get("current_temperature") if isinstance(normalized, dict) else None,
+            normalized.get("target_temperature") if isinstance(normalized, dict) else None,
+            normalized.get("fan_mode") if isinstance(normalized, dict) else None,
+        )
+    else:
+        _LOGGER.debug(
+            "LG official %s runtime refresh community_device=%s official_device=%s is_on=%s fan_mode=%s hvac_mode=%s",
+            spec.label,
+            community_device_id,
+            official_device_id,
+            normalized.get("is_on") if isinstance(normalized, dict) else None,
+            normalized.get("fan_mode") if isinstance(normalized, dict) else None,
+            normalized.get("hvac_mode") if isinstance(normalized, dict) else None,
+        )
     return True
 
 
