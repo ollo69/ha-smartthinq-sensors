@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 import base64
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
@@ -249,7 +249,9 @@ class CoreAsync:
 
         hash_object = hashlib.sha256()
         hash_object.update(
-            (user_number + datetime.utcnow().strftime("%Y%m%d%H%M%S")).encode("utf8")
+            (user_number + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")).encode(
+                "utf8"
+            )
         )
         self._client_id = hash_object.hexdigest()
         if self._update_clientid_callback is not None:
@@ -648,7 +650,7 @@ class CoreAsync:
         }
 
         parse_url = urlparse(V2_EMP_SESS_URL)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{parse_url.path}?{urlencode(emp_data)}"
         signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
@@ -691,7 +693,7 @@ class CoreAsync:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_USER_INFO)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         sig = self._oauth2_signature(f"{V2_USER_INFO}\n{timestamp}", OAUTH_SECRET_KEY)
 
         headers = {
@@ -730,7 +732,7 @@ class CoreAsync:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_AUTH_PATH)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{V2_AUTH_PATH}?{urlencode(data)}"
         sig = self._oauth2_signature(f"{req_url}\n{timestamp}", OAUTH_SECRET_KEY)
 
@@ -917,7 +919,9 @@ class Auth:
             int(token_validity) if token_validity else DEFAULT_TOKEN_VALIDITY
         )
         self.user_number = user_number
-        self._token_created_on = datetime.utcnow() if access_token else datetime.min
+        self._token_created_on = (
+            datetime.now(timezone.utc) if access_token else datetime.min
+        )
 
     @property
     def gateway(self) -> Gateway:
@@ -1056,7 +1060,7 @@ class Auth:
 
         get_new_token: bool = force_refresh or (access_token is None)
         if not get_new_token:
-            diff = (datetime.utcnow() - self._token_created_on).total_seconds()
+            diff = (datetime.now(timezone.utc) - self._token_created_on).total_seconds()
             if (self.token_validity - diff) <= TOKEN_EXP_LIMIT:
                 get_new_token = True
 
@@ -1450,7 +1454,7 @@ class ClientAsync:
         self._auth: Auth = auth
         self._session: Session | None = session
         self._connected = True
-        self._last_device_update = datetime.utcnow()
+        self._last_device_update = datetime.now(timezone.utc)
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
@@ -1574,7 +1578,7 @@ class ClientAsync:
     async def refresh_devices(self):
         """Refresh the devices' information for this client."""
         async with self._lock:
-            call_time = datetime.utcnow()
+            call_time = datetime.now(timezone.utc)
             difference = (call_time - self._last_device_update).total_seconds()
             if difference <= MIN_TIME_BETWEEN_UPDATE:
                 return
