@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
+
 from ..const import BIT_OFF, RangeFeatures, StateOptions, TemperatureUnit
 from ..core_async import ClientAsync
 from ..device import Device, DeviceStatus
@@ -126,6 +128,111 @@ class RangeStatus(DeviceStatus):
                 self._get_oven_temp_unit()
 
         return target_temp
+
+    def _get_time_delta(
+        self, hour_key: str, min_key: str, sec_key: str
+    ) -> timedelta | None:
+        """Get the time remaining as a timedelta."""
+        try:
+            hours = self.to_int_or_none(self._data.get(hour_key))
+            mins = self.to_int_or_none(self._data.get(min_key))
+            secs = self.to_int_or_none(self._data.get(sec_key))
+
+            if any(x is not None for x in (hours, mins, secs)):
+                return timedelta(hours=hours or 0, minutes=mins or 0, seconds=secs or 0)
+        except (ValueError, TypeError):
+            pass
+        return None
+
+    def _get_finish_time(self, delta: timedelta | None) -> datetime | None:
+        """Get the finish time based on the time delta."""
+        if delta is not None:
+            now = datetime.now().astimezone()
+            if delta.total_seconds() > 0:
+                return now + delta
+            # Return start of current day when timer is 0/off
+            return now.replace(hour=0, minute=0, second=0, microsecond=0).astimezone()
+        return None
+
+    @property
+    def oven_upper_timer_time(self) -> datetime | None:
+        """Get the upper timer finish time."""
+        delta = self._get_time_delta("UpperTimerHour", "UpperTimerMin", "UpperTimerSec")
+        return self._update_feature(
+            RangeFeatures.OVEN_UPPER_TIMER_TIME, self._get_finish_time(delta), False
+        )
+
+    @property
+    def oven_upper_cook_timer_time(self) -> datetime | None:
+        """Get the upper cook time finish time."""
+        delta = self._get_time_delta(
+            "UpperCookTimeHour", "UpperCookTimeMin", "UpperCookTimeSec"
+        )
+        return self._update_feature(
+            RangeFeatures.OVEN_UPPER_COOK_TIMER_TIME,
+            self._get_finish_time(delta),
+            False,
+        )
+
+    @property
+    def oven_lower_timer_time(self) -> datetime | None:
+        """Get the lower timer finish time."""
+        delta = self._get_time_delta("LowerTimerHour", "LowerTimerMin", "LowerTimerSec")
+        return self._update_feature(
+            RangeFeatures.OVEN_LOWER_TIMER_TIME, self._get_finish_time(delta), False
+        )
+
+    @property
+    def oven_lower_cook_timer_time(self) -> datetime | None:
+        """Get the lower cook time finish time."""
+        delta = self._get_time_delta(
+            "LowerCookTimeHour", "LowerCookTimeMin", "LowerCookTimeSec"
+        )
+        return self._update_feature(
+            RangeFeatures.OVEN_LOWER_COOK_TIMER_TIME,
+            self._get_finish_time(delta),
+            False,
+        )
+
+    @property
+    def oven_upper_timer_state(self) -> str | None:
+        """Get the upper timer state."""
+        delta = self._get_time_delta("UpperTimerHour", "UpperTimerMin", "UpperTimerSec")
+        state = (
+            StateOptions.ON if delta and delta.total_seconds() > 0 else StateOptions.OFF
+        )
+        return self._update_feature(RangeFeatures.OVEN_UPPER_TIMER_STATE, state)
+
+    @property
+    def oven_upper_cook_timer_state(self) -> str | None:
+        """Get the upper cook time state."""
+        delta = self._get_time_delta(
+            "UpperCookTimeHour", "UpperCookTimeMin", "UpperCookTimeSec"
+        )
+        state = (
+            StateOptions.ON if delta and delta.total_seconds() > 0 else StateOptions.OFF
+        )
+        return self._update_feature(RangeFeatures.OVEN_UPPER_COOK_TIMER_STATE, state)
+
+    @property
+    def oven_lower_timer_state(self) -> str | None:
+        """Get the lower timer state."""
+        delta = self._get_time_delta("LowerTimerHour", "LowerTimerMin", "LowerTimerSec")
+        state = (
+            StateOptions.ON if delta and delta.total_seconds() > 0 else StateOptions.OFF
+        )
+        return self._update_feature(RangeFeatures.OVEN_LOWER_TIMER_STATE, state)
+
+    @property
+    def oven_lower_cook_timer_state(self) -> str | None:
+        """Get the lower cook time state."""
+        delta = self._get_time_delta(
+            "LowerCookTimeHour", "LowerCookTimeMin", "LowerCookTimeSec"
+        )
+        state = (
+            StateOptions.ON if delta and delta.total_seconds() > 0 else StateOptions.OFF
+        )
+        return self._update_feature(RangeFeatures.OVEN_LOWER_COOK_TIMER_STATE, state)
 
     @property
     def is_on(self):
@@ -313,4 +420,12 @@ class RangeStatus(DeviceStatus):
             self.oven_upper_state,
             self.oven_upper_mode,
             self.oven_upper_current_temp,
+            self.oven_upper_timer_time,
+            self.oven_upper_cook_timer_time,
+            self.oven_lower_timer_time,
+            self.oven_lower_cook_timer_time,
+            self.oven_upper_timer_state,
+            self.oven_upper_cook_timer_state,
+            self.oven_lower_timer_state,
+            self.oven_lower_cook_timer_state,
         ]
