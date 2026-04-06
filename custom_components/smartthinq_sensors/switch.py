@@ -92,11 +92,26 @@ REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
 )
 AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.POWER,
+        name="Power",
+        icon="mdi:power",
+        turn_off_fn=lambda x: x.device.power(False),
+        turn_on_fn=lambda x: x.device.power(True),
+        value_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AIRCLEAN,
         name="Ionizer",
         icon="mdi:pine-tree",
         turn_off_fn=lambda x: x.device.set_mode_airclean(False),
         turn_on_fn=lambda x: x.device.set_mode_airclean(True),
+    ),
+    ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.UVNANO,
+        name="UVnano",
+        icon="mdi:flash",
+        turn_off_fn=lambda x: x.device.set_uv_nano(False),
+        turn_on_fn=lambda x: x.device.set_uv_nano(True),
     ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_JET,
@@ -161,6 +176,11 @@ def _switch_exist(
     if feature in lge_device.available_features:
         return True
 
+    # Special case for UVnano - check if device supports it directly
+    if feature == AirConditionerFeatures.UVNANO:
+        if hasattr(lge_device.device, 'is_uv_nano_supported'):
+            return lge_device.device.is_uv_nano_supported
+    
     return False
 
 
