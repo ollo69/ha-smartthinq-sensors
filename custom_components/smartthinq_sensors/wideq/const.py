@@ -80,6 +80,7 @@ class DehumidifierFeatures(StrEnum):
     HUMIDITY = "humidity"
     TARGET_HUMIDITY = "target_humidity"
     WATER_TANK_FULL = "water_tank_full"
+    NOTIFICATION_LIGHT = "notification_light"
 
 
 class RangeFeatures(StrEnum):
