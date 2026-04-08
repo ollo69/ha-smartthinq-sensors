@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import datetime
+from collections.abc import Callable
+from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
@@ -60,7 +61,9 @@ V2_THINQ_APP_VER = "LG ThinQ/5.0.12120"
 
 # new
 V2_GATEWAY_URL = "https://route.lgthinq.com:46030/v1/service/application/gateway-uri"
+V2_GATEWAY_URI_KEY = "uris"
 V2_AUTH_PATH = "/oauth/1.0/oauth2/token"
+V2_OAUTH_URL_KEY = "empOauthBaseUri"
 V2_USER_INFO = "/users/profile"
 V2_EMP_SESS_URL = "https://emp-oauth.lgecloud.com/emp/oauth2/token/empsession"
 OAUTH_LOGIN_HOST = "us.m.lgaccount.com"
@@ -69,6 +72,7 @@ OAUTH_REDIRECT_PATH = "login/iabClose"
 OAUTH_REDIRECT_URI = f"https://kr.m.lgaccount.com/{OAUTH_REDIRECT_PATH}"
 APPLICATION_KEY = "6V1V8H2BN5P9ZQGOI5DAQ92YZBDO3EK9"  # for spx login
 OAUTH_CLIENT_KEY = "LGAO722A02"
+OAUTH_URL_KEY = "oauthUri"
 EMP_REDIRECT_URL = "lgaccount.lgsmartthinq:/"
 THIRD_PART_LOGIN = {
     "GGL": "google",
@@ -94,6 +98,7 @@ API2_ERRORS = {
     "0110": exc.InvalidCredentialError,
     "0111": exc.DelayedResponseError,
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
+    "9012": exc.UseOfficialAPIError,
     "9995": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
     "9999": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
 }
@@ -174,6 +179,7 @@ class CoreAsync:
         oauth_url: str | None = None,
         session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
+        update_clientid_callback: Callable[[str], None] | None = None,
     ):
         """
         Create the CoreAsync object
@@ -190,6 +196,7 @@ class CoreAsync:
         self._timeout = aiohttp.ClientTimeout(total=timeout)
         self._oauth_url = oauth_url
         self._client_id = client_id
+        self._update_clientid_callback = update_clientid_callback
         self._lang_pack_url = None
 
         if session:
@@ -231,18 +238,24 @@ class CoreAsync:
             self._session = lg_client_session()
         return self._session
 
-    def _get_client_id(self, user_number: str | None = None) -> str:
+    def _get_client_id(
+        self, user_number: str | None = None, force_refresh: bool = False
+    ) -> str:
         """Generate a new clent ID or return existing."""
-        if self._client_id is not None:
+        if self._client_id is not None and not force_refresh:
             return self._client_id
         if user_number is None:
-            return None
+            return self._client_id
 
         hash_object = hashlib.sha256()
         hash_object.update(
-            (user_number + datetime.utcnow().strftime("%Y%m%d%H%M%S")).encode("utf8")
+            (user_number + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")).encode(
+                "utf8"
+            )
         )
         self._client_id = hash_object.hexdigest()
+        if self._update_clientid_callback is not None:
+            self._update_clientid_callback(self._client_id)
         return self._client_id
 
     @staticmethod
@@ -363,7 +376,7 @@ class CoreAsync:
         if "resultCode" not in out:
             raise exc.APIError("-1", out)
 
-        return self._manage_lge_result(out, True)
+        return self._manage_lge_result(out, True, user_number)
 
     async def lgedm2_post(
         self,
@@ -398,16 +411,23 @@ class CoreAsync:
 
         _LOGGER.debug("lgedm2_post after: %s", out)
 
-        return self._manage_lge_result(out, is_api_v2)
+        return self._manage_lge_result(out, is_api_v2, user_number)
 
-    @staticmethod
-    def _manage_lge_result(result: dict, is_api_v2=False) -> dict:
+    def _manage_lge_result(
+        self, result: dict, is_api_v2=False, user_number: str | None = None
+    ) -> dict:
         """Manage the result from a get or a post to lge server."""
 
         if is_api_v2:
             if "resultCode" in result:
                 code = result["resultCode"]
                 if code != "0000":
+                    if code == "9012":  # this is message "consider using native API"
+                        # we refresh the client_id as work-around for message 9012
+                        _LOGGER.info(
+                            "Refreshing client ID after receiving msg 9012: %s", result
+                        )
+                        self._get_client_id(user_number, True)
                     message = result.get("result") or "ThinQ APIv2 error"
                     if code in API2_ERRORS:
                         raise API2_ERRORS[code](message)
@@ -435,6 +455,51 @@ class CoreAsync:
         if self._oauth_url:
             return self._oauth_url
 
+        _LOGGER.debug("Try to retrieve oauth url using APIv2")
+        try:
+            await self.gateway_info()
+        except exc.APIError as ex:
+            _LOGGER.debug("Failed to retrieve oauth url using APIv2: %s", ex.message)
+
+        if not self._oauth_url:
+            _LOGGER.info(
+                "Failed to retrieve oauth url using APIv2 gateway, "
+                "try to retrieve oauth url using APIv1 gateway"
+            )
+            self._oauth_url = await self._get_apiv1_oauth_url()
+
+        _LOGGER.debug("Oauth url retrieved: %s", self._oauth_url)
+
+        return self._oauth_url
+
+    def _get_oauth_url_from_gateway_v2_info(self, gateway_v2_info: dict) -> str | None:
+        """Extract oauth url from gateway v2 info."""
+
+        _LOGGER.debug("Extracting OAuth url from gateway info")
+        oauth_base = None
+        if gateway_v2_info and isinstance(gateway_v2_info, dict):
+
+            lang_pack = None
+            if uris := gateway_v2_info.get(V2_GATEWAY_URI_KEY):
+                if isinstance(uris, dict):
+                    oauth_base = uris.get(V2_OAUTH_URL_KEY)
+                    lang_pack = uris.get(_COMMON_LANG_URI_ID)
+
+            if not oauth_base:
+                oauth_base = gateway_v2_info.get(V2_OAUTH_URL_KEY)
+            if not lang_pack:
+                lang_pack = gateway_v2_info.get(_COMMON_LANG_URI_ID)
+
+            if lang_pack and self._lang_pack_url is None:
+                # probably this is not available with APIv2
+                self._lang_pack_url = lang_pack
+                _LOGGER.debug("Common lang pack url: %s", self._lang_pack_url)
+
+        return oauth_base
+
+    async def _get_apiv1_oauth_url(self):
+        """Return url used for oauth2 authentication using APIv1."""
+
         headers = {
             "Accept": "application/json",
             "x-thinq-application-key": "wideq",
@@ -453,16 +518,22 @@ class CoreAsync:
             out = await resp.json()
 
         gateway_result = self._manage_lge_result(out)
-        _LOGGER.debug("Gateway info: %s", gateway_result)
-        self._oauth_url = gateway_result["oauthUri"]
+        _LOGGER.debug("Gateway info from APIv1: %s", gateway_result)
+        oauth_url = gateway_result[OAUTH_URL_KEY]
+
         if self._lang_pack_url is None and _COMMON_LANG_URI_ID in gateway_result:
             self._lang_pack_url = gateway_result[_COMMON_LANG_URI_ID]
-        return self._oauth_url
+            _LOGGER.debug("Common lang pack url: %s", self._lang_pack_url)
+
+        return oauth_url
 
     async def gateway_info(self):
         """Return ThinQ gateway information."""
         result = await self.thinq2_get(V2_GATEWAY_URL)
         _LOGGER.debug("GatewayV2 info: %s", result)
+        if not self._oauth_url:
+            self._oauth_url = self._get_oauth_url_from_gateway_v2_info(result)
+
         return result
 
     async def auth_user_login(
@@ -579,7 +650,7 @@ class CoreAsync:
         }
 
         parse_url = urlparse(V2_EMP_SESS_URL)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{parse_url.path}?{urlencode(emp_data)}"
         signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
@@ -622,7 +693,7 @@ class CoreAsync:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_USER_INFO)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         sig = self._oauth2_signature(f"{V2_USER_INFO}\n{timestamp}", OAUTH_SECRET_KEY)
 
         headers = {
@@ -661,7 +732,7 @@ class CoreAsync:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_AUTH_PATH)
-        timestamp = datetime.utcnow().strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{V2_AUTH_PATH}?{urlencode(data)}"
         sig = self._oauth2_signature(f"{req_url}\n{timestamp}", OAUTH_SECRET_KEY)
 
@@ -848,7 +919,9 @@ class Auth:
             int(token_validity) if token_validity else DEFAULT_TOKEN_VALIDITY
         )
         self.user_number = user_number
-        self._token_created_on = datetime.utcnow() if access_token else datetime.min
+        self._token_created_on = (
+            datetime.now(timezone.utc) if access_token else datetime.min
+        )
 
     @property
     def gateway(self) -> Gateway:
@@ -987,7 +1060,7 @@ class Auth:
 
         get_new_token: bool = force_refresh or (access_token is None)
         if not get_new_token:
-            diff = (datetime.utcnow() - self._token_created_on).total_seconds()
+            diff = (datetime.now(timezone.utc) - self._token_created_on).total_seconds()
             if (self.token_validity - diff) <= TOKEN_EXP_LIMIT:
                 get_new_token = True
 
@@ -1381,7 +1454,7 @@ class ClientAsync:
         self._auth: Auth = auth
         self._session: Session | None = session
         self._connected = True
-        self._last_device_update = datetime.utcnow()
+        self._last_device_update = datetime.now(timezone.utc)
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
@@ -1505,7 +1578,7 @@ class ClientAsync:
     async def refresh_devices(self):
         """Refresh the devices' information for this client."""
         async with self._lock:
-            call_time = datetime.utcnow()
+            call_time = datetime.now(timezone.utc)
             difference = (call_time - self._last_device_update).total_seconds()
             if difference <= MIN_TIME_BETWEEN_UPDATE:
                 return
@@ -1584,6 +1657,7 @@ class ClientAsync:
         oauth_url: str | None = None,
         aiohttp_session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
+        update_clientid_callback: Callable[[str], None] | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
         """
@@ -1600,6 +1674,7 @@ class ClientAsync:
             oauth_url=oauth_url,
             session=aiohttp_session,
             client_id=client_id,
+            update_clientid_callback=update_clientid_callback,
         )
         try:
             gateway = await Gateway.discover(core)
