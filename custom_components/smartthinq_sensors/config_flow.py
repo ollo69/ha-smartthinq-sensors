@@ -58,6 +58,8 @@ RESULT_FAIL = 1
 RESULT_NO_DEV = 2
 RESULT_CRED_FAIL = 3
 
+INT_COMM_URL = "https://git.io/JU166"
+
 _LOGGER = logging.getLogger(__name__)
 
 COUNTRIES = {
@@ -209,7 +211,9 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Parse the response url for oauth data and submit for save."""
         if not user_input:
-            return self._show_form(step_id="url")
+            return self._show_form(
+                step_id="url", description_placeholders={"pat_url": INT_COMM_URL}
+            )
 
         url = user_input[CONF_URL]
         lge_auth = LGEAuthentication(
@@ -217,7 +221,11 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         )
         oauth_info = await lge_auth.get_oauth_info_from_url(url)
         if not oauth_info:
-            return self._show_form(errors="invalid_url", step_id="url")
+            return self._show_form(
+                errors="invalid_url",
+                step_id="url",
+                description_placeholders={"pat_url": INT_COMM_URL},
+            )
 
         self._token = oauth_info["refresh_token"]
         self._oauth2_url = oauth_info.get("oauth_url")
@@ -336,7 +344,12 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         return schema
 
     @callback
-    def _show_form(self, errors: str | None = None, step_id="user") -> ConfigFlowResult:
+    def _show_form(
+        self,
+        errors: str | None = None,
+        step_id="user",
+        description_placeholders: Mapping[str, str] | None = None,
+    ) -> ConfigFlowResult:
         """Show the form to the user."""
         base_err = errors or self._error
         self._error = None
@@ -346,6 +359,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
             step_id=step_id,
             data_schema=schema,
             errors={CONF_BASE: base_err} if base_err else None,
+            description_placeholders=description_placeholders,
         )
 
     async def async_step_reauth(

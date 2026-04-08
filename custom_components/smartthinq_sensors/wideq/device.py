@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import base64
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import json
 import logging
@@ -133,7 +133,7 @@ class Monitor:
         """Refresh the devices shared client"""
         if Monitor._client_connected:
             return True
-        call_time = datetime.utcnow()
+        call_time = datetime.now(timezone.utc)
         difference = (call_time - Monitor._last_client_refresh).total_seconds()
         if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
             return False
@@ -160,6 +160,7 @@ class Monitor:
 
         state = None
         retry = False
+        err9012raised = False
         for iteration in range(MAX_RETRIES):
             _LOGGER.debug("Polling...")
             # Wait one second between iteration
@@ -185,6 +186,19 @@ class Monitor:
                 if iteration >= 1:  # just retry 2 times
                     raise
                 continue
+
+            except core_exc.UseOfficialAPIError as exc:
+                # When this exception comes, we retry 1 time before raising
+                if not err9012raised:
+                    err9012raised = True
+                    continue
+
+                self._raise_error(
+                    "Received error 9012 multiple time while updating device status",
+                    not_logged=True,
+                    exc=exc,
+                    exc_info=True,
+                )
 
             except core_exc.ClientDisconnected:
                 return None
@@ -698,7 +712,7 @@ class Device:
         """Perform dedicated additional device poll with a slower rate."""
         if poll_interval <= 0:
             return
-        call_time = datetime.utcnow()
+        call_time = datetime.now(timezone.utc)
         if self._last_additional_poll is None:
             difference = poll_interval
         else:
