@@ -31,6 +31,7 @@ class StateOptions(StrEnum):
 class AirConditionerFeatures(StrEnum):
     """Features for LG Air Conditioner devices."""
 
+    BELL_SOUND = "bell_sound"
     ENERGY_CURRENT = "energy_current"
     HOT_WATER_TEMP = "hot_water_temperature"
     HUMIDITY = "humidity"
