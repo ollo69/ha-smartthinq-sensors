@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 
 import voluptuous as vol
 
-from homeassistant.components.humidifier import HumidifierDeviceClass, HumidifierEntity
-from homeassistant.components.humidifier.const import (
-    DEFAULT_MAX_HUMIDITY,
-    DEFAULT_MIN_HUMIDITY,
+from homeassistant.components.humidifier import (
+    HumidifierDeviceClass,
+    HumidifierEntity,
     HumidifierEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
@@ -39,7 +39,7 @@ async def async_setup_entry(
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
-    _LOGGER.debug("Starting LGE ThinQ humidifier setup...")
+    _LOGGER.debug("Starting LGE ThinQ humidifier setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -64,6 +64,8 @@ async def async_setup_entry(
 
     # register services
     platform = current_platform.get()
+    if platform is None:
+        return
     platform.async_register_entity_service(
         SERVICE_SET_FAN_MODE,
         {vol.Required(ATTR_FAN_MODE): cv.string},
@@ -74,7 +76,7 @@ async def async_setup_entry(
 class LGEBaseHumidifier(CoordinatorEntity, HumidifierEntity):
     """Base humidifier device."""
 
-    def __init__(self, api: LGEDevice):
+    def __init__(self, api: LGEDevice) -> None:
         """Initialize the humidifier."""
         super().__init__(api.coordinator)
         self._api = api
@@ -115,9 +117,9 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         return HumidifierEntityFeature(0)
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes with device specific additions."""
-        state = {}
+        state: dict[str, Any] = {}
         if humidity := self._api.state.device_features.get(
             DehumidifierFeatures.HUMIDITY
         ):
@@ -132,19 +134,19 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     @property
     def is_on(self) -> bool | None:
         """Return True if entity is on."""
-        return self._api.state.is_on
+        return cast(bool | None, self._api.state.is_on)
 
     @property
     def mode(self) -> str | None:
         """Return current operation."""
         if self._use_fan_modes:
-            return self._api.state.fan_speed
-        return self._api.state.operation_mode
+            return cast(str | None, self._api.state.fan_speed)
+        return cast(str | None, self._api.state.operation_mode)
 
     async def async_set_mode(self, mode: str) -> None:
         """Set new target mode."""
         if not self.available_modes:
-            raise NotImplementedError()
+            raise NotImplementedError
         if mode not in self.available_modes:
             raise ValueError(f"Invalid mode [{mode}]")
         if self._use_fan_modes:
@@ -156,7 +158,10 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     @property
     def target_humidity(self) -> int | None:
         """Return the humidity we try to reach."""
-        return self._api.state.device_features.get(DehumidifierFeatures.TARGET_HUMIDITY)
+        return cast(
+            int | None,
+            self._api.state.device_features.get(DehumidifierFeatures.TARGET_HUMIDITY),
+        )
 
     async def async_set_humidity(self, humidity: int) -> None:
         """Set new target humidity."""
@@ -165,12 +170,12 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         await self._device.set_target_humidity(target_humidity)
         self._api.async_set_updated()
 
-    async def async_turn_on(self, **kwargs) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
         await self._device.power(True)
         self._api.async_set_updated()
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         await self._device.power(False)
         self._api.async_set_updated()
@@ -178,16 +183,12 @@ class LGEDeHumidifier(LGEBaseHumidifier):
     @property
     def min_humidity(self) -> int:
         """Return the minimum humidity."""
-        if (min_value := self._device.target_humidity_min) is not None:
-            return min_value
-        return DEFAULT_MIN_HUMIDITY
+        return self._device.target_humidity_min
 
     @property
     def max_humidity(self) -> int:
         """Return the maximum humidity."""
-        if (max_value := self._device.target_humidity_max) is not None:
-            return max_value
-        return DEFAULT_MAX_HUMIDITY
+        return self._device.target_humidity_max
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new fan mode."""

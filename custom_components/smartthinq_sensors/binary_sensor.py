@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import logging
-from typing import Any, Callable
+from typing import Any, cast
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -46,7 +47,7 @@ ATTR_OVEN_STATE = "oven_state"
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQBinarySensorEntityDescription(BinarySensorEntityDescription):
     """A class that describes ThinQ binary sensor entities."""
 
@@ -204,7 +205,7 @@ BINARY_SENSOR_ENTITIES = {
     DeviceType.DEHUMIDIFIER: DEHUMIDIFIER_BINARY_SENSORS,
     DeviceType.RANGE: RANGE_BINARY_SENSORS,
     DeviceType.REFRIGERATOR: REFRIGERATOR_BINARY_SENSORS,
-    **{dev_type: WASH_DEV_BINARY_SENSORS for dev_type in WASH_DEVICE_TYPES},
+    **dict.fromkeys(WASH_DEVICE_TYPES, WASH_DEV_BINARY_SENSORS),
 }
 
 
@@ -229,7 +230,7 @@ async def async_setup_entry(
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
-    _LOGGER.debug("Starting LGE ThinQ binary sensors setup...")
+    _LOGGER.debug("Starting LGE ThinQ binary sensors setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -258,7 +259,7 @@ async def async_setup_entry(
 
 
 class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
-    """Class to monitor binary sensors for LGE device"""
+    """Class to monitor binary sensors for LGE device."""
 
     entity_description: ThinQBinarySensorEntityDescription
     _attr_has_entity_name = True
@@ -269,7 +270,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         api: LGEDevice,
         description: ThinQBinarySensorEntityDescription,
         wrapped_device: LGEBaseDevice | None = None,
-    ):
+    ) -> None:
         """Initialize the binary sensor."""
         super().__init__(api.coordinator)
         self._api = api
@@ -280,16 +281,16 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         if not description.translation_key and description.name is UNDEFINED:
             self._attr_name = get_entity_name(api, description.key)
 
-        self._is_on = None
+        self._is_on: bool | None = None
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
         self._is_on = self._get_on_state()
         return self._is_on
 
     @property
-    def icon(self):
+    def icon(self) -> str | None:
         """Return the icon to use in the frontend, if any."""
         if self.entity_description.icon_on and self._is_on:
             return self.entity_description.icon_on
@@ -308,7 +309,7 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Return True if unable to access real state of the entity."""
         return self._api.assumed_state
 
-    def _get_on_state(self):
+    def _get_on_state(self) -> bool:
         """Return true if the binary sensor is on."""
         ret_val = self._get_sensor_state()
         if ret_val is None:
@@ -318,15 +319,15 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         ret_val = ret_val.lower()
         if ret_val == STATE_ON:
             return True
-        state = STATE_LOOKUP.get(ret_val, STATE_OFF)
+        state = STATE_LOOKUP.get(cast(Any, ret_val), STATE_OFF)
         return state == STATE_ON
 
-    def _get_sensor_state(self):
+    def _get_sensor_state(self) -> bool | str | None:
         if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:
             feature = self.entity_description.key
-            return self._api.state.device_features.get(feature)
+            return cast(bool | str | None, self._api.state.device_features.get(feature))
 
         return None

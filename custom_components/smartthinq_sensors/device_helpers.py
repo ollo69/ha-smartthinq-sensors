@@ -1,6 +1,7 @@
-"""Helper class for ThinQ devices"""
+"""Helper class for ThinQ devices."""
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 from homeassistant.util.dt import utcnow
@@ -58,7 +59,7 @@ WASH_DEVICE_TYPES = [
 
 
 def get_entity_name(device: LGEDevice, ent_key: str) -> str | None:
-    """Get the name for the entity"""
+    """Get the name for the entity."""
     if ent_key == DEFAULT_SENSOR:
         return None
 
@@ -71,14 +72,14 @@ def get_entity_name(device: LGEDevice, ent_key: str) -> str | None:
 
 
 class LGEBaseDevice:
-    """A wrapper to monitor LGE devices"""
+    """A wrapper to monitor LGE devices."""
 
-    def __init__(self, api_device: LGEDevice):
+    def __init__(self, api_device: LGEDevice) -> None:
         """Initialize the device."""
         self._api = api_device
 
     @staticmethod
-    def format_time(hours, minutes):
+    def format_time(hours: Any, minutes: Any) -> str:
         """Return a time in format hh:mm:ss based on input hours and minutes."""
         if not minutes:
             return "0:00:00"
@@ -98,33 +99,34 @@ class LGEBaseDevice:
         return ":".join(remain_time)
 
     @property
-    def device(self):
-        """The API device"""
+    def device(self) -> Any:
+        """The API device."""
         return self._api.device
 
     @property
-    def is_power_on(self):
-        """Current power state"""
+    def is_power_on(self) -> bool:
+        """Current power state."""
         if self._api.state:
             if self._api.state.is_on:
                 return True
         return False
 
     @property
-    def power_state(self):
-        """Current power state"""
+    def power_state(self) -> str:
+        """Current power state."""
         if self.is_power_on:
             return STATE_ON
         return STATE_OFF
 
     @property
-    def ssid(self):
+    def ssid(self) -> str | None:
         """The device network SSID."""
-        return self._api.device.device_info.ssid
+        ssid = self._api.device.device_info.ssid
+        return str(ssid) if ssid is not None else None
 
-    def get_features_attributes(self):
+    def get_features_attributes(self) -> dict[str | None, Any]:
         """Return a dict with device features and name."""
-        ret_val = {}
+        ret_val: dict[str | None, Any] = {}
         if self._api.state:
             states = self._api.state.device_features
         else:
@@ -135,28 +137,28 @@ class LGEBaseDevice:
         return ret_val
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str | None, Any]:
         """Return the optional state attributes."""
         return self.get_features_attributes()
 
 
 class LGEWashDevice(LGEBaseDevice):
-    """A wrapper to monitor LGE Wash devices"""
+    """A wrapper to monitor LGE Wash devices."""
 
-    def __init__(self, api_device: LGEDevice):
+    def __init__(self, api_device: LGEDevice) -> None:
         """Initialize the device."""
         super().__init__(api_device)
         self._start_time: datetime | None = None
 
     @property
-    def run_completed(self):
+    def run_completed(self) -> str:
         """Return the state on/off for device run completed."""
         if self._api.device.is_run_completed:
             return STATE_ON
         return STATE_OFF
 
     @property
-    def error_state(self):
+    def error_state(self) -> str:
         """Return the state on/off for error."""
         if self._api.state:
             if self._api.state.is_error:
@@ -164,7 +166,7 @@ class LGEWashDevice(LGEBaseDevice):
         return STATE_OFF
 
     @property
-    def start_time(self):
+    def start_time(self) -> str | None:
         """Return the time and date the wash began or will begin in ISO format."""
         if not (self._api.state and self._api.state.is_on):
             self._start_time = None
@@ -184,7 +186,7 @@ class LGEWashDevice(LGEBaseDevice):
         return self._start_time.isoformat()
 
     @property
-    def end_time(self):
+    def end_time(self) -> str | None:
         """Return the time and date the wash will end in ISO format."""
         if not (self._api.state and self._api.state.is_on):
             return None
@@ -194,7 +196,7 @@ class LGEWashDevice(LGEBaseDevice):
         return (utcnow() + timedelta(hours=hrs, minutes=mins)).isoformat()
 
     @property
-    def initial_time(self):
+    def initial_time(self) -> str:
         """Return the initial time in format HH:MM."""
         if self._api.state:
             if self._api.state.is_on:
@@ -204,7 +206,7 @@ class LGEWashDevice(LGEBaseDevice):
         return self.format_time(None, None)
 
     @property
-    def remain_time(self):
+    def remain_time(self) -> str:
         """Return the remaining time in format HH:MM."""
         if self._api.state:
             if self._api.state.is_on:
@@ -214,7 +216,7 @@ class LGEWashDevice(LGEBaseDevice):
         return self.format_time(None, None)
 
     @property
-    def reserve_time(self):
+    def reserve_time(self) -> str:
         """Return the reserved time in format HH:MM."""
         if self._api.state:
             if self._api.state.is_on:
@@ -224,22 +226,22 @@ class LGEWashDevice(LGEBaseDevice):
         return self.format_time(None, None)
 
     @property
-    def current_course(self):
+    def current_course(self) -> str:
         """Return wash device current course."""
         if self._api.state:
             if self._api.state.is_on:
                 course = self._api.state.current_course
                 if course:
-                    return course
+                    return str(course)
                 smart_course = self._api.state.current_smartcourse
                 if smart_course:
-                    return smart_course
+                    return str(smart_course)
         return "-"
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str | None, Any]:
         """Return the optional state attributes."""
-        data = {
+        data: dict[str | None, Any] = {
             ATTR_RUN_COMPLETED: self.run_completed,
             ATTR_ERROR_STATE: self.error_state,
             ATTR_START_TIME: self.start_time,
@@ -256,24 +258,34 @@ class LGEWashDevice(LGEBaseDevice):
 
 
 class LGERefrigeratorDevice(LGEBaseDevice):
-    """A wrapper to monitor LGE Refrigerator devices"""
+    """A wrapper to monitor LGE Refrigerator devices."""
 
     @property
-    def temp_fridge(self):
+    def supports_fridge_compartment(self) -> bool:
+        """Return whether the refrigerator has a fridge compartment."""
+        return bool(self._api.device.supports_fridge_compartment())
+
+    @property
+    def supports_freezer_compartment(self) -> bool:
+        """Return whether the refrigerator has a freezer compartment."""
+        return bool(self._api.device.supports_freezer_compartment())
+
+    @property
+    def temp_fridge(self) -> Any:
         """Return fridge temperature."""
-        if self._api.state:
+        if self._api.state and self.supports_fridge_compartment:
             return self._api.state.temp_fridge
         return None
 
     @property
-    def temp_freezer(self):
+    def temp_freezer(self) -> Any:
         """Return freezer temperature."""
-        if self._api.state:
+        if self._api.state and self.supports_freezer_compartment:
             return self._api.state.temp_freezer
         return None
 
     @property
-    def temp_unit(self):
+    def temp_unit(self) -> Any:
         """Return refrigerator temperature unit."""
         if self._api.state:
             unit = self._api.state.temp_unit
@@ -281,7 +293,7 @@ class LGERefrigeratorDevice(LGEBaseDevice):
         return UnitOfTemperature.CELSIUS
 
     @property
-    def dooropen_state(self):
+    def dooropen_state(self) -> str:
         """Return refrigerator door open state."""
         if self._api.state:
             state = self._api.state.door_opened_state
@@ -289,14 +301,16 @@ class LGERefrigeratorDevice(LGEBaseDevice):
         return STATE_OFF
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str | None, Any]:
         """Return the optional state attributes."""
-        data = {
-            ATTR_FRIDGE_TEMP: self.temp_fridge,
-            ATTR_FREEZER_TEMP: self.temp_freezer,
+        data: dict[str | None, Any] = {
             ATTR_TEMP_UNIT: self.temp_unit,
             ATTR_DOOR_OPEN: self.dooropen_state,
         }
+        if self.supports_fridge_compartment:
+            data[ATTR_FRIDGE_TEMP] = self.temp_fridge
+        if self.supports_freezer_compartment:
+            data[ATTR_FREEZER_TEMP] = self.temp_freezer
         features = super().extra_state_attributes
         data.update(features)
 
@@ -307,47 +321,47 @@ class LGETempDevice(LGEBaseDevice):
     """A wrapper to monitor LGE devices that support temperature unit."""
 
     @property
-    def temp_unit(self):
+    def temp_unit(self) -> Any:
         """Return device temperature unit."""
         unit = self._api.device.temperature_unit
         return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
 
 
 class LGERangeDevice(LGEBaseDevice):
-    """A wrapper to monitor LGE range devices"""
+    """A wrapper to monitor LGE range devices."""
 
     @property
-    def cooktop_state(self):
-        """Current cooktop state"""
+    def cooktop_state(self) -> str:
+        """Current cooktop state."""
         if self._api.state:
             if self._api.state.is_cooktop_on:
                 return STATE_ON
         return STATE_OFF
 
     @property
-    def oven_state(self):
-        """Current oven state"""
+    def oven_state(self) -> str:
+        """Current oven state."""
         if self._api.state:
             if self._api.state.is_oven_on:
                 return STATE_ON
         return STATE_OFF
 
     @property
-    def oven_lower_target_temp(self):
+    def oven_lower_target_temp(self) -> Any:
         """Oven lower target temperature."""
         if self._api.state:
             return self._api.state.oven_lower_target_temp
         return None
 
     @property
-    def oven_upper_target_temp(self):
+    def oven_upper_target_temp(self) -> Any:
         """Oven upper target temperature."""
         if self._api.state:
             return self._api.state.oven_upper_target_temp
         return None
 
     @property
-    def oven_temp_unit(self):
+    def oven_temp_unit(self) -> Any:
         """Oven temperature unit."""
         if self._api.state:
             unit = self._api.state.oven_temp_unit
@@ -355,9 +369,9 @@ class LGERangeDevice(LGEBaseDevice):
         return UnitOfTemperature.CELSIUS
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str | None, Any]:
         """Return the optional state attributes."""
-        data = {
+        data: dict[str | None, Any] = {
             ATTR_OVEN_LOWER_TARGET_TEMP: self.oven_lower_target_temp,
             ATTR_OVEN_UPPER_TARGET_TEMP: self.oven_upper_target_temp,
             ATTR_OVEN_TEMP_UNIT: self.oven_temp_unit,

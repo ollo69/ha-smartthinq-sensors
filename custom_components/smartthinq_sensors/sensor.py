@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import time
 import logging
-from typing import Any, Callable
+from typing import Any, cast
 
 import voluptuous as vol
 
@@ -82,7 +83,7 @@ SUPPORT_SET_TIME = 2
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQSensorEntityDescription(SensorEntityDescription):
     """A class that describes ThinQ sensor entities."""
 
@@ -302,7 +303,7 @@ AC_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         key=AirConditionerFeatures.RESERVATION_SLEEP_TIME,
         name="Sleep time",
         icon="mdi:weather-night",
-        state_class=SensorDeviceClass.DURATION,
+        device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.MINUTES,
     ),
 )
@@ -546,7 +547,7 @@ SENSOR_ENTITIES = {
     DeviceType.RANGE: RANGE_SENSORS,
     DeviceType.REFRIGERATOR: REFRIGERATOR_SENSORS,
     DeviceType.WATER_HEATER: WATER_HEATER_SENSORS,
-    **{dev_type: WASH_DEV_SENSORS for dev_type in WASH_DEVICE_TYPES},
+    **dict.fromkeys(WASH_DEVICE_TYPES, WASH_DEV_SENSORS),
 }
 
 COMMON_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
@@ -564,6 +565,24 @@ def _sensor_exist(
     lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription
 ) -> bool:
     """Check if a sensor exist for device."""
+    wrapped_device = get_wrapper_device(lge_device, lge_device.type)
+    if (
+        lge_device.type == DeviceType.REFRIGERATOR
+        and wrapped_device is not None
+        and hasattr(wrapped_device, "supports_fridge_compartment")
+        and hasattr(wrapped_device, "supports_freezer_compartment")
+    ):
+        if (
+            sensor_desc.key == ATTR_FRIDGE_TEMP
+            and not wrapped_device.supports_fridge_compartment
+        ):
+            return False
+        if (
+            sensor_desc.key == ATTR_FREEZER_TEMP
+            and not wrapped_device.supports_freezer_compartment
+        ):
+            return False
+
     if sensor_desc.value_fn is not None:
         return True
 
@@ -581,7 +600,7 @@ async def async_setup_entry(
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
-    _LOGGER.debug("Starting LGE ThinQ sensors setup...")
+    _LOGGER.debug("Starting LGE ThinQ sensors setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -601,7 +620,7 @@ async def async_setup_entry(
         lge_common_sensors = [
             LGESensor(lge_device, sensor_desc, get_wrapper_device(lge_device, dev_type))
             for sensor_desc in COMMON_SENSORS
-            for dev_type in lge_devices.keys()
+            for dev_type in lge_devices
             for lge_device in lge_devices.get(dev_type, [])
         ]
 
@@ -615,6 +634,8 @@ async def async_setup_entry(
 
     # register services
     platform = current_platform.get()
+    if platform is None:
+        return
     platform.async_register_entity_service(
         SERVICE_REMOTE_START,
         {vol.Optional("course"): str},
@@ -636,7 +657,7 @@ async def async_setup_entry(
 
 
 class LGESensor(CoordinatorEntity, SensorEntity):
-    """Class to monitor sensors for LGE device"""
+    """Class to monitor sensors for LGE device."""
 
     entity_description: ThinQSensorEntityDescription
     _attr_has_entity_name = True
@@ -647,7 +668,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         api: LGEDevice,
         description: ThinQSensorEntityDescription,
         wrapped_device: LGEBaseDevice | None = None,
-    ):
+    ) -> None:
         """Initialize the sensor."""
         super().__init__(api.coordinator)
         self._api = api
@@ -663,6 +684,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
     @property
     def supported_features(self) -> int:
+        """Return the supported entity features."""
         features = 0
         if self._is_default:
             if self._api.type in WM_DEVICE_TYPES:
@@ -686,7 +708,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         return super().native_unit_of_measurement
 
     @property
-    def icon(self):
+    def icon(self) -> str | None:
         """Return the icon to use in the frontend, if any."""
         ent_icon = self.entity_description.icon
         if ent_icon and ent_icon == DEFAULT_ICON:
@@ -704,45 +726,47 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         return self._api.assumed_state
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return the optional state attributes."""
         if self._is_default and self._wrap_device:
-            return self._wrap_device.extra_state_attributes
+            return cast(dict[str, Any] | None, self._wrap_device.extra_state_attributes)
 
         features = self.entity_description.feature_attributes
         if not (features and self._api.state):
             return None
-        data = {}
+        data: dict[str, Any] = {}
         for key, feat in features.items():
             if (val := self._api.state.device_features.get(feat)) is not None:
                 data[key] = val
         return data
 
-    def _get_sensor_state(self):
-        """Get current sensor state"""
+    def _get_sensor_state(self) -> float | int | str | None:
+        """Get current sensor state."""
         if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 
         if self._api.state:
             feature = self.entity_description.key
-            return self._api.state.device_features.get(feature)
+            return cast(
+                float | int | str | None, self._api.state.device_features.get(feature)
+            )
 
         return None
 
-    async def async_remote_start(self, course: str | None = None):
+    async def async_remote_start(self, course: str | None = None) -> None:
         """Call the remote start command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
-            raise NotImplementedError()
+            raise NotImplementedError
         await self._api.device.remote_start(course)
 
-    async def async_wake_up(self):
+    async def async_wake_up(self) -> None:
         """Call the wakeup command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
-            raise NotImplementedError()
+            raise NotImplementedError
         await self._api.device.wake_up()
 
-    async def async_set_time(self, time_wanted: time | None = None):
+    async def async_set_time(self, time_wanted: time | None = None) -> None:
         """Call the set time command for Microwave devices."""
         if self._api.type not in SET_TIME_DEVICE_TYPES:
-            raise NotImplementedError()
+            raise NotImplementedError
         await self._api.device.set_time(time_wanted)

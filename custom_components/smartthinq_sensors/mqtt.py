@@ -1,21 +1,28 @@
-"""ThinQ MQTT support for push-triggered official refresh."""
+"""ThinQ MQTT support for direct official push updates with community fallback."""
 
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 import json
 import logging
 from typing import Any
 
-from homeassistant.core import Event, HomeAssistant
-
 from thinqconnect import ThinQAPIErrorCodes, ThinQAPIException, ThinQMQTTClient
 
-from .const import DOMAIN, OFFICIAL_LGE_DEVICES
+from homeassistant.core import Event, HomeAssistant
+
+from .const import DOMAIN
 from .wideq.core_async import ClientAsync
 
 _LOGGER = logging.getLogger(__name__)
+
+CAPABILITY_REGISTRY = "capability_registry"
+OFFICIAL_LGE_DEVICES = "official_lge_devices"
+ALREADY_SUBSCRIBED_PUSH = getattr(
+    ThinQAPIErrorCodes, "ALREADY_SUBSCRIBED_PUSH", None
+)
 
 
 class ThinQMQTTHandler:
@@ -24,10 +31,10 @@ class ThinQMQTTHandler:
     def __init__(
         self,
         hass: HomeAssistant,
-        official_api,
+        official_api: Any,
         client: ClientAsync,
         official_client_id: str,
-        refresh_callback,
+        refresh_callback: Callable[[ClientAsync, Any], Awaitable[bool]] | None = None,
     ) -> None:
         """Initialize MQTT handler."""
         self._hass = hass
@@ -46,7 +53,7 @@ class ThinQMQTTHandler:
         )
         if self._mqtt is None:
             return False
-        return await self._mqtt.async_prepare_mqtt()
+        return bool(await self._mqtt.async_prepare_mqtt())
 
     async def async_disconnect(self, event: Event | None = None) -> None:
         """Disconnect the ThinQ MQTT client."""
@@ -59,14 +66,15 @@ class ThinQMQTTHandler:
             self._mqtt = None
 
     def _get_failed_device_count(
-        self, results: list[dict | BaseException | None]
+        self,
+        results: list[dict[str, Any] | BaseException | None],
     ) -> int:
         """Return count of failed subscription tasks."""
         return sum(
             isinstance(result, (TypeError, ValueError))
             or (
                 isinstance(result, ThinQAPIException)
-                and result.code != ThinQAPIErrorCodes.ALREADY_SUBSCRIBED_PUSH
+                and result.code != ALREADY_SUBSCRIBED_PUSH
             )
             for result in results
         )
@@ -139,9 +147,10 @@ class ThinQMQTTHandler:
         dup: bool,
         qos: Any,
         retain: bool,
-        **kwargs: dict,
+        **kwargs: dict[str, Any],
     ) -> None:
         """Handle the received MQTT message."""
+        del topic, dup, qos, retain, kwargs
         decoded = payload.decode()
         try:
             message = json.loads(decoded)
@@ -150,7 +159,8 @@ class ThinQMQTTHandler:
             return
 
         asyncio.run_coroutine_threadsafe(
-            self._async_handle_message(message), self._hass.loop
+            self._async_handle_message(message),
+            self._hass.loop,
         ).result()
 
     async def _async_handle_message(self, message: dict[str, Any]) -> None:
@@ -169,7 +179,27 @@ class ThinQMQTTHandler:
             )
             return
 
-        refreshed = await self._refresh_callback(self._client, lge_dev)
-        if refreshed:
-            lge_dev.runtime_state.last_mqtt_refresh = datetime.utcnow()
+        updated = lge_dev.apply_mqtt_update(message)
+        if not updated and self._refresh_callback is not None:
+            refreshed = await self._refresh_callback(self._client, lge_dev)
+            if not refreshed:
+                return
             lge_dev.async_set_updated()
+
+        domain_data = self._hass.data.get(DOMAIN, {})
+        capability_registry = domain_data.get(CAPABILITY_REGISTRY)
+        hybrid_coordinators = domain_data.get("hybrid_coordinators", {})
+        device_id = lge_dev.device_id
+
+        if capability_registry and device_id:
+            profile = capability_registry.get_profile(device_id)
+            if profile:
+                for attr_name, attr_value in message.items():
+                    if attr_name not in {"deviceId", "timestamp", "pushType"}:
+                        profile.register_attribute(attr_name, has_official=True)
+                        profile.update_attribute_official(attr_name, attr_value)
+
+        coordinator = hybrid_coordinators.get(device_id)
+        if coordinator is not None:
+            coordinator.mark_mqtt_success()
+            await coordinator.async_update_from_mqtt(message, device_id)

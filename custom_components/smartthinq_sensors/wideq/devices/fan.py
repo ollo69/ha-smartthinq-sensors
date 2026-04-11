@@ -1,16 +1,18 @@
-"""------------------for Fan"""
+"""------------------for Fan."""
 
 from __future__ import annotations
 
 from enum import Enum
 import logging
+from typing import Any
 
 from ..backports.functools import cached_property
 from ..core_async import ClientAsync
-from ..device import Device, DeviceStatus
+from ..device import Device, DeviceStatus, ThinQSnapshotProvider
 from ..device_info import DeviceInfo
 
 CTRL_BASIC = ["Control", "basicCtrl"]
+type CommandKeys = list[str | list[str]]
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
 SUPPORT_WIND_STRENGTH = ["SupportWindStrength", "support.airState.windStrength"]
@@ -19,47 +21,11 @@ STATE_OPERATION = ["Operation", "airState.operation"]
 STATE_OPERATION_MODE = ["OpMode", "airState.opMode"]
 STATE_WIND_STRENGTH = ["WindStrength", "airState.windStrength"]
 
-CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
-CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
-CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
+CMD_STATE_OPERATION: CommandKeys = [CTRL_BASIC, "Set", STATE_OPERATION]
+CMD_STATE_OP_MODE: CommandKeys = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
+CMD_STATE_WIND_STRENGTH: CommandKeys = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _dget(data, *keys, default=None):
-    """Safely traverse nested dict keys."""
-    cur = data
-    for key in keys:
-        if not isinstance(cur, dict):
-            return default
-        cur = cur.get(key)
-    return cur if cur is not None else default
-
-
-def normalize_official_fan_read(profile: dict | None, state: dict | None) -> dict:
-    """Normalize official fan profile/state payloads into a compact read model."""
-    supported_fan_modes = (
-        _dget(profile, "property", "airFlow", "windStrength", "value", "w")
-        or _dget(profile, "property", "airFlow", "windStrength", "value", "r")
-        or []
-    )
-    power_state = (
-        _dget(state, "operation", "ceilingfanOperationMode")
-        or _dget(state, "operation", "fanOperationMode")
-        or _dget(state, "operation", "currentOperation")
-    )
-    fan_mode = (
-        _dget(state, "airFlow", "windStrength")
-        or _dget(state, "airFlow", "fanSpeed")
-    )
-    return {
-        "power_state": power_state,
-        "is_on": power_state == "POWER_ON",
-        "fan_mode": fan_mode,
-        "supported_fan_modes": list(supported_fan_modes)
-        if isinstance(supported_fan_modes, list)
-        else [],
-    }
 
 
 class FanOp(Enum):
@@ -91,22 +57,31 @@ class FanSpeed(Enum):
 class FanDevice(Device):
     """A higher-level interface for Fan."""
 
-    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
-        super().__init__(client, device_info, FanStatus(self))
+    def __init__(
+        self,
+        client: ClientAsync,
+        device_info: DeviceInfo,
+        snapshot_provider: ThinQSnapshotProvider | None = None,
+    ) -> None:
+        """Initialize the device."""
+        super().__init__(
+            client,
+            device_info,
+            FanStatus(self),
+            snapshot_provider=snapshot_provider,
+        )
 
     @cached_property
-    def fan_speeds(self) -> list:
+    def fan_speeds(self) -> list[str]:
         """Available fan speeds."""
-        if supported_fan_modes := self.official_normalized_value("supported_fan_modes"):
-            return supported_fan_modes
         return self._get_property_values(SUPPORT_WIND_STRENGTH, FanSpeed)
 
     @property
-    def fan_presets(self) -> list:
+    def fan_presets(self) -> list[str]:
         """Available fan presets."""
         return []
 
-    async def power(self, turn_on):
+    async def power(self, turn_on: bool) -> None:
         """Turn on or off the device (according to a boolean)."""
 
         op_mode = FanOp.ON if turn_on else FanOp.OFF
@@ -116,11 +91,12 @@ class FanDevice(Device):
             # different power command for ThinQ1 devices
             cmd = "Start" if turn_on else "Stop"
             await self.set(keys[0], keys[2], key=None, value=cmd)
-            self._status.update_status(keys[2], op_value)
+            if self._status:
+                self._status.update_status(keys[2], op_value)
             return
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
-    async def set_fan_speed(self, speed):
+    async def set_fan_speed(self, speed: str) -> None:
         """Set the fan speed to a value from the `FanSpeed` enum."""
 
         if speed not in self.fan_speeds:
@@ -129,14 +105,21 @@ class FanDevice(Device):
         speed_value = self.model_info.enum_value(keys[2], FanSpeed[speed].value)
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
-    async def set_fan_preset(self, preset):
+    async def set_fan_preset(self, preset: str) -> None:
         """Set the fan preset to a value from the `FanPreset` enum."""
 
         raise ValueError(f"Invalid fan preset: {preset}")
 
     async def set(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
-    ):
+        self,
+        ctrl_key: str,
+        command: str | None,
+        *,
+        key: str | None = None,
+        value: str | None = None,
+        data: str | None = None,
+        ctrl_path: str | None = None,
+    ) -> None:
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
@@ -144,7 +127,8 @@ class FanDevice(Device):
         if key is not None and self._status:
             self._status.update_status(key, value)
 
-    def reset_status(self):
+    def reset_status(self) -> FanStatus:
+        """Reset the device status."""
         self._status = FanStatus(self)
         return self._status
 
@@ -165,12 +149,12 @@ class FanStatus(DeviceStatus):
 
     _device: FanDevice
 
-    def __init__(self, device: FanDevice, data: dict | None = None):
+    def __init__(self, device: FanDevice, data: dict[str, Any] | None = None) -> None:
         """Initialize device status."""
         super().__init__(device, data)
-        self._operation = None
+        self._operation: str | None = None
 
-    def _get_operation(self):
+    def _get_operation(self) -> FanOp | None:
         """Get current operation."""
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
@@ -183,26 +167,27 @@ class FanStatus(DeviceStatus):
         except ValueError:
             return None
 
-    def update_status(self, key, value):
+    def update_status(self, key: str | list[str], value: Any) -> bool:
         """Update device status."""
         if not super().update_status(key, value):
             return False
-        if key in STATE_OPERATION:
+        if isinstance(key, list):
+            if any(item in STATE_OPERATION for item in key):
+                self._operation = None
+        elif key in STATE_OPERATION:
             self._operation = None
         return True
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return if device is on."""
-        if (official_is_on := self._device.official_normalized_value("is_on")) is not None:
-            return official_is_on
         op_mode = self._get_operation()
         if not op_mode:
             return False
         return op_mode != FanOp.OFF
 
     @property
-    def operation(self):
+    def operation(self) -> str | None:
         """Return current device operation."""
         op_mode = self._get_operation()
         if not op_mode:
@@ -210,10 +195,8 @@ class FanStatus(DeviceStatus):
         return op_mode.name
 
     @property
-    def fan_speed(self):
+    def fan_speed(self) -> str | None:
         """Return current fan speed."""
-        if official_fan_mode := self._device.official_normalized_value("fan_mode"):
-            return official_fan_mode
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -223,9 +206,9 @@ class FanStatus(DeviceStatus):
             return None
 
     @property
-    def fan_preset(self):
+    def fan_preset(self) -> None:
         """Return current fan preset."""
         return None
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         return

@@ -1,4 +1,4 @@
-"""------------------for Washer and Dryer"""
+"""------------------for Washer and Dryer."""
 
 from __future__ import annotations
 
@@ -7,12 +7,13 @@ from copy import deepcopy
 from enum import IntEnum
 import json
 import logging
+from typing import Any, cast
 
 from ..backports.functools import cached_property
 from ..const import StateOptions, WashDeviceFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidDeviceStatus
-from ..device import Device, DeviceStatus
+from ..device import Device, DeviceStatus, ThinQSnapshotProvider
 from ..device_info import DeviceInfo, DeviceType
 
 STATE_WM_POWER_OFF = "STATE_POWER_OFF"
@@ -31,6 +32,7 @@ WM_ROOT_DATA = "washerDryer"
 WM_SUB_KEYS = {"mini": "miniState", "Sub": "SubState"}
 
 POWER_STATUS_KEY = ["State", "state"]
+type CommandKeys = list[str | list[str | None] | None]
 
 CMD_POWER_OFF = [[None, "WMControl"], ["PowerOff", "WMOff"], [None, None]]
 CMD_WAKE_UP = [[None, "WMWakeup"], ["OperationWakeUp", "WMWakeup"], [None, None]]
@@ -107,43 +109,46 @@ class WMDevice(Device):
         *,
         sub_device: str | None = None,
         sub_key: str | None = None,
-    ):
+        snapshot_provider: ThinQSnapshotProvider | None = None,
+    ) -> None:
+        """Initialize the device."""
         super().__init__(
             client,
             device_info,
             WMStatus(self, init_run_state=False),
             sub_device=sub_device,
+            snapshot_provider=snapshot_provider,
         )
         self._sub_key = sub_key
         if sub_key:
             self._attr_unique_id += f"-{sub_key}"
             self._attr_name += f" {sub_key.capitalize()}"
-        self._subkey_device = None
-        self._internal_state = None
-        self._run_states: list | None = None
+        self._subkey_device: WMDevice | None = None
+        self._internal_state: dict[str, Any] | None = None
+        self._run_states: list[str] | None = None
         self._is_run_completed = False
         self._course_keys: dict[CourseType, str | None] | None = None
         self._course_infos: dict[str, str] | None = None
         self._selected_course: str | None = None
         self._is_cycle_finishing = False
         self._stand_by = False
-        self._remote_start_status: dict | None = None
+        self._remote_start_status: dict[str, Any] | None = None
         self._remote_start_pressed = False
-        self._power_on_available: bool = None
+        self._power_on_available: bool | None = None
         self._initial_bit_start: bool = False
 
     @cached_property
-    def _state_power_off(self):
+    def _state_power_off(self) -> str | None:
         """Return native value for power off state."""
         return self._get_runstate_key(STATE_WM_POWER_OFF)
 
     @cached_property
-    def _state_power_on_init(self):
+    def _state_power_on_init(self) -> str | None:
         """Return native value for power on init state."""
         return self._get_runstate_key(STATE_WM_INITIAL)
 
     @cached_property
-    def _state_pause(self):
+    def _state_pause(self) -> str | None:
         """Return native value for pause state."""
         return self._get_runstate_key(STATE_WM_PAUSE)
 
@@ -158,7 +163,7 @@ class WMDevice(Device):
         return self._subkey_device
 
     @cached_property
-    def course_list(self) -> list:
+    def course_list(self) -> list[str]:
         """Return a list of available course."""
         course_infos = self._get_course_infos()
         return [_CURRENT_COURSE, *course_infos.keys()]
@@ -185,7 +190,7 @@ class WMDevice(Device):
     @property
     def is_run_completed(self) -> bool:
         """Return device run completed state."""
-        result = self._status.is_run_completed if self._status else False
+        result = self._status.is_run_completed if isinstance(self._status, WMStatus) else False
         if result:
             if not self._is_run_completed:
                 self._is_cycle_finishing = False
@@ -201,10 +206,10 @@ class WMDevice(Device):
         if (
             (self._is_cycle_finishing or self._is_run_completed)
             and any(
-                state in run_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL]
+                state in run_state for state in (STATE_WM_POWER_OFF, STATE_WM_INITIAL)
             )
             and not any(
-                state in pre_state for state in [STATE_WM_POWER_OFF, STATE_WM_INITIAL]
+                state in pre_state for state in (STATE_WM_POWER_OFF, STATE_WM_INITIAL)
             )
         ):
             if not self._is_run_completed:
@@ -216,7 +221,7 @@ class WMDevice(Device):
         return self._is_run_completed
 
     async def init_device_info(self) -> bool:
-        """Initialize the information for the device"""
+        """Initialize the information for the device."""
         if result := await super().init_device_info():
             self._init_subkey_device()
         return result
@@ -240,13 +245,13 @@ class WMDevice(Device):
                 )
                 return
 
-    def update_internal_state(self, state):
+    def update_internal_state(self, state: dict[str, Any] | None) -> None:
         """Update internal state used by sub key device."""
         if not self._sub_key:
             return
         self._internal_state = state
 
-    def save_run_states(self, run_state: str, is_pre_state=False) -> None:
+    def save_run_states(self, run_state: str, is_pre_state: bool = False) -> None:
         """Calculate the pre state based on run_state."""
         if STATE_WM_POWER_OFF in run_state:
             run_state = STATE_WM_POWER_OFF
@@ -278,11 +283,13 @@ class WMDevice(Device):
             return key
         return f"{self._sub_key.capitalize()}{key}"
 
-    def _update_status(self, key, value):
+    def _update_status(self, key: str | list[str], value: Any) -> None:
         if self._status and value:
             self._status.update_status(key, value)
 
-    def _update_opt_bit(self, opt_name: str, opt_val: str, bit_name: str, bit_val: int):
+    def _update_opt_bit(
+        self, opt_name: str, opt_val: str, bit_name: str, bit_val: int
+    ) -> str | None:
         """Update the option bit with correct value."""
         if self.model_info.is_info_v2:
             return None
@@ -290,9 +297,9 @@ class WMDevice(Device):
         option_val = int(opt_val)
         if (bit_index := self.model_info.bit_index(opt_name, bit_name)) is not None:
             if bit_val:
-                new_val = option_val | (2**bit_index)
+                new_val = option_val | (2 ** int(bit_index))
             else:
-                new_val = option_val ^ (option_val & (2**bit_index))
+                new_val = option_val ^ (option_val & (2 ** int(bit_index)))
             return str(new_val)
 
         return None
@@ -302,14 +309,17 @@ class WMDevice(Device):
         if self.model_info.is_info_v2:
             course_type_keys = _COURSE_KEYS[course_type][1]
             for key in course_type_keys:
-                if course_key := self.model_info.config_value(self.getkey(key)):
-                    if self.model_info.value_exist(course_key):
-                        return course_key
+                    pref_key = self.getkey(key)
+                    if not pref_key:
+                        continue
+                    if course_key := self.model_info.config_value(pref_key):
+                        if self.model_info.value_exist(str(course_key)):
+                            return str(course_key)
         else:
             course_keys = _COURSE_KEYS[course_type][0]
             for key in course_keys:
                 course_key = self.getkey(key)
-                if self.model_info.value_exist(course_key):
+                if course_key and self.model_info.value_exist(course_key):
                     return course_key
 
         return None
@@ -322,7 +332,7 @@ class WMDevice(Device):
             self._course_keys = {key: self._get_course_key(key) for key in _COURSE_KEYS}
         return self._course_keys[course_type]
 
-    def _get_course_infos(self) -> dict:
+    def _get_course_infos(self) -> dict[str, str]:
         """Return a dict with available courses."""
         if self._course_infos is not None:
             return self._course_infos
@@ -334,7 +344,7 @@ class WMDevice(Device):
             self._course_infos = {}
             return {}
 
-        ret_val = {}
+        ret_val: dict[str, str] = {}
         for key, value in course_infos.items():
             if enum_name := value.get("name"):
                 name = self.get_enum_text(enum_name)
@@ -347,7 +357,9 @@ class WMDevice(Device):
         self._course_infos = ret_val
         return ret_val
 
-    def _get_course_details(self, course_key, course_id):
+    def _get_course_details(
+        self, course_key: str | None, course_id: str
+    ) -> dict[str, Any] | None:
         """Get definition for a specific course ID."""
         if course_key is None:
             return None
@@ -357,14 +369,14 @@ class WMDevice(Device):
 
     def _prepare_course_info(
         self,
-        data: dict,
+        data: dict[str, Any],
         course_id: str,
-        course_info: dict,
+        course_info: dict[str, Any],
         course_type: CourseType,
         course_set: bool,
         n_course_key: str,
         s_course_key: str | None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Prepare the course info used to run the command."""
 
         ret_data = deepcopy(data)
@@ -384,8 +396,9 @@ class WMDevice(Device):
                 ret_data[s_course_key] = 0
         elif course_type == CourseType.SMARTCOURSE:
             ret_data[n_course_key] = 0
-            ret_data[s_course_key] = course_id
-            for key in ["Course", "APCourse"]:
+            if s_course_key:
+                ret_data[s_course_key] = course_id
+            for key in ("Course", "APCourse"):
                 if key in course_info:
                     ret_data[n_course_key] = course_info[key]
                     break
@@ -425,12 +438,12 @@ class WMDevice(Device):
         _LOGGER.debug("Prepared course data: %s", ret_data)
         return ret_data
 
-    def _update_course_info(self) -> dict:
-        """
-        Save information in the data payload for a specific course
+    def _update_course_info(self) -> dict[str, Any]:
+        """Save information in the data payload for a specific course.
+
         or default course if not already available.
         """
-        data = None
+        data: dict[str, Any] | None = None
         if self._initial_bit_start:
             data = self._remote_start_status
         elif self._status:
@@ -459,7 +472,7 @@ class WMDevice(Device):
         course_set = False
         if course_id is None:
             # check if this course is defined in data payload
-            for course_key in [n_course_key, s_course_key]:
+            for course_key in (n_course_key, s_course_key):
                 if not course_key:
                     continue
                 course_id = str(data.get(course_key))
@@ -472,16 +485,18 @@ class WMDevice(Device):
             course_info = self._get_course_details(n_course_key, course_id)
 
         if not course_info:
-            course_id = def_course_id
+            course_id = str(def_course_id)
             course_info = self._get_course_details(n_course_key, course_id)
 
         if not course_info:
             raise ValueError("Course info not available")
 
         # Save information for specific or default course
+        if n_course_key is None:
+            raise ValueError("Course info not available")
         return self._prepare_course_info(
             data,
-            course_id,
+            cast(str, course_id),
             course_info,
             course_type,
             course_set,
@@ -489,9 +504,9 @@ class WMDevice(Device):
             s_course_key,
         )
 
-    def _prepare_vtctrl_course_info(self) -> list:
+    def _prepare_vtctrl_course_info(self) -> list[dict[str, str]]:
         """Prepare course info for vtctrl command."""
-        vt_cmd_data = []
+        vt_cmd_data: list[dict[str, str]] = []
         course_data = self._update_course_info()
         if course_info := course_data.get(VT_CTRL_COURSE_INFO):
             for func_key in course_info["function"]:
@@ -506,7 +521,9 @@ class WMDevice(Device):
 
         return vt_cmd_data
 
-    def _prepare_command_v1(self, cmd, key):
+    def _prepare_command_v1(
+        self, cmd: dict[str, Any], key: str | None
+    ) -> dict[str, Any]:
         """Prepare command for specific ThinQ1 device."""
         encode = cmd.pop("encode", False)
 
@@ -537,7 +554,9 @@ class WMDevice(Device):
 
         return {**cmd, "data": str_data}
 
-    def _prepare_command_v2(self, cmd, key: str):
+    def _prepare_command_v2(
+        self, cmd: dict[str, Any], key: str | None
+    ) -> dict[str, Any]:
         """Prepare command for specific ThinQ2 device."""
         data_set = cmd.pop("data", None)
         if not data_set:
@@ -558,15 +577,16 @@ class WMDevice(Device):
                 if cmd_key == _COURSE_TYPE:
                     continue
                 if cmd_key in ["course", "Course", "ApCourse"]:
-                    course_data = status_data.get(n_course_key, 0)
-                    cmd_data_set[n_course_key] = course_data or "NOT_SELECTED"
+                    if n_course_key:
+                        course_data = status_data.get(n_course_key, 0)
+                        cmd_data_set[n_course_key] = course_data or "NOT_SELECTED"
                 elif cmd_key in ["smartCourse", "SmartCourse"]:
                     if s_course_key:
                         course_data = status_data.get(s_course_key, 0)
                         cmd_data_set[s_course_key] = course_data or "NOT_SELECTED"
                     else:
                         cmd_data_set[cmd_key] = "NOT_SELECTED"
-                elif cmd_key in ["OpCourse"]:
+                elif cmd_key == "OpCourse":
                     if op_course_key:
                         if course_data := status_data.get(op_course_key):
                             cmd_data_set[op_course_key] = course_data
@@ -590,14 +610,16 @@ class WMDevice(Device):
             "dataGetList": None,
         }
 
-    def _prepare_command_vtctrl(self, cmd: dict, command: str):
+    def _prepare_command_vtctrl(
+        self, cmd: dict[str, Any], command: str
+    ) -> dict[str, Any]:
         """Prepare vtCtrl command for specific ThinQ2 device."""
-        data_set: dict = cmd.pop("data", None)
+        data_set = cast(dict[str, Any] | None, cmd.pop("data", None))
         if not data_set:
             return cmd
 
-        cmd_data_set = {}
-        vt_cmd_data = []
+        cmd_data_set: dict[str, Any] = {}
+        vt_cmd_data: list[dict[str, str]] = []
         if self._initial_bit_start and command == "WMStart":
             if vt_course_data := self._prepare_vtctrl_course_info():
                 vt_cmd_data = vt_course_data
@@ -612,7 +634,7 @@ class WMDevice(Device):
                 cmd_data_set[cmd_key] = "APP"
             elif cmd_key == "vtData":
                 vt_data = {}
-                for dt_key in cmd_val.keys():
+                for dt_key in cmd_val:
                     vt_data[ctrl_target or dt_key] = vt_cmd_data
                 cmd_data_set[cmd_key] = vt_data
             else:
@@ -626,14 +648,22 @@ class WMDevice(Device):
             "dataGetList": None,
         }
 
-    def _prepare_command(self, ctrl_key, command, key, value):
+    def _prepare_command(
+        self,
+        ctrl_key: str,
+        command: str | None,
+        key: str | None,
+        value: str | None,
+    ) -> dict[str, Any] | None:
         """Prepare command for specific device."""
-        cmd = None
+        cmd: dict[str, Any] | None = None
         vt_ctrl = True
-        if command in VT_CTRL_CMD:
+        if command is not None and command in VT_CTRL_CMD:
             cmd = self.model_info.get_control_cmd("vtCtrl", "vtCtrl")
         if not cmd:
             vt_ctrl = False
+            if command is None:
+                return None
             cmd = self.model_info.get_control_cmd(command, ctrl_key)
 
         if not cmd:
@@ -641,19 +671,22 @@ class WMDevice(Device):
 
         if self.model_info.is_info_v2:
             if vt_ctrl:
-                return self._prepare_command_vtctrl(cmd, command)
+                return self._prepare_command_vtctrl(cmd, cast(str, command))
             return self._prepare_command_v2(cmd, key)
         return self._prepare_command_v1(cmd, key)
 
     def _get_runstate_key(self, state_name: str) -> str | None:
         """Return the run state key based on state name."""
         key = self.getkey(self._get_state_key(POWER_STATUS_KEY))
+        if key is None:
+            return None
         if not self.model_info.is_enum_type(key):
             return None
-        mapping = self.model_info.value(key).options
-        for key, val in mapping.items():
+        enum_value = cast(Any, self.model_info.value(key))
+        mapping = enum_value.options
+        for map_key, val in mapping.items():
             if state_name in val:
-                return key
+                return str(map_key)
         return None
 
     @property
@@ -664,7 +697,12 @@ class WMDevice(Device):
     @property
     def remote_start_enabled(self) -> bool:
         """Return if remote start is enabled."""
-        if self._remote_start_pressed or self.stand_by or not self._status.is_on:
+        if (
+            self._remote_start_pressed
+            or self.stand_by
+            or not isinstance(self._status, WMStatus)
+            or not self._status.is_on
+        ):
             return False
         if self._remote_start_status is None:
             return False
@@ -678,7 +716,7 @@ class WMDevice(Device):
     @property
     def pause_enabled(self) -> bool:
         """Return if pause is enabled."""
-        if self.stand_by or not self._status.is_on:
+        if self.stand_by or not isinstance(self._status, WMStatus) or not self._status.is_on:
             return False
         if self._remote_start_status is None:
             return False
@@ -700,7 +738,7 @@ class WMDevice(Device):
     async def select_start_course(self, course_name: str) -> None:
         """Select a secific course for remote start."""
         if not self.select_course_enabled:
-            raise InvalidDeviceStatus()
+            raise InvalidDeviceStatus
 
         if course_name == _CURRENT_COURSE:
             self._selected_course = None
@@ -709,19 +747,19 @@ class WMDevice(Device):
             raise ValueError(f"Invalid course: {course_name}")
         self._selected_course = course_name
 
-    async def power_off(self):
+    async def power_off(self) -> None:
         """Power off the device."""
-        keys = self._get_cmd_keys(CMD_POWER_OFF)
+        keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_POWER_OFF))
         await self.set(keys[0], keys[1])
         self._remote_start_status = None
         self._update_status(POWER_STATUS_KEY, self._state_power_off)
 
-    async def wake_up(self):
+    async def wake_up(self) -> None:
         """Wakeup the device."""
         if not self._stand_by:
-            raise InvalidDeviceStatus()
+            raise InvalidDeviceStatus
 
-        keys = self._get_cmd_keys(CMD_WAKE_UP)
+        keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_WAKE_UP))
         await self.set(keys[0], keys[1])
         self._stand_by = False
         self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
@@ -729,21 +767,21 @@ class WMDevice(Device):
     async def remote_start(self, course_name: str | None = None) -> None:
         """Remote start the device."""
         if not self.remote_start_enabled:
-            raise InvalidDeviceStatus()
+            raise InvalidDeviceStatus
 
         if course_name and self._initial_bit_start:
             await self.select_start_course(course_name)
 
-        keys = self._get_cmd_keys(CMD_REMOTE_START)
+        keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_REMOTE_START))
         await self.set(keys[0], keys[1], key=keys[2])
         self._remote_start_pressed = True
 
-    async def pause(self):
+    async def pause(self) -> None:
         """Pause the device."""
         if not self.pause_enabled:
-            raise InvalidDeviceStatus()
+            raise InvalidDeviceStatus
 
-        keys = self._get_cmd_keys(CMD_PAUSE)
+        keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_PAUSE))
         await self.set(keys[0], keys[1])
         # this is to keep remote start disabled until next refresh
         self._remote_start_pressed = True
@@ -751,11 +789,18 @@ class WMDevice(Device):
         self._update_status(POWER_STATUS_KEY, self._state_pause)
 
     async def set(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
-    ):
+        self,
+        ctrl_key: str,
+        command: str | None,
+        *,
+        key: str | None = None,
+        value: str | None = None,
+        data: str | None = None,
+        ctrl_path: str | None = None,
+    ) -> None:
         """Set a device's control for `key` to `value`."""
         await super().set(
-            self._getcmdkey(ctrl_key),
+            cast(str, self._getcmdkey(ctrl_key)),
             self._getcmdkey(command),
             key=key,
             value=value,
@@ -763,15 +808,21 @@ class WMDevice(Device):
             ctrl_path=ctrl_path,
         )
 
-    def reset_status(self):
+    def reset_status(self) -> WMStatus:
+        """Reset the device status."""
         tcl_count = None
-        if self._status:
+        if isinstance(self._status, WMStatus):
             tcl_count = self._status.tubclean_count
         self._status = WMStatus(self, tcl_count=tcl_count)
         return self._status
 
-    def _set_remote_start_opt(self):
+    def _set_remote_start_opt(self) -> None:
         """Save the status to use for remote start."""
+        if not isinstance(self._status, WMStatus):
+            self._remote_start_status = None
+            self._initial_bit_start = False
+            self._stand_by = False
+            return
         if self._remote_start_pressed:
             self._remote_start_pressed = False
 
@@ -807,7 +858,7 @@ class WMDevice(Device):
 
     def _set_cycle_finishing(self) -> None:
         """Calculate if the cycle is finishing because remain 1 minute."""
-        if not self._status:
+        if not isinstance(self._status, WMStatus):
             return
 
         if (remaining_min := self._status.remaintime_min) is None:
@@ -827,7 +878,7 @@ class WMDevice(Device):
 
         if not self._sub_key or not self._should_poll:
             res = await self._device_poll(self._sub_device or WM_ROOT_DATA)
-            if self._subkey_device and self._should_poll:
+            if self._subkey_device and self._should_poll and isinstance(res, dict):
                 self._subkey_device.update_internal_state(res)
         else:
             res = self._internal_state
@@ -843,8 +894,7 @@ class WMDevice(Device):
 
 
 class WMStatus(DeviceStatus):
-    """
-    Higher-level information about a WM current status.
+    """Higher-level information about a WM current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.
@@ -855,18 +905,18 @@ class WMStatus(DeviceStatus):
     def __init__(
         self,
         device: WMDevice,
-        data: dict | None = None,
+        data: dict[str, Any] | None = None,
         *,
         tcl_count: str | None = None,
-        init_run_state=True,
-    ):
+        init_run_state: bool = True,
+    ) -> None:
         """Initialize device status."""
         super().__init__(device, data)
-        self._internal_run_state = None
-        self._run_state = None
-        self._pre_state = None
-        self._process_state = None
-        self._error = None
+        self._internal_run_state: str | None = None
+        self._run_state: str | None = None
+        self._pre_state: str | StateOptions | None = None
+        self._process_state: str | StateOptions | None = None
+        self._error: str | None = None
         self._tcl_count = tcl_count
         if init_run_state:
             # we call get_run_state to update device states
@@ -875,10 +925,10 @@ class WMStatus(DeviceStatus):
     def _getkeys(self, keys: str | list[str]) -> str | list[str]:
         """Add subkey prefix to a key or a list of keys if required."""
         if isinstance(keys, list):
-            return [self._device.getkey(key) for key in keys]
-        return self._device.getkey(keys)
+            return [cast(str, self._device.getkey(key)) for key in keys]
+        return cast(str, self._device.getkey(keys))
 
-    def _get_run_state(self):
+    def _get_run_state(self) -> str:
         """Get current run state."""
         if not self._run_state:
             curr_key = self._get_data_key(self._getkeys(POWER_STATUS_KEY))
@@ -892,7 +942,7 @@ class WMStatus(DeviceStatus):
             self._device.save_run_states(self._run_state)
         return self._run_state
 
-    def _get_pre_state(self):
+    def _get_pre_state(self) -> str | StateOptions | None:
         """Get previous run state."""
         if not self._pre_state:
             keys = self._getkeys(["PreState", "preState"])
@@ -909,7 +959,7 @@ class WMStatus(DeviceStatus):
                 self._device.save_run_states(state, True)
         return self._pre_state
 
-    def _get_process_state(self):
+    def _get_process_state(self) -> str | StateOptions | None:
         """Get current process state."""
         if not self._process_state:
             keys = self._getkeys(["ProcessState", "processState"])
@@ -922,7 +972,7 @@ class WMStatus(DeviceStatus):
                 self._process_state = state
         return self._process_state
 
-    def _get_error(self):
+    def _get_error(self) -> str:
         """Get current error."""
         if not self._error:
             keys = self._getkeys(["Error", "error"])
@@ -934,7 +984,7 @@ class WMStatus(DeviceStatus):
                 self._error = error
         return self._error
 
-    def update_status(self, key, value):
+    def update_status(self, key: str | list[str], value: Any) -> bool:
         """Update device status."""
         if not super().update_status(self._getkeys(key), value):
             return False
@@ -942,26 +992,26 @@ class WMStatus(DeviceStatus):
         return True
 
     @property
-    def internal_run_state(self):
+    def internal_run_state(self) -> str | None:
         """Return internal representation for run state."""
         self._get_run_state()
         return self._internal_run_state
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return if device is on."""
         run_state = self._get_run_state()
         return STATE_WM_POWER_OFF not in run_state
 
     @property
-    def is_dryer(self):
+    def is_dryer(self) -> bool:
         """Return if device is a dryer."""
         if self._device.device_info.type in [DeviceType.DRYER, DeviceType.TOWER_DRYER]:
             return True
         return False
 
     @property
-    def is_run_completed(self):
+    def is_run_completed(self) -> bool:
         """Return if run is completed."""
         run_state = self._get_run_state()
         pre_state = self._get_pre_state()
@@ -977,7 +1027,7 @@ class WMStatus(DeviceStatus):
         return False
 
     @property
-    def is_error(self):
+    def is_error(self) -> bool:
         """Return if an error is present."""
         if not self.is_on:
             return False
@@ -987,7 +1037,7 @@ class WMStatus(DeviceStatus):
         return True
 
     @property
-    def current_course(self):
+    def current_course(self) -> str:
         """Return current course."""
         if not (course_key := self._device.get_course_key(CourseType.COURSE)):
             return StateOptions.NONE
@@ -995,59 +1045,59 @@ class WMStatus(DeviceStatus):
         return self._device.get_enum_text(course)
 
     @property
-    def current_smartcourse(self):
+    def current_smartcourse(self) -> str:
         """Return current smartcourse."""
         if not (course_key := self._device.get_course_key(CourseType.SMARTCOURSE)):
             return StateOptions.NONE
         smart_course = self.lookup_reference(course_key, ref_key="name")
         return self._device.get_enum_text(smart_course)
 
-    def _get_time_info(self, keys: list[str]):
+    def _get_time_info(self, keys: list[str | list[str]]) -> str | None:
         """Return time info for specific key."""
         if self.is_info_v2:
             if not self.is_on:
-                return 0
-            return self.int_or_none(self._data.get(self._getkeys(keys[1])))
-        return self.lookup_range(self._getkeys((keys[0])))
+                return "0"
+            return self.int_or_none(self._data.get(cast(str, self._getkeys(cast(str, keys[1])))))
+        return cast(str | None, self.lookup_range(keys[0]))
 
     @property
-    def initialtime_hour(self):
+    def initialtime_hour(self) -> str | None:
         """Return hour initial time."""
         return self._get_time_info(["Initial_Time_H", "initialTimeHour"])
 
     @property
-    def initialtime_min(self):
+    def initialtime_min(self) -> str | None:
         """Return minute initial time."""
         return self._get_time_info(
             [["Initial_Time_M", "Initial_Time"], "initialTimeMinute"]
         )
 
     @property
-    def remaintime_hour(self):
+    def remaintime_hour(self) -> str | None:
         """Return hour remaining time."""
         return self._get_time_info(["Remain_Time_H", "remainTimeHour"])
 
     @property
-    def remaintime_min(self):
+    def remaintime_min(self) -> str | None:
         """Return minute remaining time."""
         return self._get_time_info(
             [["Remain_Time_M", "Remain_Time"], "remainTimeMinute"]
         )
 
     @property
-    def reservetime_hour(self):
+    def reservetime_hour(self) -> str | None:
         """Return hour reserved time."""
         return self._get_time_info(["Reserve_Time_H", "reserveTimeHour"])
 
     @property
-    def reservetime_min(self):
+    def reservetime_min(self) -> str | None:
         """Return minute reserved time."""
         return self._get_time_info(
             [["Reserve_Time_M", "Reserve_Time"], "reserveTimeMinute"]
         )
 
     @property
-    def run_state(self):
+    def run_state(self) -> str | StateOptions | None:
         """Return current run state."""
         run_state = self._get_run_state()
         if STATE_WM_POWER_OFF in run_state:
@@ -1055,7 +1105,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.RUN_STATE, run_state)
 
     @property
-    def pre_state(self):
+    def pre_state(self) -> str | StateOptions | None:
         """Return previous run state."""
         pre_state = self._get_pre_state()
         if pre_state is None:
@@ -1065,7 +1115,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.PRE_STATE, pre_state)
 
     @property
-    def process_state(self):
+    def process_state(self) -> str | StateOptions | None:
         """Return current process state."""
         process = self._get_process_state()
         if process is None:
@@ -1075,8 +1125,9 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.PROCESS_STATE, process)
 
     @property
-    def error_msg(self):
+    def error_msg(self) -> str | StateOptions | None:
         """Return current error message."""
+        error: str | StateOptions
         if not self.is_error:
             error = StateOptions.NONE
         else:
@@ -1084,7 +1135,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.ERROR_MSG, error)
 
     @property
-    def spin_option_state(self):
+    def spin_option_state(self) -> str | StateOptions | None:
         """Return spin option state."""
         keys = self._getkeys(["SpinSpeed", "spin"])
         if not (key := self.get_model_info_key(keys)):
@@ -1095,7 +1146,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.SPINSPEED, spin_speed)
 
     @property
-    def water_temp_option_state(self):
+    def water_temp_option_state(self) -> str | StateOptions | None:
         """Return water temperature option state."""
         keys = self._getkeys(["WTemp", "WaterTemp", "temp"])
         if not (key := self.get_model_info_key(keys)):
@@ -1108,7 +1159,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.WATERTEMP, water_temp)
 
     @property
-    def rinse_mode_option_state(self):
+    def rinse_mode_option_state(self) -> str | StateOptions | None:
         """Return rinse mode option state."""
         keys = self._getkeys(["RinseOption", "rinse"])
         if not (key := self.get_model_info_key(keys)):
@@ -1119,7 +1170,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.RINSEMODE, rinse_mode)
 
     @property
-    def dry_level_option_state(self):
+    def dry_level_option_state(self) -> str | StateOptions | None:
         """Return dry level option state."""
         keys = self._getkeys(["DryLevel", "dryLevel"])
         if not (key := self.get_model_info_key(keys)):
@@ -1130,7 +1181,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.DRYLEVEL, dry_level)
 
     @property
-    def temp_control_option_state(self):
+    def temp_control_option_state(self) -> str | StateOptions | None:
         """Return temperature control option state."""
         keys = self._getkeys(["TempControl", "tempControl", "temp"])
         if not (key := self.get_model_info_key(keys)):
@@ -1143,7 +1194,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.TEMPCONTROL, temp_control)
 
     @property
-    def time_dry_option_state(self):
+    def time_dry_option_state(self) -> str | StateOptions | None:
         """Return time dry option state."""
         keys = self._getkeys("TimeDry")
         if not (key := self.get_model_info_key(keys)):
@@ -1154,7 +1205,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.TIMEDRY, time_dry, False)
 
     @property
-    def eco_hybrid_option_state(self):
+    def eco_hybrid_option_state(self) -> str | StateOptions | None:
         """Return eco hybrid option state."""
         keys = self._getkeys(["EcoHybrid", "ecoHybrid"])
         if not (key := self.get_model_info_key(keys)):
@@ -1165,9 +1216,9 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.ECOHYBRID, eco_hybrid)
 
     @property
-    def tubclean_count(self):
+    def tubclean_count(self) -> str | None:
         """Return tub clean counter."""
-        key = self._getkeys("TCLCount")
+        key = cast(str, self._getkeys("TCLCount"))
         if self.is_info_v2:
             if (result := self.int_or_none(self._data.get(key))) is None:
                 return None
@@ -1180,7 +1231,7 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.TUBCLEAN_COUNT, result, False)
 
     @property
-    def standby_state(self):
+    def standby_state(self) -> str | StateOptions | None:
         """Return standby state."""
         status = None
         keys = self._getkeys(["Standby", "standby"])
@@ -1194,17 +1245,19 @@ class WMStatus(DeviceStatus):
             status = StateOptions.OFF
         return self._update_feature(WashDeviceFeatures.STANDBY, status)
 
-    def _update_bit_features(self):
+    def _update_bit_features(self) -> None:
         """Update features related to bit status."""
         index = 1 if self.is_info_v2 else 0
         for feature, keys in BIT_FEATURES.items():
             invert = feature in INVERTED_BITS
             status = self.lookup_bit(
-                self._getkeys(keys[index]), sub_key=self._device.sub_key, invert=invert
+                cast(str, self._getkeys(keys[index])),
+                sub_key=self._device.sub_key,
+                invert=invert,
             )
             self._update_feature(feature, status, False)
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         _ = [
             self.run_state,
             self.pre_state,

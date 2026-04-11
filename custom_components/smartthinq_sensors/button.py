@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from homeassistant.components.button import (
     ButtonDeviceClass,
@@ -29,14 +30,14 @@ ATTR_PAUSE = "device_pause"
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQButtonDescriptionMixin:
     """Mixin to describe a Button entity."""
 
     press_action_fn: Callable[[Any], Awaitable[None]]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQButtonEntityDescription(
     ButtonEntityDescription, ThinQButtonDescriptionMixin
 ):
@@ -68,7 +69,7 @@ WASH_DEV_BUTTON: tuple[ThinQButtonEntityDescription, ...] = (
 )
 
 BUTTON_ENTITIES = {
-    **{dev_type: WASH_DEV_BUTTON for dev_type in WM_DEVICE_TYPES},
+    **dict.fromkeys(WM_DEVICE_TYPES, WASH_DEV_BUTTON),
 }
 
 
@@ -90,7 +91,7 @@ async def async_setup_entry(
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
-    _LOGGER.debug("Starting LGE ThinQ button setup...")
+    _LOGGER.debug("Starting LGE ThinQ button setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -117,7 +118,7 @@ async def async_setup_entry(
 
 
 class LGEButton(CoordinatorEntity, ButtonEntity):
-    """Class to control buttons for LGE device"""
+    """Class to control buttons for LGE device."""
 
     entity_description: ThinQButtonEntityDescription
     _attr_has_entity_name = True
@@ -126,7 +127,7 @@ class LGEButton(CoordinatorEntity, ButtonEntity):
         self,
         api: LGEDevice,
         description: ThinQButtonEntityDescription,
-    ):
+    ) -> None:
         """Initialize the button."""
         super().__init__(api.coordinator)
         self._api = api

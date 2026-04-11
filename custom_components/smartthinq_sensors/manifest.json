@@ -11,8 +11,7 @@
   "requirements": [
     "pycountry>=23.12.11",
     "xmltodict>=0.13.0",
-    "charset_normalizer>=3.2.0",
-    "thinqconnect==1.0.11"
+    "charset_normalizer>=3.2.0"
   ],
-  "version": "0.41.2"
+  "version": "0.42.0"
 }

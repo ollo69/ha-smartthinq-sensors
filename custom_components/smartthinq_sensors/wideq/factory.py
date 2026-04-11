@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from .const import TemperatureUnit
 from .core_async import ClientAsync
-from .device import Device
+from .device import Device, ThinQSnapshotProvider
 from .device_info import (
     WM_COMPLEX_DEVICES,
     WM_DEVICE_TYPES,
@@ -28,14 +28,17 @@ from .devices.waterheater import WaterHeaterDevice
 
 
 def _get_sub_devices(device_type: DeviceType) -> list[str | None]:
-    """Return a list of complex devices"""
+    """Return a list of complex devices."""
     if sub_devices := WM_COMPLEX_DEVICES.get(device_type):
-        return sub_devices
+        return list(sub_devices)
     return [None]
 
 
 def get_lge_device(
-    client: ClientAsync, device_info: DeviceInfo, temp_unit=TemperatureUnit.CELSIUS
+    client: ClientAsync,
+    device_info: DeviceInfo,
+    temp_unit: TemperatureUnit = TemperatureUnit.CELSIUS,
+    snapshot_provider: ThinQSnapshotProvider | None = None,
 ) -> list[Device] | None:
     """Return a list of device objects based on the device type."""
 
@@ -49,30 +52,35 @@ def get_lge_device(
         return None
 
     if device_type == DeviceType.AC:
-        return [AirConditionerDevice(client, device_info, temp_unit)]
+        return [AirConditionerDevice(client, device_info, temp_unit, snapshot_provider)]
     if device_type == DeviceType.AIR_PURIFIER:
-        return [AirPurifierDevice(client, device_info)]
+        return [AirPurifierDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.DEHUMIDIFIER:
-        return [DeHumidifierDevice(client, device_info)]
+        return [DeHumidifierDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.DISHWASHER:
-        return [DishWasherDevice(client, device_info)]
+        return [DishWasherDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.FAN:
-        return [FanDevice(client, device_info)]
+        return [FanDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.HOOD:
-        return [HoodDevice(client, device_info)]
+        return [HoodDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.MICROWAVE:
-        return [MicroWaveDevice(client, device_info)]
+        return [MicroWaveDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.RANGE:
-        return [RangeDevice(client, device_info)]
+        return [RangeDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.REFRIGERATOR:
-        return [RefrigeratorDevice(client, device_info)]
+        return [RefrigeratorDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.STYLER:
-        return [StylerDevice(client, device_info)]
+        return [StylerDevice(client, device_info, snapshot_provider=snapshot_provider)]
     if device_type == DeviceType.WATER_HEATER:
-        return [WaterHeaterDevice(client, device_info, temp_unit)]
+        return [WaterHeaterDevice(client, device_info, temp_unit, snapshot_provider)]
     if device_type in WM_DEVICE_TYPES:
         return [
-            WMDevice(client, device_info, sub_device=sub_device)
+            WMDevice(
+                client,
+                device_info,
+                sub_device=sub_device,
+                snapshot_provider=snapshot_provider,
+            )
             for sub_device in _get_sub_devices(device_type)
         ]
     return None

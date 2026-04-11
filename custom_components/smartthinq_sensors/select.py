@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -21,15 +22,15 @@ from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQSelectRequiredKeysMixin:
     """Mixin for required keys."""
 
     options_fn: Callable[[Any], list[str]]
-    select_option_fn: Callable[[Any], Awaitable[None]]
+    select_option_fn: Callable[[Any, str], Awaitable[None]]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQSelectEntityDescription(
     SelectEntityDescription, ThinQSelectRequiredKeysMixin
 ):
@@ -71,7 +72,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
 
 SELECT_ENTITIES = {
     DeviceType.MICROWAVE: MICROWAVE_SELECT,
-    **{dev_type: WASH_DEV_SELECT for dev_type in WM_DEVICE_TYPES},
+    **dict.fromkeys(WM_DEVICE_TYPES, WASH_DEV_SELECT),
 }
 
 
@@ -96,7 +97,7 @@ async def async_setup_entry(
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
-    _LOGGER.debug("Starting LGE ThinQ select setup...")
+    _LOGGER.debug("Starting LGE ThinQ select setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -123,7 +124,7 @@ async def async_setup_entry(
 
 
 class LGESelect(CoordinatorEntity, SelectEntity):
-    """Class to control selects for LGE device"""
+    """Class to control selects for LGE device."""
 
     entity_description: ThinQSelectEntityDescription
     _attr_has_entity_name = True
@@ -132,7 +133,7 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         self,
         api: LGEDevice,
         description: ThinQSelectEntityDescription,
-    ):
+    ) -> None:
         """Initialize the select."""
         super().__init__(api.coordinator)
         self._api = api
@@ -154,7 +155,7 @@ class LGESelect(CoordinatorEntity, SelectEntity):
 
         if self._api.state:
             feature = self.entity_description.key
-            return self._api.state.device_features.get(feature)
+            return cast(str | None, self._api.state.device_features.get(feature))
 
         return None
 

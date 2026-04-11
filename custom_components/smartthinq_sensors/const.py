@@ -1,12 +1,11 @@
 """Constants for LGE ThinQ custom component."""
 
-from datetime import timedelta
-
-__version__ = "0.41.2"
+__version__ = "0.42.0"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
 ISSUE_URL = f"{PROJECT_URL}issues"
 
 DOMAIN = "smartthinq_sensors"
+OFFICIAL_CLIENT_PREFIX = "home-assistant"
 
 MIN_HA_MAJ_VER = 2025
 MIN_HA_MIN_VER = 1
@@ -35,19 +34,15 @@ ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 
 # configuration
 CONF_LANGUAGE = "language"
+CONF_OFFICIAL_CLIENT_ID = "official_client_id"
+CONF_OFFICIAL_PAT = "official_pat"
 CONF_OAUTH2_URL = "oauth2_url"
 CONF_USE_API_V2 = "use_api_v2"
 CONF_USE_HA_SESSION = "use_ha_session"
 CONF_USE_REDIRECT = "use_redirect"
-CONF_OFFICIAL_PAT = "official_pat"
-CONF_OFFICIAL_CLIENT_ID = "official_client_id"
 
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"
-OFFICIAL_LGE_DEVICES = "official_lge_devices"
-THINQ_MQTT = "thinq_mqtt"
-
-MQTT_SUBSCRIPTION_INTERVAL = timedelta(hours=12)
 
 LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
 
