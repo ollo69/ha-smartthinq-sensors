@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
@@ -182,8 +182,9 @@ class CoreAsync:
         session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
         update_clientid_callback: Callable[[str], None] | None = None,
-    ) -> None:
-        """Create the CoreAsync object.
+    ):
+        """
+        Create the CoreAsync object
 
         Parameters:
             country: ThinQ account country
@@ -198,8 +199,7 @@ class CoreAsync:
         self._oauth_url = oauth_url
         self._client_id = client_id
         self._update_clientid_callback = update_clientid_callback
-        self._lang_pack_url: str | None = None
-        self._session: aiohttp.ClientSession | None
+        self._lang_pack_url = None
 
         if session:
             self._session = session
@@ -247,11 +247,11 @@ class CoreAsync:
         if self._client_id is not None and not force_refresh:
             return self._client_id
         if user_number is None:
-            return ""
+            return self._client_id
 
         hash_object = hashlib.sha256()
         hash_object.update(
-            (user_number + datetime.now(UTC).strftime("%Y%m%d%H%M%S")).encode(
+            (user_number + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")).encode(
                 "utf8"
             )
         )
@@ -415,11 +415,8 @@ class CoreAsync:
         return self._manage_lge_result(out, is_api_v2, user_number)
 
     def _manage_lge_result(
-        self,
-        result: dict[str, Any],
-        is_api_v2: bool = False,
-        user_number: str | None = None,
-    ) -> dict[str, Any]:
+        self, result: dict, is_api_v2=False, user_number: str | None = None
+    ) -> dict:
         """Manage the result from a get or a post to lge server."""
 
         if is_api_v2:
@@ -657,7 +654,7 @@ class CoreAsync:
         }
 
         parse_url = urlparse(V2_EMP_SESS_URL)
-        timestamp = datetime.now(UTC).strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{parse_url.path}?{urlencode(emp_data)}"
         signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
@@ -702,7 +699,7 @@ class CoreAsync:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_USER_INFO)
-        timestamp = datetime.now(UTC).strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         sig = self._oauth2_signature(f"{V2_USER_INFO}\n{timestamp}", OAUTH_SECRET_KEY)
 
         headers = {
@@ -745,7 +742,7 @@ class CoreAsync:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_AUTH_PATH)
-        timestamp = datetime.now(UTC).strftime(DATE_FORMAT)
+        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{V2_AUTH_PATH}?{urlencode(data)}"
         sig = self._oauth2_signature(f"{req_url}\n{timestamp}", OAUTH_SECRET_KEY)
 
@@ -936,7 +933,7 @@ class Auth:
         )
         self.user_number = user_number
         self._token_created_on = (
-            datetime.now(UTC) if access_token else datetime.min
+            datetime.now(timezone.utc) if access_token else datetime.min
         )
 
     @property
@@ -1076,7 +1073,7 @@ class Auth:
 
         get_new_token: bool = force_refresh or (access_token is None)
         if not get_new_token:
-            diff = (datetime.now(UTC) - self._token_created_on).total_seconds()
+            diff = (datetime.now(timezone.utc) - self._token_created_on).total_seconds()
             if (self.token_validity - diff) <= TOKEN_EXP_LIMIT:
                 get_new_token = True
 
@@ -1454,7 +1451,7 @@ class ClientAsync:
         self._auth: Auth = auth
         self._session: Session | None = session
         self._connected = True
-        self._last_device_update = datetime.now(UTC)
+        self._last_device_update = datetime.now(timezone.utc)
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
@@ -1580,7 +1577,7 @@ class ClientAsync:
     async def refresh_devices(self) -> None:
         """Refresh the devices' information for this client."""
         async with self._lock:
-            call_time = datetime.now(UTC)
+            call_time = datetime.now(timezone.utc)
             difference = (call_time - self._last_device_update).total_seconds()
             if difference <= MIN_TIME_BETWEEN_UPDATE:
                 return

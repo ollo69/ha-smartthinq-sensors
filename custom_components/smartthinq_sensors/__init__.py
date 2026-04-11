@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import timedelta
 import logging
 from typing import Any, cast
 import uuid
@@ -290,6 +290,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DataSourceRouter(domain_data[CAPABILITY_REGISTRY]),
     )
     domain_data.setdefault(HYBRID_COORDINATORS, {})
+
+    def _update_clientid_callback(client_id: str) -> None:
+        """Update config entry with the new client id."""
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_CLIENT_ID: client_id}
+        )
 
     def _update_clientid_callback(client_id: str) -> None:
         """Update config entry with the new client id."""

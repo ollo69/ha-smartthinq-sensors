@@ -79,6 +79,8 @@ if exceeded_user_calls := getattr(
 ):
     THINQ_ERRORS[exceeded_user_calls] = "official_user_api_calls_exceeded"
 
+INT_COMM_URL = "https://git.io/JU166"
+
 _LOGGER = logging.getLogger(__name__)
 
 COUNTRIES = {
@@ -453,7 +455,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
     def _show_form(
         self,
         errors: str | None = None,
-        step_id: str = "user",
+        step_id="user",
         description_placeholders: Mapping[str, str] | None = None,
     ) -> ConfigFlowResult:
         """Show the form to the user."""
