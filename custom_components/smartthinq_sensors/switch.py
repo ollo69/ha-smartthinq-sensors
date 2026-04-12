@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import logging
 from typing import Any, cast
 
+from thinqconnect.devices.const import Property as ThinQProperty
+
 from homeassistant.components.switch import (
     SwitchDeviceClass,
     SwitchEntity,
@@ -22,6 +24,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import STATE_LOOKUP, LGEBaseDevice
+from .official_control import async_call_official_turn_off, async_call_official_turn_on
 from .wideq import (
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
@@ -34,6 +37,12 @@ from .wideq import (
 ATTR_POWER = "power"
 
 _LOGGER = logging.getLogger(__name__)
+
+OFFICIAL_POWER_KEYS = {
+    DeviceType.WASHER: (ThinQProperty.WASHER_OPERATION_MODE,),
+    DeviceType.DRYER: (ThinQProperty.DRYER_OPERATION_MODE,),
+    DeviceType.DISHWASHER: (ThinQProperty.DISH_WASHER_OPERATION_MODE,),
+}
 
 
 @dataclass(frozen=True)
@@ -268,11 +277,26 @@ class LGESwitch(LGEBaseSwitch):
             is_avail = self.entity_description.available_fn(self._wrap_device)
         return self._api.available and is_avail
 
+    async def _async_try_official_power_control(self, turn_on: bool) -> bool:
+        """Try controlling a wash-device power switch through the official API."""
+        if self.entity_description.key != ATTR_POWER:
+            return False
+
+        property_keys = OFFICIAL_POWER_KEYS.get(self._api.type)
+        if not property_keys:
+            return False
+
+        if turn_on:
+            return await async_call_official_turn_on(self._api, *property_keys)
+        return await async_call_official_turn_off(self._api, *property_keys)
+
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         if self.entity_description.turn_off_fn is None:
             raise NotImplementedError
         if self.is_on:
+            if await self._async_try_official_power_control(False):
+                return
             await self.entity_description.turn_off_fn(self._wrap_device)
             self._api.async_set_updated()
 
@@ -281,11 +305,27 @@ class LGESwitch(LGEBaseSwitch):
         if self.entity_description.turn_on_fn is None:
             raise NotImplementedError
         if not self.is_on:
+            if await self._async_try_official_power_control(True):
+                return
             await self.entity_description.turn_on_fn(self._wrap_device)
             self._api.async_set_updated()
 
     def _get_switch_state(self) -> bool | str | None:
         """Get current switch state."""
+        if self.entity_description.key == ATTR_POWER:
+            if self._api.type in WM_DEVICE_TYPES or self._api.type == DeviceType.DISHWASHER:
+                return self._wrap_device.is_power_on
+
+            logical_key = {
+                DeviceType.WASHER: "washer.is_on",
+                DeviceType.DRYER: "dryer.is_on",
+                DeviceType.DISHWASHER: "dishwasher.is_on",
+            }.get(self._api.type)
+            if logical_key:
+                hybrid_is_on = self._api.get_hybrid_value(logical_key)
+                if hybrid_is_on is not None:
+                    return bool(hybrid_is_on)
+
         if self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 

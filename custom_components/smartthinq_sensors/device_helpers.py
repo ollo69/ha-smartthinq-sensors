@@ -106,6 +106,35 @@ class LGEBaseDevice:
     @property
     def is_power_on(self) -> bool:
         """Current power state."""
+        if self._api.type in WM_DEVICE_TYPES or self._api.type == DeviceType.DISHWASHER:
+            logical_prefix = {
+                DeviceType.WASHER: "washer",
+                DeviceType.DRYER: "dryer",
+                DeviceType.DISHWASHER: "dishwasher",
+            }.get(self._api.type)
+            if logical_prefix:
+                hybrid_run_state = self._api.get_hybrid_value(
+                    f"{logical_prefix}.run_state"
+                )
+                if isinstance(hybrid_run_state, str):
+                    normalized_run_state = hybrid_run_state.lower()
+                    if normalized_run_state in {"power_off", "off", "none"}:
+                        return False
+                    return True
+
+        logical_key = {
+            DeviceType.WASHER: "washer.is_on",
+            DeviceType.DRYER: "dryer.is_on",
+            DeviceType.DISHWASHER: "dishwasher.is_on",
+            DeviceType.FAN: "fan.is_on",
+            DeviceType.AIR_PURIFIER: "air_purifier.is_on",
+            DeviceType.HOOD: "hood.is_on",
+            DeviceType.MICROWAVE: "microwave.is_on",
+        }.get(self._api.type)
+        if logical_key:
+            hybrid_is_on = self._api.get_hybrid_value(logical_key)
+            if hybrid_is_on is not None:
+                return bool(hybrid_is_on)
         if self._api.state:
             if self._api.state.is_on:
                 return True
@@ -228,6 +257,15 @@ class LGEWashDevice(LGEBaseDevice):
     @property
     def current_course(self) -> str:
         """Return wash device current course."""
+        logical_key = {
+            DeviceType.WASHER: "washer.current_course",
+            DeviceType.DRYER: "dryer.current_course",
+            DeviceType.DISHWASHER: "dishwasher.current_course",
+        }.get(self._api.type)
+        if logical_key:
+            hybrid_course = self._api.get_hybrid_value(logical_key)
+            if hybrid_course not in (None, ""):
+                return str(hybrid_course)
         if self._api.state:
             if self._api.state.is_on:
                 course = self._api.state.current_course

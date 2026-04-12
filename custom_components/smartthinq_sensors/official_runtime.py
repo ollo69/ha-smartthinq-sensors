@@ -10,6 +10,7 @@ import json
 import logging
 from typing import Any
 
+from aiohttp import ClientError
 from thinqconnect import (
     DeviceType as OfficialDeviceType,
     ThinQApi,
@@ -322,7 +323,7 @@ async def async_setup_official_runtime(
 
     try:
         bridge_list = await async_get_ha_bridge_list(thinq_api)
-    except ThinQAPIException as err:
+    except (ClientError, OSError, TimeoutError, ThinQAPIException) as err:
         hass.data.setdefault(DOMAIN, {})[OFFICIAL_RUNTIME_LAST_ERROR] = str(err)
         _LOGGER.warning("Failed to initialize official ThinQ bridge list: %s", err)
         return None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 import logging
 from typing import Any, cast
 
@@ -11,6 +12,7 @@ from thinqconnect.devices.const import Property as ThinQProperty
 from thinqconnect.integration import ExtendedProperty, PropertyState
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.event import async_call_later
 from homeassistant.util.dt import utcnow
 
 from .const import DOMAIN
@@ -22,6 +24,9 @@ _LOGGER = logging.getLogger(__name__)
 OFFICIAL_DOMAIN = "lg_thinq"
 OFFICIAL_RUNTIME = "official_runtime"
 OFFICIAL_RUNTIME_STATUS = "official_runtime_status"
+OFFICIAL_RUNTIME_RETRY_COUNT = "official_runtime_retry_count"
+OFFICIAL_RUNTIME_RETRY_AT = "official_runtime_retry_at"
+OFFICIAL_RUNTIME_RETRY_UNSUB = "official_runtime_retry_unsub"
 OFFICIAL_DEVICE_LINKS = "official_device_links"
 LGE_DEVICES = "lge_devices"
 
@@ -262,8 +267,17 @@ def _extract_air_purifier_attributes(
         if device_type == OfficialDeviceType.AIR_PURIFIER
         else ThinQProperty.AIR_FAN_OPERATION_MODE
     )
-    if operation_state := data.get(operation_key):
-        operation_value = _get_state_value(operation_state)
+    operation_value = _get_official_state_value(
+        data,
+        operation_key,
+        "air_purifier_operation_mode",
+        "airPurifierOperationMode",
+        "operation.airPurifierOperationMode",
+        "air_fan_operation_mode",
+        "airFanOperationMode",
+        "operation.airFanOperationMode",
+    )
+    if operation_value is not None:
         aliases["air_purifier.is_on"] = _value_means_on(operation_value)
     if job_mode := data.get(ThinQProperty.CURRENT_JOB_MODE):
         aliases["air_purifier.operation_mode"] = _get_state_value(job_mode)
@@ -281,8 +295,29 @@ def _extract_air_purifier_attributes(
         aliases["air_purifier.pm25"] = _get_state_value(pm25_state)
     if filter_state := data.get(ThinQProperty.FILTER_REMAIN_PERCENT):
         aliases["air_purifier.filter.main"] = _get_state_value(filter_state)
-    if top_filter_state := data.get(ThinQProperty.TOP_FILTER_REMAIN_PERCENT):
-        aliases["air_purifier.filter.top"] = _get_state_value(top_filter_state)
+    else:
+        aliases["air_purifier.filter.main"] = _get_official_state_value(
+            data,
+            "filter_lifetime",
+            "filterLifetime",
+            "filter_info.filter_lifetime",
+            "filterInfo.filterLifetime",
+        )
+    if filter_used_time := _get_official_state_value(
+        data,
+        "used_time",
+        "usedTime",
+        "filter_info.used_time",
+        "filterInfo.usedTime",
+    ):
+        aliases["air_purifier.filter.used_time"] = filter_used_time
+    if top_filter_state := _get_official_state_value(
+        data,
+        ThinQProperty.TOP_FILTER_REMAIN_PERCENT,
+        "top_filter_remain_percent",
+        "topFilterRemainPercent",
+    ):
+        aliases["air_purifier.filter.top"] = top_filter_state
     return aliases
 
 
@@ -370,21 +405,54 @@ def _extract_laundry_attributes(
 ) -> dict[str, Any]:
     """Extract official washer/dryer/dishwasher attributes."""
     aliases: dict[str, Any] = {}
+
+    def _prefixed_keys(*keys: str) -> tuple[str, ...]:
+        """Return key variants prefixed with the main location namespace."""
+        prefixed: list[str] = []
+        for key in keys:
+            prefixed.extend((key, f"main_{key}"))
+        return tuple(prefixed)
+
     if device_type == OfficialDeviceType.WASHER:
         prefix = "washer"
         operation_key = ThinQProperty.WASHER_OPERATION_MODE
+        operation_keys = (
+            operation_key,
+            *_prefixed_keys("washer_operation_mode", "washerOperationMode"),
+            "washer_operation_mode",
+            "washerOperationMode",
+            "operation.washerOperationMode",
+        )
     elif device_type == OfficialDeviceType.DRYER:
         prefix = "dryer"
         operation_key = ThinQProperty.DRYER_OPERATION_MODE
+        operation_keys = (
+            operation_key,
+            *_prefixed_keys("dryer_operation_mode", "dryerOperationMode"),
+            "dryer_operation_mode",
+            "dryerOperationMode",
+            "operation.dryerOperationMode",
+        )
     else:
         prefix = "dishwasher"
         operation_key = ThinQProperty.DISH_WASHER_OPERATION_MODE
+        operation_keys = (
+            operation_key,
+            *_prefixed_keys("dish_washer_operation_mode", "dishWasherOperationMode"),
+            "dish_washer_operation_mode",
+            "dishWasherOperationMode",
+            "operation.dishWasherOperationMode",
+        )
 
-    operation = _get_official_state_value(data, operation_key)
+    operation = _get_official_state_value(data, *operation_keys)
     current_state = _get_official_state_value(
         data,
         ThinQProperty.CURRENT_STATE,
+        *_prefixed_keys("current_state", "currentState"),
         "current_state",
+        "currentState",
+        "run_state",
+        "runState.currentState",
     )
     is_on = _value_means_on(operation)
     if is_on is None:
@@ -398,7 +466,10 @@ def _extract_laundry_attributes(
     if current_job_mode := _get_official_state_value(
         data,
         ThinQProperty.CURRENT_JOB_MODE,
+        *_prefixed_keys("current_job_mode", "currentJobMode"),
         "current_job_mode",
+        "currentJobMode",
+        "airConJobMode.currentJobMode",
     ):
         aliases[f"{prefix}.process_state"] = current_job_mode
     elif operation is not None:
@@ -407,11 +478,55 @@ def _extract_laundry_attributes(
     if operation is not None:
         aliases[f"{prefix}.operation_mode"] = operation
 
+    if device_type == OfficialDeviceType.WASHER:
+        if current_course := _get_official_state_value(
+            data,
+            *_prefixed_keys(
+                "current_washing_course",
+                "currentWashingCourse",
+                "current_course",
+                "currentCourse",
+            ),
+            "current_washing_course",
+            "currentWashingCourse",
+            "current_course",
+            "currentCourse",
+            "washingCourse.currentWashingCourse",
+            "washing_course",
+            "course",
+        ):
+            aliases["washer.current_course"] = current_course
+    elif device_type == OfficialDeviceType.DRYER:
+        if current_course := _get_official_state_value(
+            data,
+            *_prefixed_keys(
+                "current_drying_course",
+                "currentDryingCourse",
+                "current_course",
+                "currentCourse",
+            ),
+            "current_drying_course",
+            "currentDryingCourse",
+            "current_course",
+            "currentCourse",
+            "dryingCourse.currentDryingCourse",
+            "drying_course",
+            "course",
+        ):
+            aliases["dryer.current_course"] = current_course
+
     if device_type == OfficialDeviceType.DISH_WASHER:
         if current_course := _get_official_state_value(
             data,
             ThinQProperty.CURRENT_DISH_WASHING_COURSE,
+            *_prefixed_keys(
+                "current_dish_washing_course",
+                "currentDishWashingCourse",
+            ),
             "current_dish_washing_course",
+            "currentDishWashingCourse",
+            "dish_washing_course.current_dish_washing_course",
+            "dishWashingCourse.currentDishWashingCourse",
         ):
             aliases["dishwasher.current_course"] = current_course
 
@@ -616,6 +731,8 @@ async def async_setup_official_bridge(
 ) -> None:
     """Subscribe to official lg_thinq coordinators when available."""
     domain_data = hass.data.setdefault(DOMAIN, {})
+    if domain_data.get(OFFICIAL_RUNTIME) is not None:
+        return
     domain_data[OFFICIAL_RUNTIME_STATUS] = {
         "mode": "disabled",
         "status": "not_configured",
@@ -635,6 +752,10 @@ async def async_setup_official_bridge(
             country_code=country_code,
         )
         if runtime is not None:
+            if retry_unsub := domain_data.pop(OFFICIAL_RUNTIME_RETRY_UNSUB, None):
+                retry_unsub()
+            domain_data[OFFICIAL_RUNTIME_RETRY_COUNT] = 0
+            domain_data.pop(OFFICIAL_RUNTIME_RETRY_AT, None)
             domain_data[OFFICIAL_RUNTIME] = runtime
             domain_data[OFFICIAL_RUNTIME_STATUS] = {
                 "mode": "custom_runtime",
@@ -654,11 +775,37 @@ async def async_setup_official_bridge(
                 on_unload(remove_listener)
                 await _async_handle_official_update(hass, official_coordinator)
             return
+        retry_count = int(domain_data.get(OFFICIAL_RUNTIME_RETRY_COUNT, 0)) + 1
+        domain_data[OFFICIAL_RUNTIME_RETRY_COUNT] = retry_count
+        retry_seconds = min(300 * retry_count, 3600)
+        retry_at = utcnow().timestamp() + retry_seconds
+        domain_data[OFFICIAL_RUNTIME_RETRY_AT] = retry_at
         domain_data[OFFICIAL_RUNTIME_STATUS] = {
             "mode": "custom_runtime",
             "status": "failed",
             "reason": "official_runtime_unavailable",
+            "retry_seconds": retry_seconds,
+            "retry_count": retry_count,
+            "retry_at": retry_at,
         }
+
+        if domain_data.get(OFFICIAL_RUNTIME_RETRY_UNSUB) is None:
+
+            def _retry_official_runtime(_now: datetime) -> None:
+                domain_data.pop(OFFICIAL_RUNTIME_RETRY_UNSUB, None)
+                hass.async_create_task(
+                    async_setup_official_bridge(
+                        hass,
+                        on_unload,
+                        official_pat=official_pat,
+                        official_client_id=official_client_id,
+                        country_code=country_code,
+                    )
+                )
+
+            retry_unsub = async_call_later(hass, retry_seconds, _retry_official_runtime)
+            domain_data[OFFICIAL_RUNTIME_RETRY_UNSUB] = retry_unsub
+            on_unload(retry_unsub)
 
     official_entries = hass.config_entries.async_entries(OFFICIAL_DOMAIN)
     if not official_entries:

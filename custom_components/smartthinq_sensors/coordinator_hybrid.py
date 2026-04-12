@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 import logging
 from typing import Any
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.dt import utcnow
 
@@ -17,6 +18,19 @@ from .trace import add_trace_event
 from .wideq import DeviceType
 
 _LOGGER = logging.getLogger(__name__)
+MQTT_REFRESH_TRIGGER_TYPES = {
+    DeviceType.WASHER,
+    DeviceType.DRYER,
+    DeviceType.DISHWASHER,
+}
+MQTT_REFRESH_TRIGGER_ATTRIBUTES = {
+    "washer.run_state",
+    "washer.is_on",
+    "dryer.run_state",
+    "dryer.is_on",
+    "dishwasher.run_state",
+    "dishwasher.is_on",
+}
 
 
 def _serialize_diagnostic_value(value: Any) -> Any:
@@ -111,6 +125,10 @@ class HybridDataCoordinator(DataUpdateCoordinator):
         self._last_community_refresh: datetime | None = None
         self._skipped_poll_count = 0
         self._force_all_sources_once = False
+        self._pending_mqtt_refresh_unsub: CALLBACK_TYPE | None = None
+        self._last_forced_mqtt_refresh: datetime | None = None
+        self._mqtt_refresh_delay = timedelta(seconds=8)
+        self._mqtt_refresh_cooldown = timedelta(seconds=45)
 
     def get_mqtt_health(self) -> dict[str, Any]:
         """Get MQTT health status."""
@@ -130,7 +148,84 @@ class HybridDataCoordinator(DataUpdateCoordinator):
                 else None
             ),
             "skipped_poll_count": self._skipped_poll_count,
+            "pending_mqtt_refresh": self._pending_mqtt_refresh_unsub is not None,
+            "last_forced_mqtt_refresh": (
+                self._last_forced_mqtt_refresh.isoformat()
+                if self._last_forced_mqtt_refresh
+                else None
+            ),
         }
+
+    def _should_schedule_mqtt_followup_refresh(
+        self, attribute_updates: dict[str, Any]
+    ) -> bool:
+        """Return whether this MQTT update should trigger a coalesced poll."""
+        if self._device_type not in MQTT_REFRESH_TRIGGER_TYPES:
+            return False
+        return any(
+            attribute_id in MQTT_REFRESH_TRIGGER_ATTRIBUTES
+            for attribute_id in attribute_updates
+        )
+
+    @callback
+    def _schedule_mqtt_followup_refresh(self, attribute_updates: dict[str, Any]) -> None:
+        """Schedule one coalesced follow-up community refresh after MQTT."""
+        if not self._should_schedule_mqtt_followup_refresh(attribute_updates):
+            return
+
+        now = utcnow()
+        if (
+            self._last_forced_mqtt_refresh is not None
+            and now - self._last_forced_mqtt_refresh < self._mqtt_refresh_cooldown
+        ):
+            add_trace_event(
+                self.hass,
+                category="hybrid",
+                action="mqtt_followup_refresh_suppressed",
+                device_id=self._device_id,
+                details={"reason": "cooldown_active"},
+            )
+            return
+
+        if self._pending_mqtt_refresh_unsub is not None:
+            add_trace_event(
+                self.hass,
+                category="hybrid",
+                action="mqtt_followup_refresh_suppressed",
+                device_id=self._device_id,
+                details={"reason": "refresh_already_pending"},
+            )
+            return
+
+        add_trace_event(
+            self.hass,
+            category="hybrid",
+            action="mqtt_followup_refresh_scheduled",
+            device_id=self._device_id,
+            details={
+                "delay_seconds": self._mqtt_refresh_delay.total_seconds(),
+                "attributes": sorted(attribute_updates),
+            },
+        )
+
+        @callback
+        def _run_refresh(_now: datetime) -> None:
+            self._pending_mqtt_refresh_unsub = None
+            self._last_forced_mqtt_refresh = utcnow()
+            add_trace_event(
+                self.hass,
+                category="hybrid",
+                action="mqtt_followup_refresh_started",
+                device_id=self._device_id,
+                details={},
+            )
+            self.hass.async_create_task(self.async_refresh(force_all_sources=True))
+
+        self._pending_mqtt_refresh_unsub = async_call_later(
+            self.hass,
+            self._mqtt_refresh_delay,
+            _run_refresh,
+        )
 
     def _has_recent_official_data(self, device_id: str) -> bool:
         """Check whether this device has recent official data."""
@@ -378,6 +473,7 @@ class HybridDataCoordinator(DataUpdateCoordinator):
             device_id=device_id,
             details={"attributes": sorted(attribute_updates)},
         )
+        self._schedule_mqtt_followup_refresh(attribute_updates)
 
         # Merge values
         for attr_id, value in attribute_updates.items():

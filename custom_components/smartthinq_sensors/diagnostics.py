@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.diagnostics import REDACTED, async_redact_data
@@ -9,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_TOKEN
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.util.dt import utcnow
 
 from . import (
     CAPABILITY_REGISTRY,
@@ -18,7 +20,7 @@ from . import (
     UNSUPPORTED_DEVICES,
 )
 from .const import DOMAIN, LGE_DEVICES
-from .official_bridge import OFFICIAL_RUNTIME_STATUS
+from .official_bridge import OFFICIAL_RUNTIME_RETRY_AT, OFFICIAL_RUNTIME_STATUS
 from .official_runtime import OFFICIAL_RUNTIME_LAST_ERROR
 from .trace import get_trace_events
 from .wideq.device import Device as ThinQDevice
@@ -228,12 +230,22 @@ def _async_official_runtime_as_dict(hass: HomeAssistant) -> dict[str, Any] | Non
     domain_data = hass.data.get(DOMAIN, {})
     status = domain_data.get(OFFICIAL_RUNTIME_STATUS)
     last_error = domain_data.get(OFFICIAL_RUNTIME_LAST_ERROR)
+    retry_at = domain_data.get(OFFICIAL_RUNTIME_RETRY_AT)
     if status is None and last_error is None:
         return None
+
+    retry_info = None
+    if isinstance(retry_at, (int, float)):
+        retry_dt = datetime.fromtimestamp(retry_at, tz=utcnow().tzinfo)
+        retry_info = {
+            "retry_at": retry_dt.isoformat(),
+            "retry_in_seconds": max(0, int(retry_at - utcnow().timestamp())),
+        }
 
     return {
         "status": _serialize_hybrid_value(status),
         "last_error": last_error,
+        "retry": retry_info,
     }
 
 

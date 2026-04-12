@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import base64
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 import json
 import logging
@@ -147,7 +147,7 @@ class Monitor:
         """Refresh the devices shared client."""
         if Monitor._client_connected:
             return True
-        call_time = datetime.now(timezone.utc)
+        call_time = datetime.now(UTC)
         difference = (call_time - Monitor._last_client_refresh).total_seconds()
         if difference <= MIN_TIME_BETWEEN_CLI_REFRESH:
             return False
@@ -755,7 +755,7 @@ class Device:
         """Perform dedicated additional device poll with a slower rate."""
         if poll_interval <= 0:
             return
-        call_time = datetime.now(timezone.utc)
+        call_time = datetime.now(UTC)
         if self._last_additional_poll is None:
             difference = float(poll_interval)
         else:

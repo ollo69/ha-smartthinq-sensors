@@ -742,6 +742,28 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
     def _get_sensor_state(self) -> float | int | str | None:
         """Get current sensor state."""
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            logical_key = {
+                ATTR_CURRENT_COURSE: f"{logical_prefix}.current_course",
+                WashDeviceFeatures.RUN_STATE: f"{logical_prefix}.run_state",
+                WashDeviceFeatures.PROCESS_STATE: f"{logical_prefix}.process_state",
+            }.get(self.entity_description.key)
+            if (
+                self.entity_description.key == DEFAULT_SENSOR
+                and self._wrap_device
+                and self.entity_description.value_fn is not None
+            ):
+                return self.entity_description.value_fn(self._wrap_device)
+            if logical_key:
+                hybrid_value = self._api.get_hybrid_value(logical_key)
+                if hybrid_value is not None:
+                    return cast(float | int | str, hybrid_value)
+
         if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 

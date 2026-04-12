@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+from thinqconnect.devices.const import Property as ThinQProperty
 import voluptuous as vol
 
 from homeassistant.components.humidifier import (
@@ -21,6 +22,11 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .official_control import (
+    async_call_official_post,
+    async_call_official_turn_off,
+    async_call_official_turn_on,
+)
 from .wideq import DehumidifierFeatures, DeviceType
 from .wideq.devices.dehumidifier import DeHumidifierDevice
 
@@ -149,6 +155,12 @@ class LGEDeHumidifier(LGEBaseHumidifier):
             raise NotImplementedError
         if mode not in self.available_modes:
             raise ValueError(f"Invalid mode [{mode}]")
+        if await async_call_official_post(
+            self._api,
+            mode,
+            ThinQProperty.CURRENT_JOB_MODE,
+        ):
+            return
         if self._use_fan_modes:
             await self._device.set_fan_speed(mode)
         else:
@@ -167,16 +179,32 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         """Set new target humidity."""
         humidity_step = self._device.target_humidity_step or 1
         target_humidity = humidity + (humidity % humidity_step)
+        if await async_call_official_post(
+            self._api,
+            target_humidity,
+            ThinQProperty.TARGET_HUMIDITY,
+        ):
+            return
         await self._device.set_target_humidity(target_humidity)
         self._api.async_set_updated()
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
+        if await async_call_official_turn_on(
+            self._api,
+            ThinQProperty.DEHUMIDIFIER_OPERATION_MODE,
+        ):
+            return
         await self._device.power(True)
         self._api.async_set_updated()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
+        if await async_call_official_turn_off(
+            self._api,
+            ThinQProperty.DEHUMIDIFIER_OPERATION_MODE,
+        ):
+            return
         await self._device.power(False)
         self._api.async_set_updated()
 
@@ -194,5 +222,11 @@ class LGEDeHumidifier(LGEBaseHumidifier):
         """Set new fan mode."""
         if fan_mode not in self._device.fan_speeds:
             raise ValueError(f"Invalid fan mode [{fan_mode}]")
+        if await async_call_official_post(
+            self._api,
+            fan_mode,
+            ThinQProperty.WIND_STRENGTH,
+        ):
+            return
         await self._device.set_fan_speed(fan_mode)
         self._api.async_set_updated()

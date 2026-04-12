@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+from thinqconnect.integration import ExtendedProperty
+
 from homeassistant.components.water_heater import (
     STATE_ECO,
     STATE_HEAT_PUMP,
@@ -21,6 +23,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .official_control import (
+    async_call_official_set_job_mode,
+    async_call_official_set_target_temperature,
+    async_call_official_turn_off,
+    async_call_official_turn_on,
+)
 from .wideq import (
     AirConditionerFeatures,
     DeviceType,
@@ -42,6 +50,10 @@ LGEWH_STATE_TO_HA = {
     WHMode.TURBO.name: STATE_PERFORMANCE,
     WHMode.VACATION.name: STATE_OFF,
 }
+OFFICIAL_WATER_HEATER_KEYS = (
+    ExtendedProperty.WATER_HEATER,
+    ExtendedProperty.WATER_BOILER,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -161,6 +173,12 @@ class LGEWHWaterHeater(LGEWaterHeater):
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
+            if await async_call_official_set_target_temperature(
+                self._api,
+                float(new_temp),
+                *OFFICIAL_WATER_HEATER_KEYS,
+            ):
+                return
             await self._device.set_target_temp(int(new_temp))
             self._api.async_set_updated()
 
@@ -170,6 +188,29 @@ class LGEWHWaterHeater(LGEWaterHeater):
         reverse_lookup = {v: k for k, v in modes.items()}
         if (new_mode := reverse_lookup.get(operation_mode)) is None:
             raise ValueError(f"Invalid operation_mode [{operation_mode}]")
+        official_mode = str(new_mode).lower()
+        if operation_mode == STATE_OFF:
+            if await async_call_official_turn_off(
+                self._api,
+                *OFFICIAL_WATER_HEATER_KEYS,
+            ):
+                return
+        elif await async_call_official_turn_on(
+            self._api,
+            *OFFICIAL_WATER_HEATER_KEYS,
+        ):
+            if await async_call_official_set_job_mode(
+                self._api,
+                official_mode,
+                *OFFICIAL_WATER_HEATER_KEYS,
+            ):
+                return
+        elif await async_call_official_set_job_mode(
+            self._api,
+            official_mode,
+            *OFFICIAL_WATER_HEATER_KEYS,
+        ):
+            return
         await self._device.set_op_mode(new_mode)
         self._api.async_set_updated()
 

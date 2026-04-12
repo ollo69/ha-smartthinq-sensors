@@ -11,6 +11,7 @@ from homeassistant.components.select import SelectEntity, SelectEntityDescriptio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -18,6 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
+from .wideq.core_exceptions import InvalidDeviceStatus
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +49,7 @@ WASH_DEV_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         icon="mdi:tune-vertical-variant",
         options_fn=lambda x: x.device.course_list,
         select_option_fn=lambda x, option: x.device.select_start_course(option),
-        available_fn=lambda x: x.device.select_course_enabled,
+        available_fn=lambda x: bool(x.device.course_list) and x.available,
         value_fn=lambda x: x.device.selected_course,
     ),
 )
@@ -142,14 +144,36 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         self._attr_device_info = api.device_info
         self._attr_options = self.entity_description.options_fn(self._api)
 
+    def _hybrid_logical_prefix(self) -> str | None:
+        """Return the hybrid logical attribute prefix for the current device."""
+        return {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        await self.entity_description.select_option_fn(self._api, option)
+        try:
+            await self.entity_description.select_option_fn(self._api, option)
+        except InvalidDeviceStatus as exc:
+            raise ServiceValidationError(
+                "Course selection is not available in the washer's current state."
+            ) from exc
         self._api.async_set_updated()
 
     @property
     def current_option(self) -> str | None:
         """Return the selected entity option to represent the entity state."""
+        if self.entity_description.key == "course_selection":
+            logical_prefix = self._hybrid_logical_prefix()
+            if logical_prefix:
+                hybrid_course = self._api.get_hybrid_value(
+                    f"{logical_prefix}.current_course"
+                )
+                if hybrid_course not in (None, ""):
+                    return str(hybrid_course)
+
         if self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._api)
 
@@ -163,6 +187,35 @@ class LGESelect(CoordinatorEntity, SelectEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         is_avail = True
-        if self.entity_description.available_fn is not None:
+        if self.entity_description.key == "course_selection":
+            logical_prefix = self._hybrid_logical_prefix()
+            if logical_prefix:
+                hybrid_run_state = self._api.get_hybrid_value(
+                    f"{logical_prefix}.run_state"
+                )
+                community_power_state = self._api.get_hybrid_value("state.state")
+                feature_remote_start = self._api.get_hybrid_value("feature.remote_start")
+                state_remote_start = self._api.get_hybrid_value("state.remoteStart")
+
+                run_state_powered_off = isinstance(
+                    hybrid_run_state, str
+                ) and hybrid_run_state.lower() in {"power_off", "off", "none"}
+                community_powered_off = isinstance(
+                    community_power_state, str
+                ) and community_power_state.upper() in {"POWEROFF", "POWER_OFF", "OFF"}
+                remote_start_ready = (
+                    feature_remote_start in {True, "on", "ON"}
+                    or (
+                        isinstance(state_remote_start, str)
+                        and state_remote_start.upper().endswith("_ON")
+                    )
+                )
+
+                if run_state_powered_off and community_powered_off:
+                    return False
+                is_avail = bool(self.entity_description.options_fn(self._api)) and (
+                    self._api.device.select_course_enabled or remote_start_ready
+                )
+        elif self.entity_description.available_fn is not None:
             is_avail = self.entity_description.available_fn(self._api)
         return self._api.available and is_avail

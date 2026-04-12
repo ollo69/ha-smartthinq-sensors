@@ -714,6 +714,26 @@ class WMDevice(Device):
         return False
 
     @property
+    def resume_enabled(self) -> bool:
+        """Return if resume is enabled."""
+        if not isinstance(self._status, WMStatus):
+            return False
+        return bool(
+            self.remote_start_enabled
+            and self._status.internal_run_state == self._state_pause
+        )
+
+    @property
+    def start_enabled(self) -> bool:
+        """Return if remote start is enabled for the initial ready state."""
+        if not isinstance(self._status, WMStatus):
+            return False
+        return bool(
+            self.remote_start_enabled
+            and self._status.internal_run_state == self._state_power_on_init
+        )
+
+    @property
     def pause_enabled(self) -> bool:
         """Return if pause is enabled."""
         if self.stand_by or not isinstance(self._status, WMStatus) or not self._status.is_on:
@@ -771,6 +791,23 @@ class WMDevice(Device):
 
         if course_name and self._initial_bit_start:
             await self.select_start_course(course_name)
+
+        keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_REMOTE_START))
+        await self.set(keys[0], keys[1], key=keys[2])
+        self._remote_start_pressed = True
+
+    async def resume(self) -> None:
+        """Resume the device from a paused state."""
+        if (
+            self.stand_by
+            or not isinstance(self._status, WMStatus)
+            or not self._status.is_on
+        ):
+            raise InvalidDeviceStatus
+        if self._remote_start_status is None:
+            raise InvalidDeviceStatus
+        if self._status.internal_run_state != self._state_pause:
+            raise InvalidDeviceStatus
 
         keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_REMOTE_START))
         await self.set(keys[0], keys[1], key=keys[2])
@@ -887,7 +924,11 @@ class WMDevice(Device):
             self._stand_by = False
             return None
 
-        self._status = WMStatus(self, res)
+        tcl_count = None
+        if isinstance(self._status, WMStatus):
+            tcl_count = self._status.tubclean_count
+
+        self._status = WMStatus(self, res, tcl_count=tcl_count)
         self._set_remote_start_opt()
         self._set_cycle_finishing()
         return self._status
@@ -1222,6 +1263,8 @@ class WMStatus(DeviceStatus):
         if self.is_info_v2:
             if (result := self.int_or_none(self._data.get(key))) is None:
                 return None
+            if result == "0" and self._tcl_count not in (None, "0", "N/A"):
+                result = self._tcl_count
         else:
             if not self.get_model_info_key(key):
                 return None

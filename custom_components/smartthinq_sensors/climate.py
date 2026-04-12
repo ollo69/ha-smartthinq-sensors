@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, cast
 
+from thinqconnect.integration import ExtendedProperty
 import voluptuous as vol
 
 from homeassistant.components.climate import (
@@ -33,6 +34,13 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
 from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice
+from .official_control import (
+    async_call_official_set_fan_mode,
+    async_call_official_set_hvac_mode,
+    async_call_official_set_target_temperature,
+    async_call_official_turn_off,
+    async_call_official_turn_on,
+)
 from .wideq import AirConditionerFeatures, DeviceType, TemperatureUnit
 from .wideq.devices.ac import ACFanSpeed, ACMode, AirConditionerDevice
 
@@ -61,6 +69,14 @@ FAN_MODE_LOOKUP: dict[str, str] = {
     ACFanSpeed.NATURE.name: FAN_DIFFUSE,
 }
 FAN_MODE_REVERSE_LOOKUP = {v: k for k, v in FAN_MODE_LOOKUP.items()}
+OFFICIAL_HVAC_MODE_LOOKUP: dict[HVACMode, str] = {
+    HVACMode.AUTO: "auto",
+    HVACMode.HEAT: "heat",
+    HVACMode.DRY: "air_dry",
+    HVACMode.COOL: "cool",
+    HVACMode.FAN_ONLY: "fan",
+    HVACMode.HEAT_COOL: "auto",
+}
 
 PRESET_MODE_LOOKUP: dict[str, dict[str, Any]] = {
     ACMode.ENERGY_SAVING.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
@@ -303,6 +319,11 @@ class LGEACClimate(LGEClimate):
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.OFF:
+            if await async_call_official_turn_off(
+                self._api,
+                ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+            ):
+                return
             await self._device.power(False)
             self._api.async_set_updated()
             return
@@ -311,6 +332,20 @@ class LGEACClimate(LGEClimate):
         reverse_lookup = {v: k for k, v in modes.items()}
         if (operation_mode := reverse_lookup.get(hvac_mode)) is None:
             raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
+
+        official_hvac_mode = OFFICIAL_HVAC_MODE_LOOKUP.get(hvac_mode)
+        if official_hvac_mode is not None:
+            if not self._api.state.is_on:
+                await async_call_official_turn_on(
+                    self._api,
+                    ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+                )
+            if operation_mode == HVAC_MODE_NONE or await async_call_official_set_hvac_mode(
+                self._api,
+                official_hvac_mode,
+                ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+            ):
+                return
 
         if not self._api.state.is_on:
             await self._device.power(True)
@@ -343,6 +378,18 @@ class LGEACClimate(LGEClimate):
 
         if (operation_mode := reverse_lookup.get(preset_mode)) is None:
             raise ValueError(f"Invalid preset_mode [{preset_mode}]")
+
+        if not self._api.state.is_on:
+            await async_call_official_turn_on(
+                self._api,
+                ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+            )
+        if await async_call_official_set_hvac_mode(
+            self._api,
+            operation_mode.lower(),
+            ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+        ):
+            return
 
         if not self._api.state.is_on:
             await self._device.power(True)
@@ -383,6 +430,12 @@ class LGEACClimate(LGEClimate):
                 return
 
         if (new_temp := kwargs.get(ATTR_TEMPERATURE)) is not None:
+            if await async_call_official_set_target_temperature(
+                self._api,
+                float(new_temp),
+                ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+            ):
+                return
             await self._device.set_target_temp(float(new_temp))
             self._api.async_set_updated()
 
@@ -399,6 +452,12 @@ class LGEACClimate(LGEClimate):
         lg_fan_mode = FAN_MODE_REVERSE_LOOKUP.get(fan_mode, fan_mode)
         if lg_fan_mode not in self._device.fan_speeds:
             raise ValueError(f"Invalid fan mode [{fan_mode}]")
+        if await async_call_official_set_fan_mode(
+            self._api,
+            str(lg_fan_mode).lower(),
+            ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+        ):
+            return
         await self._device.set_fan_speed(lg_fan_mode)
         self._api.async_set_updated()
 
@@ -439,11 +498,21 @@ class LGEACClimate(LGEClimate):
 
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
+        if await async_call_official_turn_on(
+            self._api,
+            ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+        ):
+            return
         await self._device.power(True)
         self._api.async_set_updated()
 
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
+        if await async_call_official_turn_off(
+            self._api,
+            ExtendedProperty.CLIMATE_AIR_CONDITIONER,
+        ):
+            return
         await self._device.power(False)
         self._api.async_set_updated()
 

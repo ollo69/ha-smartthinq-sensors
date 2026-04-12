@@ -75,7 +75,27 @@
   "issues": {
     "missing_official_pat": {
       "title": "{title} is running without an LG official PAT",
-      "description": "The integration will continue using the community ThinQ flow, but official ThinQ Connect data and MQTT-based polling reduction are disabled until an LG official PAT is configured.\n\nOpen the integration and choose **Reconfigure** to add the optional LG official PAT."
+      "description": "The integration will continue using the community ThinQ flow, but official ThinQ Connect data and MQTT-based polling reduction are disabled until an LG official PAT is configured.",
+      "fix_flow": {
+        "error": {
+          "error_connect": "Error connecting to LG ThinQ Connect. Try again in a moment.",
+          "invalid_official_pat": "Invalid LG official PAT.",
+          "official_terms_not_accepted": "The LG ThinQ Connect service terms are not accepted for this account.",
+          "official_api_not_allowed": "The LG ThinQ Connect API rejected this PAT for the requested operation.",
+          "official_country_not_supported": "The selected country is not supported by LG ThinQ Connect.",
+          "official_api_calls_exceeded": "The number of LG ThinQ Connect API calls has been exceeded.",
+          "official_user_api_calls_exceeded": "The number of LG ThinQ Connect user API calls has been exceeded."
+        },
+        "step": {
+          "init": {
+            "data": {
+              "official_pat": "LG official PAT"
+            },
+            "description": "Enter an LG official PAT to enable the direct official ThinQ Connect hybrid path for {title}.",
+            "title": "Add LG official PAT"
+          }
+        }
+      }
     }
   }
 }

@@ -79,8 +79,6 @@ if exceeded_user_calls := getattr(
 ):
     THINQ_ERRORS[exceeded_user_calls] = "official_user_api_calls_exceeded"
 
-INT_COMM_URL = "https://git.io/JU166"
-
 _LOGGER = logging.getLogger(__name__)
 
 COUNTRIES = {
@@ -180,59 +178,65 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
         if self._official_pat and not self._official_client_id:
             self._official_client_id = f"{OFFICIAL_CLIENT_PREFIX}-{uuid.uuid4()!s}"
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Handle a flow initialized by the user interface."""
+    @property
+    def _is_entry_edit_flow(self) -> bool:
+        """Return True for reauth and reconfigure flows."""
+        return self.source in (SOURCE_REAUTH, SOURCE_RECONFIGURE)
 
-        if not is_valid_ha_version():
-            return self.async_abort(
-                reason="unsupported_version",
-                description_placeholders={
-                    "req_ver": __min_ha_version__,
-                    "run_ver": __version__,
-                },
-            )
+    @callback
+    def _get_current_entry_data(self) -> dict[str, Any]:
+        """Return existing entry data when editing an entry."""
+        if entries := self._async_current_entries():
+            return dict(entries[0].data)
+        return {}
 
+    def _prepare_existing_entry(self) -> ConfigFlowResult | None:
+        """Load existing entry data or abort if a second setup is attempted."""
         if self._is_import:
             self._error = "invalid_config"
-        elif entries := self._async_current_entries():
-            entry = entries[0]
-            if (
-                entry.state == ConfigEntryState.LOADED
-                and self.source not in (SOURCE_REAUTH, SOURCE_RECONFIGURE)
-            ):
-                return self.async_abort(reason="single_instance_allowed")
-            self._load_entry_data(entry.data)
+            return None
 
-        if not user_input:
-            self._get_hass_region_lang()
-            return self._show_form()
+        if not (entries := self._async_current_entries()):
+            return None
 
-        username = cast(str | None, user_input.get(CONF_USERNAME))
-        password = cast(str | None, user_input.get(CONF_PASSWORD))
-        entered_official_pat = cast(str | None, user_input.get(CONF_OFFICIAL_PAT))
-        region = str(user_input[CONF_REGION])
-        language = str(user_input[CONF_LANGUAGE])
-        use_redirect = bool(user_input[CONF_USE_REDIRECT])
-        self._use_ha_session = user_input.get(CONF_USE_HA_SESSION, False)
-        self._official_pat = (
-            entered_official_pat or self._official_pat
-        )
+        entry = entries[0]
+        if entry.state == ConfigEntryState.LOADED and not self._is_entry_edit_flow:
+            return self.async_abort(reason="single_instance_allowed")
+
+        self._load_entry_data(entry.data)
+        return None
+
+    async def _validate_entered_official_pat(
+        self, entered_official_pat: str | None, step_id: str
+    ) -> ConfigFlowResult | None:
+        """Validate a newly entered official PAT for the current step."""
+        if not entered_official_pat:
+            return None
+
+        self._official_pat = entered_official_pat
         self._ensure_official_client_id()
+        result = await self._check_official_pat()
+        if result == RESULT_SUCCESS:
+            return None
+        return self._show_form(
+            errors=self._error or "invalid_official_pat",
+            step_id=step_id,
+        )
 
-        if error := self._validate_region_language(region, language):
-            return self._show_form(errors=error)
-        self._region = region
-        self._user_lang = language
-        self._language = language
-        if len(language) == 2:
-            self._language += f"-{region}"
+    @callback
+    def _show_reconfigure_form(self, errors: str | None = None) -> ConfigFlowResult:
+        """Show the PAT-only reconfigure form."""
+        return self._show_form(errors=errors, step_id="reconfigure")
 
-        if entered_official_pat:
-            result = await self._check_official_pat()
-            if result != RESULT_SUCCESS:
-                return await self._manage_error(result, True)
+    async def _handle_community_auth(
+        self,
+        username: str | None,
+        password: str | None,
+        use_redirect: bool,
+    ) -> ConfigFlowResult:
+        """Handle the community ThinQ authentication flow."""
+        if self._region is None or self._language is None:
+            return self._show_form(errors="invalid_config")
 
         if not use_redirect and not (username and password):
             if self.source == SOURCE_REAUTH and (
@@ -265,6 +269,50 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
             return self._show_form("error_url")
 
         return await self.async_step_url()
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle a flow initialized by the user interface."""
+
+        if not is_valid_ha_version():
+            return self.async_abort(
+                reason="unsupported_version",
+                description_placeholders={
+                    "req_ver": __min_ha_version__,
+                    "run_ver": __version__,
+                },
+            )
+
+        if result := self._prepare_existing_entry():
+            return result
+
+        if not user_input:
+            self._get_hass_region_lang()
+            return self._show_form()
+
+        username = cast(str | None, user_input.get(CONF_USERNAME))
+        password = cast(str | None, user_input.get(CONF_PASSWORD))
+        entered_official_pat = cast(str | None, user_input.get(CONF_OFFICIAL_PAT))
+        region = str(user_input[CONF_REGION])
+        language = str(user_input[CONF_LANGUAGE])
+        use_redirect = bool(user_input[CONF_USE_REDIRECT])
+        self._use_ha_session = user_input.get(CONF_USE_HA_SESSION, False)
+
+        if error := self._validate_region_language(region, language):
+            return self._show_form(errors=error)
+        self._region = region
+        self._user_lang = language
+        self._language = language
+        if len(language) == 2:
+            self._language += f"-{region}"
+
+        if pat_result := await self._validate_entered_official_pat(
+            entered_official_pat, "user"
+        ):
+            return pat_result
+
+        return await self._handle_community_auth(username, password, use_redirect)
 
     async def async_step_url(
         self, user_input: dict[str, Any] | None = None
@@ -372,16 +420,14 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if is_user_step:
             if self.source == SOURCE_RECONFIGURE:
-                return self._show_form(step_id="reconfigure")
+                return self._show_reconfigure_form()
             return self._show_form()
         return await self.async_step_user()
 
     @callback
     def _save_config_entry(self) -> ConfigFlowResult:
         """Save the entry."""
-        existing_data: dict[str, Any] = {}
-        if entries := self._async_current_entries():
-            existing_data = dict(entries[0].data)
+        existing_data = self._get_current_entry_data()
 
         data = {
             **existing_data,
@@ -455,7 +501,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
     def _show_form(
         self,
         errors: str | None = None,
-        step_id="user",
+        step_id: str = "user",
         description_placeholders: Mapping[str, str] | None = None,
     ) -> ConfigFlowResult:
         """Show the form to the user."""
@@ -486,15 +532,10 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             entered_official_pat = cast(str | None, user_input.get(CONF_OFFICIAL_PAT))
-            if entered_official_pat:
-                self._official_pat = entered_official_pat
-                self._ensure_official_client_id()
-                result = await self._check_official_pat()
-                if result != RESULT_SUCCESS:
-                    return self._show_form(
-                        errors=self._error or "invalid_official_pat",
-                        step_id="reconfigure",
-                    )
+            if pat_result := await self._validate_entered_official_pat(
+                entered_official_pat, "reconfigure"
+            ):
+                return pat_result
 
             data_updates: dict[str, Any] = {}
             if self._official_pat:
@@ -507,17 +548,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
                 data_updates=data_updates,
             )
 
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(CONF_OFFICIAL_PAT): TextSelector(
-                        config=TextSelectorConfig(type=TextSelectorType.PASSWORD)
-                    )
-                }
-            ),
-            errors={CONF_BASE: self._error} if self._error else None,
-        )
+        return self._show_reconfigure_form()
 
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None

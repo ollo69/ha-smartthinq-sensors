@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 from typing import Any, cast
 import uuid
+
+from aiohttp import ClientError
+from thinqconnect import ThinQAPIException
 
 from homeassistant.components import persistent_notification
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
@@ -255,11 +258,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass,
             DOMAIN,
             issue_id,
-            is_fixable=False,
+            is_fixable=True,
             is_persistent=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key=MISSING_OFFICIAL_PAT_ISSUE,
             translation_placeholders={"title": entry.title},
+            data={"entry_id": entry.entry_id},
         )
 
     if not use_api_v2:
@@ -290,12 +294,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         DataSourceRouter(domain_data[CAPABILITY_REGISTRY]),
     )
     domain_data.setdefault(HYBRID_COORDINATORS, {})
-
-    def _update_clientid_callback(client_id: str) -> None:
-        """Update config entry with the new client id."""
-        hass.config_entries.async_update_entry(
-            entry, data={**entry.data, CONF_CLIENT_ID: client_id}
-        )
 
     def _update_clientid_callback(client_id: str) -> None:
         """Update config entry with the new client id."""
@@ -394,13 +392,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if reload_signal is not None:
         hass.data[DOMAIN][SIGNAL_RELOAD_ENTRY] = reload_signal
     await hass.config_entries.async_forward_entry_setups(entry, SMARTTHINQ_PLATFORMS)
-    await async_setup_official_bridge(
-        hass,
-        entry.async_on_unload,
-        official_pat=official_pat,
-        official_client_id=official_client_id,
-        country_code=region,
-    )
+    try:
+        await async_setup_official_bridge(
+            hass,
+            entry.async_on_unload,
+            official_pat=official_pat,
+            official_client_id=official_client_id,
+            country_code=region,
+        )
+    except (ClientError, OSError, TimeoutError, ThinQAPIException):
+        _LOGGER.warning(
+            "Official ThinQ runtime unavailable; continuing with community API only",
+            exc_info=True,
+        )
 
     start_devices_discovery(hass, entry, client)
 
@@ -469,6 +473,11 @@ class LGEDevice:
         return self._device_id
 
     @property
+    def hass(self) -> HomeAssistant:
+        """Return the Home Assistant instance."""
+        return self._hass
+
+    @property
     def name(self) -> str:
         """The device name."""
         return self._name
@@ -487,6 +496,27 @@ class LGEDevice:
     def state(self) -> Any:
         """Current device state."""
         return self._state
+
+    def get_hybrid_value(self, attribute_id: str, default: Any = None) -> Any:
+        """Return the best available logical attribute value from hybrid routing."""
+        domain_data = self._hass.data.get(DOMAIN, {})
+        data_source_router = domain_data.get(DATA_SOURCE_ROUTER)
+        capability_registry = domain_data.get(CAPABILITY_REGISTRY)
+        if data_source_router is None or capability_registry is None:
+            return default
+
+        profile = capability_registry.get_profile(self._device_id)
+        if profile is None:
+            return default
+
+        value, source = data_source_router.get_attribute_value(
+            self._device_id,
+            attribute_id,
+            fallback_strategy="polling",
+        )
+        if source in {"official", "polling", "official_stale", "polling_stale"}:
+            return value if value is not None else default
+        return default
 
     @property
     def last_mqtt_update(self) -> datetime | None:
