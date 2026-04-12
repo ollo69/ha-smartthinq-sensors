@@ -19,7 +19,7 @@ from .runtime_data import (
     get_data_source_router,
     get_hybrid_coordinators,
 )
-from .wideq import DeviceType
+from .wideq import DeviceType, WashDeviceFeatures
 from .wideq.core_exceptions import (
     InvalidCredentialError,
     MonitorRefreshError,
@@ -224,6 +224,9 @@ class LGEDevice:
                 ),
                 "refrigerator.express_mode": getattr(state, "express_mode_status", None),
                 "refrigerator.fresh_air_filter": getattr(
+                    state, "fresh_air_filter_status", None
+                ),
+                "refrigerator.fresh_air_filter_remain_perc": getattr(
                     state, "fresh_air_filter_remain_perc", None
                 ),
                 "refrigerator.water_filter": getattr(
@@ -327,12 +330,22 @@ class LGEDevice:
                 "washer.remote_control_enabled": getattr(
                     state, "remote_control_enabled", None
                 ),
-                "washer.initial_hour": getattr(state, "initialtime_hour", None),
-                "washer.initial_minute": getattr(state, "initialtime_min", None),
+                "washer.error_message": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.ERROR_MSG
+                ),
+                "washer.door_open": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.DOOROPEN
+                ),
+                "washer.timer_total_hour": getattr(state, "initialtime_hour", None),
+                "washer.timer_total_minute": getattr(state, "initialtime_min", None),
                 "washer.remain_hour": getattr(state, "remaintime_hour", None),
                 "washer.remain_minute": getattr(state, "remaintime_min", None),
-                "washer.reserve_hour": getattr(state, "reservetime_hour", None),
-                "washer.reserve_minute": getattr(state, "reservetime_min", None),
+                "washer.timer_relative_stop_hour": getattr(
+                    state, "reservetime_hour", None
+                ),
+                "washer.timer_relative_stop_minute": getattr(
+                    state, "reservetime_min", None
+                ),
                 "washer.process_state": getattr(state, "process_state", None),
                 "washer.current_course": getattr(state, "current_course", None)
                 or (
@@ -349,12 +362,22 @@ class LGEDevice:
                 "dryer.remote_control_enabled": getattr(
                     state, "remote_control_enabled", None
                 ),
-                "dryer.initial_hour": getattr(state, "initialtime_hour", None),
-                "dryer.initial_minute": getattr(state, "initialtime_min", None),
+                "dryer.error_message": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.ERROR_MSG
+                ),
+                "dryer.door_open": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.DOOROPEN
+                ),
+                "dryer.timer_total_hour": getattr(state, "initialtime_hour", None),
+                "dryer.timer_total_minute": getattr(state, "initialtime_min", None),
                 "dryer.remain_hour": getattr(state, "remaintime_hour", None),
                 "dryer.remain_minute": getattr(state, "remaintime_min", None),
-                "dryer.reserve_hour": getattr(state, "reservetime_hour", None),
-                "dryer.reserve_minute": getattr(state, "reservetime_min", None),
+                "dryer.timer_relative_stop_hour": getattr(
+                    state, "reservetime_hour", None
+                ),
+                "dryer.timer_relative_stop_minute": getattr(
+                    state, "reservetime_min", None
+                ),
                 "dryer.process_state": getattr(state, "process_state", None),
                 "dryer.current_course": getattr(state, "current_course", None)
                 or (
@@ -368,12 +391,50 @@ class LGEDevice:
             aliases = {
                 "dishwasher.is_on": getattr(state, "is_on", None),
                 "dishwasher.run_state": getattr(state, "run_state", None),
-                "dishwasher.initial_hour": getattr(state, "initialtime_hour", None),
-                "dishwasher.initial_minute": getattr(state, "initialtime_min", None),
+                "dishwasher.error_message": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.ERROR_MSG
+                ),
+                "dishwasher.door_open": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.DOOROPEN
+                ),
+                "dishwasher.clean_l_reminder": getattr(
+                    state, "device_features", {}
+                ).get(WashDeviceFeatures.CLEAN_L_REMINDER),
+                "dishwasher.machine_clean_reminder": getattr(
+                    state, "device_features", {}
+                ).get(WashDeviceFeatures.MACHINE_CLEAN_REMINDER),
+                "dishwasher.rinse_refill": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.RINSEREFILL
+                ),
+                "dishwasher.rinse_level": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.RINSELEVEL
+                ),
+                "dishwasher.signal_level": getattr(state, "device_features", {}).get(
+                    WashDeviceFeatures.SIGNAL_LEVEL
+                ),
+                "dishwasher.softening_level": getattr(
+                    state, "device_features", {}
+                ).get(WashDeviceFeatures.SOFTENING_LEVEL),
+                "dishwasher.timer_relative_start_hour": getattr(
+                    state, "reservetime_hour", None
+                ),
+                "dishwasher.timer_relative_start_minute": getattr(
+                    state, "reservetime_min", None
+                ),
+                "dishwasher.timer_total_hour": getattr(
+                    state, "initialtime_hour", None
+                ),
+                "dishwasher.timer_total_minute": getattr(
+                    state, "initialtime_min", None
+                ),
                 "dishwasher.remain_hour": getattr(state, "remaintime_hour", None),
                 "dishwasher.remain_minute": getattr(state, "remaintime_min", None),
-                "dishwasher.reserve_hour": getattr(state, "reservetime_hour", None),
-                "dishwasher.reserve_minute": getattr(state, "reservetime_min", None),
+                "dishwasher.timer_relative_stop_hour": getattr(
+                    state, "reservetime_hour", None
+                ),
+                "dishwasher.timer_relative_stop_minute": getattr(
+                    state, "reservetime_min", None
+                ),
                 "dishwasher.process_state": getattr(state, "process_state", None),
                 "dishwasher.current_course": getattr(state, "current_course", None)
                 or (

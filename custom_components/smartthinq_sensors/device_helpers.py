@@ -26,7 +26,13 @@ from .const import (
     DEFAULT_SENSOR,
 )
 from .lge_device import LGEDevice
-from .wideq import WM_DEVICE_TYPES, DeviceType, StateOptions, TemperatureUnit
+from .wideq import (
+    WM_DEVICE_TYPES,
+    DeviceType,
+    StateOptions,
+    TemperatureUnit,
+    WashDeviceFeatures,
+)
 from .wideq.devices.ac import ACMode, AirConditionerDevice
 
 STATE_LOOKUP = {
@@ -105,9 +111,13 @@ class LGEBaseDevice:
                 hours = str(int_hours)
             else:
                 hours = "0"
+        else:
+            hours = str(int(hours))
 
         if int(minutes) < 10:
             minutes = f"0{int(minutes)}"
+        else:
+            minutes = str(int(minutes))
         remain_time = [hours, minutes, "00"]
         return ":".join(remain_time)
 
@@ -215,6 +225,15 @@ class LGEWashDevice(LGEBaseDevice):
     @property
     def error_state(self) -> str:
         """Return the state on/off for error."""
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            error_message = self._api.get_hybrid_value(f"{logical_prefix}.error_message")
+            if error_message not in (None, "", StateOptions.NONE):
+                return STATE_ON
         if self._api.state:
             if self._api.state.is_error:
                 return STATE_ON
@@ -259,9 +278,11 @@ class LGEWashDevice(LGEBaseDevice):
             DeviceType.DISHWASHER: "dishwasher",
         }.get(self._api.type)
         if logical_prefix:
-            initial_hour = self._api.get_hybrid_value(f"{logical_prefix}.initial_hour")
+            initial_hour = self._api.get_hybrid_value(
+                f"{logical_prefix}.timer_total_hour"
+            )
             initial_minute = self._api.get_hybrid_value(
-                f"{logical_prefix}.initial_minute"
+                f"{logical_prefix}.timer_total_minute"
             )
             if initial_hour is not None or initial_minute is not None:
                 return self.format_time(initial_hour, initial_minute)
@@ -301,10 +322,31 @@ class LGEWashDevice(LGEBaseDevice):
             DeviceType.DISHWASHER: "dishwasher",
         }.get(self._api.type)
         if logical_prefix:
-            reserve_hour = self._api.get_hybrid_value(f"{logical_prefix}.reserve_hour")
-            reserve_minute = self._api.get_hybrid_value(
-                f"{logical_prefix}.reserve_minute"
+            if self._api.type == DeviceType.DISHWASHER:
+                reserve_time_set = self._api.get_hybrid_value(
+                    "dishwasher.timer_relative_start_set"
+                )
+                reserve_hour = self._api.get_hybrid_value(
+                    "dishwasher.timer_relative_start_hour"
+                )
+                reserve_minute = self._api.get_hybrid_value(
+                    "dishwasher.timer_relative_start_minute"
+                )
+                if reserve_time_set is False:
+                    return self.format_time(None, None)
+                if reserve_hour is not None or reserve_minute is not None:
+                    return self.format_time(reserve_hour, reserve_minute)
+            reserve_time_set = self._api.get_hybrid_value(
+                f"{logical_prefix}.timer_relative_stop_set"
             )
+            reserve_hour = self._api.get_hybrid_value(
+                f"{logical_prefix}.timer_relative_stop_hour"
+            )
+            reserve_minute = self._api.get_hybrid_value(
+                f"{logical_prefix}.timer_relative_stop_minute"
+            )
+            if reserve_time_set is False:
+                return self.format_time(None, None)
             if reserve_hour is not None or reserve_minute is not None:
                 return self.format_time(reserve_hour, reserve_minute)
         if self._api.state:
@@ -339,6 +381,113 @@ class LGEWashDevice(LGEBaseDevice):
                     return str(smart_course)
         return "-"
 
+    @staticmethod
+    def _normalize_binary_feature_value(value: Any) -> Any:
+        """Normalize binary-like values to on/off strings for attributes."""
+        if isinstance(value, bool):
+            return STATE_ON if value else STATE_OFF
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"open", "opened", "set", "on", "true"}:
+                return STATE_ON
+            if normalized in {"close", "closed", "unset", "off", "false"}:
+                return STATE_OFF
+        return value
+
+    @staticmethod
+    def _normalize_dishwasher_preference_value(key: str, value: Any) -> str | None:
+        """Normalize dishwasher preference enums into user-friendly values."""
+        if value in (None, ""):
+            return None
+        if isinstance(value, bool):
+            return STATE_ON if value else STATE_OFF
+
+        normalized = str(value).strip()
+        upper = normalized.upper()
+
+        binary_prefixes = {
+            "clean_l_reminder": "CLEANLREMINDER_",
+            "machine_clean_reminder": "MCREMINDER_",
+            "signal_level": "SIGNALLEVEL_",
+        }
+        if prefix := binary_prefixes.get(key):
+            if upper.startswith(prefix):
+                upper = upper.removeprefix(prefix)
+            return cast(
+                str | None, LGEWashDevice._normalize_binary_feature_value(upper)
+            )
+
+        level_prefixes = {
+            "rinse_level": "RINSELEVEL_",
+            "softening_level": "SOFTENINGLEVEL_",
+        }
+        if prefix := level_prefixes.get(key):
+            if upper.startswith(prefix):
+                level_value = upper.removeprefix(prefix)
+            else:
+                level_value = normalized
+            return level_value
+
+        return normalized
+
+    @staticmethod
+    def _normalize_dishwasher_numeric_level(key: str, value: Any) -> int | None:
+        """Normalize dishwasher enum-like level values into integers."""
+        normalized = LGEWashDevice._normalize_dishwasher_preference_value(key, value)
+        if normalized in (None, ""):
+            return None
+        try:
+            return int(str(normalized))
+        except (TypeError, ValueError):
+            return None
+
+    @property
+    def rinse_level(self) -> int | None:
+        """Return dishwasher rinse level."""
+        if self._api.type != DeviceType.DISHWASHER:
+            return None
+        value = self._api.get_hybrid_value("dishwasher.rinse_level")
+        if value not in (None, ""):
+            return self._normalize_dishwasher_numeric_level("rinse_level", value)
+        if self._api.state:
+            feature_value = self._api.state.device_features.get(
+                WashDeviceFeatures.RINSELEVEL
+            )
+            if feature_value not in (None, ""):
+                return self._normalize_dishwasher_numeric_level(
+                    "rinse_level", feature_value
+                )
+        return None
+
+    def get_dishwasher_preference(self, key: str) -> str | None:
+        """Return one dishwasher preference value."""
+        if self._api.type != DeviceType.DISHWASHER:
+            return None
+        value = self._api.get_hybrid_value(f"dishwasher.{key}")
+        if value not in (None, ""):
+            return self._normalize_dishwasher_preference_value(key, value)
+        return None
+
+    @property
+    def softening_level(self) -> int | None:
+        """Return dishwasher softening level."""
+        if self._api.type != DeviceType.DISHWASHER:
+            return None
+        value = self._api.get_hybrid_value("dishwasher.softening_level")
+        if value not in (None, ""):
+            return self._normalize_dishwasher_numeric_level(
+                "softening_level", value
+            )
+        if self._api.state:
+            feature_value = self._api.state.device_features.get(
+                WashDeviceFeatures.SOFTENING_LEVEL
+            )
+            if feature_value not in (None, ""):
+                return self._normalize_dishwasher_numeric_level(
+                    "softening_level", feature_value
+                )
+        return None
+
     @property
     def extra_state_attributes(self) -> dict[str | None, Any]:
         """Return the optional state attributes."""
@@ -354,6 +503,45 @@ class LGEWashDevice(LGEBaseDevice):
         }
         features = super().extra_state_attributes
         data.update(features)
+
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            hybrid_feature_keys = {
+                "run_state": f"{logical_prefix}.run_state",
+                "process_state": f"{logical_prefix}.process_state",
+                "error_message": f"{logical_prefix}.error_message",
+                "door_open": f"{logical_prefix}.door_open",
+                "rinse_refill": f"{logical_prefix}.rinse_refill",
+                "rinse_level": f"{logical_prefix}.rinse_level",
+                "clean_l_reminder": f"{logical_prefix}.clean_l_reminder",
+                "machine_clean_reminder": f"{logical_prefix}.machine_clean_reminder",
+                "signal_level": f"{logical_prefix}.signal_level",
+                "softening_level": f"{logical_prefix}.softening_level",
+            }
+            binary_feature_keys = {"door_open", "rinse_refill"}
+            for attr_key, logical_key in hybrid_feature_keys.items():
+                value = self._api.get_hybrid_value(logical_key)
+                if value is None:
+                    continue
+                if attr_key in binary_feature_keys:
+                    value = self._normalize_binary_feature_value(value)
+                elif self._api.type == DeviceType.DISHWASHER and attr_key in {
+                    "rinse_level",
+                    "clean_l_reminder",
+                    "machine_clean_reminder",
+                    "signal_level",
+                    "softening_level",
+                }:
+                    normalized_value = self._normalize_dishwasher_preference_value(
+                        attr_key, value
+                    )
+                    if normalized_value is not None:
+                        value = normalized_value
+                data[attr_key] = value
 
         return data
 
@@ -374,32 +562,56 @@ class LGERefrigeratorDevice(LGEBaseDevice):
     @property
     def temp_fridge(self) -> Any:
         """Return fridge temperature."""
-        if self._api.state and self.supports_fridge_compartment:
-            return self._api.state.temp_fridge
+        if self.supports_fridge_compartment:
+            value = self._api.get_hybrid_value(
+                "refrigerator.fridge_temperature",
+                self._api.state.temp_fridge if self._api.state else None,
+            )
+            if value is not None:
+                return value
         return None
 
     @property
     def temp_freezer(self) -> Any:
         """Return freezer temperature."""
-        if self._api.state and self.supports_freezer_compartment:
-            return self._api.state.temp_freezer
+        if self.supports_freezer_compartment:
+            value = self._api.get_hybrid_value(
+                "refrigerator.freezer_temperature",
+                self._api.state.temp_freezer if self._api.state else None,
+            )
+            if value is not None:
+                return value
         return None
 
     @property
     def temp_unit(self) -> Any:
         """Return refrigerator temperature unit."""
-        if self._api.state:
-            unit = self._api.state.temp_unit
+        unit = self._api.get_hybrid_value(
+            "refrigerator.temp_unit",
+            self._api.state.temp_unit if self._api.state else None,
+        )
+        if unit is not None:
             return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
         return UnitOfTemperature.CELSIUS
 
     @property
     def dooropen_state(self) -> str:
         """Return refrigerator door open state."""
-        if self._api.state:
-            state = self._api.state.door_opened_state
+        state = self._api.get_hybrid_value(
+            "refrigerator.door_open",
+            self._api.state.door_opened_state if self._api.state else None,
+        )
+        if state is not None:
             return STATE_LOOKUP.get(state, STATE_OFF)
         return STATE_OFF
+
+    @property
+    def power_save_enabled(self) -> bool:
+        """Return whether refrigerator power save is enabled."""
+        value = self._api.get_hybrid_value("refrigerator.power_save_enabled")
+        if isinstance(value, bool):
+            return value
+        return False
 
     @property
     def extra_state_attributes(self) -> dict[str | None, Any]:

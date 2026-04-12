@@ -134,7 +134,7 @@ class ThinQSensorEntityDescription(SensorEntityDescription):
     """A class that describes ThinQ sensor entities."""
 
     unit_fn: Callable[[Any], str] | None = None
-    value_fn: Callable[[Any], float | str] | None = None
+    value_fn: Callable[[Any], float | int | str] | None = None
     feature_attributes: dict[str, str] | None = None
 
 
@@ -174,6 +174,40 @@ WASH_DEV_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         key=WashDeviceFeatures.RINSEMODE,
         name="Rinse mode",
         icon="mdi:waves",
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.RINSELEVEL,
+        name="Rinse level",
+        icon="mdi:waves-arrow-up",
+        entity_registry_enabled_default=False,
+        value_fn=lambda x: x.rinse_level,
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.CLEAN_L_REMINDER,
+        name="Clean L reminder",
+        icon="mdi:dishwasher-alert",
+        entity_registry_enabled_default=False,
+        value_fn=lambda x: x.get_dishwasher_preference("clean_l_reminder"),
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.MACHINE_CLEAN_REMINDER,
+        name="Machine clean reminder",
+        icon="mdi:dishwasher-alert",
+        entity_registry_enabled_default=False,
+        value_fn=lambda x: x.get_dishwasher_preference("machine_clean_reminder"),
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.SIGNAL_LEVEL,
+        name="Signal level",
+        icon="mdi:volume-high",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.SOFTENING_LEVEL,
+        name="Softening level",
+        icon="mdi:shaker-outline",
+        entity_registry_enabled_default=False,
+        value_fn=lambda x: x.softening_level,
     ),
     ThinQSensorEntityDescription(
         key=WashDeviceFeatures.TEMPCONTROL,
@@ -251,6 +285,11 @@ REFRIGERATOR_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.temp_unit,
         value_fn=lambda x: x.temp_freezer,
+    ),
+    ThinQSensorEntityDescription(
+        key=RefrigeratorFeatures.FRESHAIRFILTER,
+        name="Fresh air filter",
+        icon="mdi:air-filter",
     ),
     ThinQSensorEntityDescription(
         key=RefrigeratorFeatures.FRESHAIRFILTER_REMAIN_PERC,
@@ -617,6 +656,18 @@ def _sensor_exist(
         and not lge_device.device.is_reservation_sleep_time_supported
     ):
         return False
+    if (
+        sensor_desc.key
+        in {
+            WashDeviceFeatures.RINSELEVEL,
+            WashDeviceFeatures.CLEAN_L_REMINDER,
+            WashDeviceFeatures.MACHINE_CLEAN_REMINDER,
+            WashDeviceFeatures.SIGNAL_LEVEL,
+            WashDeviceFeatures.SOFTENING_LEVEL,
+        }
+        and lge_device.type != DeviceType.DISHWASHER
+    ):
+        return False
 
     wrapped_device = get_wrapper_device(lge_device, lge_device.type)
     if (
@@ -876,6 +927,44 @@ class LGESensor(CoordinatorEntity, SensorEntity):
                 data[key] = val
         return data
 
+    def _get_hybrid_sensor_logical_key(self) -> str | None:
+        """Return the hybrid logical key for sensors that support it."""
+        if self._api.type == DeviceType.AC:
+            ac_logical_keys: dict[AirConditionerFeatures, str] = {
+                AirConditionerFeatures.ENERGY_CURRENT: "ac.power_current",
+                AirConditionerFeatures.PM1: "ac.pm1",
+                AirConditionerFeatures.PM10: "ac.pm10",
+                AirConditionerFeatures.PM25: "ac.pm25",
+                AirConditionerFeatures.FILTER_MAIN_LIFE: "ac.filter.filter_main_life",
+                AirConditionerFeatures.RESERVATION_SLEEP_TIME: "ac.reservation_sleep_time",
+            }
+            return ac_logical_keys.get(
+                cast(AirConditionerFeatures, self.entity_description.key)
+            )
+
+        if self._api.type == DeviceType.AIR_PURIFIER:
+            air_purifier_logical_keys: dict[AirPurifierFeatures, str] = {
+                AirPurifierFeatures.FILTER_MAIN_LIFE: "air_purifier.filter.filter_main_life",
+                AirPurifierFeatures.FILTER_BOTTOM_LIFE: "air_purifier.filter.filter_bottom_life",
+                AirPurifierFeatures.FILTER_DUST_LIFE: "air_purifier.filter.filter_dust_life",
+                AirPurifierFeatures.FILTER_MID_LIFE: "air_purifier.filter.filter_mid_life",
+                AirPurifierFeatures.FILTER_TOP_LIFE: "air_purifier.filter.filter_top_life",
+            }
+            return air_purifier_logical_keys.get(
+                cast(AirPurifierFeatures, self.entity_description.key)
+            )
+
+        if self._api.type == DeviceType.REFRIGERATOR:
+            refrigerator_logical_keys: dict[RefrigeratorFeatures, str] = {
+                RefrigeratorFeatures.FRESHAIRFILTER: "refrigerator.fresh_air_filter",
+                RefrigeratorFeatures.FRESHAIRFILTER_REMAIN_PERC: "refrigerator.fresh_air_filter_remain_perc",
+            }
+            return refrigerator_logical_keys.get(
+                cast(RefrigeratorFeatures, self.entity_description.key)
+            )
+
+        return None
+
     def _get_sensor_state(self) -> float | int | str | None:
         """Get current sensor state."""
         logical_prefix = {
@@ -888,6 +977,7 @@ class LGESensor(CoordinatorEntity, SensorEntity):
                 ATTR_CURRENT_COURSE: f"{logical_prefix}.current_course",
                 WashDeviceFeatures.RUN_STATE: f"{logical_prefix}.run_state",
                 WashDeviceFeatures.PROCESS_STATE: f"{logical_prefix}.process_state",
+                WashDeviceFeatures.ERROR_MSG: f"{logical_prefix}.error_message",
             }.get(self.entity_description.key)
             if (
                 self.entity_description.key == DEFAULT_SENSOR
@@ -900,35 +990,8 @@ class LGESensor(CoordinatorEntity, SensorEntity):
                 if hybrid_value is not None:
                     return cast(float | int | str, hybrid_value)
 
-        ac_logical_key: str | None = None
-        if self.entity_description.key == AirConditionerFeatures.ENERGY_CURRENT:
-            ac_logical_key = "ac.power_current"
-        elif self.entity_description.key == AirConditionerFeatures.PM1:
-            ac_logical_key = "ac.pm1"
-        elif self.entity_description.key == AirConditionerFeatures.PM10:
-            ac_logical_key = "ac.pm10"
-        elif self.entity_description.key == AirConditionerFeatures.PM25:
-            ac_logical_key = "ac.pm25"
-        elif self.entity_description.key == AirConditionerFeatures.FILTER_MAIN_LIFE:
-            ac_logical_key = "ac.filter.filter_main_life"
-        if self._api.type == DeviceType.AC and ac_logical_key:
-            hybrid_value = self._api.get_hybrid_value(ac_logical_key)
-            if hybrid_value is not None:
-                return cast(float | int | str, hybrid_value)
-
-        air_purifier_logical_key: str | None = None
-        if self.entity_description.key == AirPurifierFeatures.FILTER_MAIN_LIFE:
-            air_purifier_logical_key = "air_purifier.filter.filter_main_life"
-        elif self.entity_description.key == AirPurifierFeatures.FILTER_BOTTOM_LIFE:
-            air_purifier_logical_key = "air_purifier.filter.filter_bottom_life"
-        elif self.entity_description.key == AirPurifierFeatures.FILTER_DUST_LIFE:
-            air_purifier_logical_key = "air_purifier.filter.filter_dust_life"
-        elif self.entity_description.key == AirPurifierFeatures.FILTER_MID_LIFE:
-            air_purifier_logical_key = "air_purifier.filter.filter_mid_life"
-        elif self.entity_description.key == AirPurifierFeatures.FILTER_TOP_LIFE:
-            air_purifier_logical_key = "air_purifier.filter.filter_top_life"
-        if self._api.type == DeviceType.AIR_PURIFIER and air_purifier_logical_key:
-            hybrid_value = self._api.get_hybrid_value(air_purifier_logical_key)
+        if hybrid_logical_key := self._get_hybrid_sensor_logical_key():
+            hybrid_value = self._api.get_hybrid_value(hybrid_logical_key)
             if hybrid_value is not None:
                 return cast(float | int | str, hybrid_value)
 

@@ -215,6 +215,32 @@ def _extract_air_conditioner_attributes(
     )
     if pm25_value is not None:
         aliases["ac.pm25"] = pm25_value
+    sleep_timer_state = normalize_text(
+        get_official_state_value(
+            data,
+            "sleep_timer_relative_to_stop",
+            "sleepTimer.relativeStopTimer",
+            "relativeStopTimer",
+        )
+    )
+    sleep_hour = get_official_state_value(
+        data,
+        "sleep_timer_relative_hour_to_stop",
+        "sleepTimer.relativeHourToStop",
+        "relativeHourToStop",
+    )
+    sleep_minute = get_official_state_value(
+        data,
+        "sleep_timer_relative_minute_to_stop",
+        "sleepTimer.relativeMinuteToStop",
+        "relativeMinuteToStop",
+    )
+    if sleep_timer_state in {"unset", "off", "none"}:
+        aliases["ac.reservation_sleep_time"] = 0
+    elif sleep_hour is not None or sleep_minute is not None:
+        aliases["ac.reservation_sleep_time"] = int(sleep_hour or 0) * 60 + int(
+            sleep_minute or 0
+        )
     if power_state := data.get(ThinQProperty.POWER_LEVEL):
         aliases["ac.power_current"] = get_state_value(power_state)
     return aliases
@@ -222,6 +248,17 @@ def _extract_air_conditioner_attributes(
 
 def _extract_refrigerator_attributes(data: dict[str, PropertyState]) -> dict[str, Any]:
     aliases: dict[str, Any] = {}
+
+    temp_unit = get_official_state_value(
+        data,
+        "fridge_temperature_unit",
+        "freezer_temperature_unit",
+        "fridge_temperature_unit_c",
+        "freezer_temperature_unit_c",
+        ThinQProperty.TEMPERATURE_UNIT,
+        "temperature_unit",
+    )
+
     aliases["refrigerator.door_open"] = get_official_state_value(
         data,
         ThinQProperty.DOOR_STATE,
@@ -229,6 +266,15 @@ def _extract_refrigerator_attributes(data: dict[str, PropertyState]) -> dict[str
         "door_state",
         "doorStatus.doorState",
     )
+    power_save_enabled = get_official_state_value(
+        data,
+        ThinQProperty.POWER_SAVE_ENABLED,
+        "power_save_enabled",
+        "powerSaveEnabled",
+        "powerSave.powerSaveEnabled",
+    )
+    if power_save_enabled is not None:
+        aliases["refrigerator.power_save_enabled"] = bool(power_save_enabled)
     aliases["refrigerator.eco_friendly"] = get_official_state_value(
         data,
         ThinQProperty.ECO_FRIENDLY_MODE,
@@ -243,6 +289,13 @@ def _extract_refrigerator_attributes(data: dict[str, PropertyState]) -> dict[str
         "expressMode",
         "refrigeration.expressMode",
     )
+    aliases["refrigerator.express_mode_name"] = get_official_state_value(
+        data,
+        ThinQProperty.EXPRESS_MODE_NAME,
+        "express_mode_name",
+        "expressModeName",
+        "refrigeration.expressModeName",
+    )
     aliases["refrigerator.express_fridge"] = get_official_state_value(
         data,
         ThinQProperty.EXPRESS_FRIDGE,
@@ -252,36 +305,45 @@ def _extract_refrigerator_attributes(data: dict[str, PropertyState]) -> dict[str
     )
     aliases["refrigerator.fresh_air_filter"] = get_official_state_value(
         data,
+        ThinQProperty.FRESH_AIR_FILTER,
+        "fresh_air_filter",
+        "freshAirFilter",
+        "refrigeration.freshAirFilter",
+    )
+    aliases["refrigerator.fresh_air_filter_remain_perc"] = get_official_state_value(
+        data,
         ThinQProperty.FRESH_AIR_FILTER_REMAIN_PERCENT,
         "fresh_air_filter_remain_percent",
+        "freshAirFilterRemainPercent",
+        "refrigeration.freshAirFilterRemainPercent",
+    )
+    temp_unit_normalized = normalize_text(temp_unit)
+    fridge_temp_keys = (
+        ("fridge_target_temperature_f", "freezer_target_temperature_f")
+        if temp_unit_normalized == "f"
+        else ("fridge_target_temperature_c", "freezer_target_temperature_c")
     )
     aliases["refrigerator.fridge_temperature"] = get_official_state_value(
         data,
+        fridge_temp_keys[0],
+        "fridge_target_temperature",
+        ThinQProperty.TARGET_TEMPERATURE_F if temp_unit_normalized == "f" else ThinQProperty.TARGET_TEMPERATURE_C,
         ThinQProperty.TARGET_TEMPERATURE_C,
         ThinQProperty.TARGET_TEMPERATURE_F,
-        "fridge_target_temperature",
-        "fridge_target_temperature_c",
-        "fridge_target_temperature_f",
         "target_temperature_c",
         "target_temperature_f",
     )
     aliases["refrigerator.freezer_temperature"] = get_official_state_value(
         data,
+        fridge_temp_keys[1],
+        "freezer_target_temperature",
+        ThinQProperty.TARGET_TEMPERATURE_F if temp_unit_normalized == "f" else ThinQProperty.TARGET_TEMPERATURE_C,
         ThinQProperty.TARGET_TEMPERATURE_C,
         ThinQProperty.TARGET_TEMPERATURE_F,
-        "freezer_target_temperature",
-        "freezer_target_temperature_c",
-        "freezer_target_temperature_f",
         "target_temperature_c",
         "target_temperature_f",
     )
-    aliases["refrigerator.temp_unit"] = get_official_state_value(
-        data,
-        ThinQProperty.TEMPERATURE_UNIT,
-        "fridge_temperature_unit",
-        "freezer_temperature_unit",
-        "temperature_unit",
-    )
+    aliases["refrigerator.temp_unit"] = temp_unit
     return aliases
 
 
@@ -513,34 +575,45 @@ def _extract_laundry_attributes(
     )
     if remain_minute is not None:
         aliases[f"{prefix}.remain_minute"] = remain_minute
-    reserve_hour = get_official_state_value(
+    timer_relative_stop_hour = get_official_state_value(
         data,
-        *_prefixed_keys("reserve_hour", "relativeHourToStop"),
+        *_prefixed_keys("timer_relative_stop_hour", "relativeHourToStop"),
         "timer.relativeHourToStop",
     )
-    if reserve_hour is not None:
-        aliases[f"{prefix}.reserve_hour"] = reserve_hour
-    reserve_minute = get_official_state_value(
+    if timer_relative_stop_hour is not None:
+        aliases[f"{prefix}.timer_relative_stop_hour"] = timer_relative_stop_hour
+    timer_relative_stop_minute = get_official_state_value(
         data,
-        *_prefixed_keys("reserve_minute", "relativeMinuteToStop"),
+        *_prefixed_keys("timer_relative_stop_minute", "relativeMinuteToStop"),
         "timer.relativeMinuteToStop",
     )
-    if reserve_minute is not None:
-        aliases[f"{prefix}.reserve_minute"] = reserve_minute
-    initial_hour = get_official_state_value(
+    if timer_relative_stop_minute is not None:
+        aliases[f"{prefix}.timer_relative_stop_minute"] = timer_relative_stop_minute
+    timer_relative_stop_state = normalize_text(
+        get_official_state_value(
+            data,
+            *_prefixed_keys("timer_relative_stop_state", "relativeStopTimer"),
+            "timer.relativeStopTimer",
+        )
+    )
+    if timer_relative_stop_state:
+        aliases[f"{prefix}.timer_relative_stop_set"] = (
+            timer_relative_stop_state not in {"unset", "off", "none"}
+        )
+    timer_total_hour = get_official_state_value(
         data,
-        *_prefixed_keys("initial_hour", "totalHour"),
+        *_prefixed_keys("timer_total_hour", "totalHour"),
         "timer.totalHour",
     )
-    if initial_hour is not None:
-        aliases[f"{prefix}.initial_hour"] = initial_hour
-    initial_minute = get_official_state_value(
+    if timer_total_hour is not None:
+        aliases[f"{prefix}.timer_total_hour"] = timer_total_hour
+    timer_total_minute = get_official_state_value(
         data,
-        *_prefixed_keys("initial_minute", "totalMinute"),
+        *_prefixed_keys("timer_total_minute", "totalMinute"),
         "timer.totalMinute",
     )
-    if initial_minute is not None:
-        aliases[f"{prefix}.initial_minute"] = initial_minute
+    if timer_total_minute is not None:
+        aliases[f"{prefix}.timer_total_minute"] = timer_total_minute
 
     if current_job_mode := get_official_state_value(
         data,
@@ -595,6 +668,85 @@ def _extract_laundry_attributes(
     return aliases
 
 
+def _extract_laundry_raw_report_attributes(
+    raw_report: dict[str, Any], device_type: OfficialDeviceType
+) -> dict[str, Any]:
+    """Extract additional laundry attributes from raw MQTT report payloads."""
+    aliases: dict[str, Any] = {}
+    prefix = {
+        OfficialDeviceType.WASHER: "washer",
+        OfficialDeviceType.DRYER: "dryer",
+        OfficialDeviceType.DISH_WASHER: "dishwasher",
+    }.get(device_type)
+    if prefix is None:
+        return aliases
+
+    if error_value := raw_report.get("error"):
+        if isinstance(error_value, list) and error_value:
+            aliases[f"{prefix}.error_message"] = error_value[0]
+        elif isinstance(error_value, str):
+            aliases[f"{prefix}.error_message"] = error_value
+
+    if device_type == OfficialDeviceType.DISH_WASHER:
+        door_status = raw_report.get("doorStatus")
+        if isinstance(door_status, dict):
+            if door_state := door_status.get("doorState"):
+                aliases["dishwasher.door_open"] = door_state
+        preference = raw_report.get("preference")
+        if isinstance(preference, dict):
+            if clean_l_reminder := preference.get("cleanLReminder"):
+                aliases["dishwasher.clean_l_reminder"] = clean_l_reminder
+            if machine_clean_reminder := preference.get("mCReminder"):
+                aliases["dishwasher.machine_clean_reminder"] = machine_clean_reminder
+            if rinse_level := preference.get("rinseLevel"):
+                aliases["dishwasher.rinse_level"] = rinse_level
+            if signal_level := preference.get("signalLevel"):
+                aliases["dishwasher.signal_level"] = signal_level
+            if softening_level := preference.get("softeningLevel"):
+                aliases["dishwasher.softening_level"] = softening_level
+        dish_washing_status = raw_report.get("dishWashingStatus")
+        if isinstance(dish_washing_status, dict):
+            rinse_refill = dish_washing_status.get("rinseRefill")
+            if rinse_refill is not None:
+                aliases["dishwasher.rinse_refill"] = rinse_refill
+            if rinse_level := dish_washing_status.get("rinseLevel"):
+                aliases["dishwasher.rinse_level"] = rinse_level
+        timer = raw_report.get("timer")
+        if isinstance(timer, dict):
+            relative_start_hour = timer.get("relativeHourToStart")
+            relative_start_minute = timer.get("relativeMinuteToStart")
+            if relative_start_hour is not None:
+                aliases["dishwasher.timer_relative_start_hour"] = relative_start_hour
+            if relative_start_minute is not None:
+                aliases["dishwasher.timer_relative_start_minute"] = relative_start_minute
+            relative_start_state = normalize_text(timer.get("relativeStartTimer"))
+            if relative_start_state:
+                aliases["dishwasher.timer_relative_start_set"] = (
+                    relative_start_state not in {"unset", "off", "none"}
+                )
+            elif relative_start_hour is not None or relative_start_minute is not None:
+                aliases["dishwasher.timer_relative_start_set"] = bool(
+                    int(relative_start_hour or 0) or int(relative_start_minute or 0)
+                )
+
+    return aliases
+
+
+def _extract_laundry_notification_attributes(
+    push_code: str | None, device_type: OfficialDeviceType
+) -> dict[str, Any]:
+    """Extract additional laundry attributes from push notifications."""
+    if not push_code:
+        return {}
+
+    normalized = normalize_text(push_code)
+    if device_type == OfficialDeviceType.DISH_WASHER:
+        if normalized == "rinse_is_not_enough":
+            return {"dishwasher.rinse_refill": True}
+
+    return {}
+
+
 def extract_official_attributes(official_coordinator: Any) -> dict[str, Any]:
     """Extract curated official attributes from a ThinQ coordinator."""
     data: dict[str, PropertyState] = getattr(official_coordinator, "data", {})
@@ -621,6 +773,10 @@ def extract_official_attributes(official_coordinator: Any) -> dict[str, Any]:
         OfficialDeviceType.DISH_WASHER,
     ):
         aliases = _extract_laundry_attributes(data, device_type)
+        if raw_report := getattr(official_coordinator, "last_raw_report", None):
+            aliases.update(_extract_laundry_raw_report_attributes(raw_report, device_type))
+        if push_code := getattr(official_coordinator, "last_push_code", None):
+            aliases.update(_extract_laundry_notification_attributes(push_code, device_type))
     else:
         aliases = {}
     return {key: value for key, value in aliases.items() if value is not None}

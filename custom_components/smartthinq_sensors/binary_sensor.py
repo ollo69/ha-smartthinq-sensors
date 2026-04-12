@@ -114,6 +114,13 @@ WASH_DEV_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     ThinQBinarySensorEntityDescription(
+        key=WashDeviceFeatures.SIGNAL_LEVEL,
+        name="Signal level",
+        icon="mdi:volume-off",
+        icon_on="mdi:volume-high",
+        entity_registry_enabled_default=False,
+    ),
+    ThinQBinarySensorEntityDescription(
         key=WashDeviceFeatures.SALTREFILL,
         name="Salt refill",
         entity_registry_enabled_default=False,
@@ -213,6 +220,12 @@ def _binary_sensor_exist(
     lge_device: LGEDevice, sensor_desc: ThinQBinarySensorEntityDescription
 ) -> bool:
     """Check if a sensor exist for device."""
+    if (
+        sensor_desc.key == WashDeviceFeatures.SIGNAL_LEVEL
+        and lge_device.type != DeviceType.DISHWASHER
+    ):
+        return False
+
     if sensor_desc.value_fn is not None:
         return True
 
@@ -319,10 +332,31 @@ class LGEBinarySensor(CoordinatorEntity, BinarySensorEntity):
         ret_val = ret_val.lower()
         if ret_val == STATE_ON:
             return True
+        if ret_val in {"open", "opened", "set"}:
+            return True
+        if ret_val in {"close", "closed", "unset"}:
+            return False
         state = STATE_LOOKUP.get(cast(Any, ret_val), STATE_OFF)
         return state == STATE_ON
 
     def _get_sensor_state(self) -> bool | str | None:
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            logical_key = {
+                ATTR_ERROR_STATE: f"{logical_prefix}.error_message",
+                WashDeviceFeatures.DOOROPEN: f"{logical_prefix}.door_open",
+                WashDeviceFeatures.RINSEREFILL: f"{logical_prefix}.rinse_refill",
+                WashDeviceFeatures.SIGNAL_LEVEL: f"{logical_prefix}.signal_level",
+            }.get(self.entity_description.key)
+            if logical_key:
+                hybrid_value = self._api.get_hybrid_value(logical_key)
+                if hybrid_value is not None:
+                    return cast(bool | str | None, hybrid_value)
+
         if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)
 

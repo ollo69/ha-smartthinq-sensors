@@ -75,6 +75,13 @@ WASH_DEV_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
 )
 REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
+        key=RefrigeratorFeatures.POWER_SAVE,
+        name="Power save",
+        icon="mdi:leaf",
+        value_fn=lambda x: x.power_save_enabled,
+        available_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
         key=RefrigeratorFeatures.ECOFRIENDLY,
         name="Eco friendly",
         icon="mdi:gauge-empty",
@@ -182,6 +189,21 @@ def _switch_exist(
     if (
         lge_device.type == DeviceType.AC
         and switch_desc.key == AirConditionerFeatures.POWER_SAVE
+    ):
+        official_coordinator = find_official_coordinator(
+            lge_device.hass, lge_device.device_id
+        )
+        if official_coordinator is None:
+            return False
+        return bool(
+            official_coordinator.api.get_active_idx(
+                ThinQProperty.POWER_SAVE_ENABLED,
+                ActiveMode.WRITABLE,
+            )
+        )
+    if (
+        lge_device.type == DeviceType.REFRIGERATOR
+        and switch_desc.key == RefrigeratorFeatures.POWER_SAVE
     ):
         official_coordinator = find_official_coordinator(
             lge_device.hass, lge_device.device_id
@@ -351,6 +373,12 @@ class LGESwitch(LGEBaseSwitch):
                 turn_on,
                 ThinQProperty.POWER_SAVE_ENABLED,
             )
+        if self.entity_description.key == RefrigeratorFeatures.POWER_SAVE:
+            return await async_call_official_post(
+                self._api,
+                turn_on,
+                ThinQProperty.POWER_SAVE_ENABLED,
+            )
         if self.entity_description.key == AirConditionerFeatures.MODE_AIRCLEAN:
             return await async_call_official_post(
                 self._api,
@@ -368,6 +396,10 @@ class LGESwitch(LGEBaseSwitch):
                 raise HomeAssistantError(
                     "Power Save control is not available through this device path."
                 )
+            if self.entity_description.key == RefrigeratorFeatures.POWER_SAVE:
+                raise HomeAssistantError(
+                    "Power Save control is not available through this device path."
+                )
             raise NotImplementedError
         if self.is_on:
             if await self._async_try_official_power_control(False):
@@ -381,6 +413,10 @@ class LGESwitch(LGEBaseSwitch):
             return
         if self.entity_description.turn_on_fn is None:
             if self.entity_description.key == AirConditionerFeatures.POWER_SAVE:
+                raise HomeAssistantError(
+                    "Power Save control is not available through this device path."
+                )
+            if self.entity_description.key == RefrigeratorFeatures.POWER_SAVE:
                 raise HomeAssistantError(
                     "Power Save control is not available through this device path."
                 )
@@ -409,6 +445,7 @@ class LGESwitch(LGEBaseSwitch):
 
         if self._api.type == DeviceType.REFRIGERATOR:
             refrigerator_logical_keys: dict[RefrigeratorFeatures, str] = {
+                RefrigeratorFeatures.POWER_SAVE: "refrigerator.power_save_enabled",
                 RefrigeratorFeatures.ECOFRIENDLY: "refrigerator.eco_friendly",
                 RefrigeratorFeatures.EXPRESSFRIDGE: "refrigerator.express_fridge",
                 RefrigeratorFeatures.EXPRESSMODE: "refrigerator.express_mode",

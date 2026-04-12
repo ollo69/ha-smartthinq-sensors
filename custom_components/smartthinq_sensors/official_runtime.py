@@ -76,6 +76,8 @@ class OfficialDeviceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.unique_id = (
             f"{self.device_id}_{self.sub_id}" if self.sub_id else self.device_id
         )
+        self.last_raw_report: dict[str, Any] | None = None
+        self.last_push_code: str | None = None
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch fresh official data."""
@@ -86,12 +88,14 @@ class OfficialDeviceCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def handle_update_status(self, status: dict[str, Any]) -> None:
         """Handle status payload received from MQTT."""
+        self.last_raw_report = status
         data = self.api.update_status(status)
         if data is not None:
             self.async_set_updated_data(data)
 
     def handle_notification_message(self, message: str | None) -> None:
         """Handle notification payload received from MQTT."""
+        self.last_push_code = message
         data = self.api.update_notification(message)
         if data is not None:
             self.async_set_updated_data(data)
