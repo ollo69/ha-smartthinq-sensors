@@ -23,6 +23,7 @@ from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
 from .wideq.core_exceptions import InvalidDeviceStatus
 
 _LOGGER = logging.getLogger(__name__)
+_DEFAULT_SELECTED_COURSE = "Current course"
 
 
 @dataclass(frozen=True)
@@ -158,7 +159,7 @@ class LGESelect(CoordinatorEntity, SelectEntity):
             await self.entity_description.select_option_fn(self._api, option)
         except InvalidDeviceStatus as exc:
             raise ServiceValidationError(
-                "Course selection is not available in the washer's current state."
+                "Course selection is not available in the device's current state."
             ) from exc
         self._api.async_set_updated()
 
@@ -175,7 +176,15 @@ class LGESelect(CoordinatorEntity, SelectEntity):
                     return str(hybrid_course)
 
         if self.entity_description.value_fn is not None:
-            return self.entity_description.value_fn(self._api)
+            current_option = self.entity_description.value_fn(self._api)
+            if (
+                self.entity_description.key == "course_selection"
+                and current_option == _DEFAULT_SELECTED_COURSE
+            ):
+                default_course = getattr(self._api.device, "default_course", None)
+                if default_course not in (None, ""):
+                    return str(default_course)
+            return current_option
 
         if self._api.state:
             feature = self.entity_description.key
@@ -194,8 +203,13 @@ class LGESelect(CoordinatorEntity, SelectEntity):
                     f"{logical_prefix}.run_state"
                 )
                 community_power_state = self._api.get_hybrid_value("state.state")
+                community_standby = self._api.get_hybrid_value("state.standby")
+                feature_standby = self._api.get_hybrid_value("feature.standby")
                 feature_remote_start = self._api.get_hybrid_value("feature.remote_start")
                 state_remote_start = self._api.get_hybrid_value("state.remoteStart")
+                official_remote_control = self._api.get_hybrid_value(
+                    f"{logical_prefix}.remote_control_enabled"
+                )
 
                 run_state_powered_off = isinstance(
                     hybrid_run_state, str
@@ -209,13 +223,34 @@ class LGESelect(CoordinatorEntity, SelectEntity):
                         isinstance(state_remote_start, str)
                         and state_remote_start.upper().endswith("_ON")
                     )
+                    or official_remote_control is True
                 )
+                standby_off = (
+                    feature_standby in {False, "off", "OFF"}
+                    or (
+                        isinstance(community_standby, str)
+                        and community_standby.upper() in {"STANDBY_OFF", "OFF"}
+                    )
+                )
+                initial_ready = isinstance(
+                    community_power_state, str
+                ) and community_power_state.upper() == "INITIAL"
 
-                if run_state_powered_off and community_powered_off:
+                if run_state_powered_off:
                     return False
-                is_avail = bool(self.entity_description.options_fn(self._api)) and (
-                    self._api.device.select_course_enabled or remote_start_ready
-                )
+                if community_powered_off:
+                    return False
+
+                if self._api.type in {DeviceType.WASHER, DeviceType.DRYER}:
+                    is_avail = bool(self.entity_description.options_fn(self._api)) and (
+                        self._api.device.select_course_enabled or remote_start_ready
+                    )
+                else:
+                    is_avail = bool(self.entity_description.options_fn(self._api)) and (
+                        self._api.device.select_course_enabled
+                        or remote_start_ready
+                        or (initial_ready and standby_off)
+                    )
         elif self.entity_description.available_fn is not None:
             is_avail = self.entity_description.available_fn(self._api)
         return self._api.available and is_avail

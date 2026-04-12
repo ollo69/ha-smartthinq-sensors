@@ -8,6 +8,7 @@ import logging
 from typing import Any, cast
 
 from thinqconnect.devices.const import Property as ThinQProperty
+from thinqconnect.integration import ActiveMode
 
 from homeassistant.components.switch import (
     SwitchDeviceClass,
@@ -17,6 +18,7 @@ from homeassistant.components.switch import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -24,7 +26,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import LGE_DISCOVERY_NEW
 from .device_helpers import STATE_LOOKUP, LGEBaseDevice
 from .lge_device import LGEDevice
-from .official_control import async_call_official_turn_off, async_call_official_turn_on
+from .official_control import (
+    async_call_official_post,
+    async_call_official_turn_off,
+    async_call_official_turn_on,
+)
+from .official_mapping import find_official_coordinator
 from .runtime_data import get_lge_devices
 from .wideq import (
     WM_DEVICE_TYPES,
@@ -102,11 +109,19 @@ REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
 )
 AC_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
     ThinQSwitchEntityDescription(
+        key=AirConditionerFeatures.POWER_SAVE,
+        name="Power save",
+        icon="mdi:leaf",
+        value_fn=lambda x: x.power_save_enabled,
+        available_fn=lambda x: x.is_power_on,
+    ),
+    ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_AIRCLEAN,
         name="Ionizer",
         icon="mdi:pine-tree",
         turn_off_fn=lambda x: x.device.set_mode_airclean(False),
         turn_on_fn=lambda x: x.device.set_mode_airclean(True),
+        available_fn=lambda x: x.device.is_mode_airclean_supported and x.is_power_on,
     ),
     ThinQSwitchEntityDescription(
         key=AirConditionerFeatures.MODE_JET,
@@ -164,6 +179,22 @@ def _switch_exist(
     lge_device: LGEDevice, switch_desc: ThinQSwitchEntityDescription
 ) -> bool:
     """Check if a switch exist for device."""
+    if (
+        lge_device.type == DeviceType.AC
+        and switch_desc.key == AirConditionerFeatures.POWER_SAVE
+    ):
+        official_coordinator = find_official_coordinator(
+            lge_device.hass, lge_device.device_id
+        )
+        if official_coordinator is None:
+            return False
+        return bool(
+            official_coordinator.api.get_active_idx(
+                ThinQProperty.POWER_SAVE_ENABLED,
+                ActiveMode.WRITABLE,
+            )
+        )
+
     if (
         lge_device.type == DeviceType.REFRIGERATOR
         and switch_desc.key == RefrigeratorFeatures.EXPRESSFRIDGE
@@ -256,6 +287,22 @@ class LGESwitch(LGEBaseSwitch):
         self.entity_description = description
         self._attr_unique_id = f"{api.unique_id}-{description.key}-switch"
 
+    def _normalized_hybrid_run_state(self) -> str | None:
+        """Return the normalized hybrid run state for laundry devices."""
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        hybrid_run_state = (
+            self._api.get_hybrid_value(f"{logical_prefix}.run_state")
+            if logical_prefix
+            else None
+        )
+        if isinstance(hybrid_run_state, str):
+            return hybrid_run_state.lower()
+        return None
+
     @property
     def is_on(self) -> bool:
         """Return the state of the switch."""
@@ -272,6 +319,12 @@ class LGESwitch(LGEBaseSwitch):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
+        if (
+            self.entity_description.key == ATTR_POWER
+            and self._api.type in WM_DEVICE_TYPES
+            and self._normalized_hybrid_run_state() in {"power_off", "off", "none"}
+        ):
+            return False
         is_avail = True
         if self.entity_description.available_fn is not None:
             is_avail = self.entity_description.available_fn(self._wrap_device)
@@ -290,9 +343,31 @@ class LGESwitch(LGEBaseSwitch):
             return await async_call_official_turn_on(self._api, *property_keys)
         return await async_call_official_turn_off(self._api, *property_keys)
 
+    async def _async_try_official_switch_control(self, turn_on: bool) -> bool:
+        """Try controlling switch entities through the official API when supported."""
+        if self.entity_description.key == AirConditionerFeatures.POWER_SAVE:
+            return await async_call_official_post(
+                self._api,
+                turn_on,
+                ThinQProperty.POWER_SAVE_ENABLED,
+            )
+        if self.entity_description.key == AirConditionerFeatures.MODE_AIRCLEAN:
+            return await async_call_official_post(
+                self._api,
+                "START" if turn_on else "STOP",
+                ThinQProperty.AIR_CLEAN_OPERATION_MODE,
+            )
+        return False
+
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
+        if self.is_on and await self._async_try_official_switch_control(False):
+            return
         if self.entity_description.turn_off_fn is None:
+            if self.entity_description.key == AirConditionerFeatures.POWER_SAVE:
+                raise HomeAssistantError(
+                    "Power Save control is not available through this device path."
+                )
             raise NotImplementedError
         if self.is_on:
             if await self._async_try_official_power_control(False):
@@ -302,7 +377,13 @@ class LGESwitch(LGEBaseSwitch):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
+        if not self.is_on and await self._async_try_official_switch_control(True):
+            return
         if self.entity_description.turn_on_fn is None:
+            if self.entity_description.key == AirConditionerFeatures.POWER_SAVE:
+                raise HomeAssistantError(
+                    "Power Save control is not available through this device path."
+                )
             raise NotImplementedError
         if not self.is_on:
             if await self._async_try_official_power_control(True):
@@ -325,6 +406,20 @@ class LGESwitch(LGEBaseSwitch):
                 hybrid_is_on = self._api.get_hybrid_value(logical_key)
                 if hybrid_is_on is not None:
                     return bool(hybrid_is_on)
+
+        if self._api.type == DeviceType.REFRIGERATOR:
+            refrigerator_logical_keys: dict[RefrigeratorFeatures, str] = {
+                RefrigeratorFeatures.ECOFRIENDLY: "refrigerator.eco_friendly",
+                RefrigeratorFeatures.EXPRESSFRIDGE: "refrigerator.express_fridge",
+                RefrigeratorFeatures.EXPRESSMODE: "refrigerator.express_mode",
+            }
+            logical_key = refrigerator_logical_keys.get(
+                cast(RefrigeratorFeatures, self.entity_description.key)
+            )
+            if logical_key:
+                hybrid_value = self._api.get_hybrid_value(logical_key)
+                if hybrid_value is not None:
+                    return cast(bool | str | None, hybrid_value)
 
         if self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)

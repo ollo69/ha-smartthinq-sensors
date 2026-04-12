@@ -116,6 +116,7 @@ async def async_setup_official_bridge(
     official_pat: str | None = None,
     official_client_id: str | None = None,
     country_code: str | None = None,
+    on_devices_changed: Callable[[], None] | None = None,
 ) -> None:
     """Subscribe to official lg_thinq coordinators when available."""
     domain_data = get_domain_data(hass)
@@ -138,6 +139,7 @@ async def async_setup_official_bridge(
             access_token=official_pat,
             client_id=official_client_id,
             country_code=country_code,
+            on_devices_changed=on_devices_changed,
         )
         if runtime is not None:
             if retry_unsub := domain_data.pop(OFFICIAL_RUNTIME_RETRY_UNSUB, None):
@@ -188,6 +190,7 @@ async def async_setup_official_bridge(
                         official_pat=official_pat,
                         official_client_id=official_client_id,
                         country_code=country_code,
+                        on_devices_changed=on_devices_changed,
                     )
                 )
 

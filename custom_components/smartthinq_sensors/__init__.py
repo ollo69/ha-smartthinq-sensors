@@ -17,9 +17,11 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .auth import is_valid_ha_version
 from .community_setup import (
+    async_refresh_devices_discovery,
     cleanup_orphan_lge_devices,
     lge_devices_setup,
     start_devices_discovery,
@@ -29,6 +31,7 @@ from .const import (
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     DOMAIN,
+    LGE_OFFICIAL_DISCOVERY,
     SIGNAL_RELOAD_ENTRY,
     __min_ha_version__,
 )
@@ -166,18 +169,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     await hass.config_entries.async_forward_entry_setups(entry, SMARTTHINQ_PLATFORMS)
     try:
+        def _schedule_devices_changed_refresh() -> None:
+            hass.async_create_task(
+                async_refresh_devices_discovery(
+                    hass,
+                    entry,
+                    client,
+                    _notify_message,
+                )
+            )
+
         await async_setup_official_bridge(
             hass,
             entry.async_on_unload,
             official_pat=official_pat,
             official_client_id=official_client_id,
             country_code=region,
+            on_devices_changed=_schedule_devices_changed_refresh,
         )
     except (ClientError, OSError, TimeoutError, ThinQAPIException):
         _LOGGER.warning(
             "Official ThinQ runtime unavailable; continuing with community API only",
             exc_info=True,
         )
+    else:
+        async_dispatcher_send(hass, LGE_OFFICIAL_DISCOVERY)
 
     start_devices_discovery(hass, entry, client, _notify_message)
 

@@ -194,12 +194,21 @@ class LGEDevice:
             return str(key).lower()
 
         if self._type == DeviceType.AC:
+            operation_mode = getattr(state, "operation_mode", None)
             aliases = {
                 "ac.is_on": getattr(state, "is_on", None),
-                "ac.operation_mode": getattr(state, "operation_mode", None),
+                "ac.operation_mode": operation_mode,
                 "ac.current_temperature": getattr(state, "current_temp", None),
                 "ac.target_temperature": getattr(state, "target_temp", None),
                 "ac.current_humidity": getattr(state, "humidity", None),
+                "ac.fan_speed": getattr(state, "fan_speed", None),
+                "ac.vertical_step_mode": getattr(state, "vertical_step_mode", None),
+                "ac.horizontal_step_mode": getattr(state, "horizontal_step_mode", None),
+                "ac.pm1": getattr(state, "pm1", None),
+                "ac.pm10": getattr(state, "pm10", None),
+                "ac.pm25": getattr(state, "pm25", None),
+                "ac.power_save_enabled": operation_mode
+                in {"ENERGY_SAVING", "ENERGY_SAVER"},
                 "ac.power_current": getattr(state, "energy_current", None),
             }
             if hasattr(state, "filters_life") and isinstance(state.filters_life, dict):
@@ -210,6 +219,10 @@ class LGEDevice:
                 "refrigerator.temp_unit": getattr(state, "temp_unit", None),
                 "refrigerator.door_open": getattr(state, "door_opened_state", None),
                 "refrigerator.eco_friendly": getattr(state, "eco_friendly_enabled", None),
+                "refrigerator.express_fridge": getattr(
+                    state, "express_fridge_status", None
+                ),
+                "refrigerator.express_mode": getattr(state, "express_mode_status", None),
                 "refrigerator.fresh_air_filter": getattr(
                     state, "fresh_air_filter_remain_perc", None
                 ),
@@ -307,25 +320,67 @@ class LGEDevice:
                 ),
             }
         elif self._type == DeviceType.WASHER:
+            selected_course = getattr(self._device, "selected_course", None)
             aliases = {
                 "washer.is_on": getattr(state, "is_on", None),
                 "washer.run_state": getattr(state, "run_state", None),
+                "washer.remote_control_enabled": getattr(
+                    state, "remote_control_enabled", None
+                ),
+                "washer.initial_hour": getattr(state, "initialtime_hour", None),
+                "washer.initial_minute": getattr(state, "initialtime_min", None),
+                "washer.remain_hour": getattr(state, "remaintime_hour", None),
+                "washer.remain_minute": getattr(state, "remaintime_min", None),
+                "washer.reserve_hour": getattr(state, "reservetime_hour", None),
+                "washer.reserve_minute": getattr(state, "reservetime_min", None),
                 "washer.process_state": getattr(state, "process_state", None),
-                "washer.current_course": getattr(state, "current_course", None),
+                "washer.current_course": getattr(state, "current_course", None)
+                or (
+                    selected_course
+                    if selected_course not in (None, "", "Current course")
+                    else None
+                ),
             }
         elif self._type == DeviceType.DRYER:
+            selected_course = getattr(self._device, "selected_course", None)
             aliases = {
                 "dryer.is_on": getattr(state, "is_on", None),
                 "dryer.run_state": getattr(state, "run_state", None),
+                "dryer.remote_control_enabled": getattr(
+                    state, "remote_control_enabled", None
+                ),
+                "dryer.initial_hour": getattr(state, "initialtime_hour", None),
+                "dryer.initial_minute": getattr(state, "initialtime_min", None),
+                "dryer.remain_hour": getattr(state, "remaintime_hour", None),
+                "dryer.remain_minute": getattr(state, "remaintime_min", None),
+                "dryer.reserve_hour": getattr(state, "reservetime_hour", None),
+                "dryer.reserve_minute": getattr(state, "reservetime_min", None),
                 "dryer.process_state": getattr(state, "process_state", None),
-                "dryer.current_course": getattr(state, "current_course", None),
+                "dryer.current_course": getattr(state, "current_course", None)
+                or (
+                    selected_course
+                    if selected_course not in (None, "", "Current course")
+                    else None
+                ),
             }
         elif self._type == DeviceType.DISHWASHER:
+            selected_course = getattr(self._device, "selected_course", None)
             aliases = {
                 "dishwasher.is_on": getattr(state, "is_on", None),
                 "dishwasher.run_state": getattr(state, "run_state", None),
+                "dishwasher.initial_hour": getattr(state, "initialtime_hour", None),
+                "dishwasher.initial_minute": getattr(state, "initialtime_min", None),
+                "dishwasher.remain_hour": getattr(state, "remaintime_hour", None),
+                "dishwasher.remain_minute": getattr(state, "remaintime_min", None),
+                "dishwasher.reserve_hour": getattr(state, "reservetime_hour", None),
+                "dishwasher.reserve_minute": getattr(state, "reservetime_min", None),
                 "dishwasher.process_state": getattr(state, "process_state", None),
-                "dishwasher.current_course": getattr(state, "current_course", None),
+                "dishwasher.current_course": getattr(state, "current_course", None)
+                or (
+                    selected_course
+                    if selected_course not in (None, "", "Current course")
+                    else None
+                ),
             }
 
         return {key: value for key, value in aliases.items() if value is not None}

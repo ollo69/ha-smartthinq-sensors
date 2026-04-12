@@ -11,6 +11,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
 
+from .const import LGE_TRACE_EVENT
 from .runtime_data import get_domain_data, get_trace_buffer
 
 TRACE_BUFFER = "trace_buffer"
@@ -45,15 +46,25 @@ def add_trace_event(
             str(key): _sanitize_trace_value(value) for key, value in details.items()
         }
 
-    buffer.append(
-        TraceEvent(
-            timestamp=utcnow(),
-            category=category,
-            action=action,
-            device_id=device_id,
-            details=sanitized_details,
-        )
+    event = TraceEvent(
+        timestamp=utcnow(),
+        category=category,
+        action=action,
+        device_id=device_id,
+        details=sanitized_details,
     )
+    buffer.append(event)
+    if event.category == "mqtt":
+        hass.bus.async_fire(
+            LGE_TRACE_EVENT,
+            {
+                "timestamp": event.timestamp.isoformat(),
+                "category": event.category,
+                "action": event.action,
+                "device_id": event.device_id,
+                "details": event.details,
+            },
+        )
 
 
 def get_trace_events(

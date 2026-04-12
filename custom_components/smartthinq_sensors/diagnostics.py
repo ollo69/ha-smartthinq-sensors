@@ -14,6 +14,7 @@ from homeassistant.util.dt import utcnow
 
 from .const import DOMAIN, LGE_DEVICES
 from .official_bridge import OFFICIAL_RUNTIME_RETRY_AT, OFFICIAL_RUNTIME_STATUS
+from .official_mapping import find_official_coordinator
 from .official_runtime import OFFICIAL_RUNTIME_LAST_ERROR
 from .runtime_data import (
     CAPABILITY_REGISTRY,
@@ -183,6 +184,7 @@ def _async_hybrid_as_dict(
             if isinstance(hybrid_coordinators, dict)
             else None
         )
+        official_coordinator = find_official_coordinator(hass, device_id)
         attributes = (
             sorted(profile.attributes)
             if profile is not None
@@ -215,6 +217,11 @@ def _async_hybrid_as_dict(
                 if coordinator is not None and hasattr(coordinator, "get_diagnostics")
                 else None
             ),
+            "official": (
+                _async_official_device_as_dict(official_coordinator)
+                if official_coordinator is not None
+                else None
+            ),
             "routing": routing,
         }
 
@@ -224,6 +231,26 @@ def _async_hybrid_as_dict(
             snapshot_manager.get_diagnostics()
         )
     return hybrid_data
+
+
+def _async_official_device_as_dict(official_coordinator: Any) -> dict[str, Any]:
+    """Represent one matched official coordinator as diagnostics."""
+    official_api = getattr(official_coordinator, "api", None)
+    official_device = getattr(official_api, "device", None)
+    data = getattr(official_coordinator, "data", {})
+
+    return {
+        "device_id": getattr(official_coordinator, "device_id", None),
+        "unique_id": getattr(official_coordinator, "unique_id", None),
+        "sub_id": getattr(official_coordinator, "sub_id", None),
+        "device_type": getattr(getattr(official_device, "device_type", None), "name", None),
+        "model_name": getattr(official_device, "model_name", None),
+        "alias": getattr(official_device, "alias", None),
+        "energy_properties": _serialize_hybrid_value(
+            getattr(official_device, "energy_properties", None)
+        ),
+        "data_keys": sorted(str(key) for key in data)[:100],
+    }
 
 
 @callback

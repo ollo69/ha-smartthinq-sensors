@@ -68,6 +68,8 @@ WASH_DEVICE_TYPES = [
     DeviceType.STYLER,
 ]
 
+DEFAULT_SELECTED_COURSE = "Current course"
+
 
 def get_entity_name(device: LGEDevice, ent_key: str) -> str | None:
     """Get the name for the entity."""
@@ -164,6 +166,19 @@ class LGEBaseDevice:
         ssid = self._api.device.device_info.ssid
         return str(ssid) if ssid is not None else None
 
+    @property
+    def power_save_enabled(self) -> bool:
+        """Return whether AC power save is enabled."""
+        if self._api.type != DeviceType.AC:
+            return False
+
+        value = self._api.get_hybrid_value("ac.power_save_enabled")
+        if value is not None:
+            return bool(value)
+
+        operation_mode = getattr(self._api.state, "operation_mode", None)
+        return operation_mode in {ACMode.ENERGY_SAVING.name, ACMode.ENERGY_SAVER.name}
+
     def get_features_attributes(self) -> dict[str | None, Any]:
         """Return a dict with device features and name."""
         ret_val: dict[str | None, Any] = {}
@@ -238,6 +253,18 @@ class LGEWashDevice(LGEBaseDevice):
     @property
     def initial_time(self) -> str:
         """Return the initial time in format HH:MM."""
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            initial_hour = self._api.get_hybrid_value(f"{logical_prefix}.initial_hour")
+            initial_minute = self._api.get_hybrid_value(
+                f"{logical_prefix}.initial_minute"
+            )
+            if initial_hour is not None or initial_minute is not None:
+                return self.format_time(initial_hour, initial_minute)
         if self._api.state:
             if self._api.state.is_on:
                 return self.format_time(
@@ -248,6 +275,16 @@ class LGEWashDevice(LGEBaseDevice):
     @property
     def remain_time(self) -> str:
         """Return the remaining time in format HH:MM."""
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            remain_hour = self._api.get_hybrid_value(f"{logical_prefix}.remain_hour")
+            remain_minute = self._api.get_hybrid_value(f"{logical_prefix}.remain_minute")
+            if remain_hour is not None or remain_minute is not None:
+                return self.format_time(remain_hour, remain_minute)
         if self._api.state:
             if self._api.state.is_on:
                 return self.format_time(
@@ -258,6 +295,18 @@ class LGEWashDevice(LGEBaseDevice):
     @property
     def reserve_time(self) -> str:
         """Return the reserved time in format HH:MM."""
+        logical_prefix = {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+        if logical_prefix:
+            reserve_hour = self._api.get_hybrid_value(f"{logical_prefix}.reserve_hour")
+            reserve_minute = self._api.get_hybrid_value(
+                f"{logical_prefix}.reserve_minute"
+            )
+            if reserve_hour is not None or reserve_minute is not None:
+                return self.format_time(reserve_hour, reserve_minute)
         if self._api.state:
             if self._api.state.is_on:
                 return self.format_time(
@@ -277,6 +326,9 @@ class LGEWashDevice(LGEBaseDevice):
             hybrid_course = self._api.get_hybrid_value(logical_key)
             if hybrid_course not in (None, ""):
                 return str(hybrid_course)
+        selected_course = getattr(self._api.device, "selected_course", None)
+        if selected_course not in (None, "", DEFAULT_SELECTED_COURSE):
+            return str(selected_course)
         if self._api.state:
             if self._api.state.is_on:
                 course = self._api.state.current_course
@@ -379,6 +431,31 @@ class LGETempDevice(LGEBaseDevice):
 class LGEACDevice(LGETempDevice):
     """A wrapper to monitor LGE AC devices with hybrid-aware state."""
 
+    def _normalize_enum_value(
+        self,
+        value: Any,
+        supported_values: list[str],
+        *,
+        aliases: dict[str, str] | None = None,
+    ) -> str | None:
+        """Normalize hybrid/community values to the device's enum names."""
+        if value is None:
+            return None
+
+        normalized = str(value).strip()
+        if normalized in supported_values:
+            return normalized
+
+        upper_value = normalized.upper().replace("-", "_").replace(" ", "_")
+        for candidate in (upper_value, upper_value.title()):
+            if candidate in supported_values:
+                return candidate
+
+        if aliases and (aliased := aliases.get(upper_value)) in supported_values:
+            return aliased
+
+        return normalized
+
     @property
     def device(self) -> AirConditionerDevice:
         """Return the wrapped AC device."""
@@ -395,36 +472,19 @@ class LGEACDevice(LGETempDevice):
         value = self._api.get_hybrid_value(
             "ac.operation_mode", self._api.state.operation_mode
         )
-        if value is None:
-            return None
-
-        normalized = str(value).strip()
-        if normalized in self.device.op_modes:
-            return normalized
-
-        upper_value = normalized.upper()
-        if upper_value in self.device.op_modes:
-            return upper_value
-
-        upper_value = upper_value.replace("-", "_").replace(" ", "_")
-        if upper_value in self.device.op_modes:
-            return upper_value
-
         alias_map = {
             "AIR_DRY": ACMode.DRY.name,
             "DRY": ACMode.DRY.name,
             "FAN": ACMode.FAN.name,
             "AUTO": ACMode.AI.name if ACMode.AI.name in self.device.op_modes else "AUTO",
         }
-        aliased = alias_map.get(upper_value)
-        if aliased in self.device.op_modes:
-            return aliased
-
-        return (
-            str(self._api.state.operation_mode)
-            if self._api.state.operation_mode
-            else normalized
+        normalized = self._normalize_enum_value(
+            value, self.device.op_modes, aliases=alias_map
         )
+        if normalized in self.device.op_modes:
+            return normalized
+
+        return str(self._api.state.operation_mode) if self._api.state.operation_mode else normalized
 
     @property
     def current_temperature(self) -> float:
@@ -448,6 +508,45 @@ class LGEACDevice(LGETempDevice):
             self._api.state.device_features.get("humidity"),
         )
         return int(value) if value is not None else None
+
+    @property
+    def power_save_enabled(self) -> bool:
+        """Return whether AC power save is enabled."""
+        value = self._api.get_hybrid_value("ac.power_save_enabled")
+        if value is not None:
+            return bool(value)
+        return self.operation_mode in {ACMode.ENERGY_SAVING.name, ACMode.ENERGY_SAVER.name}
+
+    @property
+    def fan_speed(self) -> str | None:
+        """Return the best current AC fan speed."""
+        value = self._api.get_hybrid_value("ac.fan_speed", self._api.state.fan_speed)
+        normalized = self._normalize_enum_value(value, self.device.fan_speeds)
+        if normalized in self.device.fan_speeds:
+            return normalized
+        return self._api.state.fan_speed or normalized
+
+    @property
+    def vertical_step_mode(self) -> str | None:
+        """Return the best current AC vertical step mode."""
+        value = self._api.get_hybrid_value(
+            "ac.vertical_step_mode", self._api.state.vertical_step_mode
+        )
+        normalized = self._normalize_enum_value(value, self.device.vertical_step_modes)
+        if normalized in self.device.vertical_step_modes:
+            return normalized
+        return self._api.state.vertical_step_mode or normalized
+
+    @property
+    def horizontal_step_mode(self) -> str | None:
+        """Return the best current AC horizontal step mode."""
+        value = self._api.get_hybrid_value(
+            "ac.horizontal_step_mode", self._api.state.horizontal_step_mode
+        )
+        normalized = self._normalize_enum_value(value, self.device.horizontal_step_modes)
+        if normalized in self.device.horizontal_step_modes:
+            return normalized
+        return self._api.state.horizontal_step_mode or normalized
 
 
 class LGERangeDevice(LGEBaseDevice):

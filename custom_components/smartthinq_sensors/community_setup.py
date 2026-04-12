@@ -34,6 +34,7 @@ from .wideq import (
 from .wideq.core_async import ClientAsync
 
 _LOGGER = logging.getLogger(__name__)
+DISCOVERY_SCAN_INTERVAL = timedelta(minutes=30)
 
 
 async def lge_devices_setup(
@@ -155,6 +156,90 @@ def cleanup_orphan_lge_devices(
 
 
 @callback
+def _apply_discovery_results(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    *,
+    lge_devs: dict[DeviceType, list[LGEDevice]],
+    unsupported_devs: dict[DeviceType, list[ThinQDeviceInfo]],
+    old_devs: dict[str, list[str]],
+    new_devs: dict[str, list[str]],
+    notify_message: Any,
+) -> None:
+    """Apply device discovery results to runtime data."""
+    runtime_data = get_domain_data(hass)
+    runtime_data[DISCOVERED_DEVICES] = new_devs
+
+    if lge_devs:
+        notify_message(
+            hass, "new_devices", "SmartThinQ Sensors", "Discovered new devices."
+        )
+        async_dispatcher_send(hass, LGE_DISCOVERY_NEW, lge_devs)
+
+    if lge_devs or unsupported_devs or len(old_devs) != len(new_devs):
+        new_ids = [v for ids in new_devs.values() for v in ids]
+        cleanup_orphan_lge_devices(hass, entry.entry_id, new_ids)
+
+        prev_lge_devs: dict[DeviceType, list[LGEDevice]] = get_lge_devices(hass)
+        new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
+        for dev_type, dev_list in prev_lge_devs.items():
+            valid_lge_devs = [dev for dev in dev_list if dev.device_id in new_ids]
+            if valid_lge_devs:
+                new_lge_devs[dev_type] = valid_lge_devs
+        for dev_type, dev_list in lge_devs.items():
+            if dev_type in new_lge_devs:
+                new_lge_devs[dev_type].extend(dev_list)
+            else:
+                new_lge_devs[dev_type] = dev_list
+        runtime_data[LGE_DEVICES] = new_lge_devs
+
+        prev_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = (
+            get_unsupported_devices(hass)
+        )
+        new_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = {}
+        for uns_dev_type, uns_dev_list in prev_uns_devs.items():
+            valid_uns_devs = [
+                dev for dev in uns_dev_list if dev.device_id in new_devs
+            ]
+            if valid_uns_devs:
+                new_uns_devs[uns_dev_type] = valid_uns_devs
+        for uns_dev_type, uns_dev_list in unsupported_devs.items():
+            if uns_dev_type in new_uns_devs:
+                new_uns_devs[uns_dev_type].extend(uns_dev_list)
+            else:
+                new_uns_devs[uns_dev_type] = uns_dev_list
+        runtime_data[UNSUPPORTED_DEVICES] = new_uns_devs
+
+
+async def async_refresh_devices_discovery(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    client: ClientAsync,
+    notify_message: Any,
+) -> None:
+    """Refresh device discovery immediately."""
+    _LOGGER.debug("Discovering new devices")
+
+    old_devs = get_discovered_devices(hass)
+    snapshot_manager = get_snapshot_manager(hass)
+    lge_devs, unsupported_devs, new_devs = await lge_devices_setup(
+        hass,
+        client,
+        old_devs,
+        snapshot_manager=snapshot_manager,
+    )
+    _apply_discovery_results(
+        hass,
+        entry,
+        lge_devs=lge_devs,
+        unsupported_devs=unsupported_devs,
+        old_devs=old_devs,
+        new_devs=new_devs,
+        notify_message=notify_message,
+    )
+
+
+@callback
 def start_devices_discovery(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -165,59 +250,8 @@ def start_devices_discovery(
 
     async def _async_discover_devices(_event: Any) -> None:
         """Discover new devices."""
-        _LOGGER.debug("Discovering new devices")
-
-        runtime_data = get_domain_data(hass)
-        old_devs = get_discovered_devices(hass)
-        snapshot_manager = get_snapshot_manager(hass)
-        lge_devs, unsupported_devs, new_devs = await lge_devices_setup(
-            hass,
-            client,
-            old_devs,
-            snapshot_manager=snapshot_manager,
-        )
-        runtime_data[DISCOVERED_DEVICES] = new_devs
-
-        if lge_devs:
-            notify_message(
-                hass, "new_devices", "SmartThinQ Sensors", "Discovered new devices."
-            )
-            async_dispatcher_send(hass, LGE_DISCOVERY_NEW, lge_devs)
-
-        if lge_devs or unsupported_devs or len(old_devs) != len(new_devs):
-            new_ids = [v for ids in new_devs.values() for v in ids]
-            cleanup_orphan_lge_devices(hass, entry.entry_id, new_ids)
-
-            prev_lge_devs: dict[DeviceType, list[LGEDevice]] = get_lge_devices(hass)
-            new_lge_devs: dict[DeviceType, list[LGEDevice]] = {}
-            for dev_type, dev_list in prev_lge_devs.items():
-                valid_lge_devs = [dev for dev in dev_list if dev.device_id in new_ids]
-                if valid_lge_devs:
-                    new_lge_devs[dev_type] = valid_lge_devs
-            for dev_type, dev_list in lge_devs.items():
-                if dev_type in new_lge_devs:
-                    new_lge_devs[dev_type].extend(dev_list)
-                else:
-                    new_lge_devs[dev_type] = dev_list
-            runtime_data[LGE_DEVICES] = new_lge_devs
-
-            prev_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = (
-                get_unsupported_devices(hass)
-            )
-            new_uns_devs: dict[DeviceType, list[ThinQDeviceInfo]] = {}
-            for uns_dev_type, uns_dev_list in prev_uns_devs.items():
-                valid_uns_devs = [
-                    dev for dev in uns_dev_list if dev.device_id in new_devs
-                ]
-                if valid_uns_devs:
-                    new_uns_devs[uns_dev_type] = valid_uns_devs
-            for uns_dev_type, uns_dev_list in unsupported_devs.items():
-                if uns_dev_type in new_uns_devs:
-                    new_uns_devs[uns_dev_type].extend(uns_dev_list)
-                else:
-                    new_uns_devs[uns_dev_type] = uns_dev_list
-            runtime_data[UNSUPPORTED_DEVICES] = new_uns_devs
+        await async_refresh_devices_discovery(hass, entry, client, notify_message)
 
     entry.async_on_unload(
-        async_track_time_interval(hass, _async_discover_devices, timedelta(minutes=5))
+        async_track_time_interval(hass, _async_discover_devices, DISCOVERY_SCAN_INTERVAL)
     )

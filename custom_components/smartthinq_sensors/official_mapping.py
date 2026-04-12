@@ -15,6 +15,8 @@ from .runtime_data import get_domain_data, get_lge_devices
 from .wideq import DeviceType as CommunityDeviceType
 
 OFFICIAL_DEVICE_LINKS = "official_device_links"
+OFFICIAL_RUNTIME = "official_runtime"
+OFFICIAL_DOMAIN = "lg_thinq"
 
 OFFICIAL_TO_COMMUNITY_TYPE = {
     "AIR_CONDITIONER": CommunityDeviceType.AC,
@@ -119,6 +121,15 @@ def _extract_air_conditioner_attributes(
             )
         ),
     )
+    power_save_enabled = get_official_state_value(
+        data,
+        ThinQProperty.POWER_SAVE_ENABLED,
+        "power_save_enabled",
+        "powerSaveEnabled",
+        "powerSave.powerSaveEnabled",
+    )
+    if power_save_enabled is not None:
+        aliases["ac.power_save_enabled"] = bool(power_save_enabled)
     aliases.setdefault(
         "ac.operation_mode",
         get_official_state_value(data, ThinQProperty.CURRENT_JOB_MODE, "current_job_mode"),
@@ -144,6 +155,66 @@ def _extract_air_conditioner_attributes(
             "ac.target_temperature",
             get_official_state_value(data, "target_temperature_c", "target_temperature"),
         )
+    fan_speed = get_official_state_value(
+        data,
+        ThinQProperty.WIND_STRENGTH,
+        "wind_strength",
+        "windStrength",
+        "airFlow.windStrength",
+        "airFlow.windStrengthDetail",
+    )
+    if fan_speed is not None:
+        aliases["ac.fan_speed"] = fan_speed
+    vertical_swing = get_official_state_value(
+        data,
+        "vertical_swing_enabled",
+        "rotate_up_down",
+        "rotateUpDown",
+        "windDirection.rotateUpDown",
+    )
+    if vertical_swing is not None:
+        aliases["ac.vertical_step_mode"] = "Swing" if bool(vertical_swing) else "Off"
+    horizontal_swing = get_official_state_value(
+        data,
+        "horizontal_swing_enabled",
+        "rotate_left_right",
+        "rotateLeftRight",
+        "windDirection.rotateLeftRight",
+    )
+    if horizontal_swing is not None:
+        aliases["ac.horizontal_step_mode"] = (
+            "Swing" if bool(horizontal_swing) else "Off"
+        )
+    pm1_value = get_official_state_value(
+        data,
+        ThinQProperty.PM1,
+        ThinQProperty.PM1_LEVEL,
+        "pm1",
+        "PM1",
+        "airQualitySensor.PM1",
+    )
+    if pm1_value is not None:
+        aliases["ac.pm1"] = pm1_value
+    pm10_value = get_official_state_value(
+        data,
+        ThinQProperty.PM10,
+        ThinQProperty.PM10_LEVEL,
+        "pm10",
+        "PM10",
+        "airQualitySensor.PM10",
+    )
+    if pm10_value is not None:
+        aliases["ac.pm10"] = pm10_value
+    pm25_value = get_official_state_value(
+        data,
+        ThinQProperty.PM2,
+        ThinQProperty.PM2_LEVEL,
+        "pm2",
+        "PM2",
+        "airQualitySensor.PM2",
+    )
+    if pm25_value is not None:
+        aliases["ac.pm25"] = pm25_value
     if power_state := data.get(ThinQProperty.POWER_LEVEL):
         aliases["ac.power_current"] = get_state_value(power_state)
     return aliases
@@ -152,16 +223,32 @@ def _extract_air_conditioner_attributes(
 def _extract_refrigerator_attributes(data: dict[str, PropertyState]) -> dict[str, Any]:
     aliases: dict[str, Any] = {}
     aliases["refrigerator.door_open"] = get_official_state_value(
-        data, ThinQProperty.DOOR_STATE, "main_door_state"
+        data,
+        ThinQProperty.DOOR_STATE,
+        "main_door_state",
+        "door_state",
+        "doorStatus.doorState",
     )
     aliases["refrigerator.eco_friendly"] = get_official_state_value(
         data,
         ThinQProperty.ECO_FRIENDLY_MODE,
-        ThinQProperty.EXPRESS_MODE,
-        ThinQProperty.EXPRESS_FRIDGE,
         "eco_friendly_mode",
+        "ecoFriendlyMode",
+        "ecoFriendly.ecoFriendlyMode",
+    )
+    aliases["refrigerator.express_mode"] = get_official_state_value(
+        data,
+        ThinQProperty.EXPRESS_MODE,
         "express_mode",
+        "expressMode",
+        "refrigeration.expressMode",
+    )
+    aliases["refrigerator.express_fridge"] = get_official_state_value(
+        data,
+        ThinQProperty.EXPRESS_FRIDGE,
         "express_fridge",
+        "expressFridge",
+        "refrigeration.expressFridge",
     )
     aliases["refrigerator.fresh_air_filter"] = get_official_state_value(
         data,
@@ -404,6 +491,56 @@ def _extract_laundry_attributes(
         aliases[f"{prefix}.is_on"] = is_on
     if current_state is not None:
         aliases[f"{prefix}.run_state"] = current_state
+    remote_control_enabled = get_official_state_value(
+        data,
+        ThinQProperty.REMOTE_CONTROL_ENABLED,
+        *_prefixed_keys("remote_control_enabled", "remoteControlEnabled"),
+        "remoteControlEnable.remoteControlEnabled",
+    )
+    if remote_control_enabled is not None:
+        aliases[f"{prefix}.remote_control_enabled"] = bool(remote_control_enabled)
+    remain_hour = get_official_state_value(
+        data,
+        *_prefixed_keys("remain_hour", "remainHour"),
+        "timer.remainHour",
+    )
+    if remain_hour is not None:
+        aliases[f"{prefix}.remain_hour"] = remain_hour
+    remain_minute = get_official_state_value(
+        data,
+        *_prefixed_keys("remain_minute", "remainMinute"),
+        "timer.remainMinute",
+    )
+    if remain_minute is not None:
+        aliases[f"{prefix}.remain_minute"] = remain_minute
+    reserve_hour = get_official_state_value(
+        data,
+        *_prefixed_keys("reserve_hour", "relativeHourToStop"),
+        "timer.relativeHourToStop",
+    )
+    if reserve_hour is not None:
+        aliases[f"{prefix}.reserve_hour"] = reserve_hour
+    reserve_minute = get_official_state_value(
+        data,
+        *_prefixed_keys("reserve_minute", "relativeMinuteToStop"),
+        "timer.relativeMinuteToStop",
+    )
+    if reserve_minute is not None:
+        aliases[f"{prefix}.reserve_minute"] = reserve_minute
+    initial_hour = get_official_state_value(
+        data,
+        *_prefixed_keys("initial_hour", "totalHour"),
+        "timer.totalHour",
+    )
+    if initial_hour is not None:
+        aliases[f"{prefix}.initial_hour"] = initial_hour
+    initial_minute = get_official_state_value(
+        data,
+        *_prefixed_keys("initial_minute", "totalMinute"),
+        "timer.totalMinute",
+    )
+    if initial_minute is not None:
+        aliases[f"{prefix}.initial_minute"] = initial_minute
 
     if current_job_mode := get_official_state_value(
         data,
@@ -548,3 +685,30 @@ def find_target_device_id(
         if isinstance(official_key, str):
             device_links[official_key] = target_device_id
     return target_device_id
+
+
+def iter_official_coordinators(hass: HomeAssistant) -> list[Any]:
+    """Return all currently available official coordinators."""
+    domain_data = get_domain_data(hass)
+    coordinators: list[Any] = []
+
+    runtime = domain_data.get(OFFICIAL_RUNTIME)
+    runtime_coordinators = getattr(runtime, "coordinators", None)
+    if isinstance(runtime_coordinators, dict):
+        coordinators.extend(runtime_coordinators.values())
+
+    for entry in hass.config_entries.async_entries(OFFICIAL_DOMAIN):
+        runtime_data = getattr(entry, "runtime_data", None)
+        entry_coordinators = getattr(runtime_data, "coordinators", None)
+        if isinstance(entry_coordinators, dict):
+            coordinators.extend(entry_coordinators.values())
+
+    return coordinators
+
+
+def find_official_coordinator(hass: HomeAssistant, target_device_id: str) -> Any | None:
+    """Return the matched official coordinator for a community device id."""
+    for coordinator in iter_official_coordinators(hass):
+        if find_target_device_id(hass, coordinator) == target_device_id:
+            return coordinator
+    return None

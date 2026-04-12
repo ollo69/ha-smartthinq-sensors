@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import time
+from datetime import datetime, time, timedelta
 import logging
 from typing import Any, cast
 
+from thinqconnect import ThinQAPIException
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
@@ -22,15 +23,19 @@ from homeassistant.const import (
     PERCENTAGE,
     STATE_UNAVAILABLE,
     EntityCategory,
+    UnitOfEnergy,
     UnitOfPower,
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
+from homeassistant.helpers.event import async_track_point_in_time
 from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import (
     ATTR_CURRENT_COURSE,
@@ -44,6 +49,7 @@ from .const import (
     DEFAULT_ICON,
     DEFAULT_SENSOR,
     LGE_DISCOVERY_NEW,
+    LGE_OFFICIAL_DISCOVERY,
 )
 from .device_helpers import (
     DEVICE_ICONS,
@@ -53,6 +59,7 @@ from .device_helpers import (
     get_wrapper_device,
 )
 from .lge_device import LGEDevice
+from .official_mapping import find_official_coordinator
 from .runtime_data import get_lge_devices
 from .wideq import (
     SET_TIME_DEVICE_TYPES,
@@ -80,6 +87,46 @@ SUPPORT_WM_SERVICES = 1
 SUPPORT_SET_TIME = 2
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ThinQEnergySensorEntityDescription(SensorEntityDescription):
+    """Describe an official energy usage sensor."""
+
+    device_class: SensorDeviceClass = SensorDeviceClass.ENERGY
+    state_class: SensorStateClass = SensorStateClass.TOTAL
+    native_unit_of_measurement: str = UnitOfEnergy.WATT_HOUR
+    suggested_display_precision: int = 0
+    usage_period: str = "day"
+    start_date_fn: Callable[[datetime], datetime]
+    end_date_fn: Callable[[datetime], datetime]
+    update_interval: timedelta = timedelta(days=1)
+
+
+ENERGY_USAGE_SENSORS: tuple[ThinQEnergySensorEntityDescription, ...] = (
+    ThinQEnergySensorEntityDescription(
+        key="energy_usage_yesterday",
+        name="Energy usage yesterday",
+        usage_period="day",
+        start_date_fn=lambda now: now - timedelta(days=1),
+        end_date_fn=lambda now: now - timedelta(days=1),
+    ),
+    ThinQEnergySensorEntityDescription(
+        key="energy_usage_this_month",
+        name="Energy usage this month",
+        usage_period="month",
+        start_date_fn=lambda now: now,
+        end_date_fn=lambda now: now,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+    ),
+    ThinQEnergySensorEntityDescription(
+        key="energy_usage_last_month",
+        name="Energy usage last month",
+        usage_period="month",
+        start_date_fn=lambda now: now.replace(day=1) - timedelta(days=1),
+        end_date_fn=lambda now: now.replace(day=1) - timedelta(days=1),
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -564,6 +611,13 @@ def _sensor_exist(
     lge_device: LGEDevice, sensor_desc: ThinQSensorEntityDescription
 ) -> bool:
     """Check if a sensor exist for device."""
+    if (
+        lge_device.type == DeviceType.AC
+        and sensor_desc.key == AirConditionerFeatures.RESERVATION_SLEEP_TIME
+        and not lge_device.device.is_reservation_sleep_time_supported
+    ):
+        return False
+
     wrapped_device = get_wrapper_device(lge_device, lge_device.type)
     if (
         lge_device.type == DeviceType.REFRIGERATOR
@@ -592,6 +646,53 @@ def _sensor_exist(
     return False
 
 
+def _format_energy_property_name(energy_property: str) -> str:
+    """Return a user-facing energy property label."""
+    words: list[str] = []
+    current_word = ""
+    for char in energy_property.replace("_", " "):
+        if char == " ":
+            if current_word:
+                words.append(current_word)
+                current_word = ""
+            continue
+        if char.isupper() and current_word:
+            words.append(current_word)
+            current_word = char
+        else:
+            current_word += char
+    if current_word:
+        words.append(current_word)
+    return " ".join(word.capitalize() for word in words) or energy_property
+
+
+def _build_official_energy_sensors(lge_device: LGEDevice) -> list[LGEOfficialEnergySensor]:
+    """Create official energy usage sensors for one device when supported."""
+    official_coordinator = find_official_coordinator(lge_device.hass, lge_device.device_id)
+    if official_coordinator is None:
+        return []
+
+    official_device = getattr(getattr(official_coordinator, "api", None), "device", None)
+    energy_properties = getattr(official_device, "energy_properties", None)
+    if not isinstance(energy_properties, list) or not energy_properties:
+        return []
+
+    multi_property = len(energy_properties) > 1
+    entities: list[LGEOfficialEnergySensor] = []
+    for energy_property in energy_properties:
+        property_label = _format_energy_property_name(str(energy_property))
+        entities.extend(
+            LGEOfficialEnergySensor(
+                api=lge_device,
+                entity_description=description,
+                energy_property=str(energy_property),
+                property_label=property_label if multi_property else None,
+            )
+            for description in ENERGY_USAGE_SENSORS
+        )
+    return entities
+
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -599,6 +700,7 @@ async def async_setup_entry(
     lge_cfg_devices = get_lge_devices(hass)
 
     _LOGGER.debug("Starting LGE ThinQ sensors setup")
+    known_unique_ids: set[str] = set()
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -607,7 +709,7 @@ async def async_setup_entry(
         if not lge_devices:
             return
 
-        lge_sensors = [
+        lge_sensors: list[LGESensor | LGEOfficialEnergySensor] = [
             LGESensor(lge_device, sensor_desc, get_wrapper_device(lge_device, dev_type))
             for dev_type, sensor_descs in SENSOR_ENTITIES.items()
             for sensor_desc in sensor_descs
@@ -615,19 +717,46 @@ async def async_setup_entry(
             if _sensor_exist(lge_device, sensor_desc)
         ]
 
-        lge_common_sensors = [
+        lge_common_sensors: list[LGESensor | LGEOfficialEnergySensor] = [
             LGESensor(lge_device, sensor_desc, get_wrapper_device(lge_device, dev_type))
             for sensor_desc in COMMON_SENSORS
             for dev_type in lge_devices
             for lge_device in lge_devices.get(dev_type, [])
         ]
 
-        async_add_entities(lge_sensors + lge_common_sensors)
+        lge_energy_sensors: list[LGESensor | LGEOfficialEnergySensor] = [
+            energy_sensor
+            for dev_type in lge_devices
+            for lge_device in lge_devices.get(dev_type, [])
+            for energy_sensor in _build_official_energy_sensors(lge_device)
+        ]
+
+        entities_to_add = [
+            entity
+            for entity in (lge_sensors + lge_common_sensors + lge_energy_sensors)
+            if entity.unique_id not in known_unique_ids
+        ]
+        if not entities_to_add:
+            return
+
+        known_unique_ids.update(
+            entity.unique_id
+            for entity in entities_to_add
+            if entity.unique_id is not None
+        )
+        async_add_entities(entities_to_add)
 
     _async_discover_device(lge_cfg_devices)
 
     entry.async_on_unload(
         async_dispatcher_connect(hass, LGE_DISCOVERY_NEW, _async_discover_device)
+    )
+    entry.async_on_unload(
+        async_dispatcher_connect(
+            hass,
+            LGE_OFFICIAL_DISCOVERY,
+            lambda: _async_discover_device(get_lge_devices(hass)),
+        )
     )
 
     # register services
@@ -774,6 +903,12 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         ac_logical_key: str | None = None
         if self.entity_description.key == AirConditionerFeatures.ENERGY_CURRENT:
             ac_logical_key = "ac.power_current"
+        elif self.entity_description.key == AirConditionerFeatures.PM1:
+            ac_logical_key = "ac.pm1"
+        elif self.entity_description.key == AirConditionerFeatures.PM10:
+            ac_logical_key = "ac.pm10"
+        elif self.entity_description.key == AirConditionerFeatures.PM25:
+            ac_logical_key = "ac.pm25"
         elif self.entity_description.key == AirConditionerFeatures.FILTER_MAIN_LIFE:
             ac_logical_key = "ac.filter.filter_main_life"
         if self._api.type == DeviceType.AC and ac_logical_key:
@@ -825,3 +960,97 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._api.type not in SET_TIME_DEVICE_TYPES:
             raise NotImplementedError
         await self._api.device.set_time(time_wanted)
+
+
+class LGEOfficialEnergySensor(CoordinatorEntity, SensorEntity):
+    """Official ThinQ energy usage sensor."""
+
+    entity_description: ThinQEnergySensorEntityDescription
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        api: LGEDevice,
+        entity_description: ThinQEnergySensorEntityDescription,
+        energy_property: str,
+        property_label: str | None = None,
+    ) -> None:
+        """Initialize the official energy sensor."""
+        super().__init__(api.coordinator)
+        self._api = api
+        self.entity_description = entity_description
+        self._energy_property = energy_property
+        self._property_label = property_label
+        self._unsub_update: Callable[[], None] | None = None
+        self._attr_unique_id = (
+            f"{api.unique_id}-{energy_property}-{entity_description.key}"
+        )
+        self._attr_device_info = api.device_info
+        base_name = (
+            entity_description.name
+            if isinstance(entity_description.name, str)
+            else "Energy usage"
+        )
+        if property_label:
+            self._attr_name = f"{base_name} {property_label}"
+        else:
+            self._attr_name = base_name
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity addition."""
+        await super().async_added_to_hass()
+        await self._async_update_and_schedule()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Handle entity removal."""
+        if self._unsub_update is not None:
+            self._unsub_update()
+            self._unsub_update = None
+        await super().async_will_remove_from_hass()
+
+    @property
+    def available(self) -> bool:
+        """Return whether the entity is available."""
+        return self._api.available and self.native_value is not None
+
+    async def async_update(self, now: datetime | None = None) -> None:
+        """Update the sensor state."""
+        await self._async_update_and_schedule()
+        self.async_write_ha_state()
+
+    async def _async_update_and_schedule(self) -> None:
+        """Fetch energy usage and schedule the next refresh."""
+        if self._unsub_update is not None:
+            self._unsub_update()
+            self._unsub_update = None
+
+        next_update = dt_util.utcnow() + self.entity_description.update_interval
+        official_coordinator = find_official_coordinator(self.hass, self._api.device_id)
+        official_api = getattr(official_coordinator, "api", None)
+
+        if official_api is not None:
+            now = dt_util.now()
+            start_date = self.entity_description.start_date_fn(now)
+            end_date = self.entity_description.end_date_fn(now)
+            try:
+                self._attr_native_value = await official_api.async_get_energy_usage(
+                    energy_property=self._energy_property,
+                    period=self.entity_description.usage_period,
+                    start_date=start_date.date(),
+                    end_date=end_date.date(),
+                    detail=False,
+                )
+            except (HomeAssistantError, ThinQAPIException, ValueError) as exc:
+                _LOGGER.debug(
+                    "[%s:%s] Failed to fetch official energy usage for %s: %s",
+                    self._api.name,
+                    self.entity_description.key,
+                    self._energy_property,
+                    exc,
+                )
+
+        self._unsub_update = async_track_point_in_time(
+            self.hass,
+            self.async_update,
+            next_update,
+        )

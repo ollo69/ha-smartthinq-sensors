@@ -31,6 +31,10 @@ MQTT_REFRESH_TRIGGER_ATTRIBUTES = {
     "dishwasher.run_state",
     "dishwasher.is_on",
 }
+MQTT_REFRESH_URGENT_RUN_STATES = {
+    "initial",
+    "pause",
+}
 
 
 def _serialize_diagnostic_value(value: Any) -> Any:
@@ -167,6 +171,16 @@ class HybridDataCoordinator(DataUpdateCoordinator):
             for attribute_id in attribute_updates
         )
 
+    def _has_urgent_mqtt_refresh_signal(self, attribute_updates: dict[str, Any]) -> bool:
+        """Return whether this MQTT update should bypass the normal cooldown."""
+        for attribute_id, value in attribute_updates.items():
+            if attribute_id not in MQTT_REFRESH_TRIGGER_ATTRIBUTES:
+                continue
+            if attribute_id.endswith(".run_state") and isinstance(value, str):
+                if value.strip().lower() in MQTT_REFRESH_URGENT_RUN_STATES:
+                    return True
+        return False
+
     @callback
     def _schedule_mqtt_followup_refresh(self, attribute_updates: dict[str, Any]) -> None:
         """Schedule one coalesced follow-up community refresh after MQTT."""
@@ -174,7 +188,10 @@ class HybridDataCoordinator(DataUpdateCoordinator):
             return
 
         now = utcnow()
+        urgent_refresh = self._has_urgent_mqtt_refresh_signal(attribute_updates)
         if (
+            not urgent_refresh
+            and
             self._last_forced_mqtt_refresh is not None
             and now - self._last_forced_mqtt_refresh < self._mqtt_refresh_cooldown
         ):
@@ -205,6 +222,7 @@ class HybridDataCoordinator(DataUpdateCoordinator):
             details={
                 "delay_seconds": self._mqtt_refresh_delay.total_seconds(),
                 "attributes": sorted(attribute_updates),
+                "urgent": urgent_refresh,
             },
         )
 

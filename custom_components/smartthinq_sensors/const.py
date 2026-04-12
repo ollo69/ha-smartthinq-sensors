@@ -45,6 +45,8 @@ CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 
 LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
+LGE_OFFICIAL_DISCOVERY = f"{DOMAIN}_official_discovery"
+LGE_TRACE_EVENT = f"{DOMAIN}_trace_event"
 SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
 
 DEFAULT_ICON = "def_icon"

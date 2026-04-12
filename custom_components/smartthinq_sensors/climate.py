@@ -438,7 +438,7 @@ class LGEACClimate(LGEClimate):
     @property
     def fan_mode(self) -> str | None:
         """Return the fan setting."""
-        speed = cast(str | None, self._api.state.fan_speed)
+        speed = self._wrap_device.fan_speed
         if speed is None:
             return None
         return FAN_MODE_LOOKUP.get(speed, speed)
@@ -461,8 +461,8 @@ class LGEACClimate(LGEClimate):
     def swing_mode(self) -> str | None:
         """Return the swing mode setting."""
         if self._use_h_mode:
-            return cast(str | None, self._api.state.horizontal_step_mode)
-        return cast(str | None, self._api.state.vertical_step_mode)
+            return self._wrap_device.horizontal_step_mode
+        return self._wrap_device.vertical_step_mode
 
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing operation."""
@@ -479,7 +479,7 @@ class LGEACClimate(LGEClimate):
     @property
     def swing_horizontal_mode(self) -> str | None:
         """Return the horizontal swing mode setting."""
-        return cast(str | None, self._api.state.horizontal_step_mode)
+        return self._wrap_device.horizontal_step_mode
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""

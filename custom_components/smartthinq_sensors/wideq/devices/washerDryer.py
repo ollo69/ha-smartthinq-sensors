@@ -174,6 +174,38 @@ class WMDevice(Device):
         return self._selected_course or _CURRENT_COURSE
 
     @property
+    def default_course(self) -> str | None:
+        """Return the device default course label."""
+        if not self.model_info:
+            return None
+        if not (course_key := self.get_course_key(CourseType.COURSE)):
+            return None
+
+        if self.model_info.is_info_v2:
+            course_id = self.model_info.config_value(
+                f"default{self._getcmdkey('Course')}"
+            )
+        else:
+            course_id = self.model_info.config_value("defaultCourseId")
+        if course_id is None:
+            return None
+
+        course_details = self._get_course_details(course_key, str(course_id))
+        if not course_details:
+            for course_name, mapped_course_id in self._get_course_infos().items():
+                if str(mapped_course_id) == str(course_id):
+                    return course_name
+            return None
+
+        if enum_name := course_details.get("name"):
+            course_name = self.get_enum_text(enum_name)
+            if course_name != enum_name:
+                return course_name
+
+        default_name = course_details.get("_comment")
+        return str(default_name) if default_name else None
+
+    @property
     def run_state(self) -> str:
         """Return calculated pre state."""
         if not self._run_states:
@@ -443,19 +475,60 @@ class WMDevice(Device):
 
         or default course if not already available.
         """
+        n_course_key = self.get_course_key(CourseType.COURSE)
+        s_course_key = self.get_course_key(CourseType.SMARTCOURSE)
         data: dict[str, Any] | None = None
-        if self._initial_bit_start:
-            data = self._remote_start_status
+        raw_state = (
+            str(self._status.as_dict.get("state", "")).upper()
+            if isinstance(self._status, WMStatus)
+            else ""
+        )
+        raw_remote_start = (
+            str(self._status.as_dict.get("remoteStart", "")).upper()
+            if isinstance(self._status, WMStatus)
+            else ""
+        )
+        ready_for_remote_start = (
+            self._initial_bit_start
+            or (
+                self._remote_start_status is not None
+                and raw_remote_start == "REMOTE_START_ON"
+                and raw_state in {"INITIAL", "PAUSE"}
+            )
+        )
+
+        current_status_data = self._status.as_dict if self._status else None
+        current_course_selected = bool(
+            current_status_data
+            and any(
+                str(current_status_data.get(course_key, "")).upper() not in {"", "0", "NOT_SELECTED"}
+                for course_key in (n_course_key, s_course_key)
+                if course_key
+            )
+        )
+
+        if ready_for_remote_start and self._remote_start_status is not None:
+            # Prefer the current live payload when it already carries a concrete
+            # selected course. Some dryers keep the selected course after wake,
+            # but the cached remote-start snapshot may still hold an older
+            # "not selected" course value.
+            if current_course_selected and current_status_data is not None:
+                data = current_status_data
+            else:
+                data = self._remote_start_status
         elif self._status:
-            self._selected_course = None
+            # Preserve a locally selected course while the device is still in a
+            # remote-start-ready state. Some dryers clear the on-device course
+            # display after wake, but still expect the selected course to be
+            # supplied with the subsequent start command.
+            if not ready_for_remote_start:
+                self._selected_course = None
             data = self._status.as_dict
 
         if not data:
             raise ValueError("Course info not available")
 
         course_type = CourseType.COURSE
-        n_course_key = self.get_course_key(CourseType.COURSE)
-        s_course_key = self.get_course_key(CourseType.SMARTCOURSE)
         if self.model_info.is_info_v2:
             def_course_id = self.model_info.config_value(
                 f"default{self._getcmdkey('Course')}"
@@ -697,13 +770,30 @@ class WMDevice(Device):
     @property
     def remote_start_enabled(self) -> bool:
         """Return if remote start is enabled."""
+        raw_state = (
+            str(self._status.as_dict.get("state", "")).upper()
+            if isinstance(self._status, WMStatus)
+            else ""
+        )
+        raw_remote_start = (
+            str(self._status.as_dict.get("remoteStart", "")).upper()
+            if isinstance(self._status, WMStatus)
+            else ""
+        )
+        raw_ready_state = (
+            raw_remote_start == "REMOTE_START_ON"
+            and raw_state in {"INITIAL", "PAUSE"}
+        )
         if (
             self._remote_start_pressed
-            or self.stand_by
             or not isinstance(self._status, WMStatus)
             or not self._status.is_on
         ):
             return False
+        if self.stand_by and not raw_ready_state:
+            return False
+        if self._remote_start_status is None and raw_remote_start == "REMOTE_START_ON":
+            self._remote_start_status = self._status.as_dict
         if self._remote_start_status is None:
             return False
         if self._status.internal_run_state in [
@@ -711,7 +801,7 @@ class WMDevice(Device):
             self._state_pause,
         ]:
             return True
-        return False
+        return raw_state in {"INITIAL", "PAUSE"}
 
     @property
     def resume_enabled(self) -> bool:
@@ -728,10 +818,14 @@ class WMDevice(Device):
         """Return if remote start is enabled for the initial ready state."""
         if not isinstance(self._status, WMStatus):
             return False
-        return bool(
-            self.remote_start_enabled
-            and self._status.internal_run_state == self._state_power_on_init
-        )
+        if not self.remote_start_enabled:
+            return False
+        if self._status.internal_run_state == self._state_power_on_init:
+            return True
+        # Some dryers report a ready-to-start state through the raw state payload
+        # even when the internal initial-bit marker is not set.
+        raw_state = str(self._status.as_dict.get("state", "")).upper()
+        return raw_state == "INITIAL"
 
     @property
     def pause_enabled(self) -> bool:
@@ -750,7 +844,7 @@ class WMDevice(Device):
     @property
     def select_course_enabled(self) -> bool:
         """Return if selecr course is enabled."""
-        enabled = self._initial_bit_start and self.remote_start_enabled
+        enabled = self.start_enabled
         if not enabled and self._selected_course:
             self._selected_course = None
         return enabled
@@ -786,10 +880,38 @@ class WMDevice(Device):
 
     async def remote_start(self, course_name: str | None = None) -> None:
         """Remote start the device."""
-        if not self.remote_start_enabled:
-            raise InvalidDeviceStatus
+        if course_name == _CURRENT_COURSE:
+            course_name = None
 
-        if course_name and self._initial_bit_start:
+        raw_state = (
+            str(self._status.as_dict.get("state", "")).upper()
+            if isinstance(self._status, WMStatus)
+            else ""
+        )
+        raw_remote_start = (
+            str(self._status.as_dict.get("remoteStart", "")).upper()
+            if isinstance(self._status, WMStatus)
+            else ""
+        )
+        raw_ready_state = (
+            isinstance(self._status, WMStatus)
+            and self._status.is_on
+            and raw_remote_start == "REMOTE_START_ON"
+            and raw_state in {"INITIAL", "PAUSE"}
+        )
+        if not self.remote_start_enabled:
+            if not raw_ready_state:
+                raise InvalidDeviceStatus
+            if self._remote_start_status is None:
+                self._remote_start_status = cast(WMStatus, self._status).as_dict
+            self._initial_bit_start = True
+
+        if course_name is None and isinstance(self._status, WMStatus):
+            current_course = self._status.current_course
+            if current_course not in {StateOptions.NONE, "-", _CURRENT_COURSE}:
+                course_name = current_course
+
+        if course_name and (self.start_enabled or raw_ready_state):
             await self.select_start_course(course_name)
 
         keys = self._get_cmd_keys(cast(list[str | list[str]], CMD_REMOTE_START))
@@ -883,11 +1005,16 @@ class WMDevice(Device):
                 self._stand_by = stand_by == StateOptions.ON
 
         remote_start = self._status.device_features.get(WashDeviceFeatures.REMOTESTART)
-        if remote_start == StateOptions.ON:
+        raw_remote_start = str(self._status.as_dict.get("remoteStart", "")).upper()
+        raw_state = str(self._status.as_dict.get("state", "")).upper()
+        if remote_start == StateOptions.ON or raw_remote_start == "REMOTE_START_ON":
             if self._remote_start_status is None:
                 self._remote_start_status = self._status.as_dict
-            self._initial_bit_start = (
+            # Some dryers expose a ready-to-start raw INITIAL state even when the
+            # normalized initial-bit marker does not resolve cleanly.
+            self._initial_bit_start = bool(
                 self._status.internal_run_state == self._state_power_on_init
+                or raw_state == "INITIAL"
             )
         else:
             self._remote_start_status = None

@@ -20,9 +20,10 @@ from thinqconnect import (
 )
 from thinqconnect.integration import HABridge, async_get_ha_bridge_list
 
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
@@ -32,12 +33,19 @@ _LOGGER = logging.getLogger(__name__)
 
 DEVICE_PUSH_MESSAGE = "DEVICE_PUSH"
 DEVICE_STATUS_MESSAGE = "DEVICE_STATUS"
+DEVICE_REGISTERED_MESSAGE = "DEVICE_REGISTERED"
+DEVICE_UNREGISTERED_MESSAGE = "DEVICE_UNREGISTERED"
+DEVICE_ALIAS_CHANGED_MESSAGE = "DEVICE_ALIAS_CHANGED"
 HYBRID_COORDINATORS = "hybrid_coordinators"
 MQTT_SUBSCRIPTION_INTERVAL = timedelta(days=1)
 OFFICIAL_RUNTIME_LAST_ERROR = "official_runtime_last_error"
 ALREADY_SUBSCRIBED_PUSH = getattr(
     ThinQAPIErrorCodes, "ALREADY_SUBSCRIBED_PUSH", None
 )
+REVERSE_DEVICE_UNIT_TO_HA = {
+    UnitOfTemperature.CELSIUS: "C",
+    UnitOfTemperature.FAHRENHEIT: "F",
+}
 
 
 @dataclass(slots=True)
@@ -98,13 +106,17 @@ class OfficialThinQMQTT:
         thinq_api: ThinQApi,
         client_id: str,
         coordinators: dict[str, OfficialDeviceCoordinator],
+        on_devices_changed: Callable[[], None] | None = None,
     ) -> None:
         """Initialize MQTT runtime."""
         self._hass = hass
         self._thinq_api = thinq_api
         self._client_id = client_id
         self._coordinators = coordinators
+        self._on_devices_changed = on_devices_changed
         self._client: ThinQMQTTClient | None = None
+        self._pending_devices_refresh_unsub: Callable[[], None] | None = None
+        self._devices_refresh_delay = timedelta(seconds=10)
 
     def _mark_all_disconnected(self, reason: str) -> None:
         """Mark all hybrid coordinators as disconnected."""
@@ -160,6 +172,11 @@ class OfficialThinQMQTT:
             )
             for coordinator in self._coordinators.values()
         )
+        tasks.append(
+            self._hass.async_create_task(
+                self._thinq_api.async_post_push_devices_subscribe()
+            )
+        )
         if tasks:
             results = await asyncio.gather(*tasks, return_exceptions=True)
             failed = self._get_failed_device_count(results)
@@ -208,6 +225,11 @@ class OfficialThinQMQTT:
                 self._thinq_api.async_delete_event_subscribe(coordinator.device_id)
             )
             for coordinator in self._coordinators.values()
+        )
+        tasks.append(
+            self._hass.async_create_task(
+                self._thinq_api.async_delete_push_devices_subscribe()
+            )
         )
         if tasks:
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -265,8 +287,62 @@ class OfficialThinQMQTT:
             self._hass.loop,
         ).result()
 
+    def _schedule_devices_changed_refresh(self, message: dict[str, Any]) -> None:
+        """Schedule one debounced device discovery refresh."""
+        if self._on_devices_changed is None:
+            return
+        if self._pending_devices_refresh_unsub is not None:
+            return
+
+        add_trace_event(
+            self._hass,
+            category="mqtt",
+            action="devices_changed_scheduled",
+            details={
+                "delay_seconds": self._devices_refresh_delay.total_seconds(),
+                "push_type": message.get("pushType")
+                or message.get("push", {}).get("pushType"),
+                "device_id": message.get("deviceId")
+                or message.get("push", {}).get("deviceId"),
+            },
+        )
+
+        def _run_refresh(_now: datetime) -> None:
+            self._pending_devices_refresh_unsub = None
+            if self._on_devices_changed is not None:
+                self._on_devices_changed()
+
+        self._pending_devices_refresh_unsub = async_call_later(
+            self._hass,
+            self._devices_refresh_delay,
+            _run_refresh,
+        )
+
     async def async_handle_device_event(self, message: dict[str, Any]) -> None:
         """Handle one official MQTT message."""
+        if push_message := message.get("push"):
+            if not isinstance(push_message, dict):
+                return
+            push_type = push_message.get("pushType")
+            if push_type in {
+                DEVICE_REGISTERED_MESSAGE,
+                DEVICE_UNREGISTERED_MESSAGE,
+                DEVICE_ALIAS_CHANGED_MESSAGE,
+            }:
+                add_trace_event(
+                    self._hass,
+                    category="mqtt",
+                    action="devices_changed_message_received",
+                    details={
+                        "push_type": push_type,
+                        "device_id": push_message.get("deviceId"),
+                        "alias": push_message.get("alias"),
+                        "message": message,
+                    },
+                )
+                self._schedule_devices_changed_refresh(push_message)
+                return
+
         unique_id = (
             f"{message['deviceId']}_{list(message['report'].keys())[0]}"
             if message.get("deviceType") == OfficialDeviceType.WASHTOWER
@@ -297,6 +373,7 @@ class OfficialThinQMQTT:
             details={
                 "push_type": push_type,
                 "message_keys": sorted(message.keys()),
+                "message": message,
             },
         )
         if push_type == DEVICE_STATUS_MESSAGE:
@@ -312,6 +389,7 @@ async def async_setup_official_runtime(
     access_token: str,
     client_id: str,
     country_code: str,
+    on_devices_changed: Callable[[], None] | None = None,
 ) -> OfficialThinQRuntime | None:
     """Create a self-contained official ThinQ runtime."""
     thinq_api = ThinQApi(
@@ -341,7 +419,13 @@ async def async_setup_official_runtime(
     for coordinator in results:
         runtime.coordinators[coordinator.unique_id] = coordinator
 
-    mqtt_client = OfficialThinQMQTT(hass, thinq_api, client_id, runtime.coordinators)
+    mqtt_client = OfficialThinQMQTT(
+        hass,
+        thinq_api,
+        client_id,
+        runtime.coordinators,
+        on_devices_changed=on_devices_changed,
+    )
     runtime.mqtt_client = mqtt_client
 
     try:
@@ -380,6 +464,9 @@ async def _async_setup_official_coordinator(
     bridge: HABridge,
 ) -> OfficialDeviceCoordinator:
     """Create and initialize one official coordinator."""
+    bridge.set_preferred_temperature_unit(
+        REVERSE_DEVICE_UNIT_TO_HA.get(hass.config.units.temperature_unit)
+    )
     coordinator = OfficialDeviceCoordinator(hass, bridge)
     await coordinator.async_refresh()
     return coordinator

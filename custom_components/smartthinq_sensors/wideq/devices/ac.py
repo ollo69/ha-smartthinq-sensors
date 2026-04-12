@@ -898,9 +898,17 @@ class AirConditionerDevice(Device):
         range_info = cast(RangeValue, range_val)
         return [range_info.min, range_info.max]
 
+    @cached_property
+    def is_reservation_sleep_time_supported(self) -> bool:
+        """Return if reservation sleep time is supported by the model."""
+        key = self._get_state_key(STATE_RESERVATION_SLEEP_TIME)
+        return self.model_info.value(key, [TYPE_RANGE]) is not None
+
     @property
     def is_reservation_sleep_time_available(self) -> bool:
         """Return if reservation sleep time is available."""
+        if not self.is_reservation_sleep_time_supported:
+            return False
         if not isinstance(status := self._status, AirConditionerStatus):
             return False
         if (
