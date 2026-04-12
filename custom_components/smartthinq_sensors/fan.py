@@ -24,13 +24,14 @@ from homeassistant.util.percentage import (
     percentage_to_ordered_list_item,
 )
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
+from .lge_device import LGEDevice
 from .official_control import (
     async_call_official_post,
     async_call_official_turn_off,
     async_call_official_turn_on,
 )
+from .runtime_data import get_lge_devices
 from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 ATTR_FAN_MODE = "fan_mode"
@@ -163,8 +164,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up LGE device fan based on config_entry."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
     _LOGGER.debug("Starting LGE ThinQ fan setup")
 

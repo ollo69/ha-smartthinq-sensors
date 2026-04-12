@@ -45,6 +45,7 @@ CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 
 LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
+SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
 
 DEFAULT_ICON = "def_icon"
 DEFAULT_SENSOR = "default"

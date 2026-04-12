@@ -11,7 +11,7 @@ from thinqconnect.integration import ActiveMode, ExtendedProperty
 
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN
+from .runtime_data import get_domain_data
 from .trace import add_trace_event
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def _normalize_text(value: Any) -> str:
 
 def _iter_official_coordinators(hass: HomeAssistant) -> Iterable[Any]:
     """Yield official coordinators from custom runtime or built-in integration."""
-    domain_data = hass.data.get(DOMAIN, {})
+    domain_data = get_domain_data(hass)
     runtime = domain_data.get(OFFICIAL_RUNTIME)
     coordinators = getattr(runtime, "coordinators", None)
     if isinstance(coordinators, dict):
@@ -44,7 +44,7 @@ def _iter_official_coordinators(hass: HomeAssistant) -> Iterable[Any]:
 def _find_official_coordinator(lge_device: Any) -> Any | None:
     """Find the official coordinator that matches a community device."""
     hass = lge_device.hass
-    domain_data = hass.data.get(DOMAIN, {})
+    domain_data = get_domain_data(hass)
     reverse_links = {
         target_device_id: official_key
         for official_key, target_device_id in domain_data.get(OFFICIAL_DEVICE_LINKS, {}).items()

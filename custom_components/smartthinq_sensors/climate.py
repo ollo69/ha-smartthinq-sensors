@@ -31,9 +31,9 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_platform
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice
+from .const import LGE_DISCOVERY_NEW
+from .device_helpers import TEMP_UNIT_LOOKUP, LGEACDevice, LGERefrigeratorDevice
+from .lge_device import LGEDevice
 from .official_control import (
     async_call_official_set_fan_mode,
     async_call_official_set_hvac_mode,
@@ -41,7 +41,8 @@ from .official_control import (
     async_call_official_turn_off,
     async_call_official_turn_on,
 )
-from .wideq import AirConditionerFeatures, DeviceType, TemperatureUnit
+from .runtime_data import get_lge_devices
+from .wideq import DeviceType, TemperatureUnit
 from .wideq.devices.ac import ACFanSpeed, ACMode, AirConditionerDevice
 
 # general ac attributes
@@ -139,8 +140,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up LGE device climate based on config_entry."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
     _LOGGER.debug("Starting LGE ThinQ climate setup")
 
@@ -224,6 +224,7 @@ class LGEACClimate(LGEClimate):
         """Initialize the climate."""
         super().__init__(api)
         self._device: AirConditionerDevice = api.device
+        self._wrap_device = LGEACDevice(api)
         self._attr_unique_id = f"{api.unique_id}-AC"
         self._attr_fan_modes = [
             FAN_MODE_LOOKUP.get(s, s) for s in self._device.fan_speeds
@@ -241,6 +242,17 @@ class LGEACClimate(LGEClimate):
 
         self._hvac_mode_lookup: dict[str, HVACMode] | None = None
         self._preset_mode_lookup: dict[str, str] | None = None
+        self._attr_supported_features = DEFAULT_AC_FEATURES
+        if self._attr_fan_modes:
+            self._attr_supported_features |= ClimateEntityFeature.FAN_MODE
+        if self._attr_swing_modes:
+            self._attr_supported_features |= ClimateEntityFeature.SWING_MODE
+        if self._attr_swing_horizontal_modes:
+            self._attr_supported_features |= ClimateEntityFeature.SWING_HORIZONTAL_MODE
+
+    def _is_on_for_control(self) -> bool:
+        """Return the best available power state for control decisions."""
+        return self._wrap_device.is_on
 
     def _available_hvac_modes(self) -> dict[str, HVACMode]:
         """Return available hvac modes from lookup dict."""
@@ -270,22 +282,9 @@ class LGEACClimate(LGEClimate):
                 modes[mode["preset"]] = key
             if modes:
                 self._attr_preset_mode = PRESET_NONE
+                self._attr_supported_features |= ClimateEntityFeature.PRESET_MODE
             self._preset_mode_lookup = {v: k for k, v in modes.items()}
         return self._preset_mode_lookup
-
-    @property
-    def supported_features(self) -> ClimateEntityFeature:
-        """Return the list of supported features."""
-        features = DEFAULT_AC_FEATURES
-        if len(self.fan_modes or []) > 0:
-            features |= ClimateEntityFeature.FAN_MODE
-        if self.preset_modes:
-            features |= ClimateEntityFeature.PRESET_MODE
-        if self.swing_modes:
-            features |= ClimateEntityFeature.SWING_MODE
-        if self.swing_horizontal_modes:
-            features |= ClimateEntityFeature.SWING_HORIZONTAL_MODE
-        return features
 
     @property
     def target_temperature_step(self) -> float:
@@ -302,8 +301,8 @@ class LGEACClimate(LGEClimate):
     @property
     def hvac_mode(self) -> HVACMode:
         """Return hvac operation i.e. heat, cool mode."""
-        op_mode: str | None = self._api.state.operation_mode
-        if not self._api.state.is_on or op_mode is None:
+        op_mode = self._wrap_device.operation_mode
+        if not self._wrap_device.is_on or op_mode is None:
             if self._attr_preset_mode:
                 self._attr_preset_mode = PRESET_NONE
             return HVACMode.OFF
@@ -335,7 +334,7 @@ class LGEACClimate(LGEClimate):
 
         official_hvac_mode = OFFICIAL_HVAC_MODE_LOOKUP.get(hvac_mode)
         if official_hvac_mode is not None:
-            if not self._api.state.is_on:
+            if not self._is_on_for_control():
                 await async_call_official_turn_on(
                     self._api,
                     ExtendedProperty.CLIMATE_AIR_CONDITIONER,
@@ -347,7 +346,7 @@ class LGEACClimate(LGEClimate):
             ):
                 return
 
-        if not self._api.state.is_on:
+        if not self._is_on_for_control():
             await self._device.power(True)
         if operation_mode != HVAC_MODE_NONE:
             await self._device.set_op_mode(operation_mode)
@@ -370,7 +369,7 @@ class LGEACClimate(LGEClimate):
             if (
                 curr_preset is not None
                 and curr_preset != PRESET_NONE
-                and self._api.state.is_on
+                and self._is_on_for_control()
             ):
                 op_mode = reverse_lookup[curr_preset]
                 await self.async_set_hvac_mode(PRESET_MODE_LOOKUP[op_mode]["hvac"])
@@ -379,7 +378,7 @@ class LGEACClimate(LGEClimate):
         if (operation_mode := reverse_lookup.get(preset_mode)) is None:
             raise ValueError(f"Invalid preset_mode [{preset_mode}]")
 
-        if not self._api.state.is_on:
+        if not self._is_on_for_control():
             await async_call_official_turn_on(
                 self._api,
                 ExtendedProperty.CLIMATE_AIR_CONDITIONER,
@@ -391,7 +390,7 @@ class LGEACClimate(LGEClimate):
         ):
             return
 
-        if not self._api.state.is_on:
+        if not self._is_on_for_control():
             await self._device.power(True)
         await self._device.set_op_mode(operation_mode)
         self._api.async_set_updated()
@@ -407,20 +406,17 @@ class LGEACClimate(LGEClimate):
     @property
     def current_temperature(self) -> float:
         """Return the current temperature."""
-        return cast(float, self._api.state.current_temp)
+        return self._wrap_device.current_temperature
 
     @property
     def current_humidity(self) -> int | None:
         """Return the current humidity."""
-        return cast(
-            int | None,
-            self._api.state.device_features.get(AirConditionerFeatures.HUMIDITY),
-        )
+        return self._wrap_device.current_humidity
 
     @property
     def target_temperature(self) -> float:
         """Return the temperature we try to reach."""
-        return cast(float, self._api.state.target_temp)
+        return self._wrap_device.target_temperature
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""

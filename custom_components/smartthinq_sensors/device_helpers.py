@@ -1,12 +1,12 @@
 """Helper class for ThinQ devices."""
 
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
+from homeassistant.components.climate import HVACMode
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
 from homeassistant.util.dt import utcnow
 
-from . import LGEDevice
 from .const import (
     ATTR_CURRENT_COURSE,
     ATTR_DOOR_OPEN,
@@ -25,7 +25,9 @@ from .const import (
     ATTR_TEMP_UNIT,
     DEFAULT_SENSOR,
 )
+from .lge_device import LGEDevice
 from .wideq import WM_DEVICE_TYPES, DeviceType, StateOptions, TemperatureUnit
+from .wideq.devices.ac import ACMode, AirConditionerDevice
 
 STATE_LOOKUP = {
     StateOptions.OFF: STATE_OFF,
@@ -35,6 +37,15 @@ STATE_LOOKUP = {
 TEMP_UNIT_LOOKUP = {
     TemperatureUnit.CELSIUS: UnitOfTemperature.CELSIUS,
     TemperatureUnit.FAHRENHEIT: UnitOfTemperature.FAHRENHEIT,
+}
+
+AC_HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
+    ACMode.AI.name: HVACMode.AUTO,
+    ACMode.HEAT.name: HVACMode.HEAT,
+    ACMode.DRY.name: HVACMode.DRY,
+    ACMode.COOL.name: HVACMode.COOL,
+    ACMode.FAN.name: HVACMode.FAN_ONLY,
+    ACMode.ACO.name: HVACMode.HEAT_COOL,
 }
 
 DEVICE_ICONS = {
@@ -365,6 +376,80 @@ class LGETempDevice(LGEBaseDevice):
         return TEMP_UNIT_LOOKUP.get(unit, UnitOfTemperature.CELSIUS)
 
 
+class LGEACDevice(LGETempDevice):
+    """A wrapper to monitor LGE AC devices with hybrid-aware state."""
+
+    @property
+    def device(self) -> AirConditionerDevice:
+        """Return the wrapped AC device."""
+        return cast(AirConditionerDevice, self._api.device)
+
+    @property
+    def is_on(self) -> bool:
+        """Return the best current AC power state."""
+        return bool(self._api.get_hybrid_value("ac.is_on", self._api.state.is_on))
+
+    @property
+    def operation_mode(self) -> str | None:
+        """Return the best current AC operation mode."""
+        value = self._api.get_hybrid_value(
+            "ac.operation_mode", self._api.state.operation_mode
+        )
+        if value is None:
+            return None
+
+        normalized = str(value).strip()
+        if normalized in self.device.op_modes:
+            return normalized
+
+        upper_value = normalized.upper()
+        if upper_value in self.device.op_modes:
+            return upper_value
+
+        upper_value = upper_value.replace("-", "_").replace(" ", "_")
+        if upper_value in self.device.op_modes:
+            return upper_value
+
+        alias_map = {
+            "AIR_DRY": ACMode.DRY.name,
+            "DRY": ACMode.DRY.name,
+            "FAN": ACMode.FAN.name,
+            "AUTO": ACMode.AI.name if ACMode.AI.name in self.device.op_modes else "AUTO",
+        }
+        aliased = alias_map.get(upper_value)
+        if aliased in self.device.op_modes:
+            return aliased
+
+        return (
+            str(self._api.state.operation_mode)
+            if self._api.state.operation_mode
+            else normalized
+        )
+
+    @property
+    def current_temperature(self) -> float:
+        """Return the best current AC temperature."""
+        return float(
+            self._api.get_hybrid_value("ac.current_temperature", self._api.state.current_temp)
+        )
+
+    @property
+    def target_temperature(self) -> float:
+        """Return the best current AC target temperature."""
+        return float(
+            self._api.get_hybrid_value("ac.target_temperature", self._api.state.target_temp)
+        )
+
+    @property
+    def current_humidity(self) -> int | None:
+        """Return the best current AC humidity."""
+        value = self._api.get_hybrid_value(
+            "ac.current_humidity",
+            self._api.state.device_features.get("humidity"),
+        )
+        return int(value) if value is not None else None
+
+
 class LGERangeDevice(LGEBaseDevice):
     """A wrapper to monitor LGE range devices."""
 
@@ -430,7 +515,9 @@ def get_wrapper_device(
         return LGERefrigeratorDevice(lge_device)
     if dev_type == DeviceType.RANGE:
         return LGERangeDevice(lge_device)
-    if dev_type in (DeviceType.AC, DeviceType.WATER_HEATER):
+    if dev_type == DeviceType.AC:
+        return LGEACDevice(lge_device)
+    if dev_type == DeviceType.WATER_HEATER:
         return LGETempDevice(lge_device)
     if dev_type in (DeviceType.HOOD, DeviceType.MICROWAVE):
         return LGEBaseDevice(lge_device)

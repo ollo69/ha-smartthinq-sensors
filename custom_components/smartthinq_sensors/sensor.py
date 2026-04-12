@@ -32,7 +32,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback, current_p
 from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
 from .const import (
     ATTR_CURRENT_COURSE,
     ATTR_FREEZER_TEMP,
@@ -44,8 +43,6 @@ from .const import (
     ATTR_RESERVE_TIME,
     DEFAULT_ICON,
     DEFAULT_SENSOR,
-    DOMAIN,
-    LGE_DEVICES,
     LGE_DISCOVERY_NEW,
 )
 from .device_helpers import (
@@ -55,6 +52,8 @@ from .device_helpers import (
     get_entity_name,
     get_wrapper_device,
 )
+from .lge_device import LGEDevice
+from .runtime_data import get_lge_devices
 from .wideq import (
     SET_TIME_DEVICE_TYPES,
     WM_DEVICE_TYPES,
@@ -597,8 +596,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE sensors."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
     _LOGGER.debug("Starting LGE ThinQ sensors setup")
 
@@ -735,7 +733,16 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if not (features and self._api.state):
             return None
         data: dict[str, Any] = {}
+        logical_prefix = {
+            DeviceType.AC: "ac.filter",
+            DeviceType.AIR_PURIFIER: "air_purifier.filter",
+        }.get(self._api.type)
         for key, feat in features.items():
+            if logical_prefix:
+                logical_value = self._api.get_hybrid_value(f"{logical_prefix}.{feat}")
+                if logical_value is not None:
+                    data[key] = logical_value
+                    continue
             if (val := self._api.state.device_features.get(feat)) is not None:
                 data[key] = val
         return data
@@ -763,6 +770,32 @@ class LGESensor(CoordinatorEntity, SensorEntity):
                 hybrid_value = self._api.get_hybrid_value(logical_key)
                 if hybrid_value is not None:
                     return cast(float | int | str, hybrid_value)
+
+        ac_logical_key: str | None = None
+        if self.entity_description.key == AirConditionerFeatures.ENERGY_CURRENT:
+            ac_logical_key = "ac.power_current"
+        elif self.entity_description.key == AirConditionerFeatures.FILTER_MAIN_LIFE:
+            ac_logical_key = "ac.filter.filter_main_life"
+        if self._api.type == DeviceType.AC and ac_logical_key:
+            hybrid_value = self._api.get_hybrid_value(ac_logical_key)
+            if hybrid_value is not None:
+                return cast(float | int | str, hybrid_value)
+
+        air_purifier_logical_key: str | None = None
+        if self.entity_description.key == AirPurifierFeatures.FILTER_MAIN_LIFE:
+            air_purifier_logical_key = "air_purifier.filter.filter_main_life"
+        elif self.entity_description.key == AirPurifierFeatures.FILTER_BOTTOM_LIFE:
+            air_purifier_logical_key = "air_purifier.filter.filter_bottom_life"
+        elif self.entity_description.key == AirPurifierFeatures.FILTER_DUST_LIFE:
+            air_purifier_logical_key = "air_purifier.filter.filter_dust_life"
+        elif self.entity_description.key == AirPurifierFeatures.FILTER_MID_LIFE:
+            air_purifier_logical_key = "air_purifier.filter.filter_mid_life"
+        elif self.entity_description.key == AirPurifierFeatures.FILTER_TOP_LIFE:
+            air_purifier_logical_key = "air_purifier.filter.filter_top_life"
+        if self._api.type == DeviceType.AIR_PURIFIER and air_purifier_logical_key:
+            hybrid_value = self._api.get_hybrid_value(air_purifier_logical_key)
+            if hybrid_value is not None:
+                return cast(float | int | str, hybrid_value)
 
         if self._wrap_device and self.entity_description.value_fn is not None:
             return self.entity_description.value_fn(self._wrap_device)

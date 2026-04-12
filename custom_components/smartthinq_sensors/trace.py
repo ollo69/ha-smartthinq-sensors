@@ -11,7 +11,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.util.dt import utcnow
 
-from .const import DOMAIN
+from .runtime_data import get_domain_data, get_trace_buffer
 
 TRACE_BUFFER = "trace_buffer"
 TRACE_BUFFER_LIMIT = 200
@@ -37,13 +37,7 @@ def add_trace_event(
     details: dict[str, Any] | None = None,
 ) -> None:
     """Append a trace event to the bounded in-memory buffer."""
-    domain_data = hass.data.setdefault(DOMAIN, {})
-    buffer = domain_data.setdefault(
-        TRACE_BUFFER,
-        deque(maxlen=TRACE_BUFFER_LIMIT),
-    )
-    if not isinstance(buffer, deque):
-        return
+    buffer = get_trace_buffer(hass, TRACE_BUFFER, TRACE_BUFFER_LIMIT)
 
     sanitized_details = None
     if details:
@@ -68,7 +62,7 @@ def get_trace_events(
     device_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Return serialized trace events, optionally filtered by device."""
-    domain_data = hass.data.get(DOMAIN, {})
+    domain_data = get_domain_data(hass)
     buffer = domain_data.get(TRACE_BUFFER)
     if not isinstance(buffer, deque):
         return []

@@ -20,7 +20,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import UNDEFINED
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
 from .const import (
     ATTR_DOOR_OPEN,
     ATTR_ERROR_STATE,
@@ -38,6 +37,7 @@ from .device_helpers import (
     get_entity_name,
     get_wrapper_device,
 )
+from .lge_device import LGEDevice
 from .wideq import DehumidifierFeatures, DeviceType, WashDeviceFeatures
 
 # range sensor attributes

@@ -20,9 +20,10 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
 from .device_helpers import LGEBaseDevice
+from .lge_device import LGEDevice
+from .runtime_data import get_lge_devices
 from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
@@ -80,8 +81,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE selects."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
     _LOGGER.debug("Starting LGE ThinQ light setup")
 

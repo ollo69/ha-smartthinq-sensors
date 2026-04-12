@@ -12,16 +12,18 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.util.dt import utcnow
 
-from . import (
+from .const import DOMAIN, LGE_DEVICES
+from .official_bridge import OFFICIAL_RUNTIME_RETRY_AT, OFFICIAL_RUNTIME_STATUS
+from .official_runtime import OFFICIAL_RUNTIME_LAST_ERROR
+from .runtime_data import (
     CAPABILITY_REGISTRY,
     DATA_SOURCE_ROUTER,
     HYBRID_COORDINATORS,
     SNAPSHOT_MANAGER,
     UNSUPPORTED_DEVICES,
+    get_domain_data,
+    get_lge_devices,
 )
-from .const import DOMAIN, LGE_DEVICES
-from .official_bridge import OFFICIAL_RUNTIME_RETRY_AT, OFFICIAL_RUNTIME_STATUS
-from .official_runtime import OFFICIAL_RUNTIME_LAST_ERROR
 from .trace import get_trace_events
 from .wideq.device import Device as ThinQDevice
 
@@ -70,7 +72,7 @@ def _async_get_diagnostics(
         return diag_data
 
     # Get info for unsupported device if diagnostic is for the config entry
-    unsup_devices = hass.data[DOMAIN].get(UNSUPPORTED_DEVICES, {})
+    unsup_devices = get_domain_data(hass).get(UNSUPPORTED_DEVICES, {})
     unsup_data = {}
     for dev_type, devices in unsup_devices.items():
         unsup_devs = [
@@ -90,7 +92,7 @@ def _async_devices_as_dict(
 ) -> dict[str, Any]:
     """Represent a LGE devices as a dictionary."""
 
-    lge_devices = hass.data[DOMAIN].get(LGE_DEVICES, {})
+    lge_devices = get_lge_devices(hass)
     devs_data = {}
     for dev_type, devices in lge_devices.items():
         lge_devs = {}
@@ -140,7 +142,7 @@ def _async_hybrid_as_dict(
     lg_device_id: str | None = None,
 ) -> dict[str, Any] | None:
     """Represent hybrid coordinator and routing state as diagnostics."""
-    domain_data = hass.data.get(DOMAIN, {})
+    domain_data = get_domain_data(hass)
     capability_registry = domain_data.get(CAPABILITY_REGISTRY)
     data_source_router = domain_data.get(DATA_SOURCE_ROUTER)
     hybrid_coordinators = domain_data.get(HYBRID_COORDINATORS)
@@ -227,7 +229,7 @@ def _async_hybrid_as_dict(
 @callback
 def _async_official_runtime_as_dict(hass: HomeAssistant) -> dict[str, Any] | None:
     """Represent official runtime status for diagnostics."""
-    domain_data = hass.data.get(DOMAIN, {})
+    domain_data = get_domain_data(hass)
     status = domain_data.get(OFFICIAL_RUNTIME_STATUS)
     last_error = domain_data.get(OFFICIAL_RUNTIME_LAST_ERROR)
     retry_at = domain_data.get(OFFICIAL_RUNTIME_RETRY_AT)

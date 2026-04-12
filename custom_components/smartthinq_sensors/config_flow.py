@@ -41,7 +41,7 @@ from homeassistant.helpers.selector import (
     TextSelectorType,
 )
 
-from . import LGEAuthentication, is_valid_ha_version
+from .auth import LGEAuthentication, is_valid_ha_version
 from .const import (
     CONF_LANGUAGE,
     CONF_OAUTH2_URL,

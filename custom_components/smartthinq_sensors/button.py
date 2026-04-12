@@ -19,9 +19,10 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
 from .device_helpers import LGEBaseDevice
+from .lge_device import LGEDevice
+from .runtime_data import get_lge_devices
 from .wideq import WM_DEVICE_TYPES, DeviceType, WashDeviceFeatures
 from .wideq.core_exceptions import InvalidDeviceStatus
 
@@ -100,8 +101,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE buttons."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
     _LOGGER.debug("Starting LGE ThinQ button setup")
 
