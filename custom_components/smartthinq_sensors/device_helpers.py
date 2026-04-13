@@ -144,6 +144,8 @@ class LGEBaseDevice:
                     if normalized_run_state in {"power_off", "off", "none"}:
                         return False
                     return True
+            if self._api.state and not self._api.state.is_on:
+                return False
 
         logical_key = {
             DeviceType.WASHER: "washer.is_on",
