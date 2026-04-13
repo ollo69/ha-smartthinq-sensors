@@ -35,6 +35,11 @@ OFFICIAL_TO_COMMUNITY_TYPE = {
 }
 
 
+def _optional_thinq_property(name: str) -> Any | None:
+    """Return a ThinQ property constant only if present in this library version."""
+    return getattr(ThinQProperty, name, None)
+
+
 def normalize_text(value: Any) -> str:
     """Normalize text for stable comparisons."""
     return str(value or "").strip().casefold()
@@ -188,7 +193,7 @@ def _extract_air_conditioner_attributes(
     pm1_value = get_official_state_value(
         data,
         ThinQProperty.PM1,
-        ThinQProperty.PM1_LEVEL,
+        _optional_thinq_property("PM1_LEVEL"),
         "pm1",
         "PM1",
         "airQualitySensor.PM1",
@@ -198,7 +203,7 @@ def _extract_air_conditioner_attributes(
     pm10_value = get_official_state_value(
         data,
         ThinQProperty.PM10,
-        ThinQProperty.PM10_LEVEL,
+        _optional_thinq_property("PM10_LEVEL"),
         "pm10",
         "PM10",
         "airQualitySensor.PM10",
@@ -208,7 +213,7 @@ def _extract_air_conditioner_attributes(
     pm25_value = get_official_state_value(
         data,
         ThinQProperty.PM2,
-        ThinQProperty.PM2_LEVEL,
+        _optional_thinq_property("PM2_LEVEL"),
         "pm2",
         "PM2",
         "airQualitySensor.PM2",
