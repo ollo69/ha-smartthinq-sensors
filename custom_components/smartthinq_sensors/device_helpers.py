@@ -129,24 +129,6 @@ class LGEBaseDevice:
     @property
     def is_power_on(self) -> bool:
         """Current power state."""
-        if self._api.type in WM_DEVICE_TYPES or self._api.type == DeviceType.DISHWASHER:
-            logical_prefix = {
-                DeviceType.WASHER: "washer",
-                DeviceType.DRYER: "dryer",
-                DeviceType.DISHWASHER: "dishwasher",
-            }.get(self._api.type)
-            if logical_prefix:
-                hybrid_run_state = self._api.get_hybrid_value(
-                    f"{logical_prefix}.run_state"
-                )
-                if isinstance(hybrid_run_state, str):
-                    normalized_run_state = hybrid_run_state.lower()
-                    if normalized_run_state in {"power_off", "off", "none"}:
-                        return False
-                    return True
-            if self._api.state and not self._api.state.is_on:
-                return False
-
         logical_key = {
             DeviceType.WASHER: "washer.is_on",
             DeviceType.DRYER: "dryer.is_on",
@@ -156,6 +138,30 @@ class LGEBaseDevice:
             DeviceType.HOOD: "hood.is_on",
             DeviceType.MICROWAVE: "microwave.is_on",
         }.get(self._api.type)
+
+        if self._api.type in WM_DEVICE_TYPES or self._api.type == DeviceType.DISHWASHER:
+            logical_prefix = {
+                DeviceType.WASHER: "washer",
+                DeviceType.DRYER: "dryer",
+                DeviceType.DISHWASHER: "dishwasher",
+            }.get(self._api.type)
+            if logical_prefix:
+                if logical_key:
+                    hybrid_is_on = self._api.get_hybrid_value(logical_key)
+                    if hybrid_is_on is False:
+                        return False
+                hybrid_run_state = self._api.get_hybrid_value(
+                    f"{logical_prefix}.run_state"
+                )
+                if isinstance(hybrid_run_state, str):
+                    normalized_run_state = hybrid_run_state.lower()
+                    if normalized_run_state in {"power_off", "off", "none"}:
+                        return False
+                    if normalized_run_state not in {"-", "unknown", "unavailable"}:
+                        return True
+            if self._api.state and not self._api.state.is_on:
+                return False
+
         if logical_key:
             hybrid_is_on = self._api.get_hybrid_value(logical_key)
             if hybrid_is_on is not None:
