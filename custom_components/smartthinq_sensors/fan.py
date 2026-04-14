@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, cast
+
+from thinqconnect.devices.const import Property as ThinQProperty
 
 from homeassistant.components.fan import (
     FanEntity,
@@ -21,8 +24,14 @@ from homeassistant.util.percentage import (
     percentage_to_ordered_list_item,
 )
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
+from .lge_device import LGEDevice
+from .official_control import (
+    async_call_official_post,
+    async_call_official_turn_off,
+    async_call_official_turn_on,
+)
+from .runtime_data import get_lge_devices
 from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 ATTR_FAN_MODE = "fan_mode"
@@ -31,17 +40,31 @@ DEFAULT_KEY = "default"
 
 _LOGGER = logging.getLogger(__name__)
 
+OFFICIAL_OPERATION_KEYS = {
+    DeviceType.FAN: (ThinQProperty.CEILING_FAN_OPERATION_MODE,),
+    DeviceType.AIR_PURIFIER: (
+        ThinQProperty.AIR_PURIFIER_OPERATION_MODE,
+        ThinQProperty.AIR_FAN_OPERATION_MODE,
+    ),
+}
+OFFICIAL_SPEED_KEYS = {
+    DeviceType.FAN: (ThinQProperty.WIND_STRENGTH,),
+    DeviceType.AIR_PURIFIER: (ThinQProperty.WIND_STRENGTH,),
+    DeviceType.HOOD: (ThinQProperty.FAN_SPEED,),
+    DeviceType.MICROWAVE: (ThinQProperty.FAN_SPEED,),
+}
 
-@dataclass
+
+@dataclass(frozen=True)
 class LGEFanWrapperDescription:
     """A class that describes LG fan wrapper."""
 
     fanspeed_fn: Callable[[Any], str] | None
     fanspeeds_fn: Callable[[Any], list[str]]
-    set_fanspeed_fn: Callable[[Any], Awaitable[None]]
+    set_fanspeed_fn: Callable[[Any, str], Awaitable[None]]
     fanpreset_fn: Callable[[Any], str] | None = None
     fanpresets_fn: Callable[[Any], list[str]] | None = None
-    set_fanpreset_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_fanpreset_fn: Callable[[Any, str], Awaitable[None]] | None = None
     turn_off_fn: Callable[[Any], Awaitable[None]] | None = None
     turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
 
@@ -75,14 +98,14 @@ MICROWAVE_WRAPPER = LGEFanWrapperDescription(
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQFanRequiredKeysMixin:
     """Mixin for required keys."""
 
     wrapper_description: LGEFanWrapperDescription
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQFanEntityDescription(FanEntityDescription, ThinQFanRequiredKeysMixin):
     """A class that describes ThinQ fan entities."""
 
@@ -141,10 +164,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up LGE device fan based on config_entry."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
-    _LOGGER.debug("Starting LGE ThinQ fan setup...")
+    _LOGGER.debug("Starting LGE ThinQ fan setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -184,9 +206,9 @@ class LGEFanWrapper:
         self._api = api
         self._description = descr
         self._feature_key = feature_key
-        self._turn_off_speed = None
-        self._last_speed = None
-        self._avl_speeds = self._get_fan_speeds()
+        self._turn_off_speed: str | None = None
+        self._last_speed: str | None = None
+        self._avl_speeds: list[str] = self._get_fan_speeds()
 
     def _get_fan_speeds(self) -> list[str]:
         """List of available speeds."""
@@ -195,13 +217,34 @@ class LGEFanWrapper:
             self._turn_off_speed = avl_speeds.pop(0)
         return avl_speeds
 
+    def _normalize_speed_value(self, speed: Any) -> str | None:
+        """Normalize a speed value to the canonical item from available speeds."""
+        if speed is None:
+            return None
+
+        speed_text = str(speed)
+        speed_lookup = {
+            candidate.casefold(): candidate for candidate in self._avl_speeds
+        }
+        if self._turn_off_speed is not None:
+            speed_lookup[self._turn_off_speed.casefold()] = self._turn_off_speed
+        return speed_lookup.get(speed_text.casefold(), speed_text)
+
     @property
     def fan_speed(self) -> str | None:
         """Return current speed."""
+        logical_key = {
+            DeviceType.FAN: "fan.fan_speed",
+            DeviceType.AIR_PURIFIER: "air_purifier.fan_speed",
+        }.get(self._api.type)
+        if logical_key is not None:
+            hybrid_speed = self._api.get_hybrid_value(logical_key)
+            if hybrid_speed is not None:
+                return self._normalize_speed_value(hybrid_speed)
         if self._description.fanspeed_fn:
-            return self._description.fanspeed_fn(self._api)
+            return self._normalize_speed_value(self._description.fanspeed_fn(self._api))
         if feature := self._feature_key:
-            return self._api.state.device_features.get(feature)
+            return self._normalize_speed_value(self._api.state.device_features.get(feature))
         return None
 
     @property
@@ -226,9 +269,19 @@ class LGEFanWrapper:
     @property
     def is_on(self) -> bool:
         """Return if fan is on."""
+        logical_key = {
+            DeviceType.FAN: "fan.is_on",
+            DeviceType.AIR_PURIFIER: "air_purifier.is_on",
+            DeviceType.HOOD: "hood.is_on",
+            DeviceType.MICROWAVE: "microwave.is_on",
+        }.get(self._api.type)
+        if logical_key is not None:
+            hybrid_is_on = self._api.get_hybrid_value(logical_key)
+            if hybrid_is_on is not None:
+                return bool(hybrid_is_on)
         if self._description.turn_off_fn is None:
             return self.fan_speed != self._turn_off_speed
-        return self._api.state.is_on
+        return cast(bool, self._api.state.is_on)
 
     async def async_set_speed(self, speed: str) -> None:
         """Set fan speed."""
@@ -237,7 +290,7 @@ class LGEFanWrapper:
     async def async_set_preset(self, preset: str) -> None:
         """Set fan preset."""
         if self._description.set_fanpreset_fn is None:
-            return NotImplementedError()
+            raise NotImplementedError
         await self._description.set_fanpreset_fn(self._api, preset)
 
     async def async_turn_on(
@@ -259,7 +312,8 @@ class LGEFanWrapper:
         """Turn on the fan."""
         if self._description.turn_off_fn is None:
             self._last_speed = self.fan_speed
-            await self.async_set_speed(self._turn_off_speed)
+            if self._turn_off_speed is not None:
+                await self.async_set_speed(self._turn_off_speed)
         else:
             await self._description.turn_off_fn(self._api)
 
@@ -267,7 +321,7 @@ class LGEFanWrapper:
 class LGEBaseFan(CoordinatorEntity, FanEntity):
     """Base fan device."""
 
-    def __init__(self, api: LGEDevice):
+    def __init__(self, api: LGEDevice) -> None:
         """Initialize the base fan."""
         super().__init__(api.coordinator)
         self._api = api
@@ -309,9 +363,9 @@ class LGEFan(LGEBaseFan):
         return features
 
     @property
-    def extra_state_attributes(self):
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes with device specific additions."""
-        state = {}
+        state: dict[str, Any] = {}
         if fan_modes := self._wrapper.fan_speeds:
             state[ATTR_FAN_MODES] = fan_modes
             if fan_mode := self._wrapper.fan_speed:
@@ -328,8 +382,10 @@ class LGEFan(LGEBaseFan):
             return None
         if self.speed_count <= 1:
             return 100
+        if (fan_speed := self._wrapper.fan_speed) is None:
+            return None
         return ordered_list_item_to_percentage(
-            self._wrapper.fan_speeds, self._wrapper.fan_speed
+            self._wrapper.fan_speeds, fan_speed
         )
 
     @property
@@ -341,10 +397,25 @@ class LGEFan(LGEBaseFan):
             return None
         return self._wrapper.fan_preset
 
+    async def _async_try_official_set_speed(self, named_speed: str) -> bool:
+        """Try setting fan speed with the official API."""
+        speed_keys = OFFICIAL_SPEED_KEYS.get(self._api.type)
+        if not speed_keys:
+            return False
+        if not self._wrapper.is_on:
+            operation_keys = OFFICIAL_OPERATION_KEYS.get(self._api.type)
+            if operation_keys:
+                await async_call_official_turn_on(self._api, *operation_keys)
+        return await async_call_official_post(
+            self._api,
+            str(named_speed).lower(),
+            *speed_keys,
+        )
+
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
         if self.speed_count == 0:
-            raise NotImplementedError()
+            raise NotImplementedError
 
         if percentage == 0:
             if self.preset_mode is None:
@@ -354,6 +425,8 @@ class LGEFan(LGEBaseFan):
         named_speed = percentage_to_ordered_list_item(
             self._wrapper.fan_speeds, percentage
         )
+        if await self._async_try_official_set_speed(named_speed):
+            return
         if not self._wrapper.is_on:
             await self._wrapper.async_turn_on(speed=named_speed)
         else:
@@ -363,7 +436,7 @@ class LGEFan(LGEBaseFan):
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
         if self.preset_modes is None:
-            raise NotImplementedError()
+            raise NotImplementedError
         if not self._wrapper.is_on:
             await self._wrapper.async_turn_on(preset=preset_mode)
         else:
@@ -374,7 +447,7 @@ class LGEFan(LGEBaseFan):
         self,
         percentage: int | None = None,
         preset_mode: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Turn on the fan."""
         if preset_mode and self.preset_modes:
@@ -382,12 +455,24 @@ class LGEFan(LGEBaseFan):
         elif percentage or self.speed_count == 1:
             await self.async_set_percentage(percentage or 100)
         else:
+            operation_keys = OFFICIAL_OPERATION_KEYS.get(self._api.type)
+            if operation_keys and await async_call_official_turn_on(
+                self._api,
+                *operation_keys,
+            ):
+                return
             await self._wrapper.async_turn_on()
             self._api.async_set_updated()
 
-    async def async_turn_off(self, **kwargs) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         if not self._wrapper.is_on:
+            return
+        operation_keys = OFFICIAL_OPERATION_KEYS.get(self._api.type)
+        if operation_keys and await async_call_official_turn_off(
+            self._api,
+            *operation_keys,
+        ):
             return
         await self._wrapper.async_turn_off()
         self._api.async_set_updated()

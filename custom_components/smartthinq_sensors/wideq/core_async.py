@@ -1,21 +1,20 @@
-"""
-A low-level, general abstraction for the LG SmartThinQ API.
-"""
+"""A low-level, general abstraction for the LG SmartThinQ API."""
 
 from __future__ import annotations
 
 import asyncio
 import base64
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 import hashlib
 import hmac
 import json
 import logging
 import os
+from pathlib import Path
 import ssl
 import sys
-from typing import Any
+from typing import Any, cast
 from urllib.parse import (
     ParseResult,
     parse_qs,
@@ -26,6 +25,7 @@ from urllib.parse import (
     urlunparse,
 )
 import uuid
+from xml.parsers.expat import ExpatError
 
 import aiohttp
 from charset_normalizer import from_bytes
@@ -47,6 +47,8 @@ ENABLE_CLEANUP_CLOSED = not (3, 11, 1) <= sys.version_info < (3, 11, 4)
 
 # enable logging of auth information
 LOG_AUTH_INFO = False
+THINQ2_EMULATION_ENV = "THINQ2_EMULATION"
+LEGACY_THINQ2_EMULATION_ENV = "thinq2_emulation"
 
 # v2
 V2_API_KEY = "VGhpblEyLjAgU0VSVklDRQ=="
@@ -180,9 +182,8 @@ class CoreAsync:
         session: aiohttp.ClientSession | None = None,
         client_id: str | None = None,
         update_clientid_callback: Callable[[str], None] | None = None,
-    ):
-        """
-        Create the CoreAsync object
+    ) -> None:
+        """Create the CoreAsync object.
 
         Parameters:
             country: ThinQ account country
@@ -197,7 +198,8 @@ class CoreAsync:
         self._oauth_url = oauth_url
         self._client_id = client_id
         self._update_clientid_callback = update_clientid_callback
-        self._lang_pack_url = None
+        self._lang_pack_url: str | None = None
+        self._session: aiohttp.ClientSession | None
 
         if session:
             self._session = session
@@ -217,7 +219,7 @@ class CoreAsync:
         return self._language
 
     @property
-    def lang_pack_url(self):
+    def lang_pack_url(self) -> str | None:
         """Return the used language."""
         return self._lang_pack_url
 
@@ -226,7 +228,7 @@ class CoreAsync:
         """Return the associated client_id."""
         return self._client_id
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the managed session on exit."""
         if self._managed_session and self._session:
             await self._session.close()
@@ -245,11 +247,11 @@ class CoreAsync:
         if self._client_id is not None and not force_refresh:
             return self._client_id
         if user_number is None:
-            return self._client_id
+            return ""
 
         hash_object = hashlib.sha256()
         hash_object.update(
-            (user_number + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")).encode(
+            (user_number + datetime.now(UTC).strftime("%Y%m%d%H%M%S")).encode(
                 "utf8"
             )
         )
@@ -259,27 +261,27 @@ class CoreAsync:
         return self._client_id
 
     @staticmethod
-    async def _get_json_resp(response: aiohttp.ClientResponse) -> dict:
+    async def _get_json_resp(response: aiohttp.ClientResponse) -> dict[str, Any]:
         """Try to get the json content from request response."""
 
         # first, we try to get the response json content
         try:
-            return await response.json()
+            return dict(await response.json())
         except ValueError as ex:
             resp_text = await response.text(errors="replace")
             _LOGGER.debug("Error decoding json response %s: %s", resp_text, ex)
 
         # if fails, we try to convert text from xml to json
         try:
-            return xmltodict.parse(resp_text)
-        except Exception:
+            return dict(xmltodict.parse(resp_text))
+        except (TypeError, ExpatError):
             raise exc.InvalidResponseError(resp_text) from None
 
     @staticmethod
     def _oauth2_signature(message: str, secret: str) -> str:
-        """
-        Get the base64-encoded SHA-1 HMAC digest of a string, as used in
-        OAauth2 request signatures.
+        """Get the base64-encoded SHA-1 HMAC digest of a string.
+
+        Used in OAauth2 request signatures.
 
         Both the `secret` and `message` are given as text strings. We use
         their UTF-8 equivalents.
@@ -292,14 +294,14 @@ class CoreAsync:
 
     @staticmethod
     def _thinq2_headers(
-        extra_headers: dict | None = None,
+        extra_headers: dict[str, str] | None = None,
         client_id: str | None = None,
         access_token: str | None = None,
         user_number: str | None = None,
-        country=DEFAULT_COUNTRY,
-        language=DEFAULT_LANGUAGE,
-        security_key=False,
-    ) -> dict:
+        country: str = DEFAULT_COUNTRY,
+        language: str = DEFAULT_LANGUAGE,
+        security_key: bool = False,
+    ) -> dict[str, str]:
         """Prepare API2 header."""
 
         headers = {
@@ -328,7 +330,7 @@ class CoreAsync:
         if user_number:
             headers["x-user-no"] = user_number
 
-        add_headers = extra_headers or {}
+        add_headers: dict[str, str] = extra_headers or {}
         return {**headers, **add_headers}
 
     async def http_get_bytes(
@@ -340,17 +342,16 @@ class CoreAsync:
             url=url,
             timeout=self._timeout,
         ) as resp:
-            result = await resp.content.read()
+            return await resp.content.read()
 
-        return result
 
     async def thinq2_get(
         self,
         url: str,
         access_token: str | None = None,
         user_number: str | None = None,
-        headers: dict | None = None,
-    ) -> dict:
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """Make an HTTP request in the format used by the API2 servers."""
 
         _LOGGER.debug("thinq2_get before: %s", url)
@@ -384,9 +385,9 @@ class CoreAsync:
         data: dict | None = None,
         access_token: str | None = None,
         user_number: str | None = None,
-        headers: dict | None = None,
-        is_api_v2=False,
-    ) -> dict:
+        headers: dict[str, str] | None = None,
+        is_api_v2: bool = False,
+    ) -> dict[str, Any]:
         """Make an HTTP request in the format used by the API servers."""
 
         _LOGGER.debug("lgedm2_post before: %s", url)
@@ -414,8 +415,11 @@ class CoreAsync:
         return self._manage_lge_result(out, is_api_v2, user_number)
 
     def _manage_lge_result(
-        self, result: dict, is_api_v2=False, user_number: str | None = None
-    ) -> dict:
+        self,
+        result: dict[str, Any],
+        is_api_v2: bool = False,
+        user_number: str | None = None,
+    ) -> dict[str, Any]:
         """Manage the result from a get or a post to lge server."""
 
         if is_api_v2:
@@ -433,7 +437,7 @@ class CoreAsync:
                         raise API2_ERRORS[code](message)
                     raise exc.APIError(message, code)
 
-            return result.get("result")
+            return dict(result.get("result") or {})
 
         msg = result.get(DATA_ROOT)
         if not msg:
@@ -447,9 +451,9 @@ class CoreAsync:
                     raise API2_ERRORS[code](message)
                 raise exc.APIError(message, code)
 
-        return msg
+        return dict(msg)
 
-    async def get_oauth_url(self):
+    async def get_oauth_url(self) -> str:
         """Return url used for oauth2 authentication."""
 
         if self._oauth_url:
@@ -470,7 +474,7 @@ class CoreAsync:
 
         _LOGGER.debug("Oauth url retrieved: %s", self._oauth_url)
 
-        return self._oauth_url
+        return self._oauth_url or ""
 
     def _get_oauth_url_from_gateway_v2_info(self, gateway_v2_info: dict) -> str | None:
         """Extract oauth url from gateway v2 info."""
@@ -497,7 +501,7 @@ class CoreAsync:
 
         return oauth_base
 
-    async def _get_apiv1_oauth_url(self):
+    async def _get_apiv1_oauth_url(self) -> str:
         """Return url used for oauth2 authentication using APIv1."""
 
         headers = {
@@ -515,7 +519,7 @@ class CoreAsync:
             timeout=self._timeout,
             raise_for_status=False,
         ) as resp:
-            out = await resp.json()
+            out = dict(await resp.json())
 
         gateway_result = self._manage_lge_result(out)
         _LOGGER.debug("Gateway info from APIv1: %s", gateway_result)
@@ -525,9 +529,9 @@ class CoreAsync:
             self._lang_pack_url = gateway_result[_COMMON_LANG_URI_ID]
             _LOGGER.debug("Common lang pack url: %s", self._lang_pack_url)
 
-        return oauth_url
+        return str(oauth_url)
 
-    async def gateway_info(self):
+    async def gateway_info(self) -> dict[str, Any]:
         """Return ThinQ gateway information."""
         result = await self.thinq2_get(V2_GATEWAY_URL)
         _LOGGER.debug("GatewayV2 info: %s", result)
@@ -543,10 +547,10 @@ class CoreAsync:
         username: str,
         encrypted_pwd: str,
         *,
-        extra_headers: dict | None = None,
-    ):
-        """
-        Perform a login with username and password.
+        extra_headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Perform a login with username and password.
+
         Password must be encrypted using hashlib with hash512 algorythm.
         """
 
@@ -580,7 +584,7 @@ class CoreAsync:
             timeout=self._timeout,
             raise_for_status=False,
         ) as resp:
-            pre_login = await resp.json()
+            pre_login = dict(await resp.json())
 
         _LOGGER.debug("auth_user_login - preLogin data: %s", pre_login)
         headers["X-Signature"] = pre_login["signature"]
@@ -605,7 +609,7 @@ class CoreAsync:
             timeout=self._timeout,
             raise_for_status=False,
         ) as resp:
-            account_data = await resp.json()
+            account_data = dict(await resp.json())
 
         _LOGGER.debug("auth_user_login - account_data: %s", account_data)
         if "account" not in account_data or "error" in account_data:
@@ -619,7 +623,7 @@ class CoreAsync:
                     msg += f"message: {err_msg}"
             if not msg:
                 _LOGGER.error(
-                    "auth_user_login - invalid account_data: %s", account_data
+                    "Auth user login - invalid account_data: %s", account_data
                 )
                 msg = "unknown error"
             raise exc.AuthenticationError(msg)
@@ -634,8 +638,11 @@ class CoreAsync:
         async with self._get_session().get(
             url=emp_search_key_url, timeout=self._timeout, raise_for_status=False
         ) as resp:
-            secret_data = json.loads(
+            secret_data = cast(
+                dict[str, Any],
+                json.loads(
                 await resp.text()
+                ),
             )  # this return data as plain/text
 
         _LOGGER.debug("auth_user_login - secret_data: %s", secret_data)
@@ -650,7 +657,7 @@ class CoreAsync:
         }
 
         parse_url = urlparse(V2_EMP_SESS_URL)
-        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
+        timestamp = datetime.now(UTC).strftime(DATE_FORMAT)
         req_url = f"{parse_url.path}?{urlencode(emp_data)}"
         signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
@@ -676,24 +683,26 @@ class CoreAsync:
             timeout=self._timeout,
             raise_for_status=False,
         ) as resp:
-            token_data = await resp.json()
+            token_data = dict(await resp.json())
 
         if LOG_AUTH_INFO:
             _LOGGER.debug("auth_user_login - token_data: %s", token_data)
 
         if token_data.get("status", -1) != 1:
-            raise exc.TokenError()
+            raise exc.TokenError
 
         return token_data
 
-    async def get_user_number(self, access_token, *, oauth_url: str | None = None):
+    async def get_user_number(
+        self, access_token: str, *, oauth_url: str | None = None
+    ) -> str:
         """Get the user number used by API requests based on access token."""
 
         if not oauth_url:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_USER_INFO)
-        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
+        timestamp = datetime.now(UTC).strftime(DATE_FORMAT)
         sig = self._oauth2_signature(f"{V2_USER_INFO}\n{timestamp}", OAUTH_SECRET_KEY)
 
         headers = {
@@ -711,28 +720,32 @@ class CoreAsync:
         async with self._get_session().get(
             url=url, headers=headers, timeout=self._timeout, raise_for_status=False
         ) as resp:
-            res_data = await resp.json()
+            res_data = dict(await resp.json())
 
         if res_data.get("status", -1) != 1 or "account" not in res_data:
-            _LOGGER.error("get_user_number: invalid response: %s", res_data)
+            _LOGGER.error("Get user number: invalid response: %s", res_data)
             raise exc.AuthenticationError("Failed to retrieve User Number")
         if LOG_AUTH_INFO:
             _LOGGER.debug("Get user number: %s", res_data)
 
-        return res_data["account"]["userNo"]
+        return str(cast(dict[str, Any], res_data["account"])["userNo"])
 
     async def _auth_request(
-        self, data, *, oauth_url: str | None = None, log_auth_info=False
-    ):
-        """
-        Use an auth code to log into the v2 API and obtain an access token
+        self,
+        data: dict[str, str],
+        *,
+        oauth_url: str | None = None,
+        log_auth_info: bool = False,
+    ) -> dict[str, Any]:
+        """Use an auth code to log into the v2 API and obtain an access token.
+
         and refresh token.
         """
         if not oauth_url:
             oauth_url = await self.get_oauth_url()
 
         url = urljoin(oauth_url, V2_AUTH_PATH)
-        timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
+        timestamp = datetime.now(UTC).strftime(DATE_FORMAT)
         req_url = f"{V2_AUTH_PATH}?{urlencode(data)}"
         sig = self._oauth2_signature(f"{req_url}\n{timestamp}", OAUTH_SECRET_KEY)
 
@@ -751,8 +764,8 @@ class CoreAsync:
             raise_for_status=False,
         ) as resp:
             if resp.status != 200:
-                raise exc.TokenError()
-            res_data = await resp.json()
+                raise exc.TokenError
+            res_data = dict(await resp.json())
 
         if log_auth_info:
             _LOGGER.debug("Auth request result: %s", res_data)
@@ -761,9 +774,11 @@ class CoreAsync:
 
         return res_data
 
-    async def auth_code_login(self, auth_code, *, oauth_url: str | None = None):
-        """
-        Get a new access_token using an authorization_code.
+    async def auth_code_login(
+        self, auth_code: str, *, oauth_url: str | None = None
+    ) -> tuple[str, Any, str]:
+        """Get a new access_token using an authorization_code.
+
         May raise a `tokenError`.
         """
         out = await self._auth_request(
@@ -778,9 +793,11 @@ class CoreAsync:
 
         return out["access_token"], out.get("expires_in"), out["refresh_token"]
 
-    async def refresh_auth(self, refresh_token, *, oauth_url: str | None = None):
-        """
-        Get a new access_token using a refresh_token.
+    async def refresh_auth(
+        self, refresh_token: str, *, oauth_url: str | None = None
+    ) -> tuple[str, Any]:
+        """Get a new access_token using a refresh_token.
+
         May raise a `TokenError`.
         """
         out = await self._auth_request(
@@ -819,7 +836,7 @@ class Gateway:
         """Return the API core used language."""
         return self._core.language
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the core aiohttp session."""
         await self._core.close()
 
@@ -832,13 +849,13 @@ class Gateway:
     def oauth_login_url(
         self,
         *,
-        use_oauth2=True,
+        use_oauth2: bool = True,
         redirect_uri: str | None = None,
         state: str | None = None,
     ) -> str:
-        """
-        Construct the URL for users to log in (in a browser) to start an
-        authenticated session.
+        """Construct the URL for users to log in to start a session.
+
+        This URL is intended to be opened in a browser.
         """
 
         url_base_parsed = urlparse(self.login_base_uri)
@@ -847,9 +864,9 @@ class Gateway:
                 scheme=url_base_parsed.scheme,
                 netloc=url_base_parsed.netloc,
                 path=urljoin(url_base_parsed.path, OAUTH_REDIRECT_PATH),
-                params=None,
-                query=None,
-                fragment=None,
+                params="",
+                query="",
+                fragment="",
             )
         )
         url_netloc = OAUTH_LOGIN_HOST
@@ -874,18 +891,17 @@ class Gateway:
             query["redirect_uri"] = redirect_uri or OAUTH_REDIRECT_URI
 
         url_query = urlencode(query)
-        url_login = urlunparse(
+        return urlunparse(
             ParseResult(
                 scheme=url_base_parsed.scheme,
                 netloc=url_netloc,
                 path=urljoin(url_base_parsed.path, OAUTH_LOGIN_PATH),
-                params=None,
+                params="",
                 query=url_query,
-                fragment=None,
+                fragment="",
             )
         )
 
-        return url_login
 
     def dump(self) -> dict:
         """Dump the gateway objet."""
@@ -920,7 +936,7 @@ class Auth:
         )
         self.user_number = user_number
         self._token_created_on = (
-            datetime.now(timezone.utc) if access_token else datetime.min
+            datetime.now(UTC) if access_token else datetime.min
         )
 
     @property
@@ -1035,7 +1051,7 @@ class Auth:
         """Perform authentication, returning a new Auth object."""
         oauth_info = await cls.oauth_info_from_user_login(username, password, gateway)
         if not oauth_info:
-            return None
+            raise exc.AuthenticationError("User login failed")
 
         auth = cls(
             gateway,
@@ -1046,21 +1062,21 @@ class Auth:
         )
         return await auth.refresh()
 
-    def start_session(self):
-        """
-        Start an API session for the logged-in user.
+    def start_session(self) -> Session:
+        """Start an API session for the logged-in user.
+
         Return the Session object and a list of the user's devices.
         """
         return Session(self)
 
-    async def refresh(self, force_refresh=False) -> Auth:
+    async def refresh(self, force_refresh: bool = False) -> Auth:
         """Refresh the authentication token, returning a new Auth object."""
 
         access_token = self.access_token
 
         get_new_token: bool = force_refresh or (access_token is None)
         if not get_new_token:
-            diff = (datetime.now(timezone.utc) - self._token_created_on).total_seconds()
+            diff = (datetime.now(UTC) - self._token_created_on).total_seconds()
             if (self.token_validity - diff) <= TOKEN_EXP_LIMIT:
                 get_new_token = True
 
@@ -1072,6 +1088,7 @@ class Auth:
             )
         else:
             token_validity = str(self.token_validity)
+            access_token = cast(str, access_token)
 
         if not self.user_number:
             self.user_number = await self._gateway.core.get_user_number(access_token)
@@ -1115,15 +1132,15 @@ class Auth:
 class Session:
     """ThinQ authentication session."""
 
-    def __init__(self, auth: Auth, session_id=0) -> None:
+    def __init__(self, auth: Auth, session_id: int = 0) -> None:
         """Initialize session object."""
         self._auth = auth
         self.session_id = session_id
-        self._homes: dict | None = None
-        self._common_lang_pack_url = None
+        self._homes: dict[str, dict[str, str]] | None = None
+        self._common_lang_pack_url: str | None = None
 
     @property
-    def common_lang_pack_url(self):
+    def common_lang_pack_url(self) -> str | None:
         """Return common language pack url."""
         return self._common_lang_pack_url
 
@@ -1132,9 +1149,8 @@ class Session:
         self._auth = await self._auth.refresh()
         return self._auth
 
-    async def post(self, path: str, data: dict | None = None) -> dict:
-        """
-        Make a POST request to the APIv1 server.
+    async def post(self, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Make a POST request to the APIv1 server.
 
         This is like `lgedm_post`, but it pulls the context for the
         request from an active Session.
@@ -1149,9 +1165,8 @@ class Session:
             is_api_v2=False,
         )
 
-    async def post2(self, path: str, data: dict | None = None) -> dict:
-        """
-        Make a POST request to the APIv2 server.
+    async def post2(self, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Make a POST request to the APIv2 server.
 
         This is like `lgedm_post`, but it pulls the context for the
         request from an active Session.
@@ -1165,7 +1180,7 @@ class Session:
             is_api_v2=True,
         )
 
-    async def get(self, path: str) -> dict:
+    async def get(self, path: str) -> dict[str, Any]:
         """Make a GET request to the APIv1 server."""
 
         url = urljoin(self._auth.gateway.thinq1_uri, path)
@@ -1175,7 +1190,7 @@ class Session:
             self._auth.user_number,
         )
 
-    async def get2(self, path: str) -> dict:
+    async def get2(self, path: str) -> dict[str, Any]:
         """Make a GET request to the APIv2 server."""
 
         url = urljoin(self._auth.gateway.thinq2_uri, path)
@@ -1185,54 +1200,44 @@ class Session:
             self._auth.user_number,
         )
 
-    async def _get_homes(self) -> dict | None:
+    async def _get_homes(self) -> dict[str, dict[str, str]] | None:
         """Get a dict of homes associated with the user's account."""
         if self._homes is not None:
             return self._homes
 
         homes = await self.get2("service/homes")
-        if not isinstance(homes, dict):
-            _LOGGER.warning("LG API return invalid homes information: '%s'", homes)
-            return None
-
         _LOGGER.debug("Received homes: %s", homes)
-        loaded_homes = {}
+        loaded_homes: dict[str, dict[str, str]] = {}
         homes_list = as_list(homes.get("item", []))
         for home in homes_list:
+            if not isinstance(home, dict):
+                continue
             if home_id := home.get(_HOME_ID):
                 loaded_homes[home_id] = {
-                    _HOME_NAME: home.get(_HOME_NAME, "unamed home"),
-                    _HOME_CURRENT: home.get(_HOME_CURRENT, "N"),
+                    _HOME_NAME: str(home.get(_HOME_NAME, "unamed home")),
+                    _HOME_CURRENT: str(home.get(_HOME_CURRENT, "N")),
                 }
 
         if loaded_homes:
             self._homes = loaded_homes
         return loaded_homes
 
-    async def _get_home_devices(self, home_id: str) -> list[dict] | None:
-        """
-        Get a list of devices associated with the user's home_id.
+    async def _get_home_devices(self, home_id: str) -> list[dict[str, Any]] | None:
+        """Get a list of devices associated with the user's home_id.
+
         Return information about the devices.
         """
         dashboard = await self.get2(f"service/homes/{home_id}")
-        if not isinstance(dashboard, dict):
-            _LOGGER.warning(
-                "LG API return invalid devices information for home_id %s: '%s'",
-                home_id,
-                dashboard,
-            )
-            return None
-
         if self._common_lang_pack_url is None:
             if _COMMON_LANG_URI_ID in dashboard:
                 self._common_lang_pack_url = dashboard[_COMMON_LANG_URI_ID]
             else:
                 self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
-        return as_list(dashboard.get("devices", []))
+        return [item for item in as_list(dashboard.get("devices", [])) if isinstance(item, dict)]
 
-    async def get_devices_homes(self) -> list[dict] | None:
-        """
-        Get a list of devices associated with the user's account.
+    async def get_devices_homes(self) -> list[dict[str, Any]] | None:
+        """Get a list of devices associated with the user's account.
+
         Return information about the devices based on homes API call.
         """
         if not (homes := await self._get_homes()):
@@ -1240,7 +1245,7 @@ class Session:
             return None
 
         valid_home = False
-        devices_list = []
+        devices_list: list[dict[str, Any]] = []
         for home_id in homes:
             if (devices := await self._get_home_devices(home_id)) is None:
                 continue
@@ -1249,36 +1254,31 @@ class Session:
 
         return devices_list if valid_home else None
 
-    async def get_devices_dashboard(self) -> list[dict] | None:
-        """
-        Get a list of devices associated with the user's account.
+    async def get_devices_dashboard(self) -> list[dict[str, Any]] | None:
+        """Get a list of devices associated with the user's account.
+
         Return information about the devices based on dashboard API call.
         """
         dashboard = await self.get2("service/application/dashboard")
-        if not isinstance(dashboard, dict):
-            _LOGGER.warning(
-                "LG dashboard API return invalid devices information: '%s'", dashboard
-            )
-            return None
         if self._common_lang_pack_url is None:
             if _COMMON_LANG_URI_ID in dashboard:
                 self._common_lang_pack_url = dashboard[_COMMON_LANG_URI_ID]
             else:
                 self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
-        return as_list(dashboard.get("item", []))
+        return [item for item in as_list(dashboard.get("item", [])) if isinstance(item, dict)]
 
-    async def get_devices(self) -> list[dict] | None:
-        """
-        Get a list of devices associated with the user's account.
+    async def get_devices(self) -> list[dict[str, Any]] | None:
+        """Get a list of devices associated with the user's account.
+
         Return information about the devices.
         """
         if not _API_USE_HOMES:
             return await self.get_devices_dashboard()
         return await self.get_devices_homes()
 
-    async def monitor_start(self, device_id):
-        """
-        Begin monitoring a device's status.
+    async def monitor_start(self, device_id: str) -> str:
+        """Begin monitoring a device's status.
+
         Return a "work ID" that can be used to retrieve the result of
         monitoring.
         """
@@ -1292,11 +1292,10 @@ class Session:
                 "workId": gen_uuid(),
             },
         )
-        return res["workId"]
+        return str(res["workId"])
 
-    async def monitor_poll(self, device_id, work_id):
-        """
-        Get the result of a monitoring task.
+    async def monitor_poll(self, device_id: str, work_id: str) -> bytes | None:
+        """Get the result of a monitoring task.
 
         `work_id` is a string ID retrieved from `monitor_start`.
         Return a status result, which is a bytestring, or None if the
@@ -1330,7 +1329,7 @@ class Session:
 
         return None
 
-    async def monitor_stop(self, device_id, work_id):
+    async def monitor_stop(self, device_id: str, work_id: str) -> None:
         """Stop monitoring a device."""
 
         await self.post(
@@ -1340,18 +1339,18 @@ class Session:
 
     async def set_device_controls(
         self,
-        device_id,
-        ctrl_key,
-        command=None,
-        value=None,
-        data=None,
-    ):
-        """
-        Control a device's settings.
+        device_id: str,
+        ctrl_key: str | dict[str, Any],
+        command: str | None = None,
+        value: Any = None,
+        data: Any = None,
+    ) -> dict[str, Any]:
+        """Control a device's settings.
+
         `values` is a key/value map containing the settings to update.
         """
-        res = {}
-        payload = None
+        res: dict[str, Any] = {}
+        payload: dict[str, Any] | None = None
         if isinstance(ctrl_key, dict):
             payload = ctrl_key
         elif command is not None:
@@ -1375,18 +1374,18 @@ class Session:
 
     async def device_v2_controls(
         self,
-        device_id,
-        ctrl_key,
-        command=None,
-        key=None,
-        value=None,
+        device_id: str,
+        ctrl_key: str | dict[str, Any],
+        command: str | None = None,
+        key: str | None = None,
+        value: str | None = None,
         *,
-        ctrl_path=None,
-    ):
+        ctrl_path: str | None = None,
+    ) -> dict[str, Any]:
         """Control a device's settings based on api V2."""
 
-        res = {}
-        payload = None
+        res: dict[str, Any] = {}
+        payload: dict[str, Any] | None = None
         path = ctrl_path or "control-sync"
         cmd_path = f"service/devices/{device_id}/{path}"
         if isinstance(ctrl_key, dict):
@@ -1404,9 +1403,10 @@ class Session:
 
         return res
 
-    async def get_device_config(self, device_id, key, category="Config"):
-        """
-        Get a device configuration option.
+    async def get_device_config(
+        self, device_id: str, key: str, category: str = "Config"
+    ) -> Any:
+        """Get a device configuration option.
 
         The `category` string should probably either be "Config" or
         "Control"; the right choice appears to depend on the key.
@@ -1425,19 +1425,19 @@ class Session:
         )
         return res["returnData"]
 
-    async def get_device_v2_settings(self, device_id):
+    async def get_device_v2_settings(self, device_id: str) -> dict[str, Any]:
         """Get a device's settings based on api V2."""
         return await self.get2(f"service/devices/{device_id}")
 
-    async def delete_permission(self, device_id):
+    async def delete_permission(self, device_id: str) -> None:
         """Delete permission on V1 device after a control command."""
         await self.post("rti/delControlPermission", {"deviceId": device_id})
 
 
 class ClientAsync:
-    """
-    A higher-level API wrapper that provides a session more easily
-    and allows serialization of state.
+    """Provide a higher-level API wrapper for sessions.
+
+    This wrapper also allows serialization of state.
     """
 
     def __init__(
@@ -1454,40 +1454,44 @@ class ClientAsync:
         self._auth: Auth = auth
         self._session: Session | None = session
         self._connected = True
-        self._last_device_update = datetime.now(timezone.utc)
+        self._last_device_update = datetime.now(UTC)
         self._lock = asyncio.Lock()
         # The last list of devices we got from the server. This is the
         # raw JSON list data describing the devices.
-        self._devices = None
+        self._devices: dict[str, dict[str, Any]] | None = None
 
         # Cached model info data. This is a mapping from URLs to JSON
         # responses.
-        self._model_url_info: dict[str, Any] = {}
-        self._common_lang_pack = None
-        self._local_lang_pack = None
+        self._model_url_info: dict[str, dict[str, Any]] = {}
+        self._common_lang_pack: dict[str, Any] | None = None
+        self._local_lang_pack: dict[str, Any] | None = None
 
         # Locale information used to discover a gateway, if necessary.
         self._country = country
         self._language = language
 
         # enable emulation mode for debug / test
-        env_emulation = os.environ.get("thinq2_emulation", "") == "ENABLED"
+        env_emulation = (
+            os.environ.get(
+                THINQ2_EMULATION_ENV,
+                os.environ.get(LEGACY_THINQ2_EMULATION_ENV, ""),
+            )
+            == "ENABLED"
+        )
         self._emulation = env_emulation or enable_emulation
 
-    def _load_emul_devices(self) -> dict | None:
+    def _load_emul_devices(self) -> list[dict[str, Any]] | None:
         """This is used only for debug."""
-        data_file = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "deviceV2.txt"
-        )
+        data_file = Path(__file__).resolve().parent / "deviceV2.txt"
         try:
-            with open(data_file, "r", encoding="utf-8") as emu_dev:
-                device_v2 = json.load(emu_dev)
+            with data_file.open(encoding="utf-8") as emu_dev:
+                device_v2 = cast(list[dict[str, Any]], json.load(emu_dev))
         except (FileNotFoundError, json.JSONDecodeError):
             self._emulation = False
             return None
         return device_v2
 
-    async def _load_devices(self, force_update: bool = False):
+    async def _load_devices(self, force_update: bool = False) -> None:
         """Load dict with available devices."""
         if self._session and (self._devices is None or force_update):
             if (new_devices := await self._session.get_devices()) is None:
@@ -1502,15 +1506,13 @@ class ClientAsync:
             }
 
     @property
-    def api_version(self):
+    def api_version(self) -> str:
         """Return core API version."""
         return CORE_VERSION
 
     @property
     def auth(self) -> Auth:
         """Return the Auth object associated to this client."""
-        if not self._auth:
-            assert False, "unauthenticated"
         return self._auth
 
     @property
@@ -1554,7 +1556,7 @@ class ClientAsync:
         return self._emulation
 
     @property
-    def oauth_info(self) -> dict:
+    def oauth_info(self) -> dict[str, Any]:
         """Return current auth info."""
         return {
             "refresh_token": self.auth.refresh_token,
@@ -1562,7 +1564,7 @@ class ClientAsync:
             "user_number": self.auth.user_number,
         }
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the active managed core http session."""
         if not self._connected:
             return
@@ -1570,22 +1572,22 @@ class ClientAsync:
         self._session = None
         await self._auth.gateway.close()
 
-    def _check_connected(self):
+    def _check_connected(self) -> None:
         """Check that client is in connected status."""
         if not self._connected:
-            raise exc.ClientDisconnected()
+            raise exc.ClientDisconnected
 
-    async def refresh_devices(self):
+    async def refresh_devices(self) -> None:
         """Refresh the devices' information for this client."""
         async with self._lock:
-            call_time = datetime.now(timezone.utc)
+            call_time = datetime.now(UTC)
             difference = (call_time - self._last_device_update).total_seconds()
             if difference <= MIN_TIME_BETWEEN_UPDATE:
                 return
             await self._load_devices(True)
             self._last_device_update = call_time
 
-    async def refresh(self, refresh_gateway=False) -> None:
+    async def refresh(self, refresh_gateway: bool = False) -> None:
         """Refresh client connection."""
         self._check_connected()
         if refresh_gateway:
@@ -1615,8 +1617,7 @@ class ClientAsync:
         client_id: str | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
-        """
-        Construct a client using username and password.
+        """Construct a client using username and password.
 
         This allows simpler state storage (e.g., for human-written
         configuration) but it is a little less efficient because we need
@@ -1660,8 +1661,7 @@ class ClientAsync:
         update_clientid_callback: Callable[[str], None] | None = None,
         enable_emulation: bool = False,
     ) -> ClientAsync:
-        """
-        Construct a client using just a refresh token.
+        """Construct a client using just a refresh token.
 
         This allows simpler state storage (e.g., for human-written
         configuration) but it is a little less efficient because we need
@@ -1744,7 +1744,7 @@ class ClientAsync:
 
         return result
 
-    async def _load_json_info(self, info_url: str):
+    async def _load_json_info(self, info_url: str) -> dict[str, Any]:
         """Load JSON data from specific url."""
         self._check_connected()
         if not info_url:
@@ -1752,11 +1752,16 @@ class ClientAsync:
 
         content = await self._auth.gateway.core.http_get_bytes(info_url)
 
-        def _load_json_content():
+        def _load_json_content() -> dict[str, Any]:
             """Decode and load as json the received content."""
+            detected_content = from_bytes(content).best()
             try:
                 # we use charset_normalizer to detect correct encoding and convert to unicode string
-                str_content = str(from_bytes(content).best(), errors="replace")
+                str_content = (
+                    str(detected_content)
+                    if detected_content is not None
+                    else str(content, errors="replace")
+                )
             except (LookupError, TypeError):
                 # A LookupError is raised if the encoding was not found which could
                 # indicate a misspelling or similar mistake.
@@ -1768,23 +1773,28 @@ class ClientAsync:
 
             enc_resp = str_content.encode()
             try:
-                return json.loads(enc_resp)
+                return cast(dict[str, Any], json.loads(enc_resp))
             except json.JSONDecodeError as ex:
                 _LOGGER.warning(
                     "Failed to load json info file: %s - error: %s", info_url, ex
                 )
-                return None
+                return {}
 
         return await asyncio.to_thread(_load_json_content)
 
-    async def common_lang_pack(self):
+    async def common_lang_pack(self) -> dict[str, Any]:
         """Load JSON common lang pack from specific url."""
         if self._devices is None:
             return {}
         if self._common_lang_pack is None and self._session:
-            self._common_lang_pack = (
-                await self._load_json_info(self._session.common_lang_pack_url)
-            ).get("pack", {})
+            if lang_pack_url := self._session.common_lang_pack_url:
+                self._common_lang_pack = (
+                    await self._load_json_info(lang_pack_url)
+                ).get("pack", {})
+            else:
+                self._common_lang_pack = {}
+        if self._common_lang_pack is None:
+            return {}
         return self._common_lang_pack
 
     async def local_lang_pack(self) -> dict[str, str]:
@@ -1792,14 +1802,12 @@ class ClientAsync:
         if self._local_lang_pack is not None:
             return self._local_lang_pack
 
-        def _load_local_lang_pack() -> dict[str, dict]:
+        def _load_local_lang_pack() -> dict[str, dict[str, str]]:
             """Load content of local lang pack."""
-            data_file = os.path.join(
-                os.path.dirname(os.path.realpath(__file__)), _LOCAL_LANG_FILE
-            )
+            data_file = Path(__file__).resolve().parent / _LOCAL_LANG_FILE
             try:
-                with open(data_file, "r", encoding="utf-8") as lang_file:
-                    return json.load(lang_file)
+                with data_file.open(encoding="utf-8") as lang_file:
+                    return cast(dict[str, dict[str, str]], json.load(lang_file))
             except (FileNotFoundError, json.JSONDecodeError):
                 return {}
 
@@ -1813,10 +1821,12 @@ class ClientAsync:
         self._local_lang_pack = result
         return result
 
-    async def model_url_info(self, url, device=None):
-        """
-        For a DeviceInfo object, get a ModelInfo object describing
-        the model's capabilities.
+    async def model_url_info(
+        self, url: str | None, device: DeviceInfo | None = None
+    ) -> dict[str, Any] | None:
+        """Get a ModelInfo object for a DeviceInfo object.
+
+        The returned object describes the model's capabilities.
         """
         if not url:
             return {}
@@ -1836,7 +1846,7 @@ class ClientAsync:
     def dump(self) -> dict[str, Any]:
         """Serialize the client state."""
 
-        out = {
+        out: dict[str, Any] = {
             "model_url_info": self._model_url_info,
         }
 
@@ -1880,8 +1890,10 @@ class ClientAsync:
         if "session" in state:
             client._session = Session(client.auth, state["session"])
 
-        if "model_info" in state:
-            client._model_url_info = state["model_url_info"]
+        if "model_url_info" in state:
+            client._model_url_info = cast(
+                dict[str, dict[str, Any]], state["model_url_info"]
+            )
 
         if "country" in state:
             client._country = state["country"]

@@ -5,6 +5,7 @@
       "no_smartthinq_devices": "No SmartThinQ devices found. Component setup aborted.",
       "unsupported_version": "This integration require at least HomeAssistant version {req_ver}, you are running version {run_ver}.",
       "reauth_successful": "Configuration successfully completed.",
+      "reconfigure_successful": "Configuration successfully completed.",
       "reconfigured": "Configuration successfully completed."
     },
     "error": {
@@ -14,6 +15,12 @@
       "invalid_language": "Invalid language format.",
       "invalid_url": "Invalid redirection URL. Make sure you can access the ThinQ app on your phone.",
       "invalid_credentials": "Invalid SmartThinQ credentials. Use the LG App on your mobile device to verify if there are Term of Service to accept. Account based on social network are not supported and in most case do not work with this integration.",
+      "invalid_official_pat": "Invalid LG official PAT.",
+      "official_terms_not_accepted": "The LG ThinQ Connect service terms are not accepted for this account.",
+      "official_api_not_allowed": "The LG ThinQ Connect API rejected this PAT for the requested operation.",
+      "official_country_not_supported": "The selected country is not supported by LG ThinQ Connect.",
+      "official_api_calls_exceeded": "The number of LG ThinQ Connect API calls has been exceeded.",
+      "official_user_api_calls_exceeded": "The number of LG ThinQ Connect user API calls has been exceeded.",
       "invalid_config": "Found invalid configuration, please reconfigure.",
       "no_user_info": "User Name and Password are required.",
       "unknown": "Unknown error."
@@ -26,11 +33,12 @@
           "region": "Country Code",
           "language": "Language Code",
           "use_redirect": "Use URL redirect authentication method",
+          "official_pat": "LG official PAT",
           "use_ha_session": "Share Home Assistant HTTP connection (may cause SSL errors)",
           "use_tls_v1": "Force use of protocol TLSv1 (sometimes required)",
           "exclude_dh": "Do not use DH cypher (in case 'dh key too small' error)"
         },
-        "description": "Insert your SmartThinQ account access information."
+        "description": "Insert your SmartThinQ account access information. LG official PAT is optional, and is used for the direct official ThinQ Connect hybrid path."
       },
       "url": {
         "data": {
@@ -52,9 +60,42 @@
           "reauth_cred": "Check this option if you need to enter new ThinQ credential"
         },
         "title": "SmartThinQ LGE Sensors - Reauth",
-        "description": "Invalid ThinQ credential error, integration setup aborted. Please use the LG App on your mobile device and check if there are new Term of Service to accept, then press ok to reload integration."
+        "description": "Invalid ThinQ credential error, integration setup aborted. Please use the LG App on your mobile device and check if there are new Term of Service to accept, then press ok to reload integration. If you already have a valid community token and only need to update the LG official PAT, check the box and update that field on the next step."
+      },
+      "reconfigure": {
+        "data": {
+          "official_pat": "LG official PAT"
+        },
+        "title": "SmartThinQ LGE Sensors - Reconfigure",
+        "description": "LG official PAT is optional. Leave it empty to keep running with the community ThinQ flow only, or enter a PAT to enable the direct official ThinQ Connect hybrid path."
       }
     },
     "title": "SmartThinQ LGE Sensors"
+  },
+  "issues": {
+    "missing_official_pat": {
+      "title": "{title} is running without an LG official PAT",
+      "description": "The integration will continue using the community ThinQ flow, but official ThinQ Connect data and MQTT-based polling reduction are disabled until an LG official PAT is configured.",
+      "fix_flow": {
+        "error": {
+          "error_connect": "Error connecting to LG ThinQ Connect. Try again in a moment.",
+          "invalid_official_pat": "Invalid LG official PAT.",
+          "official_terms_not_accepted": "The LG ThinQ Connect service terms are not accepted for this account.",
+          "official_api_not_allowed": "The LG ThinQ Connect API rejected this PAT for the requested operation.",
+          "official_country_not_supported": "The selected country is not supported by LG ThinQ Connect.",
+          "official_api_calls_exceeded": "The number of LG ThinQ Connect API calls has been exceeded.",
+          "official_user_api_calls_exceeded": "The number of LG ThinQ Connect user API calls has been exceeded."
+        },
+        "step": {
+          "init": {
+            "data": {
+              "official_pat": "LG official PAT"
+            },
+            "description": "Enter an LG official PAT to enable the direct official ThinQ Connect hybrid path for {title}.",
+            "title": "Add LG official PAT"
+          }
+        }
+      }
+    }
   }
 }
