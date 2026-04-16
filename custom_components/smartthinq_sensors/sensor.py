@@ -617,7 +617,10 @@ async def async_setup_entry(
     platform = current_platform.get()
     platform.async_register_entity_service(
         SERVICE_REMOTE_START,
-        {vol.Optional("course"): str},
+        {
+            vol.Optional("course"): str,
+            vol.Optional("overrides"): str
+        },
         "async_remote_start",
         [SUPPORT_WM_SERVICES],
     )
@@ -729,11 +732,15 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
         return None
 
-    async def async_remote_start(self, course: str | None = None):
+    async def async_remote_start(
+        self,
+        course: str | None = None,
+        overrides: str | None = None
+    ):
         """Call the remote start command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
-        await self._api.device.remote_start(course)
+        await self._api.device.remote_start(course, overrides)
 
     async def async_wake_up(self):
         """Call the wakeup command for WM devices."""
