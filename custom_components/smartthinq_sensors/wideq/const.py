@@ -103,11 +103,11 @@ class RefrigeratorFeatures(StrEnum):
 
     ECOFRIENDLY = "eco_friendly"
     EXPRESSMODE = "express_mode"
+    SABBATHMODE = "sabbath_mode"
     EXPRESSFRIDGE = "express_fridge"
     FRESHAIRFILTER = "fresh_air_filter"
     FRESHAIRFILTER_REMAIN_PERC = "fresh_air_filter_remain_perc"
     ICEPLUS = "ice_plus"
-    SABBATH = "sabbath_mode"
     SMARTSAVINGMODE = "smart_saving_mode"
     WATERFILTERUSED_MONTH = "water_filter_used_month"
     WATERFILTER_REMAIN_PERC = "water_filter_remain_perc"
