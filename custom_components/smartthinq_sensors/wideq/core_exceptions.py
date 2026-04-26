@@ -52,6 +52,10 @@ class DelayedResponseError(APIError):
     """The device delay in the response."""
 
 
+class UseOfficialAPIError(APIError):
+    """Requests stop responding suggesting to move to official public API."""
+
+
 class TokenError(APIError):
     """An authentication token was rejected."""
 
