@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
+
+from thinqconnect.integration import ExtendedProperty
 
 from homeassistant.components.water_heater import (
     STATE_ECO,
@@ -19,8 +21,15 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
+from .lge_device import LGEDevice
+from .official_control import (
+    async_call_official_set_job_mode,
+    async_call_official_set_target_temperature,
+    async_call_official_turn_off,
+    async_call_official_turn_on,
+)
+from .runtime_data import get_lge_devices
 from .wideq import (
     AirConditionerFeatures,
     DeviceType,
@@ -28,12 +37,7 @@ from .wideq import (
     WaterHeaterFeatures,
 )
 from .wideq.devices.ac import AWHP_MAX_TEMP, AWHP_MIN_TEMP, AirConditionerDevice
-from .wideq.devices.waterheater import (
-    DEFAULT_MAX_TEMP as WH_MAX_TEMP,
-    DEFAULT_MIN_TEMP as WH_MIN_TEMP,
-    WaterHeaterDevice,
-    WHMode,
-)
+from .wideq.devices.waterheater import WaterHeaterDevice, WHMode
 
 LGEAC_SUPPORT_FLAGS = (
     WaterHeaterEntityFeature.TARGET_TEMPERATURE
@@ -47,6 +51,10 @@ LGEWH_STATE_TO_HA = {
     WHMode.TURBO.name: STATE_PERFORMANCE,
     WHMode.VACATION.name: STATE_OFF,
 }
+OFFICIAL_WATER_HEATER_KEYS = (
+    ExtendedProperty.WATER_HEATER,
+    ExtendedProperty.WATER_BOILER,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,10 +63,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up LGE device water heater based on config_entry."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
-    _LOGGER.debug("Starting LGE ThinQ water heater setup...")
+    _LOGGER.debug("Starting LGE ThinQ water heater setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -68,7 +75,7 @@ async def async_setup_entry(
             return
 
         # WH devices
-        lge_water_heater = [
+        lge_water_heater: list[LGEWaterHeater] = [
             LGEWHWaterHeater(lge_device)
             for lge_device in lge_devices.get(DeviceType.WATER_HEATER, [])
         ]
@@ -94,7 +101,7 @@ async def async_setup_entry(
 class LGEWaterHeater(CoordinatorEntity, WaterHeaterEntity):
     """Base water heater device."""
 
-    def __init__(self, api: LGEDevice):
+    def __init__(self, api: LGEDevice) -> None:
         """Initialize the climate."""
         super().__init__(api.coordinator)
         self._api = api
@@ -117,8 +124,8 @@ class LGEWHWaterHeater(LGEWaterHeater):
         super().__init__(api)
         self._device: WaterHeaterDevice = api.device
         self._attr_unique_id = f"{api.unique_id}-WH"
-        self._supported_features = None
-        self._modes_lookup = None
+        self._supported_features: WaterHeaterEntityFeature | None = None
+        self._modes_lookup: dict[str, str] | None = None
 
     def _available_modes(self) -> dict[str, str]:
         """Return available modes from lookup dict."""
@@ -163,9 +170,15 @@ class LGEWHWaterHeater(LGEWaterHeater):
             return None
         return list(modes.values())
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
+            if await async_call_official_set_target_temperature(
+                self._api,
+                float(new_temp),
+                *OFFICIAL_WATER_HEATER_KEYS,
+            ):
+                return
             await self._device.set_target_temp(int(new_temp))
             self._api.async_set_updated()
 
@@ -175,6 +188,29 @@ class LGEWHWaterHeater(LGEWaterHeater):
         reverse_lookup = {v: k for k, v in modes.items()}
         if (new_mode := reverse_lookup.get(operation_mode)) is None:
             raise ValueError(f"Invalid operation_mode [{operation_mode}]")
+        official_mode = str(new_mode).lower()
+        if operation_mode == STATE_OFF:
+            if await async_call_official_turn_off(
+                self._api,
+                *OFFICIAL_WATER_HEATER_KEYS,
+            ):
+                return
+        elif await async_call_official_turn_on(
+            self._api,
+            *OFFICIAL_WATER_HEATER_KEYS,
+        ):
+            if await async_call_official_set_job_mode(
+                self._api,
+                official_mode,
+                *OFFICIAL_WATER_HEATER_KEYS,
+            ):
+                return
+        elif await async_call_official_set_job_mode(
+            self._api,
+            official_mode,
+            *OFFICIAL_WATER_HEATER_KEYS,
+        ):
+            return
         await self._device.set_op_mode(new_mode)
         self._api.async_set_updated()
 
@@ -189,26 +225,25 @@ class LGEWHWaterHeater(LGEWaterHeater):
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return self._api.state.device_features.get(WaterHeaterFeatures.HOT_WATER_TEMP)
+        return cast(
+            float | None,
+            self._api.state.device_features.get(WaterHeaterFeatures.HOT_WATER_TEMP),
+        )
 
     @property
     def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
-        return self._api.state.target_temp
+        return cast(float | None, self._api.state.target_temp)
 
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
-        if (min_value := self._device.target_temperature_min) is not None:
-            return min_value
-        return self._device.conv_temp_unit(WH_MIN_TEMP)
+        return self._device.target_temperature_min
 
     @property
     def max_temp(self) -> float:
         """Return the maximum temperature."""
-        if (max_value := self._device.target_temperature_max) is not None:
-            return max_value
-        return self._device.conv_temp_unit(WH_MAX_TEMP)
+        return self._device.target_temperature_max
 
 
 class LGEACWaterHeater(LGEWaterHeater):
@@ -240,7 +275,7 @@ class LGEACWaterHeater(LGEWaterHeater):
             return STATE_HEAT_PUMP
         return STATE_OFF
 
-    async def async_set_temperature(self, **kwargs) -> None:
+    async def async_set_temperature(self, **kwargs: Any) -> None:
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
             await self._device.set_hot_water_target_temp(int(new_temp))
@@ -248,7 +283,7 @@ class LGEACWaterHeater(LGEWaterHeater):
 
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set operation mode."""
-        if operation_mode not in self.operation_list:
+        if operation_mode not in (self.operation_list or []):
             raise ValueError(f"Invalid operation mode [{operation_mode}]")
         if operation_mode == self.current_operation:
             return
@@ -266,25 +301,26 @@ class LGEACWaterHeater(LGEWaterHeater):
     @property
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
-        return self._api.state.device_features.get(
-            AirConditionerFeatures.HOT_WATER_TEMP
+        return cast(
+            float | None,
+            self._api.state.device_features.get(AirConditionerFeatures.HOT_WATER_TEMP),
         )
 
     @property
     def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
-        return self._api.state.hot_water_target_temp
+        return cast(float | None, self._api.state.hot_water_target_temp)
 
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
         if (min_value := self._device.hot_water_target_temperature_min) is not None:
             return min_value
-        return self._device.conv_temp_unit(AWHP_MIN_TEMP)
+        return cast(float, self._device.conv_temp_unit(AWHP_MIN_TEMP))
 
     @property
     def max_temp(self) -> float:
         """Return the maximum temperature."""
         if (max_value := self._device.hot_water_target_temperature_max) is not None:
             return max_value
-        return self._device.conv_temp_unit(AWHP_MAX_TEMP)
+        return cast(float, self._device.conv_temp_unit(AWHP_MAX_TEMP))
