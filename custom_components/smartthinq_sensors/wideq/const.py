@@ -158,6 +158,7 @@ class WashDeviceFeatures(StrEnum):
     TUBCLEAN_COUNT = "tubclean_count"
     TURBOWASH = "turbo_wash"
     WATERTEMP = "water_temp"
+    WRINKLECARE = "wrinkle_care"
 
 
 class WaterHeaterFeatures(StrEnum):

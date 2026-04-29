@@ -169,6 +169,11 @@ WASH_DEV_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_registry_enabled_default=False,
     ),
+    ThinQBinarySensorEntityDescription(
+        key=WashDeviceFeatures.WRINKLECARE,
+        name="Wrinkle care",
+        entity_registry_enabled_default=False,
+    ),        
 )
 REFRIGERATOR_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
     ThinQBinarySensorEntityDescription(
