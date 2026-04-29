@@ -923,7 +923,9 @@ class Auth:
         )
         self.user_number = user_number
         self._token_created_on = (
-            datetime.now(timezone.utc) if access_token else datetime.min
+            datetime.now(timezone.utc)
+            if access_token
+            else datetime.min.replace(tzinfo=timezone.utc)
         )
 
     @property
