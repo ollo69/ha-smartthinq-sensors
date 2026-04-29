@@ -98,6 +98,7 @@ API2_ERRORS = {
     "0110": exc.InvalidCredentialError,
     "0111": exc.DelayedResponseError,
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
+    "9006": exc.UseOfficialAPIError,
     "9012": exc.UseOfficialAPIError,
     "9995": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
     "9999": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
@@ -422,10 +423,12 @@ class CoreAsync:
             if "resultCode" in result:
                 code = result["resultCode"]
                 if code != "0000":
-                    if code == "9012":  # this is message "consider using native API"
-                        # we refresh the client_id as work-around for message 9012
+                    if code in ("9006", "9012"):
+                        # this are messages "Please consider using the official API" or "consider using native API"
+                        # we refresh the client_id as work-around
                         _LOGGER.info(
-                            "Refreshing client ID after receiving msg 9012: %s", result
+                            "Refreshing client ID after receiving msg 9006 or 9012: %s",
+                            result,
                         )
                         self._get_client_id(user_number, True)
                     message = result.get("result") or "ThinQ APIv2 error"
