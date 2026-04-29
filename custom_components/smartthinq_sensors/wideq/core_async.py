@@ -98,6 +98,7 @@ API2_ERRORS = {
     "0110": exc.InvalidCredentialError,
     "0111": exc.DelayedResponseError,
     9000: exc.InvalidRequestError,  # Surprisingly, an integer (not a string).
+    "9006": exc.UseOfficialAPIError,
     "9012": exc.UseOfficialAPIError,
     "9995": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
     "9999": exc.FailedRequestError,  # This come as "other errors", we manage as not FailedRequestError.
