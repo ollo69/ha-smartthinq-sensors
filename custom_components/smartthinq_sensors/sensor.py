@@ -392,6 +392,50 @@ RANGE_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         unit_fn=lambda x: x.oven_temp_unit,
     ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_UPPER_TIMER_TIME,
+        name="Oven upper timer",
+        icon="mdi:timer-outline",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_UPPER_TIMER_STATE,
+        name="Oven upper timer state",
+        icon="mdi:timer-cog-outline",
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_UPPER_COOK_TIMER_TIME,
+        name="Oven upper cook time",
+        icon="mdi:timer-check-outline",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_UPPER_COOK_TIMER_STATE,
+        name="Oven upper cook time state",
+        icon="mdi:timer-cog-outline",
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_LOWER_TIMER_TIME,
+        name="Oven lower timer",
+        icon="mdi:timer-outline",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_LOWER_TIMER_STATE,
+        name="Oven lower timer state",
+        icon="mdi:timer-cog-outline",
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_LOWER_COOK_TIMER_TIME,
+        name="Oven lower cook time",
+        icon="mdi:timer-check-outline",
+        device_class=SensorDeviceClass.TIMESTAMP,
+    ),
+    ThinQSensorEntityDescription(
+        key=RangeFeatures.OVEN_LOWER_COOK_TIMER_STATE,
+        name="Oven lower cook time state",
+        icon="mdi:timer-cog-outline",
+    ),
 )
 AIR_PURIFIER_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
     ThinQSensorEntityDescription(
