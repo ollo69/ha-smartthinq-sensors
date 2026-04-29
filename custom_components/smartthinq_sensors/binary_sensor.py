@@ -198,6 +198,12 @@ DEHUMIDIFIER_BINARY_SENSORS: tuple[ThinQBinarySensorEntityDescription, ...] = (
         key=DehumidifierFeatures.WATER_TANK_FULL,
         name="Water Tank Full",
     ),
+    ThinQBinarySensorEntityDescription(
+        key=DehumidifierFeatures.NOTIFICATION_LIGHT,
+        name="Notification Light",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        value_fn=lambda x: x.notification_light,
+    ),
 )
 
 BINARY_SENSOR_ENTITIES = {
