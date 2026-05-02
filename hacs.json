@@ -1,7 +1,5 @@
 {
-  "name": "SmartThinQ LGE Sensors",
+  "name": "SmartThinQ LGE Sensors (with Shabbat fridge mode)",
   "content_in_root": false,
-  "zip_release": true,
-  "filename": "smartthinq_sensors.zip",
   "homeassistant": "2025.1.0"
 }
