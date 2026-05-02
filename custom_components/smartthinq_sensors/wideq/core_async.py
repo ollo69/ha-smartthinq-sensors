@@ -1434,6 +1434,30 @@ class Session:
         """Get a device's settings based on api V2."""
         return await self.get2(f"service/devices/{device_id}")
 
+    async def get_energy_history(
+        self,
+        device_id: str,
+        period: str = "day",
+        start_date: str = "",
+        end_date: str = "",
+    ) -> dict:
+        """Get laundry device energy consumption history from the V2 API.
+
+        period: "hour", "day", or "month"
+        start_date / end_date: YYYY-MM-DD (defaults to today)
+        Returns a dict with an "item" list of energy entries.
+        """
+        if not start_date:
+            start_date = datetime.now().strftime("%Y-%m-%d")
+        if not end_date:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+        path = (
+            f"service/laundry/{device_id}/energy-history"
+            f"?type=period&period={period}"
+            f"&startDate={start_date}&endDate={end_date}"
+        )
+        return await self.get2(path)
+
     async def delete_permission(self, device_id):
         """Delete permission on V1 device after a control command."""
         await self.post("rti/delControlPermission", {"deviceId": device_id})
