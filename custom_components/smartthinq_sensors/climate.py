@@ -47,6 +47,12 @@ ATTR_FRIDGE = "fridge"
 ATTR_FREEZER = "freezer"
 HVAC_MODE_NONE = "--"
 
+# AWHP (Air-to-Water Heat Pump) AI/Auto offset handling:
+# ThinQ encodes offset -5..+5 as 12..22 with base 17 (0 offset).
+AWHP_AI_BASE = 17
+AWHP_AI_MIN = -5
+AWHP_AI_MAX = 5
+
 # service definitions
 SERVICE_SET_SLEEP_TIME = "set_sleep_time"
 
@@ -270,6 +276,8 @@ class LGEACClimate(LGEClimate):
     @property
     def target_temperature_step(self) -> float:
         """Return the supported step of target temperature."""
+        if self._is_awhp_ai_offset_mode():
+            return 1.0
         return self._device.target_temperature_step
 
     @property
@@ -278,6 +286,14 @@ class LGEACClimate(LGEClimate):
         if self._device.temperature_unit == TemperatureUnit.FAHRENHEIT:
             return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
+
+    def _is_awhp_ai_offset_mode(self) -> bool:
+        """AWHP uses offset -5..+5 when ThinQ operation mode is AI."""
+        return (
+            self._device.is_air_to_water
+            and self._api.state.operation_mode == ACMode.AI.name
+            and self.temperature_unit == UnitOfTemperature.CELSIUS
+        )
 
     @property
     def hvac_mode(self) -> HVACMode:
@@ -312,7 +328,10 @@ class LGEACClimate(LGEClimate):
             await self._device.power(True)
         if operation_mode != HVAC_MODE_NONE:
             await self._device.set_op_mode(operation_mode)
+
         self._api.async_set_updated()
+        await self._api.coordinator.async_request_refresh()
+        self.async_write_ha_state()
 
     @property
     def hvac_modes(self) -> list[HVACMode]:
@@ -339,7 +358,10 @@ class LGEACClimate(LGEClimate):
         if not self._api.state.is_on:
             await self._device.power(True)
         await self._device.set_op_mode(operation_mode)
+
         self._api.async_set_updated()
+        await self._api.coordinator.async_request_refresh()
+        self.async_write_ha_state()
 
     @property
     def preset_modes(self) -> list[str] | None:
@@ -360,8 +382,12 @@ class LGEACClimate(LGEClimate):
 
     @property
     def target_temperature(self) -> float:
-        """Return the temperature we try to reach."""
-        return self._api.state.target_temp
+        temp = self._api.state.target_temp
+        if temp is None:
+            return temp
+        if self._is_awhp_ai_offset_mode():
+            return int(round(float(temp) - AWHP_AI_BASE))
+        return temp
 
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
@@ -371,8 +397,14 @@ class LGEACClimate(LGEClimate):
                 return
 
         if (new_temp := kwargs.get(ATTR_TEMPERATURE)) is not None:
+            if self._is_awhp_ai_offset_mode():
+                nt = int(round(float(new_temp)))
+                nt = max(AWHP_AI_MIN, min(AWHP_AI_MAX, nt))  # clamp -5..+5
+                new_temp = nt + AWHP_AI_BASE
             await self._device.set_target_temp(new_temp)
             self._api.async_set_updated()
+
+
 
     @property
     def fan_mode(self) -> str | None:
@@ -436,8 +468,12 @@ class LGEACClimate(LGEClimate):
     @property
     def min_temp(self) -> float:
         """Return the minimum temperature."""
+        if self._is_awhp_ai_offset_mode():
+            return float(AWHP_AI_MIN)
+
         if (min_value := self._device.target_temperature_min) is not None:
             return min_value
+
         return self._device.conv_temp_unit(
             AWHP_MIN_TEMP if self._device.is_air_to_water else DEFAULT_MIN_TEMP
         )
@@ -445,11 +481,16 @@ class LGEACClimate(LGEClimate):
     @property
     def max_temp(self) -> float:
         """Return the maximum temperature."""
+        if self._is_awhp_ai_offset_mode():
+            return float(AWHP_AI_MAX)
+
         if (max_value := self._device.target_temperature_max) is not None:
             return max_value
+
         return self._device.conv_temp_unit(
             AWHP_MAX_TEMP if self._device.is_air_to_water else DEFAULT_MAX_TEMP
         )
+
 
     async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
@@ -481,11 +522,6 @@ class LGERefrigeratorClimate(LGEClimate):
         if not self._wrap_device.device.set_values_allowed:
             return ClimateEntityFeature(0)
         return ClimateEntityFeature.TARGET_TEMPERATURE
-
-    @property
-    def target_temperature_step(self) -> float:
-        """Return the supported step of target temperature."""
-        return self._wrap_device.device.target_temperature_step
 
     @property
     def temperature_unit(self) -> str:

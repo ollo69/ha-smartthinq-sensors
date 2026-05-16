@@ -735,10 +735,18 @@ class AirConditionerDevice(Device):
         """Set the device's target temperature in Celsius degrees."""
         range_info = self._temperature_range
         conv_temp = self._f2c(temp)
-        if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
+
+        # AWHP (air-to-water) AI offset is encoded as 12..22 (base 17).
+        # Allow these values even if the normal water temp range is 20..50.
+        if self.is_air_to_water and (12 <= conv_temp <= 22):
+            pass
+        elif range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
+
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
         await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
+
+
 
     async def set_mode_airclean(self, status: bool):
         """Set the Airclean mode on or off."""
