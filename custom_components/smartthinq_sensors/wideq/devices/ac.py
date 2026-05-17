@@ -124,6 +124,30 @@ CMD_STATE_HOT_WATER_MODE = [CTRL_BASIC, "Set", STATE_HOT_WATER_MODE]
 CMD_STATE_HOT_WATER_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_HOT_WATER_TARGET_TEMP]
 CMD_STATE_MODE_AWHP_SILENT = [CTRL_BASIC, "Set", STATE_MODE_AWHP_SILENT]
 
+# AWHP Second Circuit Section
+STATE_2ND_CIRCUIT_ONOFF = ["2ndCircuitOnOff", "airState.2ndCircuit.onOff"]
+STATE_2ND_OPERATION = ["2ndOperation", "airState.2nd.operation"]
+STATE_2ND_CURRENT_TEMP = ["2ndTempCur", "airState.2nd.tempState.current"]
+STATE_2ND_TARGET_TEMP = ["2ndTempCfg", "airState.2nd.tempState.target"]
+STATE_2ND_WATER_OUT_TEMP = ["2ndWaterTempCur", "airState.2nd.tempState.outWaterCurrent"]
+STATE_2ND_WATER_MIN_TEMP = ["2ndWaterTempCoolMin", "airState.2nd.tempState.waterTempCoolMin"]
+STATE_2ND_WATER_MAX_TEMP = ["2ndWaterTempHeatMax", "airState.2nd.tempState.waterTempHeatMax"]
+STATE_2ND_AWHP_TEMP_MODE = ["2ndAwhpTempSwitch", "airState.2nd.miscFuncState.awhpTempSwitch"]
+STATE_2ND_AIR_TEMP_MIN = ["2ndAirTempMin", "airState.2nd.tempState.airTempHeatMin"]
+STATE_2ND_AIR_TEMP_MAX = ["2ndAirTempMax", "airState.2nd.tempState.airTempHeatMax"]
+
+CMD_STATE_2ND_CIRCUIT_ONOFF = [CTRL_BASIC, "Set", STATE_2ND_CIRCUIT_ONOFF]
+CMD_STATE_2ND_OPERATION = [CTRL_BASIC, "Set", STATE_2ND_OPERATION]
+CMD_STATE_2ND_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_2ND_TARGET_TEMP]
+CMD_STATE_2ND_AWHP_TEMP_MODE = [CTRL_BASIC, "Set", STATE_2ND_AWHP_TEMP_MODE]
+
+# ESS (Energy Storage System) Section
+STATE_ESS_BATTERY_REMAIN = ["EssBatteryRemain", "airState.ess.batteryRemain"]
+STATE_ESS_BATTERY_POWER = ["EssBatteryPower", "airState.ess.batteryPower"]
+STATE_ESS_SOLAR_POWER = ["EssSolarPower", "airState.ess.solarPower"]
+STATE_ESS_GRID_POWER = ["EssGridPower", "airState.ess.gridPower"]
+STATE_ESS_CONSUME_POWER = ["EssConsumePower", "airState.ess.consumePower"]
+
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
 # STATE_AUTODRY_MODE_V2 = "airState.miscFuncState.autoDry"
@@ -885,6 +909,44 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
         await self.set(keys[0], keys[1], key=keys[2], value=str(value))
 
+    # Second Circuit Control Methods
+    async def set_second_circuit_onoff(self, value: bool):
+        """Set the second circuit on or off."""
+        if not self.is_air_to_water:
+            raise ValueError("Second circuit not supported")
+        mode = 1 if value else 0
+        keys = self._get_cmd_keys(CMD_STATE_2ND_CIRCUIT_ONOFF)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_second_circuit_op_mode(self, mode: str):
+        """Set the second circuit operation mode to an operation mode value (e.g., 'HEAT', 'COOL', 'AUTO')."""
+        if not self.is_air_to_water:
+            raise ValueError("Second circuit not supported")
+        # Validate that the mode exists in ACMode enum
+        if mode not in [m.name for m in ACMode]:
+            raise ValueError(f"Invalid operation mode: {mode}")
+        keys = self._get_cmd_keys(CMD_STATE_2ND_OPERATION)
+        mode_value = self.model_info.enum_value(keys[2], ACMode[mode].value)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode_value)
+
+    async def set_second_circuit_target_temp(self, temp):
+        """Set the second circuit target temperature in Celsius degrees."""
+        if not self.is_air_to_water:
+            raise ValueError("Second circuit not supported")
+        # Get temperature range for second circuit
+        if (status := self._status) is not None:
+            min_temp = status.second_circuit_water_min_temp or AWHP_MIN_TEMP
+            max_temp = status.second_circuit_water_max_temp or AWHP_MAX_TEMP
+        else:
+            min_temp = AWHP_MIN_TEMP
+            max_temp = AWHP_MAX_TEMP
+
+        conv_temp = self._f2c(temp)
+        if not (min_temp <= conv_temp <= max_temp):
+            raise ValueError(f"Target temperature out of range: {temp}")
+        keys = self._get_cmd_keys(CMD_STATE_2ND_TARGET_TEMP)
+        await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
+
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
     ):
@@ -1385,6 +1447,160 @@ class AirConditionerStatus(DeviceStatus):
             return None
         return self._update_feature(
             AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False
+        )
+
+    # Second Circuit Properties
+    @property
+    def second_circuit_onoff(self):
+        """Return if second circuit is on."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_CIRCUIT_ONOFF)
+        if (value := self.to_int_or_none(self._data.get(key))) is None:
+            return None
+        status = value == 1
+        return self._update_feature(
+            AirConditionerFeatures.SECOND_CIRCUIT_ONOFF, status, False
+        )
+
+    @property
+    def second_circuit_operation(self):
+        """Return second circuit operation mode (e.g., 'Heat', 'Auto', 'Cool')."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_OPERATION)
+        
+        # Try to get as enum first (for string values)
+        value = self.lookup_enum(key, True)
+        
+        # If that fails, try to get as numeric value and convert
+        if value is None:
+            if (raw_value := self.to_int_or_none(self._data.get(key))) is not None:
+                # For AWHP second circuit, operation modes are:
+                # 0 = Off/Cool, 1 = Auto, 2 = Heat
+                # Map numeric values to ACMode enum names
+                mode_map = {
+                    0: ACMode.COOL.name,
+                    1: "AUTO",  # AUTO mode
+                    2: ACMode.HEAT.name,
+                }
+                value = mode_map.get(raw_value)
+        
+        return self._update_feature(
+            AirConditionerFeatures.SECOND_CIRCUIT_OPERATION, value, False
+        )
+
+    @property
+    def second_circuit_current_temp(self):
+        """Return second circuit current temperature."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_CURRENT_TEMP)
+        value = self._str_to_temp(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.SECOND_CIRCUIT_CURRENT_TEMP, value, False
+        )
+
+    @property
+    def second_circuit_target_temp(self):
+        """Return second circuit target temperature."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_TARGET_TEMP)
+        return self._str_to_temp(self._data.get(key))
+
+    @property
+    def second_circuit_water_out_temp(self):
+        """Return second circuit out water current temperature."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_WATER_OUT_TEMP)
+        value = self._str_to_temp(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.SECOND_CIRCUIT_WATER_OUT_TEMP, value, False
+        )
+
+    @property
+    def second_circuit_water_min_temp(self):
+        """Return second circuit water target minimum allowed temperature."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_WATER_MIN_TEMP)
+        return self._str_to_temp(self._data.get(key))
+
+    @property
+    def second_circuit_water_max_temp(self):
+        """Return second circuit water target maximum allowed temperature."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_WATER_MAX_TEMP)
+        return self._str_to_temp(self._data.get(key))
+
+    @property
+    def second_circuit_temp_mode(self):
+        """Return if second circuit is set in air or water mode."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_2ND_AWHP_TEMP_MODE)
+        if (value := self.lookup_enum(key, True)) is not None:
+            if value == AWHP_MODE_AIR:
+                return AWHP_MODE_AIR
+        return AWHP_MODE_WATER
+
+    # ESS (Energy Storage System) Properties
+    @property
+    def ess_battery_remain(self):
+        """Return ESS battery remaining percentage."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_ESS_BATTERY_REMAIN)
+        value = self.to_int_or_none(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.ESS_BATTERY_REMAIN, value, False
+        )
+
+    @property
+    def ess_battery_power(self):
+        """Return ESS battery power in watts."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_ESS_BATTERY_POWER)
+        value = self.to_int_or_none(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.ESS_BATTERY_POWER, value, False
+        )
+
+    @property
+    def ess_solar_power(self):
+        """Return ESS solar power in watts."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_ESS_SOLAR_POWER)
+        value = self.to_int_or_none(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.ESS_SOLAR_POWER, value, False
+        )
+
+    @property
+    def ess_grid_power(self):
+        """Return ESS grid power in watts."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_ESS_GRID_POWER)
+        value = self.to_int_or_none(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.ESS_GRID_POWER, value, False
+        )
+
+    @property
+    def ess_consume_power(self):
+        """Return ESS consumed power in watts."""
+        if not self._device.is_air_to_water:
+            return None
+        key = self._get_state_key(STATE_ESS_CONSUME_POWER)
+        value = self.to_int_or_none(self._data.get(key))
+        return self._update_feature(
+            AirConditionerFeatures.ESS_CONSUME_POWER, value, False
         )
 
     def _update_features(self):

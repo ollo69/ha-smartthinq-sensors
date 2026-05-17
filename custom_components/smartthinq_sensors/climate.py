@@ -147,6 +147,17 @@ async def async_setup_entry(
             for lge_device in lge_devices.get(DeviceType.AC, [])
         ]
 
+        # AC second circuit (for AWHP with 2nd circuit)
+        lge_climates.extend(
+            [
+                LGEACSecondCircuitClimate(lge_device)
+                for lge_device in lge_devices.get(DeviceType.AC, [])
+                if lge_device.device.is_air_to_water
+                and hasattr(lge_device.device._status, "second_circuit_onoff")
+                and lge_device.device._status.second_circuit_onoff is not None
+            ]
+        )
+
         # Refrigerator devices
         lge_climates.extend(
             [
@@ -454,6 +465,152 @@ class LGEACClimate(LGEClimate):
     async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
         await self._device.set_reservation_sleep_time(sleep_time)
+
+
+class LGEACSecondCircuitClimate(LGEClimate):
+    """Air-to-Water Heat Pump second circuit climate device."""
+
+    _attr_has_entity_name = True
+    _attr_supported_features = (
+        ClimateEntityFeature.TARGET_TEMPERATURE
+        | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TURN_ON
+    )
+
+    # Operation mode mapping for second circuit
+    # Based on numeric values: 0=COOL, 1=AUTO, 2=HEAT
+    _operation_mode_map = {
+        "AUTO": HVACMode.AUTO,
+        "HEAT": HVACMode.HEAT,
+        "COOL": HVACMode.COOL,
+    }
+
+    def __init__(self, api: LGEDevice) -> None:
+        """Initialize the second circuit climate."""
+        super().__init__(api)
+        self._device: AirConditionerDevice = api.device
+        self._attr_unique_id = f"{api.unique_id}-AC-Second-Circuit"
+        self._attr_name = "Second circuit"
+        
+        # Determine supported HVAC modes based on device capabilities
+        self._attr_hvac_modes = self._get_supported_hvac_modes()
+    
+    def _get_supported_hvac_modes(self) -> list[HVACMode]:
+        """Get supported HVAC modes for second circuit."""
+        # For AWHP second circuits, check what modes are available on the main circuit
+        # as the second circuit typically supports the same operation modes
+        supported_modes = [HVACMode.OFF]
+        
+        # Get the main circuit's operation modes
+        main_circuit_modes = self._device.op_modes
+        
+        # Map main circuit modes to second circuit HVAC modes
+        for mode in main_circuit_modes:
+            # For AWHP, relevant modes are typically HEAT, COOL, and AUTO
+            if mode == ACMode.HEAT.name and HVACMode.HEAT not in supported_modes:
+                supported_modes.append(HVACMode.HEAT)
+            elif mode == ACMode.COOL.name and HVACMode.COOL not in supported_modes:
+                supported_modes.append(HVACMode.COOL)
+            elif mode in [ACMode.AI.name, ACMode.ACO.name] and HVACMode.AUTO not in supported_modes:
+                # AI (Artificial Intelligence) and ACO (Auto Change Over) are auto modes
+                supported_modes.append(HVACMode.AUTO)
+        
+        # If no modes found, default to HEAT (most common for AWHP second circuits)
+        if len(supported_modes) == 1:  # Only OFF
+            supported_modes.append(HVACMode.HEAT)
+        
+        return supported_modes
+
+    @property
+    def target_temperature_step(self) -> float:
+        """Return the supported step of target temperature."""
+        return self._device.target_temperature_step
+
+    @property
+    def temperature_unit(self) -> str:
+        """Return the unit of measurement used by the platform."""
+        if self._device.temperature_unit == TemperatureUnit.FAHRENHEIT:
+            return UnitOfTemperature.FAHRENHEIT
+        return UnitOfTemperature.CELSIUS
+
+    @property
+    def hvac_mode(self) -> HVACMode:
+        """Return hvac operation mode."""
+        if not self._api.state.second_circuit_onoff:
+            return HVACMode.OFF
+        
+        # Get the actual operation mode from the device
+        op_mode = self._api.state.second_circuit_operation
+        if op_mode:
+            return self._operation_mode_map.get(op_mode, HVACMode.HEAT)
+        
+        return HVACMode.HEAT
+
+    async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Set new target hvac mode."""
+        if hvac_mode == HVACMode.OFF:
+            await self._device.set_second_circuit_onoff(False)
+            self._api.async_set_updated()
+            return
+        
+        # Map HVAC mode back to operation mode name
+        reverse_lookup = {v: k for k, v in self._operation_mode_map.items()}
+        operation_mode = reverse_lookup.get(hvac_mode)
+        
+        if operation_mode is None:
+            raise ValueError(f"Invalid hvac_mode [{hvac_mode}]")
+        
+        # Turn on the circuit if it's off
+        if not self._api.state.second_circuit_onoff:
+            await self._device.set_second_circuit_onoff(True)
+        
+        # Set the operation mode
+        await self._device.set_second_circuit_op_mode(operation_mode)
+        self._api.async_set_updated()
+
+    @property
+    def current_temperature(self) -> float | None:
+        """Return the current temperature."""
+        # For AWHP second circuit, use water output temperature
+        return self._api.state.second_circuit_water_out_temp
+
+    @property
+    def target_temperature(self) -> float | None:
+        """Return the temperature we try to reach."""
+        return self._api.state.second_circuit_target_temp
+
+    async def async_set_temperature(self, **kwargs) -> None:
+        """Set new target temperature."""
+        if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
+            raise ValueError("No temperature specified")
+
+        if (hvac_mode := kwargs.get(ATTR_HVAC_MODE)) is not None:
+            await self.async_set_hvac_mode(hvac_mode)
+
+        await self._device.set_second_circuit_target_temp(temperature)
+        self._api.async_set_updated()
+
+    @property
+    def min_temp(self) -> float:
+        """Return the minimum temperature."""
+        if (status := self._api.state) is not None:
+            min_temp = status.second_circuit_water_min_temp
+            if min_temp is not None:
+                return min_temp
+        return AWHP_MIN_TEMP
+
+    @property
+    def max_temp(self) -> float:
+        """Return the maximum temperature."""
+        if (status := self._api.state) is not None:
+            max_temp = status.second_circuit_water_max_temp
+            if max_temp is not None:
+                return max_temp
+        return AWHP_MAX_TEMP
+
+    async def async_set_sleep_time(self, sleep_time: int) -> None:
+        """Not supported for second circuit."""
+        raise NotImplementedError("Sleep time not supported for second circuit")
 
 
 class LGERefrigeratorClimate(LGEClimate):
