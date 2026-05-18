@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import date, datetime, time, timezone
 import logging
 from typing import Any, Callable
 
@@ -714,6 +714,16 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._wrap_device and self.entity_description.unit_fn is not None:
             return self.entity_description.unit_fn(self._wrap_device)
         return super().native_unit_of_measurement
+
+    @property
+    def last_reset(self) -> datetime | None:
+        """Return midnight today for daily-resetting TOTAL energy sensors."""
+        if (
+            self.entity_description.state_class == SensorStateClass.TOTAL
+            and self.entity_description.device_class == SensorDeviceClass.ENERGY
+        ):
+            return datetime.combine(date.today(), time.min, tzinfo=timezone.utc)
+        return None
 
     @property
     def icon(self):
