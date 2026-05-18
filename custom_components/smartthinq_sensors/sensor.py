@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import time
+from datetime import date, datetime, time, timezone
 import logging
 from typing import Any, Callable
 
@@ -21,6 +21,7 @@ from homeassistant.const import (
     PERCENTAGE,
     STATE_UNAVAILABLE,
     EntityCategory,
+    UnitOfEnergy,
     UnitOfPower,
     UnitOfTime,
 )
@@ -181,6 +182,35 @@ WASH_DEV_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         icon="mdi:clock-outline",
         value_fn=lambda x: x.reserve_time,
         entity_registry_enabled_default=False,
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.ENERGY_TODAY,
+        name="Energy today",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        icon="mdi:calendar-today",
+        value_fn=lambda x: x.energy_today,
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.ENERGY_THIS_MONTH,
+        name="Energy this month",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        icon="mdi:calendar-month",
+        entity_registry_enabled_default=False,
+        value_fn=lambda x: x.energy_this_month,
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.ENERGY_LAST_CYCLE,
+        name="Energy last cycle",
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.WATT_HOUR,
+        icon="mdi:washing-machine",
+        entity_registry_enabled_default=False,
+        value_fn=lambda x: x.energy_last_cycle,
     ),
 )
 REFRIGERATOR_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
@@ -684,6 +714,16 @@ class LGESensor(CoordinatorEntity, SensorEntity):
         if self._wrap_device and self.entity_description.unit_fn is not None:
             return self.entity_description.unit_fn(self._wrap_device)
         return super().native_unit_of_measurement
+
+    @property
+    def last_reset(self) -> datetime | None:
+        """Return midnight today for daily-resetting TOTAL energy sensors."""
+        if (
+            self.entity_description.state_class == SensorStateClass.TOTAL
+            and self.entity_description.device_class == SensorDeviceClass.ENERGY
+        ):
+            return datetime.combine(date.today(), time.min, tzinfo=timezone.utc)
+        return None
 
     @property
     def icon(self):
