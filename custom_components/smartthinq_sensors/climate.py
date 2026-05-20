@@ -168,7 +168,7 @@ async def async_setup_entry(
     platform = current_platform.get()
     platform.async_register_entity_service(
         SERVICE_SET_SLEEP_TIME,
-        {vol.Required("sleep_time"): int},
+        {vol.Required("sleep_time"): vol.Coerce(int)},
         "async_set_sleep_time",
     )
 
