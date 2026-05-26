@@ -47,6 +47,13 @@ DEFAULT_SCAN_INTERVAL = 300
 MIN_SCAN_INTERVAL = 30
 MAX_SCAN_INTERVAL = 3600
 
+# Faster polling interval used while a device is actively running.
+# LG's API returns a 9006 rate-limit warning below ~35 s.
+CONF_ACTIVE_SCAN_INTERVAL = "active_scan_interval"
+DEFAULT_ACTIVE_SCAN_INTERVAL = 35
+MIN_ACTIVE_SCAN_INTERVAL = 30
+MAX_ACTIVE_SCAN_INTERVAL = 3600
+
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 

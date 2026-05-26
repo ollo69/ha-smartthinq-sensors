@@ -44,15 +44,19 @@ from homeassistant.helpers.selector import (
 
 from . import LGEAuthentication, is_valid_ha_version
 from .const import (
+    CONF_ACTIVE_SCAN_INTERVAL,
     CONF_LANGUAGE,
     CONF_OAUTH2_URL,
     CONF_SCAN_INTERVAL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     CONF_USE_REDIRECT,
+    DEFAULT_ACTIVE_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_ACTIVE_SCAN_INTERVAL,
     MAX_SCAN_INTERVAL,
+    MIN_ACTIVE_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     __min_ha_version__,
 )
@@ -418,15 +422,29 @@ class SmartThinQOptionsFlowHandler(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        current = self.config_entry.options.get(
+        current_interval = self.config_entry.options.get(
             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
+        current_active_interval = self.config_entry.options.get(
+            CONF_ACTIVE_SCAN_INTERVAL, DEFAULT_ACTIVE_SCAN_INTERVAL
         )
         schema = vol.Schema(
             {
-                vol.Required(CONF_SCAN_INTERVAL, default=current): NumberSelector(
+                vol.Required(CONF_SCAN_INTERVAL, default=current_interval): NumberSelector(
                     NumberSelectorConfig(
                         min=MIN_SCAN_INTERVAL,
                         max=MAX_SCAN_INTERVAL,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="s",
+                    )
+                ),
+                vol.Required(
+                    CONF_ACTIVE_SCAN_INTERVAL, default=current_active_interval
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=MIN_ACTIVE_SCAN_INTERVAL,
+                        max=MAX_ACTIVE_SCAN_INTERVAL,
                         step=1,
                         mode=NumberSelectorMode.BOX,
                         unit_of_measurement="s",

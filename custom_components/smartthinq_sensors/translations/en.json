@@ -61,9 +61,14 @@
     "step": {
       "init": {
         "title": "SmartThinQ options",
-        "description": "How often the integration polls the LG cloud (seconds). Default is 300 (5 min). Lower values risk a 24-hour LG account block. Increase if you have many devices or hit bans.",
+        "description": "Configure polling rates. The idle interval is used when all devices are off. The active interval is used while a device is running. Lower active values give faster updates but risk LG account bans if set too aggressively.",
         "data": {
-          "scan_interval": "Scan interval (seconds)"
+          "scan_interval": "Idle scan interval (seconds)",
+          "active_scan_interval": "Active scan interval (seconds)"
+        },
+        "data_description": {
+          "scan_interval": "How often to poll when devices are off. Default: 300 s (5 min). Min: 30 s.",
+          "active_scan_interval": "How often to poll while a device is running. Default: 35 s. Min: 30 s."
         }
       }
     }
@@ -71,7 +76,10 @@
   "entity": {
     "number": {
       "scan_interval": {
-        "name": "Scan interval"
+        "name": "Idle scan interval"
+      },
+      "active_scan_interval": {
+        "name": "Active scan interval"
       }
     }
   }

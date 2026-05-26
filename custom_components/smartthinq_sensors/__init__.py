@@ -33,11 +33,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
     CLIENT,
+    CONF_ACTIVE_SCAN_INTERVAL,
     CONF_LANGUAGE,
     CONF_OAUTH2_URL,
     CONF_SCAN_INTERVAL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
+    DEFAULT_ACTIVE_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     LGE_DEVICES,
@@ -234,8 +236,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Forward the scan_interval number entity before any LG call so users can
     # adjust the polling rate even when the LG cloud is unreachable.
-    hass.data.setdefault(DOMAIN, {})[CONF_SCAN_INTERVAL] = int(
+    domain_data = hass.data.setdefault(DOMAIN, {})
+    domain_data[CONF_SCAN_INTERVAL] = int(
         entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+    )
+    domain_data[CONF_ACTIVE_SCAN_INTERVAL] = int(
+        entry.options.get(CONF_ACTIVE_SCAN_INTERVAL, DEFAULT_ACTIVE_SCAN_INTERVAL)
     )
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.NUMBER])
     entry.async_on_unload(entry.add_update_listener(_options_update_listener))
@@ -355,22 +361,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Apply OptionsFlow changes to running coordinators without a reload."""
     new_interval = int(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+    new_active_interval = int(
+        entry.options.get(CONF_ACTIVE_SCAN_INTERVAL, DEFAULT_ACTIVE_SCAN_INTERVAL)
+    )
     domain_data = hass.data.get(DOMAIN, {})
-    if domain_data.get(CONF_SCAN_INTERVAL) == new_interval:
+    if (
+        domain_data.get(CONF_SCAN_INTERVAL) == new_interval
+        and domain_data.get(CONF_ACTIVE_SCAN_INTERVAL) == new_active_interval
+    ):
         return
     domain_data[CONF_SCAN_INTERVAL] = new_interval
-    delta = timedelta(seconds=new_interval)
+    domain_data[CONF_ACTIVE_SCAN_INTERVAL] = new_active_interval
     for devices in domain_data.get(LGE_DEVICES, {}).values():
         for lge_device in devices:
             if lge_device.coordinator is not None:
-                lge_device.coordinator.update_interval = delta
+                lge_device._apply_scan_interval()
                 # Reschedule so the new interval takes effect immediately
                 # rather than waiting out the old one.
                 if lge_device.coordinator.data is not None:
                     lge_device.coordinator.async_set_updated_data(
                         lge_device.coordinator.data
                     )
-    _LOGGER.info("ThinQ scan interval updated to %d seconds", new_interval)
+    _LOGGER.info(
+        "ThinQ scan intervals updated: idle=%ds, active=%ds",
+        new_interval,
+        new_active_interval,
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -505,6 +521,20 @@ class LGEDevice:
         if self._coordinator:
             self._coordinator.async_set_updated_data(self._state)
 
+    def _apply_scan_interval(self) -> None:
+        """Set the coordinator interval based on whether the device is currently on."""
+        if not self._coordinator:
+            return
+        domain_data = self._hass.data.get(DOMAIN, {})
+        is_on = getattr(self._state, "is_on", False)
+        if is_on:
+            interval = domain_data.get(
+                CONF_ACTIVE_SCAN_INTERVAL, DEFAULT_ACTIVE_SCAN_INTERVAL
+            )
+        else:
+            interval = domain_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+        self._coordinator.update_interval = timedelta(seconds=interval)
+
     async def _create_coordinator(self) -> None:
         """Get the coordinator for a specific device."""
         interval = self._hass.data.get(DOMAIN, {}).get(
@@ -577,6 +607,7 @@ class LGEDevice:
             # _LOGGER.debug('Status attributes: %s', l)
             self._disc_count = 0
             self._state = state
+        self._apply_scan_interval()
 
 
 async def lge_devices_setup(
