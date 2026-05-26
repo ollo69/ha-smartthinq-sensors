@@ -44,8 +44,10 @@ class AirConditionerFeatures(StrEnum):
     PM1 = "pm1"
     PM10 = "pm10"
     PM25 = "pm25"
+    POWER = "power"
     RESERVATION_SLEEP_TIME = "reservation_sleep_time"
     ROOM_TEMP = "room_temperature"
+    UVNANO = "uvnano"
     WATER_IN_TEMP = "water_in_temperature"
     WATER_OUT_TEMP = "water_out_temperature"
 
