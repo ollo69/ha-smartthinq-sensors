@@ -237,6 +237,27 @@ class LGEWashDevice(LGEBaseDevice):
         return "-"
 
     @property
+    def energy_today(self) -> int | None:
+        """Return energy consumed today in Wh."""
+        if self._api.state:
+            return self._api.state.energy_today
+        return None
+
+    @property
+    def energy_this_month(self) -> int | None:
+        """Return energy consumed this month in Wh."""
+        if self._api.state:
+            return self._api.state.energy_this_month
+        return None
+
+    @property
+    def energy_last_cycle(self) -> int | None:
+        """Return energy of the most recent wash day in Wh."""
+        if self._api.state:
+            return self._api.state.energy_last_cycle
+        return None
+
+    @property
     def extra_state_attributes(self):
         """Return the optional state attributes."""
         data = {
