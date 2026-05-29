@@ -24,6 +24,7 @@ SUPPORT_LIGHT = ["SupportLight", "support.light"]
 SUPPORT_PAC_MODE = ["SupportPACMode", "support.pacMode"]
 SUPPORT_RAC_MODE = ["SupportRACMode", "support.racMode"]
 SUPPORT_RAC_SUBMODE = ["SupportRACSubMode", "support.racSubMode"]
+SUPPORT_SAC_SUBMODE = ["SupportSACSubMode", "support.sacSubMode"]
 
 SUPPORT_VANE_HSTEP = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_STEP_LEFT_RIGHT_W"]
 SUPPORT_VANE_VSTEP = [SUPPORT_RAC_SUBMODE, "@AC_MAIN_WIND_DIRECTION_STEP_UP_DOWN_W"]
@@ -42,6 +43,7 @@ SUPPORT_PM = [
     SUPPORT_AIR_POLUTION,
     ["@PM1_0_SUPPORT", "@PM2_5_SUPPORT", "@PM10_SUPPORT"],
 ]
+SUPPORT_BELL_SOUND = [SUPPORT_SAC_SUBMODE, "@SUPPORT_SOUND_ON_OFF"]
 
 CTRL_BASIC = ["Control", "basicCtrl"]
 CTRL_WIND_DIRECTION = ["Control", "wDirCtrl"]
@@ -79,6 +81,7 @@ STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
 STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
 STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
 STATE_RESERVATION_SLEEP_TIME = ["SleepTime", "airState.reservation.sleepTime"]
+STATE_BELL_SOUND = ["BellSound", "airState.bellSound.control"]
 
 FILTER_TYPES = [
     [
@@ -106,6 +109,7 @@ CMD_STATE_MODE_AIRCLEAN = [CTRL_BASIC, "Set", STATE_MODE_AIRCLEAN]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
+CMD_STATE_BELL_SOUND = [CTRL_BASIC, "Set", STATE_BELL_SOUND]
 
 # AWHP Section
 STATE_AWHP_TEMP_MODE = ["AwhpTempSwitch", "airState.miscFuncState.awhpTempSwitch"]
@@ -151,6 +155,9 @@ MODE_ON = "@ON"
 
 MODE_AIRCLEAN_OFF = "@AC_MAIN_AIRCLEAN_OFF_W"
 MODE_AIRCLEAN_ON = "@AC_MAIN_AIRCLEAN_ON_W"
+
+BUZZER_ON = "@BUZZER_ON"
+BUZZER_OFF = "@BUZZER_OFF"
 
 AWHP_MODE_AIR = "@AIR"
 AWHP_MODE_WATER = "@WATER"
@@ -590,6 +597,15 @@ class AirConditionerDevice(Device):
         return self._is_mode_supported(SUPPORT_AIRCLEAN)
 
     @cached_property
+    def is_bell_sound_supported(self):
+        """Return if bell sound (buzzer) control is supported."""
+        if self._is_mode_supported(SUPPORT_BELL_SOUND):
+            return True
+        # fallback: check if model info defines the bellSound control key
+        key = self._get_state_key(STATE_BELL_SOUND)
+        return self.model_info.enum_value(key, BUZZER_ON) is not None
+
+    @cached_property
     def supported_ligth_modes(self):
         """Return light switch modes supported."""
         if self._is_mode_supported(SUPPORT_LIGHT_SWITCH):
@@ -747,6 +763,16 @@ class AirConditionerDevice(Device):
 
         keys = self._get_cmd_keys(CMD_STATE_MODE_AIRCLEAN)
         mode_key = MODE_AIRCLEAN_ON if status else MODE_AIRCLEAN_OFF
+        mode = self.model_info.enum_value(keys[2], mode_key)
+        await self.set(keys[0], keys[1], key=keys[2], value=mode)
+
+    async def set_bell_sound(self, status: bool):
+        """Set the bell sound (buzzer) on or off."""
+        if not self.is_bell_sound_supported:
+            raise ValueError("Bell sound control not supported")
+
+        keys = self._get_cmd_keys(CMD_STATE_BELL_SOUND)
+        mode_key = BUZZER_ON if status else BUZZER_OFF
         mode = self.model_info.enum_value(keys[2], mode_key)
         await self.set(keys[0], keys[1], key=keys[2], value=mode)
 
@@ -1189,6 +1215,17 @@ class AirConditionerStatus(DeviceStatus):
         return self._update_feature(AirConditionerFeatures.MODE_AIRCLEAN, status, False)
 
     @property
+    def bell_sound(self):
+        """Return bell sound (buzzer) status."""
+        if not self._device.is_bell_sound_supported:
+            return None
+        key = self._get_state_key(STATE_BELL_SOUND)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == BUZZER_ON
+        return self._update_feature(AirConditionerFeatures.BELL_SOUND, status, False)
+
+    @property
     def mode_jet(self):
         """Return Jet Mode status."""
         if self._device.supported_mode_jet == JetModeSupport.NONE:
@@ -1397,6 +1434,7 @@ class AirConditionerStatus(DeviceStatus):
             self.pm25,
             self.pm1,
             self.mode_airclean,
+            self.bell_sound,
             self.mode_jet,
             self.lighting_display,
             self.water_in_current_temp,
