@@ -119,10 +119,12 @@ STATE_HOT_WATER_MIN_TEMP = ["HotWaterTempMin", "airState.tempState.hotWaterTempM
 STATE_HOT_WATER_MAX_TEMP = ["HotWaterTempMax", "airState.tempState.hotWaterTempMax"]
 STATE_HOT_WATER_MODE = ["HotWater", "airState.miscFuncState.hotWater"]
 STATE_MODE_AWHP_SILENT = ["SilentMode", "airState.miscFuncState.silentAWHP"]
+STATE_MODE_HOT_WATER_POWER = ["HotWaterPower", "airState.miscFuncState.powerHotWater"]
 
 CMD_STATE_HOT_WATER_MODE = [CTRL_BASIC, "Set", STATE_HOT_WATER_MODE]
 CMD_STATE_HOT_WATER_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_HOT_WATER_TARGET_TEMP]
 CMD_STATE_MODE_AWHP_SILENT = [CTRL_BASIC, "Set", STATE_MODE_AWHP_SILENT]
+CMD_STATE_MODE_HOT_WATER_POWER = [CTRL_BASIC, "Set", STATE_MODE_HOT_WATER_POWER]
 
 CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
 
@@ -792,6 +794,16 @@ class AirConditionerDevice(Device):
             raise ValueError(f"Invalid AWHP silent mode: {mode}")
         await self.set(keys[0], keys[1], key=keys[2], value=silent_mode)
 
+    async def set_mode_hot_water_power(self, value: bool):
+        """Set the awhp Power mode on or off."""
+        if not self.is_air_to_water:
+            raise ValueError("AWHP Power mode not supported")
+        mode = MODE_ON if value else MODE_OFF
+        keys = self._get_cmd_keys(CMD_STATE_MODE_HOT_WATER_POWER)
+        if (power_mode := self.model_info.enum_value(keys[2], mode)) is None:
+            raise ValueError(f"Invalid AWHP Power mode: {mode}")
+        await self.set(keys[0], keys[1], key=keys[2], value=power_mode)
+
     async def hot_water_mode(self, value: bool):
         """Set the device hot water mode on or off."""
         if not self.is_water_heater_supported:
@@ -1345,6 +1357,19 @@ class AirConditionerStatus(DeviceStatus):
         )
 
     @property
+    def mode_hot_water_power(self):
+        """Return AWHP Power mode status."""
+        if not (self._device.is_air_to_water and self.is_info_v2):
+            return None
+        key = self._get_state_key(STATE_MODE_HOT_WATER_POWER)
+        if (value := self.lookup_enum(key, True)) is None:
+            return None
+        status = value == MODE_ON
+        return self._update_feature(
+            AirConditionerFeatures.MODE_HOT_WATER_POWER, status, False
+        )
+
+    @property
     def hot_water_current_temp(self):
         """Return AWHP hot water current temperature."""
         if not self._device.is_water_heater_supported:
@@ -1402,6 +1427,7 @@ class AirConditionerStatus(DeviceStatus):
             self.water_in_current_temp,
             self.water_out_current_temp,
             self.mode_awhp_silent,
+            self.mode_hot_water_power,
             self.hot_water_current_temp,
             self.reservation_sleep_time,
         ]
