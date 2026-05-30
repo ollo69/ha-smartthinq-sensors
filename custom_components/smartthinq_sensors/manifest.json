@@ -3,11 +3,12 @@
   "name": "SmartThinQ LGE Sensors",
   "codeowners": ["@ollo69"],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": ["lg_thinq"],
   "documentation": "https://github.com/ollo69/ha-smartthinq-sensors",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/ollo69/ha-smartthinq-sensors/issues",
+  "loggers": ["thinqconnect"],
   "requirements": [
     "pycountry>=23.12.11",
     "xmltodict>=0.13.0",

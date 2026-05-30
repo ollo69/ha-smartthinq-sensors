@@ -90,33 +90,35 @@ class NetworkType(Enum):
 
 
 class DeviceInfo:
-    """
-    Details about a user's device.
+    """Details about a user's device.
+
     This is populated from a JSON dictionary provided by the API.
     """
 
     def __init__(self, data: dict[str, Any]) -> None:
         """Initialize the object."""
         self._data = data
-        self._device_id = None
-        self._device_type = None
-        self._platform_type = None
-        self._network_type = None
+        self._device_id: str | None = None
+        self._device_type: DeviceType | None = None
+        self._platform_type: PlatformType | None = None
+        self._network_type: NetworkType | None = None
 
-    def as_dict(self):
-        """Return the data dictionary"""
+    def as_dict(self) -> dict[str, Any]:
+        """Return the data dictionary."""
         if not self._data:
             return {}
         return self._data.copy()
 
-    def _get_data_key(self, keys):
+    def _get_data_key(self, keys: list[str]) -> str:
         """Get valid key from a list of possible keys."""
         for key in keys:
             if key in self._data:
                 return key
         return ""
 
-    def _get_data_value(self, key, default: Any = StateOptions.UNKNOWN):
+    def _get_data_value(
+        self, key: str | list[str], default: Any = StateOptions.UNKNOWN
+    ) -> Any:
         """Get data value for a specific key or list of keys."""
         if isinstance(key, list):
             vkey = self._get_data_key(key)
@@ -128,43 +130,44 @@ class DeviceInfo:
     @property
     def model_id(self) -> str:
         """Return the model name."""
-        return self._get_data_value(["modelName", "modelNm"])
+        return str(self._get_data_value(["modelName", "modelNm"]))
 
     @property
     def device_id(self) -> str:
         """Return the device id."""
         if self._device_id is None:
-            self._device_id = self._data.get(KEY_DEVICE_ID, StateOptions.UNKNOWN)
+            self._device_id = str(self._data.get(KEY_DEVICE_ID, StateOptions.UNKNOWN))
         return self._device_id
 
     @property
     def name(self) -> str:
         """Return the device name."""
-        return self._data.get("alias", self.device_id)
+        return str(self._data.get("alias", self.device_id))
 
     @property
-    def model_info_url(self) -> str:
+    def model_info_url(self) -> str | None:
         """Return the url used to retrieve model info."""
-        return self._get_data_value(["modelJsonUrl", "modelJsonUri"], default=None)
+        value = self._get_data_value(["modelJsonUrl", "modelJsonUri"], default=None)
+        return str(value) if value is not None else None
 
     @property
-    def model_lang_pack_url(self) -> str:
+    def model_lang_pack_url(self) -> str | None:
         """Return the url used to retrieve model language pack."""
-        return self._get_data_value(
-            ["langPackModelUrl", "langPackModelUri"], default=None
-        )
+        value = self._get_data_value(["langPackModelUrl", "langPackModelUri"], default=None)
+        return str(value) if value is not None else None
 
     @property
-    def product_lang_pack_url(self) -> str:
+    def product_lang_pack_url(self) -> str | None:
         """Return the url used to retrieve product info."""
-        return self._get_data_value(
+        value = self._get_data_value(
             ["langPackProductTypeUrl", "langPackProductTypeUri"], default=None
         )
+        return str(value) if value is not None else None
 
     @property
     def model_name(self) -> str:
         """Return the model name for the device."""
-        return self._get_data_value(["modelName", "modelNm"])
+        return str(self._get_data_value(["modelName", "modelNm"]))
 
     @property
     def macaddress(self) -> str | None:
@@ -175,22 +178,23 @@ class DeviceInfo:
     def firmware(self) -> str | None:
         """Return the device firmware version."""
         if fw_ver := self._data.get("fwVer"):
-            return fw_ver
+            return str(fw_ver)
         if (fw_ver := self._data.get("modemInfo")) is not None:
             if isinstance(fw_ver, dict):
-                return fw_ver.get("appVersion")
-            return fw_ver
+                app_version = fw_ver.get("appVersion")
+                return str(app_version) if app_version is not None else None
+            return str(fw_ver)
         return None
 
     @property
     def devicestate(self) -> str:
         """The kind of device, as a `DeviceType` value."""
-        return self._get_data_value("deviceState")
+        return str(self._get_data_value("deviceState"))
 
     @property
     def isonline(self) -> bool:
         """The kind of device, as a `DeviceType` value."""
-        return self._data.get("online", False)
+        return bool(self._data.get("online", False))
 
     @property
     def type(self) -> DeviceType:

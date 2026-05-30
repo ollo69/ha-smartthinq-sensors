@@ -1,18 +1,20 @@
-"""------------------for WATER HEATER"""
+"""Support for water heater devices."""
 
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any, cast
 
 from ..backports.functools import cached_property
 from ..const import TemperatureUnit, WaterHeaterFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
 from ..core_util import TempUnitConversion
-from ..device import Device, DeviceStatus
+from ..device import Device, DeviceStatus, ThinQSnapshotProvider
 from ..device_info import DeviceInfo
 
 CTRL_BASIC = ["Control", "basicCtrl"]
+type CommandKeys = list[str | list[str]]
 
 STATE_POWER_V1 = "InOutInstantPower"
 
@@ -25,10 +27,10 @@ STATE_CURRENT_TEMP = ["TempCur", "airState.tempState.hotWaterCurrent"]
 STATE_TARGET_TEMP = ["TempCfg", "airState.tempState.hotWaterTarget"]
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 
-CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
-CMD_STATE_TARGET_TEMP = [CTRL_BASIC, "Set", STATE_TARGET_TEMP]
+CMD_STATE_OP_MODE: CommandKeys = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
+CMD_STATE_TARGET_TEMP: CommandKeys = [CTRL_BASIC, "Set", STATE_TARGET_TEMP]
 
-CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
+CMD_ENABLE_EVENT_V2: CommandKeys = ["allEventEnable", "Set", "airState.mon.timeout"]
 
 DEFAULT_MIN_TEMP = 35
 DEFAULT_MAX_TEMP = 60
@@ -65,10 +67,16 @@ class WaterHeaterDevice(Device):
         self,
         client: ClientAsync,
         device_info: DeviceInfo,
-        temp_unit=TemperatureUnit.CELSIUS,
-    ):
+        temp_unit: TemperatureUnit = TemperatureUnit.CELSIUS,
+        snapshot_provider: ThinQSnapshotProvider | None = None,
+    ) -> None:
         """Initialize WaterHeaterDevice object."""
-        super().__init__(client, device_info, WaterHeaterStatus(self))
+        super().__init__(
+            client,
+            device_info,
+            WaterHeaterStatus(self),
+            snapshot_provider=snapshot_provider,
+        )
         self._temperature_unit = (
             TemperatureUnit.FAHRENHEIT
             if temp_unit == TemperatureUnit.FAHRENHEIT
@@ -80,23 +88,24 @@ class WaterHeaterDevice(Device):
 
         self._unit_conv = TempUnitConversion()
 
-    def _f2c(self, value):
+    def _f2c(self, value: float) -> float:
         """Convert Fahrenheit to Celsius temperatures for this device if required."""
         if self._temperature_unit == TemperatureUnit.CELSIUS:
             return value
-        return self._unit_conv.f2c(value, self.model_info)
+        input_value: int | str = int(value) if value.is_integer() else str(value)
+        return cast(float, self._unit_conv.f2c(input_value, self.model_info))
 
-    def conv_temp_unit(self, value):
+    def conv_temp_unit(self, value: float) -> float:
         """Convert Celsius to Fahrenheit temperatures for this device if required."""
         if self._temperature_unit == TemperatureUnit.CELSIUS:
             return float(value)
-        return self._unit_conv.c2f(value, self.model_info)
+        return cast(float, self._unit_conv.c2f(value, self.model_info))
 
     @cached_property
-    def _temperature_range(self):
+    def _temperature_range(self) -> list[float]:
         """Get valid temperature range for model."""
         key = self._get_state_key(STATE_TARGET_TEMP)
-        range_info = self.model_info.value(key)
+        range_info = cast(Any, self.model_info.value(key))
         if not range_info:
             min_temp = DEFAULT_MIN_TEMP
             max_temp = DEFAULT_MAX_TEMP
@@ -106,33 +115,33 @@ class WaterHeaterDevice(Device):
         return [min_temp, max_temp]
 
     @cached_property
-    def op_modes(self):
+    def op_modes(self) -> list[str]:
         """Return a list of available operation modes."""
         return self._get_property_values(SUPPORT_OPERATION_MODE, WHMode)
 
     @property
-    def temperature_unit(self):
+    def temperature_unit(self) -> TemperatureUnit:
         """Return the unit used for temperature."""
         return self._temperature_unit
 
     @property
-    def target_temperature_step(self):
+    def target_temperature_step(self) -> float:
         """Return target temperature step used."""
         return TEMP_STEP_WHOLE
 
     @property
-    def target_temperature_min(self):
+    def target_temperature_min(self) -> float:
         """Return minimum value for target temperature."""
         temp_range = self._temperature_range
         return self.conv_temp_unit(temp_range[0])
 
     @property
-    def target_temperature_max(self):
+    def target_temperature_max(self) -> float:
         """Return maximum value for target temperature."""
         temp_range = self._temperature_range
         return self.conv_temp_unit(temp_range[1])
 
-    async def set_op_mode(self, mode):
+    async def set_op_mode(self, mode: str) -> None:
         """Set the device's operating mode to an `OpMode` value."""
         if mode not in self.op_modes:
             raise ValueError(f"Invalid operating mode: {mode}")
@@ -140,39 +149,46 @@ class WaterHeaterDevice(Device):
         mode_value = self.model_info.enum_value(keys[2], WHMode[mode].value)
         await self.set(keys[0], keys[1], key=keys[2], value=mode_value)
 
-    async def set_target_temp(self, temp):
+    async def set_target_temp(self, temp: float) -> None:
         """Set the device's target temperature in Celsius degrees."""
         range_info = self._temperature_range
         conv_temp = self._f2c(temp)
         if range_info and not (range_info[0] <= conv_temp <= range_info[1]):
             raise ValueError(f"Target temperature out of range: {temp}")
         keys = self._get_cmd_keys(CMD_STATE_TARGET_TEMP)
-        await self.set(keys[0], keys[1], key=keys[2], value=conv_temp)
+        await self.set(keys[0], keys[1], key=keys[2], value=str(conv_temp))
 
-    async def get_power(self):
+    async def get_power(self) -> int:
         """Get the instant power usage in watts of the whole unit."""
         if not self._current_power_supported:
             return 0
         try:
             value = await self._get_config(STATE_POWER_V1)
-            return value[STATE_POWER_V1]
+            return cast(int, value[STATE_POWER_V1])
         except (ValueError, InvalidRequestError):
             # Device does not support whole unit instant power usage
             self._current_power_supported = False
             return 0
 
     async def set(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
-    ):
+        self,
+        ctrl_key: str,
+        command: str | None,
+        *,
+        key: str | None = None,
+        value: str | None = None,
+        data: str | None = None,
+        ctrl_path: str | None = None,
+    ) -> None:
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
         )
-        if self._status:
+        if key is not None and self._status:
             self._status.update_status(key, value)
 
-    def reset_status(self):
-        """Reset the device's status"""
+    def reset_status(self) -> WaterHeaterStatus:
+        """Reset the device's status."""
         self._status = WaterHeaterStatus(self)
         return self._status
 
@@ -184,7 +200,7 @@ class WaterHeaterDevice(Device):
     #    # this command is to get power usage on V1 device
     #    self._current_power = await self.get_power()
 
-    async def _pre_update_v2(self):
+    async def _pre_update_v2(self) -> None:
         """Call additional methods before data update for v2 API."""
         # this command is to get power and temp info on V2 device
         keys = self._get_cmd_keys(CMD_ENABLE_EVENT_V2)
@@ -211,19 +227,21 @@ class WaterHeaterStatus(DeviceStatus):
 
     _device: WaterHeaterDevice
 
-    def __init__(self, device: WaterHeaterDevice, data: dict | None = None):
+    def __init__(
+        self, device: WaterHeaterDevice, data: dict[str, Any] | None = None
+    ) -> None:
         """Initialize device status."""
         super().__init__(device, data)
-        self._operation = None
+        self._operation: str | None = None
 
-    def _str_to_temp(self, str_temp):
+    def _str_to_temp(self, str_temp: Any) -> float | None:
         """Convert a string to either an `int` or a `float` temperature."""
         temp = self._str_to_num(str_temp)
         if not temp:  # value 0 return None!!!
             return None
         return self._device.conv_temp_unit(temp)
 
-    def _get_operation(self):
+    def _get_operation(self) -> ACOp | None:
         """Get current operation."""
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
@@ -236,7 +254,7 @@ class WaterHeaterStatus(DeviceStatus):
         except ValueError:
             return None
 
-    def update_status(self, key, value):
+    def update_status(self, key: str | list[str], value: Any) -> bool:
         """Update device status."""
         if not super().update_status(key, value):
             return False
@@ -245,21 +263,21 @@ class WaterHeaterStatus(DeviceStatus):
         return True
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return if device is on."""
         if not (operation := self._get_operation()):
             return False
         return operation != ACOp.OFF
 
     @property
-    def operation(self):
+    def operation(self) -> str | None:
         """Return current device operation."""
         if not (operation := self._get_operation()):
             return None
         return operation.name
 
     @property
-    def operation_mode(self):
+    def operation_mode(self) -> str | None:
         """Return current device operation mode."""
         key = self._get_state_key(STATE_OPERATION_MODE)
         if (value := self.lookup_enum(key, True)) is None:
@@ -270,20 +288,24 @@ class WaterHeaterStatus(DeviceStatus):
             return None
 
     @property
-    def current_temp(self):
+    def current_temp(self) -> str | None:
         """Return current temperature."""
         key = self._get_state_key(STATE_CURRENT_TEMP)
         value = self._str_to_temp(self._data.get(key))
-        return self._update_feature(WaterHeaterFeatures.HOT_WATER_TEMP, value, False)
+        if value is None:
+            return None
+        return self._update_feature(
+            WaterHeaterFeatures.HOT_WATER_TEMP, str(value), False
+        )
 
     @property
-    def target_temp(self):
+    def target_temp(self) -> float | None:
         """Return target temperature."""
         key = self._get_state_key(STATE_TARGET_TEMP)
         return self._str_to_temp(self._data.get(key))
 
     @property
-    def energy_current(self):
+    def energy_current(self) -> str | None:
         """Return current energy usage."""
         key = self._get_state_key(STATE_POWER)
         if (value := self.to_int_or_none(self._data.get(key))) is None:
@@ -291,9 +313,11 @@ class WaterHeaterStatus(DeviceStatus):
         if value <= 50:
             # decrease power for devices that always return 50 when standby
             value = 5
-        return self._update_feature(WaterHeaterFeatures.ENERGY_CURRENT, value, False)
+        return self._update_feature(
+            WaterHeaterFeatures.ENERGY_CURRENT, str(value), False
+        )
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         _ = [
             self.current_temp,
             self.energy_current,

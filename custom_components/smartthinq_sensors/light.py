@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, cast
 
 from homeassistant.components.light import (
     ATTR_EFFECT,
@@ -19,21 +20,22 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
 from .device_helpers import LGEBaseDevice
+from .lge_device import LGEDevice
+from .runtime_data import get_lge_devices
 from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQLightEntityDescription(LightEntityDescription):
     """A class that describes ThinQ light entities."""
 
     value_fn: Callable[[Any], str] | None = None
     effects_fn: Callable[[Any], list[str]] | None = None
-    set_effect_fn: Callable[[Any], Awaitable[None]] | None = None
+    set_effect_fn: Callable[[Any, str], Awaitable[None]] | None = None
     turn_off_fn: Callable[[Any], Awaitable[None]] | None = None
     turn_on_fn: Callable[[Any], Awaitable[None]] | None = None
 
@@ -79,10 +81,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE selects."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
-    _LOGGER.debug("Starting LGE ThinQ light setup...")
+    _LOGGER.debug("Starting LGE ThinQ light setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -109,18 +110,18 @@ async def async_setup_entry(
 
 
 class LGELight(CoordinatorEntity, LightEntity):
-    """Class to control lights for LGE device"""
+    """Class to control lights for LGE device."""
 
     entity_description: ThinQLightEntityDescription
     _attr_has_entity_name = True
-    _attr_supported_color_modes = set(ColorMode.ONOFF)
+    _attr_supported_color_modes = {ColorMode.ONOFF}
     _attr_color_mode = ColorMode.ONOFF
 
     def __init__(
         self,
         api: LGEDevice,
         description: ThinQLightEntityDescription,
-    ):
+    ) -> None:
         """Initialize the light."""
         super().__init__(api.coordinator)
         self._api = api
@@ -128,11 +129,11 @@ class LGELight(CoordinatorEntity, LightEntity):
         self.entity_description = description
         self._attr_unique_id = f"{api.unique_id}-{description.key}-light"
         self._attr_device_info = api.device_info
-        self._turn_off_effect = None
-        self._last_effect = None
+        self._turn_off_effect: str | None = None
+        self._last_effect: str | None = None
         self._attr_effect_list = self._get_light_effects()
 
-    def _get_light_effects(self) -> list[str]:
+    def _get_light_effects(self) -> list[str] | None:
         """Get available light effects."""
         if self.entity_description.effects_fn is None:
             return None
@@ -156,10 +157,14 @@ class LGELight(CoordinatorEntity, LightEntity):
     @property
     def effect(self) -> str | None:
         """Return the current effect."""
+        effect: str | None
         if self.entity_description.value_fn is not None:
             effect = self.entity_description.value_fn(self._api)
         else:
-            effect = self._api.state.device_features.get(self.entity_description.key)
+            effect = cast(
+                str | None,
+                self._api.state.device_features.get(self.entity_description.key),
+            )
 
         off_effect = self._turn_off_effect
         if not effect or (off_effect and effect == off_effect):
@@ -171,17 +176,19 @@ class LGELight(CoordinatorEntity, LightEntity):
         """Return if light is on."""
         if self._turn_off_effect is not None:
             return self.effect is not None
-        return self._api.state.is_on
+        return cast(bool, self._api.state.is_on)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
-        effect = kwargs.get(ATTR_EFFECT)
+        effect = cast(str | None, kwargs.get(ATTR_EFFECT))
         is_on = self.is_on
         if self.entity_description.turn_on_fn is not None:
             if not is_on:
                 await self.entity_description.turn_on_fn(self._api)
         elif effect is None:
-            effect = self._last_effect or self.effect_list[0]
+            effect_list = self.effect_list or []
+            if not (effect := self._last_effect or next(iter(effect_list), None)):
+                raise NotImplementedError
 
         if not effect and is_on:
             return
@@ -201,5 +208,5 @@ class LGELight(CoordinatorEntity, LightEntity):
             self._last_effect = self.effect
             await self.entity_description.set_effect_fn(self._api, effect)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
         self._api.async_set_updated()

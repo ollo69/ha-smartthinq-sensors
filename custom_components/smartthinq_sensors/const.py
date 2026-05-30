@@ -5,6 +5,7 @@ PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
 ISSUE_URL = f"{PROJECT_URL}issues"
 
 DOMAIN = "smartthinq_sensors"
+OFFICIAL_CLIENT_PREFIX = "home-assistant"
 
 MIN_HA_MAJ_VER = 2025
 MIN_HA_MIN_VER = 7
@@ -33,15 +34,13 @@ ATTR_OVEN_TEMP_UNIT = "oven_temp_unit"
 
 # configuration
 CONF_LANGUAGE = "language"
+CONF_OFFICIAL_CLIENT_ID = "official_client_id"
+CONF_OFFICIAL_PAT = "official_pat"
 CONF_OAUTH2_URL = "oauth2_url"
 CONF_USE_API_V2 = "use_api_v2"
 CONF_USE_HA_SESSION = "use_ha_session"
 CONF_USE_REDIRECT = "use_redirect"
 
-# Polling interval (seconds) - user-adjustable via OptionsFlow / number entity.
-# LG cloud blocks accounts that poll too aggressively. Default raised from
-# the original hardcoded 30 s to 300 s (5 min) so fresh installs and existing
-# users without an explicit override avoid the ban.
 CONF_SCAN_INTERVAL = "scan_interval"
 DEFAULT_SCAN_INTERVAL = 300
 MIN_SCAN_INTERVAL = 30
@@ -51,6 +50,9 @@ CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 
 LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
+LGE_OFFICIAL_DISCOVERY = f"{DOMAIN}_official_discovery"
+LGE_TRACE_EVENT = f"{DOMAIN}_trace_event"
+SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
 
 DEFAULT_ICON = "def_icon"
 DEFAULT_SENSOR = "default"

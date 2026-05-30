@@ -1,4 +1,4 @@
-"""Number platform exposing the SmartThinQ scan_interval option."""
+"""Number platform exposing the SmartThinQ scan interval option."""
 
 from __future__ import annotations
 
@@ -21,12 +21,12 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the scan_interval number entity for this config entry."""
+    """Set up the scan interval number entity for this config entry."""
     async_add_entities([SmartThinQScanIntervalNumber(config_entry)])
 
 
 class SmartThinQScanIntervalNumber(NumberEntity):
-    """Polling interval (seconds) shared by all SmartThinQ coordinators."""
+    """Polling interval shared by all SmartThinQ community coordinators."""
 
     _attr_has_entity_name = True
     _attr_translation_key = "scan_interval"
@@ -39,12 +39,12 @@ class SmartThinQScanIntervalNumber(NumberEntity):
     _attr_icon = "mdi:timer-cog-outline"
 
     def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize."""
+        """Initialize the number entity."""
         self._config_entry = config_entry
         self._attr_unique_id = f"{config_entry.entry_id}-scan_interval"
 
     async def async_added_to_hass(self) -> None:
-        """Refresh state whenever the option is changed via OptionsFlow."""
+        """Refresh state whenever options change."""
 
         async def _options_changed(_hass: HomeAssistant, _entry: ConfigEntry) -> None:
             self.async_write_ha_state()
@@ -53,13 +53,13 @@ class SmartThinQScanIntervalNumber(NumberEntity):
 
     @property
     def native_value(self) -> float:
-        """Return the current interval (seconds)."""
+        """Return the current interval in seconds."""
         return float(
             self._config_entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         )
 
     async def async_set_native_value(self, value: float) -> None:
-        """Persist the new interval; the options listener picks it up live."""
+        """Persist the new interval."""
         self.hass.config_entries.async_update_entry(
             self._config_entry,
             options={**self._config_entry.options, CONF_SCAN_INTERVAL: int(value)},

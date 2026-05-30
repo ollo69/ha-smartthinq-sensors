@@ -2,34 +2,39 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import logging
-from typing import Any, Awaitable, Callable
+from typing import Any, cast
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import LGEDevice
-from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .const import LGE_DISCOVERY_NEW
+from .lge_device import LGEDevice
+from .runtime_data import get_lge_devices
 from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
+from .wideq.core_exceptions import InvalidDeviceStatus
 
 _LOGGER = logging.getLogger(__name__)
+_DEFAULT_SELECTED_COURSE = "Current course"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQSelectRequiredKeysMixin:
     """Mixin for required keys."""
 
     options_fn: Callable[[Any], list[str]]
-    select_option_fn: Callable[[Any], Awaitable[None]]
+    select_option_fn: Callable[[Any, str], Awaitable[None]]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThinQSelectEntityDescription(
     SelectEntityDescription, ThinQSelectRequiredKeysMixin
 ):
@@ -46,7 +51,7 @@ WASH_DEV_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         icon="mdi:tune-vertical-variant",
         options_fn=lambda x: x.device.course_list,
         select_option_fn=lambda x, option: x.device.select_start_course(option),
-        available_fn=lambda x: x.device.select_course_enabled,
+        available_fn=lambda x: bool(x.device.course_list) and x.available,
         value_fn=lambda x: x.device.selected_course,
     ),
 )
@@ -71,7 +76,7 @@ MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
 
 SELECT_ENTITIES = {
     DeviceType.MICROWAVE: MICROWAVE_SELECT,
-    **{dev_type: WASH_DEV_SELECT for dev_type in WM_DEVICE_TYPES},
+    **dict.fromkeys(WM_DEVICE_TYPES, WASH_DEV_SELECT),
 }
 
 
@@ -93,10 +98,9 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE selects."""
-    entry_config = hass.data[DOMAIN]
-    lge_cfg_devices = entry_config.get(LGE_DEVICES)
+    lge_cfg_devices = get_lge_devices(hass)
 
-    _LOGGER.debug("Starting LGE ThinQ select setup...")
+    _LOGGER.debug("Starting LGE ThinQ select setup")
 
     @callback
     def _async_discover_device(lge_devices: dict) -> None:
@@ -123,7 +127,7 @@ async def async_setup_entry(
 
 
 class LGESelect(CoordinatorEntity, SelectEntity):
-    """Class to control selects for LGE device"""
+    """Class to control selects for LGE device."""
 
     entity_description: ThinQSelectEntityDescription
     _attr_has_entity_name = True
@@ -132,7 +136,7 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         self,
         api: LGEDevice,
         description: ThinQSelectEntityDescription,
-    ):
+    ) -> None:
         """Initialize the select."""
         super().__init__(api.coordinator)
         self._api = api
@@ -141,20 +145,50 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         self._attr_device_info = api.device_info
         self._attr_options = self.entity_description.options_fn(self._api)
 
+    def _hybrid_logical_prefix(self) -> str | None:
+        """Return the hybrid logical attribute prefix for the current device."""
+        return {
+            DeviceType.WASHER: "washer",
+            DeviceType.DRYER: "dryer",
+            DeviceType.DISHWASHER: "dishwasher",
+        }.get(self._api.type)
+
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
-        await self.entity_description.select_option_fn(self._api, option)
+        try:
+            await self.entity_description.select_option_fn(self._api, option)
+        except InvalidDeviceStatus as exc:
+            raise ServiceValidationError(
+                "Course selection is not available in the device's current state."
+            ) from exc
         self._api.async_set_updated()
 
     @property
     def current_option(self) -> str | None:
         """Return the selected entity option to represent the entity state."""
+        if self.entity_description.key == "course_selection":
+            logical_prefix = self._hybrid_logical_prefix()
+            if logical_prefix:
+                hybrid_course = self._api.get_hybrid_value(
+                    f"{logical_prefix}.current_course"
+                )
+                if hybrid_course not in (None, ""):
+                    return str(hybrid_course)
+
         if self.entity_description.value_fn is not None:
-            return self.entity_description.value_fn(self._api)
+            current_option = self.entity_description.value_fn(self._api)
+            if (
+                self.entity_description.key == "course_selection"
+                and current_option == _DEFAULT_SELECTED_COURSE
+            ):
+                default_course = getattr(self._api.device, "default_course", None)
+                if default_course not in (None, ""):
+                    return str(default_course)
+            return current_option
 
         if self._api.state:
             feature = self.entity_description.key
-            return self._api.state.device_features.get(feature)
+            return cast(str | None, self._api.state.device_features.get(feature))
 
         return None
 
@@ -162,6 +196,61 @@ class LGESelect(CoordinatorEntity, SelectEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         is_avail = True
-        if self.entity_description.available_fn is not None:
+        if self.entity_description.key == "course_selection":
+            logical_prefix = self._hybrid_logical_prefix()
+            if logical_prefix:
+                hybrid_run_state = self._api.get_hybrid_value(
+                    f"{logical_prefix}.run_state"
+                )
+                community_power_state = self._api.get_hybrid_value("state.state")
+                community_standby = self._api.get_hybrid_value("state.standby")
+                feature_standby = self._api.get_hybrid_value("feature.standby")
+                feature_remote_start = self._api.get_hybrid_value("feature.remote_start")
+                state_remote_start = self._api.get_hybrid_value("state.remoteStart")
+                official_remote_control = self._api.get_hybrid_value(
+                    f"{logical_prefix}.remote_control_enabled"
+                )
+
+                run_state_powered_off = isinstance(
+                    hybrid_run_state, str
+                ) and hybrid_run_state.lower() in {"power_off", "off", "none"}
+                community_powered_off = isinstance(
+                    community_power_state, str
+                ) and community_power_state.upper() in {"POWEROFF", "POWER_OFF", "OFF"}
+                remote_start_ready = (
+                    feature_remote_start in {True, "on", "ON"}
+                    or (
+                        isinstance(state_remote_start, str)
+                        and state_remote_start.upper().endswith("_ON")
+                    )
+                    or official_remote_control is True
+                )
+                standby_off = (
+                    feature_standby in {False, "off", "OFF"}
+                    or (
+                        isinstance(community_standby, str)
+                        and community_standby.upper() in {"STANDBY_OFF", "OFF"}
+                    )
+                )
+                initial_ready = isinstance(
+                    community_power_state, str
+                ) and community_power_state.upper() == "INITIAL"
+
+                if run_state_powered_off:
+                    return False
+                if community_powered_off:
+                    return False
+
+                if self._api.type in {DeviceType.WASHER, DeviceType.DRYER}:
+                    is_avail = bool(self.entity_description.options_fn(self._api)) and (
+                        self._api.device.select_course_enabled or remote_start_ready
+                    )
+                else:
+                    is_avail = bool(self.entity_description.options_fn(self._api)) and (
+                        self._api.device.select_course_enabled
+                        or remote_start_ready
+                        or (initial_ready and standby_off)
+                    )
+        elif self.entity_description.available_fn is not None:
             is_avail = self.entity_description.available_fn(self._api)
         return self._api.available and is_avail

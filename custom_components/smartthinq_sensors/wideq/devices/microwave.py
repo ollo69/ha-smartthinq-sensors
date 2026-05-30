@@ -1,15 +1,16 @@
-"""------------------for Microwave"""
+"""------------------for Microwave."""
 
 from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, time
 from enum import Enum
+from typing import Any, cast
 
 from ..backports.functools import cached_property
 from ..const import BIT_OFF, MicroWaveFeatures, StateOptions
 from ..core_async import ClientAsync
-from ..device import Device, DeviceStatus
+from ..device import Device, DeviceStatus, ThinQSnapshotProvider
 from ..device_info import DeviceInfo
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
@@ -39,6 +40,8 @@ CMD_SET_VENTLAMP = "setVentLampLevel"
 
 KEY_DATASET = "dataSetList"
 KEY_OVENSTATE = "ovenState"
+
+CommandPayload = dict[str, Any]
 
 CMD_PREF_DICT = {
     "command": "Set",
@@ -123,16 +126,27 @@ class WeightUnit(Enum):
 class MicroWaveDevice(Device):
     """A higher-level interface for a microwave."""
 
-    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+    def __init__(
+        self,
+        client: ClientAsync,
+        device_info: DeviceInfo,
+        snapshot_provider: ThinQSnapshotProvider | None = None,
+    ) -> None:
         """Init the device."""
-        super().__init__(client, device_info, MicroWaveStatus(self))
+        super().__init__(
+            client,
+            device_info,
+            MicroWaveStatus(self),
+            snapshot_provider=snapshot_provider,
+        )
 
-    def reset_status(self):
+    def reset_status(self) -> MicroWaveStatus:
+        """Reset the device status."""
         self._status = MicroWaveStatus(self)
         return self._status
 
     # Settings
-    def _prepare_command_ventlamp(self):
+    def _prepare_command_ventlamp(self) -> dict[str, str | int]:
         """Prepare vent / lamp command."""
         if not self._status:
             return {}
@@ -147,9 +161,15 @@ class MicroWaveDevice(Device):
             CMD_LAMPLEVEL: int(lamp_level),
         }
 
-    def _prepare_command(self, ctrl_key, command, key, value):
-        """
-        Prepare command for specific device.
+    def _prepare_command(
+        self,
+        ctrl_key: str,
+        command: str | CommandPayload | None,
+        key: str | None,
+        value: str | None,
+    ) -> CommandPayload | None:
+        """Prepare command for specific device.
+
         Overwrite for specific device settings.
         """
         if self._should_poll:
@@ -163,20 +183,22 @@ class MicroWaveDevice(Device):
         else:
             full_cmd = {}
 
-        cmd = deepcopy(cmd_key)
-        def_cmd = cmd[KEY_DATASET].get(KEY_OVENSTATE, {})
-        cmd[KEY_DATASET][KEY_OVENSTATE] = {**def_cmd, **full_cmd, **command}
+        cmd = cast(CommandPayload, deepcopy(cmd_key))
+        data_set = cast(dict[str, Any], cmd[KEY_DATASET])
+        def_cmd = cast(dict[str, Any], data_set.get(KEY_OVENSTATE, {}))
+        command_data = cast(dict[str, Any], command or {})
+        data_set[KEY_OVENSTATE] = {**def_cmd, **full_cmd, **command_data}
 
         return cmd
 
     # Clock
-    async def set_clock_display(self, turn_on: bool):
+    async def set_clock_display(self, turn_on: bool) -> None:
         """Set display clock on/off."""
         state = MODE_CLKON if turn_on else MODE_CLKOFF
         cmd = {CMD_CLOCKDISPLAY: state}
         await self.set_val(CMD_SET_PREFERENCE, cmd, key=STATE_CLOCKDISPLAY, value=state)
 
-    async def set_time(self, time_wanted: time | None = None):
+    async def set_time(self, time_wanted: time | None = None) -> None:
         """Set time on microwave."""
         if time_wanted is None:
             time_wanted = datetime.now().time()
@@ -189,7 +211,7 @@ class MicroWaveDevice(Device):
         await self.set_val(CMD_SET_PREFERENCE, cmd)
 
     # Sound
-    async def set_sound(self, turn_on: bool):
+    async def set_sound(self, turn_on: bool) -> None:
         """Set sound on/off."""
         state = MODE_VOLON if turn_on else MODE_VOLOFF
         cmd = {CMD_SOUND: state}
@@ -201,7 +223,7 @@ class MicroWaveDevice(Device):
         """Get display scroll speed list."""
         return self._get_property_values(STATE_DEFROSTWMODE, WeightUnit)
 
-    async def set_defrost_weight_unit(self, unit: str):
+    async def set_defrost_weight_unit(self, unit: str) -> None:
         """Set weight unit kg/lb."""
         if unit not in self.defrost_weight_units:
             raise ValueError(f"Invalid display unit: {unit}")
@@ -214,7 +236,7 @@ class MicroWaveDevice(Device):
         """Get display scroll speed list."""
         return self._get_property_values(STATE_DISPLAYSCROLL, DisplayScrollSpeed)
 
-    async def set_display_scroll_speed(self, speed: str):
+    async def set_display_scroll_speed(self, speed: str) -> None:
         """Set display scroll speed."""
         if speed not in self.display_scroll_speeds:
             raise ValueError(f"Invalid display scroll speed: {speed}")
@@ -239,7 +261,7 @@ class MicroWaveDevice(Device):
         """Get display scroll speed list."""
         return list(self._supported_light_modes)
 
-    async def set_light_mode(self, mode: str):
+    async def set_light_mode(self, mode: str) -> None:
         """Set light mode."""
         if mode not in self.light_modes:
             raise ValueError(f"Invalid light mode: {mode}")
@@ -265,7 +287,7 @@ class MicroWaveDevice(Device):
         """Get vent speed list."""
         return list(self._supported_vent_speeds)
 
-    async def set_vent_speed(self, option: str):
+    async def set_vent_speed(self, option: str) -> None:
         """Set vent speed."""
         if option not in self.vent_speeds:
             raise ValueError(f"Invalid vent mode: {option}")
@@ -276,9 +298,15 @@ class MicroWaveDevice(Device):
 
         await self.set_val(CMD_SET_VENTLAMP, cmd, key=STATE_VENTLEVEL, value=level)
 
-    async def set_val(self, ctrl_key, command, key=None, value=None):
+    async def set_val(
+        self,
+        ctrl_key: str,
+        command: CommandPayload,
+        key: str | None = None,
+        value: str | None = None,
+    ) -> None:
         """Set a device's control for microwave and update status."""
-        await self.set(ctrl_key, command)
+        await self.set(ctrl_key, cast(Any, command))
         if self._status and key is not None:
             self._status.update_status(key, value)
 
@@ -293,8 +321,7 @@ class MicroWaveDevice(Device):
 
 
 class MicroWaveStatus(DeviceStatus):
-    """
-    Higher-level information about a microwave current status.
+    """Higher-level information about a microwave current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.
@@ -302,13 +329,15 @@ class MicroWaveStatus(DeviceStatus):
 
     _device: MicroWaveDevice
 
-    def __init__(self, device: MicroWaveDevice, data: dict | None = None):
+    def __init__(
+        self, device: MicroWaveDevice, data: dict[str, Any] | None = None
+    ) -> None:
         """Initialize device status."""
         super().__init__(device, data)
-        self._oven_temp_unit = None
+        self._oven_temp_unit: str | None = None
 
     @property
-    def oven_upper_state(self):
+    def oven_upper_state(self) -> str | StateOptions | None:
         """Return upper microwave oven state."""
         # Known microwave models only have upper oven state information
         status = self.lookup_enum("UpperOvenState")
@@ -319,7 +348,7 @@ class MicroWaveStatus(DeviceStatus):
         return self._update_feature(MicroWaveFeatures.OVEN_UPPER_STATE, status)
 
     @property
-    def oven_upper_mode(self):
+    def oven_upper_mode(self) -> str | StateOptions | None:
         """Return upper microwave oven mode."""
         # Known microwave models only have upper oven state information
         status = self.lookup_enum("UpperCookMode")
@@ -328,41 +357,45 @@ class MicroWaveStatus(DeviceStatus):
         return self._update_feature(MicroWaveFeatures.OVEN_UPPER_MODE, status)
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return if device is on."""
         return self.is_oven_on
 
     @property
-    def is_oven_on(self):
+    def is_oven_on(self) -> bool:
         """Return if oven is on."""
-        for feature in [
+        for feature in (
             MicroWaveFeatures.OVEN_UPPER_STATE,
-        ]:
+        ):
             res = self.device_features.get(feature)
             if res and res != StateOptions.OFF:
                 return True
         return False
 
     @property
-    def is_clock_display_on(self):
+    def is_clock_display_on(self) -> str | StateOptions | None:
         """Get display clock on/off."""
         if (status := self._data.get(STATE_CLOCKDISPLAY)) is None:
             return None
         return self._update_feature(
-            MicroWaveFeatures.CLOCK_DISPLAY, status == MODE_CLKON, False
+            MicroWaveFeatures.CLOCK_DISPLAY,
+            StateOptions.ON if status == MODE_CLKON else StateOptions.OFF,
+            False,
         )
 
     @property
-    def is_sound_on(self):
+    def is_sound_on(self) -> str | StateOptions | None:
         """Get sound on/off."""
         if (status := self._data.get(STATE_SOUND)) is None:
             return None
         return self._update_feature(
-            MicroWaveFeatures.SOUND, status == MODE_VOLON, False
+            MicroWaveFeatures.SOUND,
+            StateOptions.ON if status == MODE_VOLON else StateOptions.OFF,
+            False,
         )
 
     @property
-    def weight_unit(self):
+    def weight_unit(self) -> str | StateOptions | None:
         """Get weight unit kg/lb."""
         if (value := self.lookup_enum(STATE_DEFROSTWMODE)) is None:
             return None
@@ -373,7 +406,7 @@ class MicroWaveStatus(DeviceStatus):
         return self._update_feature(MicroWaveFeatures.WEIGHT_UNIT, status, False)
 
     @property
-    def display_scroll_speed(self):
+    def display_scroll_speed(self) -> str | StateOptions | None:
         """Get display scroll speed."""
         if (value := self.lookup_enum(STATE_DISPLAYSCROLL)) is None:
             return None
@@ -386,7 +419,7 @@ class MicroWaveStatus(DeviceStatus):
         )
 
     @property
-    def light_mode(self):
+    def light_mode(self) -> str | StateOptions | None:
         """Get light mode."""
         if (value := self.lookup_range(STATE_LAMPLEVEL)) is None:
             return None
@@ -397,7 +430,7 @@ class MicroWaveStatus(DeviceStatus):
         return self._update_feature(MicroWaveFeatures.LIGHT_MODE, status, False)
 
     @property
-    def vent_speed(self):
+    def vent_speed(self) -> str | StateOptions | None:
         """Get vent speed."""
         if (value := self.lookup_range(STATE_VENTLEVEL)) is None:
             return None
@@ -407,7 +440,7 @@ class MicroWaveStatus(DeviceStatus):
             return None
         return self._update_feature(MicroWaveFeatures.VENT_SPEED, status, False)
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         _ = [
             self.oven_upper_state,
             self.oven_upper_mode,

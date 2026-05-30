@@ -1,17 +1,19 @@
-"""------------------for Dehumidifier"""
+"""Support for dehumidifier devices."""
 
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any, cast
 
 from ..backports.functools import cached_property
 from ..const import DehumidifierFeatures
 from ..core_async import ClientAsync
 from ..core_exceptions import InvalidRequestError
-from ..device import Device, DeviceStatus
+from ..device import Device, DeviceStatus, ThinQSnapshotProvider
 from ..device_info import DeviceInfo
 
 CTRL_BASIC = ["Control", "basicCtrl"]
+type CommandKeys = list[str | list[str]]
 STATE_POWER_V1 = "InOutInstantPower"
 
 SUPPORT_OPERATION_MODE = ["SupportOpMode", "support.airState.opMode"]
@@ -31,12 +33,12 @@ STATE_TANK_LIGHT = ["WatertankLight", "airState.miscFuncState.watertankLight"]
 
 STATE_POWER = [STATE_POWER_V1, "airState.energy.onCurrent"]
 
-CMD_STATE_OPERATION = [CTRL_BASIC, "Set", STATE_OPERATION]
-CMD_STATE_OP_MODE = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
-CMD_STATE_TARGET_HUM = [CTRL_BASIC, "Set", STATE_TARGET_HUM]
-CMD_STATE_WIND_STRENGTH = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
+CMD_STATE_OPERATION: CommandKeys = [CTRL_BASIC, "Set", STATE_OPERATION]
+CMD_STATE_OP_MODE: CommandKeys = [CTRL_BASIC, "Set", STATE_OPERATION_MODE]
+CMD_STATE_TARGET_HUM: CommandKeys = [CTRL_BASIC, "Set", STATE_TARGET_HUM]
+CMD_STATE_WIND_STRENGTH: CommandKeys = [CTRL_BASIC, "Set", STATE_WIND_STRENGTH]
 
-CMD_ENABLE_EVENT_V2 = ["allEventEnable", "Set", "airState.mon.timeout"]
+CMD_ENABLE_EVENT_V2: CommandKeys = ["allEventEnable", "Set", "airState.mon.timeout"]
 
 DEFAULT_MIN_HUM = 30
 DEFAULT_MAX_HUM = 70
@@ -74,17 +76,28 @@ class DHumFanSpeed(Enum):
 class DeHumidifierDevice(Device):
     """A higher-level interface for DeHumidifier."""
 
-    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
-        super().__init__(client, device_info, DeHumidifierStatus(self))
+    def __init__(
+        self,
+        client: ClientAsync,
+        device_info: DeviceInfo,
+        snapshot_provider: ThinQSnapshotProvider | None = None,
+    ) -> None:
+        """Initialize the dehumidifier device."""
+        super().__init__(
+            client,
+            device_info,
+            DeHumidifierStatus(self),
+            snapshot_provider=snapshot_provider,
+        )
 
         self._current_power = 0
         self._current_power_supported = True
 
     @cached_property
-    def _humidity_range(self):
+    def _humidity_range(self) -> list[int]:
         """Get valid humidity range for model."""
         key = self._get_state_key(STATE_TARGET_HUM)
-        range_info = self.model_info.value(key)
+        range_info = cast(Any, self.model_info.value(key))
         if not range_info:
             min_hum = DEFAULT_MIN_HUM
             max_hum = DEFAULT_MAX_HUM
@@ -94,31 +107,31 @@ class DeHumidifierDevice(Device):
         return [min_hum, max_hum]
 
     @cached_property
-    def op_modes(self):
+    def op_modes(self) -> list[str]:
         """Return a list of available operation modes."""
         return self._get_property_values(SUPPORT_OPERATION_MODE, DHumMode)
 
     @cached_property
-    def fan_speeds(self):
+    def fan_speeds(self) -> list[str]:
         """Return a list of available fan speeds."""
         return self._get_property_values(SUPPORT_WIND_STRENGTH, DHumFanSpeed)
 
     @property
-    def target_humidity_step(self):
+    def target_humidity_step(self) -> int:
         """Return target humidity step used."""
         return DEFAULT_STEP_HUM
 
     @property
-    def target_humidity_min(self):
+    def target_humidity_min(self) -> int:
         """Return minimum value for target humidity."""
         return self._humidity_range[0]
 
     @property
-    def target_humidity_max(self):
+    def target_humidity_max(self) -> int:
         """Return maximum value for target humidity."""
         return self._humidity_range[1]
 
-    async def power(self, turn_on):
+    async def power(self, turn_on: bool) -> None:
         """Turn on or off the device (according to a boolean)."""
 
         op_mode = DHumOp.ON if turn_on else DHumOp.OFF
@@ -128,11 +141,12 @@ class DeHumidifierDevice(Device):
             # different power command for ThinQ1 devices
             cmd = "Start" if turn_on else "Stop"
             await self.set(keys[0], keys[2], key=None, value=cmd)
-            self._status.update_status(keys[2], op_value)
+            if self._status is not None:
+                self._status.update_status(keys[2], op_value)
             return
         await self.set(keys[0], keys[1], key=keys[2], value=op_value)
 
-    async def set_op_mode(self, mode):
+    async def set_op_mode(self, mode: str) -> None:
         """Set the device's operating mode to an `OpMode` value."""
 
         if mode not in self.op_modes:
@@ -141,7 +155,7 @@ class DeHumidifierDevice(Device):
         mode_value = self.model_info.enum_value(keys[2], DHumMode[mode].value)
         await self.set(keys[0], keys[1], key=keys[2], value=mode_value)
 
-    async def set_fan_speed(self, speed):
+    async def set_fan_speed(self, speed: str) -> None:
         """Set the fan speed to a value from the `ACFanSpeed` enum."""
 
         if speed not in self.fan_speeds:
@@ -150,31 +164,38 @@ class DeHumidifierDevice(Device):
         speed_value = self.model_info.enum_value(keys[2], DHumFanSpeed[speed].value)
         await self.set(keys[0], keys[1], key=keys[2], value=speed_value)
 
-    async def set_target_humidity(self, humidity):
+    async def set_target_humidity(self, humidity: int) -> None:
         """Set the device's target humidity."""
 
         range_info = self._humidity_range
         if range_info and not (range_info[0] <= humidity <= range_info[1]):
             raise ValueError(f"Target humidity out of range: {humidity}")
         keys = self._get_cmd_keys(CMD_STATE_TARGET_HUM)
-        await self.set(keys[0], keys[1], key=keys[2], value=humidity)
+        await self.set(keys[0], keys[1], key=keys[2], value=str(humidity))
 
-    async def get_power(self):
+    async def get_power(self) -> int:
         """Get the instant power usage in watts of the whole unit."""
         if not self._current_power_supported:
             return 0
 
         try:
             value = await self._get_config(STATE_POWER_V1)
-            return value[STATE_POWER_V1]
+            return cast(int, value[STATE_POWER_V1])
         except (ValueError, InvalidRequestError):
             # Device does not support whole unit instant power usage
             self._current_power_supported = False
             return 0
 
     async def set(
-        self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
-    ):
+        self,
+        ctrl_key: str,
+        command: str | None,
+        *,
+        key: str | None = None,
+        value: str | None = None,
+        data: str | None = None,
+        ctrl_path: str | None = None,
+    ) -> None:
         """Set a device's control for `key` to `value`."""
         await super().set(
             ctrl_key, command, key=key, value=value, data=data, ctrl_path=ctrl_path
@@ -182,7 +203,8 @@ class DeHumidifierDevice(Device):
         if key is not None and self._status:
             self._status.update_status(key, value)
 
-    def reset_status(self):
+    def reset_status(self) -> DeHumidifierStatus:
+        """Reset the device status."""
         self._status = DeHumidifierStatus(self)
         return self._status
 
@@ -223,12 +245,14 @@ class DeHumidifierStatus(DeviceStatus):
 
     _device: DeHumidifierDevice
 
-    def __init__(self, device: DeHumidifierDevice, data: dict | None = None):
+    def __init__(
+        self, device: DeHumidifierDevice, data: dict[str, Any] | None = None
+    ) -> None:
         """Initialize device status."""
         super().__init__(device, data)
-        self._operation = None
+        self._operation: str | None = None
 
-    def _get_operation(self):
+    def _get_operation(self) -> DHumOp | None:
         """Get current operation."""
         if self._operation is None:
             key = self._get_state_key(STATE_OPERATION)
@@ -241,7 +265,7 @@ class DeHumidifierStatus(DeviceStatus):
         except ValueError:
             return None
 
-    def update_status(self, key, value):
+    def update_status(self, key: str | list[str], value: Any) -> bool:
         """Update device status."""
         if not super().update_status(key, value):
             return False
@@ -250,7 +274,7 @@ class DeHumidifierStatus(DeviceStatus):
         return True
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return if device is on."""
         op_mode = self._get_operation()
         if not op_mode:
@@ -258,7 +282,7 @@ class DeHumidifierStatus(DeviceStatus):
         return op_mode != DHumOp.OFF
 
     @property
-    def operation(self):
+    def operation(self) -> str | None:
         """Return current device operation."""
         op_mode = self._get_operation()
         if not op_mode:
@@ -266,7 +290,7 @@ class DeHumidifierStatus(DeviceStatus):
         return op_mode.name
 
     @property
-    def operation_mode(self):
+    def operation_mode(self) -> str | None:
         """Return current device operation mode."""
         key = self._get_state_key(STATE_OPERATION_MODE)
         if (value := self.lookup_enum(key, True)) is None:
@@ -277,7 +301,7 @@ class DeHumidifierStatus(DeviceStatus):
             return None
 
     @property
-    def fan_speed(self):
+    def fan_speed(self) -> str | None:
         """Return current fan speed."""
         key = self._get_state_key(STATE_WIND_STRENGTH)
         if (value := self.lookup_enum(key, True)) is None:
@@ -288,7 +312,7 @@ class DeHumidifierStatus(DeviceStatus):
             return None
 
     @property
-    def current_humidity(self):
+    def current_humidity(self) -> str | None:
         """Return current humidity."""
         # support_key = self._get_state_key(SUPPORT_AIR_POLUTION)
         # if self._device.model_info.enum_value(support_key, "@SENSOR_HUMID_SUPPORT") is None:
@@ -296,25 +320,27 @@ class DeHumidifierStatus(DeviceStatus):
         key = self._get_state_key(STATE_CURRENT_HUM)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
-        return self._update_feature(DehumidifierFeatures.HUMIDITY, value, False)
+        return self._update_feature(DehumidifierFeatures.HUMIDITY, str(value), False)
 
     @property
-    def target_humidity(self):
+    def target_humidity(self) -> str | None:
         """Return target humidity."""
         key = self._get_state_key(STATE_TARGET_HUM)
         if (value := self.to_int_or_none(self.lookup_range(key))) is None:
             return None
-        return self._update_feature(DehumidifierFeatures.TARGET_HUMIDITY, value, False)
+        return self._update_feature(
+            DehumidifierFeatures.TARGET_HUMIDITY, str(value), False
+        )
 
     @property
-    def water_tank_full(self):
+    def water_tank_full(self) -> str | None:
         """Return water tank full status."""
         key = self._get_state_key(STATE_TANK_LIGHT)
         if (value := self.lookup_enum_bool(key)) is None:
             return None
         return self._update_feature(DehumidifierFeatures.WATER_TANK_FULL, value)
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         _ = [
             self.current_humidity,
             self.target_humidity,

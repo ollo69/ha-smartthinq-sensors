@@ -1,14 +1,15 @@
-"""------------------for Hood"""
+"""------------------for Hood."""
 
 from __future__ import annotations
 
 from copy import deepcopy
 from enum import Enum
+from typing import Any, cast
 
 from ..backports.functools import cached_property
 from ..const import BIT_OFF, HoodFeatures, StateOptions
 from ..core_async import ClientAsync
-from ..device import Device, DeviceStatus
+from ..device import Device, DeviceStatus, ThinQSnapshotProvider
 from ..device_info import DeviceInfo
 
 ITEM_STATE_OFF = "@OV_STATE_INITIAL_W"
@@ -26,6 +27,8 @@ CMD_SET_VENTLAMP = "setCookStart"
 
 KEY_DATASET = "dataSetList"
 KEY_HOODSTATE = "hoodState"
+
+CommandPayload = dict[str, Any]
 
 CMD_VENTLAMP_V1_DICT = {
     "cmd": "Control",
@@ -76,16 +79,29 @@ class VentSpeed(Enum):
 class HoodDevice(Device):
     """A higher-level interface for a hood."""
 
-    def __init__(self, client: ClientAsync, device_info: DeviceInfo):
+    def __init__(
+        self,
+        client: ClientAsync,
+        device_info: DeviceInfo,
+        snapshot_provider: ThinQSnapshotProvider | None = None,
+    ) -> None:
         """Init the device."""
-        super().__init__(client, device_info, HoodStatus(self))
+        super().__init__(
+            client,
+            device_info,
+            HoodStatus(self),
+            snapshot_provider=snapshot_provider,
+        )
 
-    def reset_status(self):
+    def reset_status(self) -> HoodStatus:
+        """Reset the device status."""
         self._status = HoodStatus(self)
         return self._status
 
     # Settings
-    def _prepare_command_ventlamp_v1(self, command):
+    def _prepare_command_ventlamp_v1(
+        self, command: CommandPayload
+    ) -> CommandPayload:
         """Prepare vent / lamp command for API V1 devices."""
         if not self._status:
             return {}
@@ -103,7 +119,7 @@ class HoodDevice(Device):
 
         return {**CMD_VENTLAMP_V1_DICT, "data": data}
 
-    def _prepare_command_ventlamp_v2(self):
+    def _prepare_command_ventlamp_v2(self) -> dict[str, str | int]:
         """Prepare vent / lamp command for API V2 devices."""
         if not self._status:
             return {}
@@ -118,18 +134,30 @@ class HoodDevice(Device):
             CMD_LAMPLEVEL: int(lamp_level),
         }
 
-    def _prepare_command_v1(self, ctrl_key, command, key, value):
-        """
-        Prepare command for specific API V1 device.
+    def _prepare_command_v1(
+        self,
+        ctrl_key: str,
+        command: str | CommandPayload | None,
+        key: str | None,
+        value: str | None,
+    ) -> CommandPayload | None:
+        """Prepare command for specific API V1 device.
+
         Overwrite for specific device settings.
         """
         if ctrl_key == CMD_SET_VENTLAMP:
-            return self._prepare_command_ventlamp_v1(command)
+            return self._prepare_command_ventlamp_v1(cast(CommandPayload, command or {}))
         return None
 
-    def _prepare_command(self, ctrl_key, command, key, value):
-        """
-        Prepare command for specific device.
+    def _prepare_command(
+        self,
+        ctrl_key: str,
+        command: str | CommandPayload | None,
+        key: str | None,
+        value: str | None,
+    ) -> CommandPayload | None:
+        """Prepare command for specific device.
+
         Overwrite for specific device settings.
         """
         if self._should_poll:
@@ -143,9 +171,11 @@ class HoodDevice(Device):
         else:
             full_cmd = {}
 
-        cmd = deepcopy(cmd_key)
-        def_cmd = cmd[KEY_DATASET].get(KEY_HOODSTATE, {})
-        cmd[KEY_DATASET][KEY_HOODSTATE] = {**def_cmd, **full_cmd, **command}
+        cmd = cast(CommandPayload, deepcopy(cmd_key))
+        data_set = cast(dict[str, Any], cmd[KEY_DATASET])
+        def_cmd = cast(dict[str, Any], data_set.get(KEY_HOODSTATE, {}))
+        command_data = cast(dict[str, Any], command or {})
+        data_set[KEY_HOODSTATE] = {**def_cmd, **full_cmd, **command_data}
 
         return cmd
 
@@ -164,7 +194,7 @@ class HoodDevice(Device):
         """Get display scroll speed list."""
         return list(self._supported_light_modes)
 
-    async def set_light_mode(self, mode: str):
+    async def set_light_mode(self, mode: str) -> None:
         """Set light mode."""
         if mode not in self.light_modes:
             raise ValueError(f"Invalid light mode: {mode}")
@@ -190,7 +220,7 @@ class HoodDevice(Device):
         """Get vent speed list."""
         return list(self._supported_vent_speeds)
 
-    async def set_vent_speed(self, option: str):
+    async def set_vent_speed(self, option: str) -> None:
         """Set vent speed."""
         if option not in self.vent_speeds:
             raise ValueError(f"Invalid vent mode: {option}")
@@ -201,9 +231,15 @@ class HoodDevice(Device):
 
         await self.set_val(CMD_SET_VENTLAMP, cmd, key=STATE_VENTLEVEL, value=level)
 
-    async def set_val(self, ctrl_key, command, key=None, value=None):
+    async def set_val(
+        self,
+        ctrl_key: str,
+        command: CommandPayload,
+        key: str | None = None,
+        value: str | None = None,
+    ) -> None:
         """Set a device's control for hood and update status."""
-        await self.set(ctrl_key, command)
+        await self.set(ctrl_key, cast(Any, command))
         if self._status and key is not None:
             self._status.update_status(key, value)
 
@@ -218,8 +254,7 @@ class HoodDevice(Device):
 
 
 class HoodStatus(DeviceStatus):
-    """
-    Higher-level information about a hood current status.
+    """Higher-level information about a hood current status.
 
     :param device: The Device instance.
     :param data: JSON data from the API.
@@ -228,7 +263,7 @@ class HoodStatus(DeviceStatus):
     _device: HoodDevice
 
     @property
-    def hood_state(self):
+    def hood_state(self) -> str | StateOptions | None:
         """Return hood state."""
         status = self.lookup_enum("HoodState")
         if status is None:
@@ -238,7 +273,7 @@ class HoodStatus(DeviceStatus):
         return self._update_feature(HoodFeatures.HOOD_STATE, status)
 
     @property
-    def is_on(self):
+    def is_on(self) -> bool:
         """Return if device is on."""
         res = self.device_features.get(HoodFeatures.HOOD_STATE)
         if res and res != StateOptions.OFF:
@@ -246,7 +281,7 @@ class HoodStatus(DeviceStatus):
         return False
 
     @property
-    def light_mode(self):
+    def light_mode(self) -> str | StateOptions | None:
         """Get light mode."""
         if (value := self.lookup_range(STATE_LAMPLEVEL)) is None:
             return None
@@ -257,7 +292,7 @@ class HoodStatus(DeviceStatus):
         return self._update_feature(HoodFeatures.LIGHT_MODE, status, False)
 
     @property
-    def vent_speed(self):
+    def vent_speed(self) -> str | StateOptions | None:
         """Get vent speed."""
         if (value := self.lookup_range(STATE_VENTLEVEL)) is None:
             return None
@@ -267,7 +302,7 @@ class HoodStatus(DeviceStatus):
             return None
         return self._update_feature(HoodFeatures.VENT_SPEED, status, False)
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         _ = [
             self.hood_state,
             self.light_mode,
