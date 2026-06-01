@@ -1598,7 +1598,7 @@ class ClientAsync:
             self.auth.refresh_gateway(gateway)
         self._auth = await self.auth.refresh(True)
         self._session = self.auth.start_session()
-        await self._load_devices()
+        await self._load_devices(True)
 
     async def refresh_auth(self) -> None:
         """Refresh auth token if requested."""

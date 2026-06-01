@@ -88,6 +88,7 @@ class Monitor:
         msg,
         *,
         not_logged=False,
+        critical=True,
         exc: Exception = None,
         exc_info=False,
         debug_count=0,
@@ -111,7 +112,9 @@ class Monitor:
         )
 
         if (
-            not Monitor._critical_error
+            critical
+            and not_logged
+            and not Monitor._critical_error
             and Monitor._not_logged_count >= MAX_UPDATE_FAIL_ALLOWED
         ):
             Monitor._critical_error = True
@@ -219,10 +222,19 @@ class Monitor:
                 )
 
             except core_exc.NotLoggedInError as exc:
-                # This could be raised by an expired token
+                # LG can invalidate the active session while the refresh token
+                # is still valid. Rebuild the shared client/session immediately
+                # and retry this update before treating the monitor as failed.
+                Monitor._client_connected = False
+                try:
+                    if await self._refresh_client():
+                        continue
+                except core_exc.NotLoggedInError as refresh_exc:
+                    exc = refresh_exc
                 self._raise_error(
                     "Connection to ThinQ failed. ThinQ API error",
                     not_logged=True,
+                    critical=False,
                     exc=exc,
                 )
 
