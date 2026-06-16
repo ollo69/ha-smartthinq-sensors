@@ -6,8 +6,6 @@
 name: "Close stale issues and PRs"
 
 on:
-  schedule:
-    - cron: "0 1 * * *"
   workflow_dispatch:
 
 permissions:
