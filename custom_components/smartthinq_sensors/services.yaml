@@ -12,6 +12,12 @@ remote_start:
       required: false
       selector:
         text:
+    overrides:
+      name: overrides
+      description: 'Optional mapping of course option overrides, e.g. {"temp": "TEMP_60"} (washer-dryer).'
+      required: false
+      selector:
+        object:
 
 wake_up:
   name: WakeUp

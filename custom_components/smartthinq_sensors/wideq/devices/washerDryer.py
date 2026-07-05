@@ -131,6 +131,7 @@ class WMDevice(Device):
         self._remote_start_pressed = False
         self._power_on_available: bool = None
         self._initial_bit_start: bool = False
+        self._course_overrides: dict = {}
 
     @cached_property
     def _state_power_off(self):
@@ -421,6 +422,13 @@ class WMDevice(Device):
 
         if not course_set:
             ret_data[VT_CTRL_COURSE_INFO] = course_info
+
+        # Apply user supplied option overrides (e.g. temperature, spin,
+        # rinse) on top of the selected course defaults. Keys must match
+        # the course "function" value keys; invalid values are rejected
+        # by the ThinQ backend.
+        for _okey, _oval in self._course_overrides.items():
+            ret_data[_okey] = _oval
 
         _LOGGER.debug("Prepared course data: %s", ret_data)
         return ret_data
@@ -728,16 +736,26 @@ class WMDevice(Device):
         self._stand_by = False
         self._update_status(POWER_STATUS_KEY, self._state_power_on_init)
 
-    async def remote_start(self, course_name: str | None = None) -> None:
-        """Remote start the device."""
+    async def remote_start(
+        self, course_name: str | None = None, overrides: dict | None = None
+    ) -> None:
+        """Remote start the device.
+
+        ``overrides`` optionally overrides selected course option defaults
+        (e.g. ``{"temp": "TEMP_60"}``) for washer-dryer devices.
+        """
         if not self.remote_start_enabled:
             raise InvalidDeviceStatus()
 
         if course_name and self._initial_bit_start:
             await self.select_start_course(course_name)
 
-        keys = self._get_cmd_keys(CMD_REMOTE_START)
-        await self.set(keys[0], keys[1], key=keys[2])
+        self._course_overrides = overrides or {}
+        try:
+            keys = self._get_cmd_keys(CMD_REMOTE_START)
+            await self.set(keys[0], keys[1], key=keys[2])
+        finally:
+            self._course_overrides = {}
         self._remote_start_pressed = True
 
     async def pause(self):
