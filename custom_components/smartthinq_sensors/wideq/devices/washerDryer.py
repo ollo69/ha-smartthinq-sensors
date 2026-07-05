@@ -717,10 +717,12 @@ class WMDevice(Device):
         self._update_status(POWER_STATUS_KEY, self._state_power_off)
 
     async def wake_up(self):
-        """Wakeup the device."""
-        if not self._stand_by:
-            raise InvalidDeviceStatus()
-
+        """Wakeup the device from power-save / sleep mode."""
+        # Do not gate on ``self._stand_by``: when the appliance is in
+        # power-save sleep it reports an empty status (so ``_stand_by`` is
+        # False), yet that is exactly when a wake-up is required. The
+        # official ThinQ app's "sleep off" button is likewise always
+        # available in this state.
         keys = self._get_cmd_keys(CMD_WAKE_UP)
         await self.set(keys[0], keys[1])
         self._stand_by = False
