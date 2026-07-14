@@ -1,0 +1,21 @@
+{
+    "en-US": {
+        "@WM_TERM_NO_SELECT_W": "Not Selected",
+        "@WM_STATE_POWER_OFF_W": "Power OFF",
+        "@WM_STATE_INITIAL_W": "Standby",
+        "@WM_STATE_PAUSE_W": "Paused",
+        "@WM_STATE_RESERVE_W": "Delay Set",
+        "@CP_UX30_CARD_DELAY_SET": "Delay Set",
+        "@WM_STATE_DETECTING_W": "Detecting",
+        "@WM_STATE_RUNNING_W": "Washing",
+        "@WM_STATE_RINSING_W": "Rinsing",
+        "@WM_STATE_SPINNING_W": "Spinning",
+        "@WM_STATE_DRYING_W": "Drying",
+        "@WM_STATE_END_W": "Finished",
+        "@WM_STATE_COOLDOWN_W": "Cool Down",
+        "@WM_STATE_RINSEHOLD_W": "Rinse Hold",
+        "@WM_STATE_REFRESHING_W": "Refreshing",
+        "@WM_STATE_STEAMSOFTENING_W": "Steam Softening",
+        "@WM_STATE_ERROR_W": "Error"
+    }
+}
