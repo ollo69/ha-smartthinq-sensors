@@ -1,0 +1,19 @@
+{
+  "domain": "smartthinq_sensors",
+  "name": "SmartThinQ LGE Sensors",
+  "codeowners": ["@ollo69"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/ollo69/ha-smartthinq-sensors",
+  "integration_type": "hub",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/ollo69/ha-smartthinq-sensors/issues",
+  "requirements": [
+    "pycountry>=23.12.11",
+    "xmltodict>=0.13.0",
+    "charset_normalizer>=3.2.0",
+    "paho-mqtt>=1.6.1",
+    "cryptography>=41.0.0"
+  ],
+  "version": "0.44.0"
+}

@@ -1,0 +1,52 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Len jedna konfigurácia SmartThinQ LGE Sensors je povolená.",
+            "no_smartthinq_devices": "Nebolo nájdené SmartThinQ zariadenie. Nastavenie komponentu bolo prerušené.",
+            "unsupported_version": "Táto integrácia vyžaduje aspoň verziu HomeAssistant {req_ver}, používate verziu {run_ver}.",
+            "reconfigured": "Konfigurácia bola úspešne dokončená."
+        },
+        "error": {
+            "error_connect": "Chyba pri pripájaní k SmartThinQ. Skúste to znova a uistite sa, že máte v telefóne prístup k aplikácii ThinQ.",
+            "error_url": "Chyba pri získavaní prihlasovacej adresy URL z ThinQ.",
+            "invalid_region": "Nesprávny formát regiónu.",
+            "invalid_language": "Nesprávny formát jazyka.",
+            "invalid_url": "Nesprávna spätná URL.",
+            "invalid_credentials": "Neplatné poverenia SmartThinQ. Pomocou aplikácie LG na svojom mobilnom zariadení overte, či existujú zmluvné podmienky, ktoré je potrebné prijať. Účty založené na sociálnej sieti nie sú podporované a vo väčšine prípadov s touto integráciou nefungujú.",
+            "invalid_config": "Našla sa neplatná konfigurácia, prekonfigurujte ju.",
+            "no_user_info": "Vyžaduje sa používateľské meno a heslo.",
+            "unknown": "Neznáma chyba."
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "username": "Používateľské meno účtu LG",
+                    "password": "Heslo",
+                    "region": "Región",
+                    "language": "Jazyk",
+                    "use_redirect": "Použite metódu overenia presmerovania adresy URL",
+                    "use_ha_session": "Share Home Assistant HTTP pripojenie (môže spôsobiť chyby SSL)",
+                    "use_tls_v1": "Vynútiť použitie protokolu TLSv1 (niekedy sa vyžaduje)",
+                    "exclude_dh": "Nepoužívajte šifrovanie DH (v prípade chyby „kľúč dh je príliš malý“)"
+                },
+                "description": "Vyplňte informácie o prístupe k SmartThinQ."
+            },
+            "url": {
+                "data": {
+                    "login_url": "SmartThinQ prihlasovacie URL",
+                    "callback_url": "Spätná URL"
+                },
+                "description": "Pomocou URL v prvom poli vykonajte prihlásenie do SmartThinQ a potom vložte URL, ktorú vygeneruje prehliadač po prihlásení, do druhého poľa.",
+                "title": "SmartThinQ LGE Sensors - Autentifikácia"
+            },
+            "token": {
+                "data": {
+                    "token": "Obnovte Token"
+                },
+                "description": "Uložte vygenerovaný token pre budúce použitie a potom potvrďte dokončenie konfigurácie.",
+                "title": "SmartThinQ LGE Sensors - Nový obnovený token"
+            }
+        },
+        "title": "SmartThinQ LGE Sensors"
+    }
+}
