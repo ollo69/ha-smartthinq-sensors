@@ -70,6 +70,7 @@ BIT_FEATURES = {
     WashDeviceFeatures.STEAM: ["Steam", "steam"],
     WashDeviceFeatures.STEAMSOFTENER: ["SteamSoftener", "steamSoftener"],
     WashDeviceFeatures.TURBOWASH: ["TurboWash", "turboWash"],
+    WashDeviceFeatures.WRINKLECARE: ["WrinkleCare", "wrinkleCare"],
 }
 
 INVERTED_BITS = [WashDeviceFeatures.DOOROPEN]
@@ -343,6 +344,13 @@ class WMDevice(Device):
             else:
                 name = value.get("_comment", key)
             ret_val[name] = key
+            
+        downloaded1 = self._device_info.snapshot["washerDryer"]
+        if downloaded := downloaded1.get("downloadedCourseDryer27inchBase"):
+            _LOGGER.debug("downloaded:%s", downloaded)
+            ret_val[downloaded] = downloaded
+        else:      
+            _LOGGER.debug("downloaded NOT found ")            
 
         self._course_infos = ret_val
         return ret_val
