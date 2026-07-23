@@ -37,7 +37,7 @@
           "login_url": "SmartThinQ login URL",
           "callback_url": "Redirection URL"
         },
-        "description": "Use the URL in the first field to perform login to SmartThinQ with your credentials, then paste the URL where the browser is redirected after the login in the second field. Share feedback about your setup [here](https://git.io/JU166).",
+        "description": "Use the URL in the first field to perform login to SmartThinQ with your credentials, then paste the URL where the browser is redirected after the login in the second field. Share feedback about your setup [here]({pat_url}).",
         "title": "SmartThinQ LGE Sensors - Authentication"
       },
       "token": {
@@ -56,5 +56,23 @@
       }
     },
     "title": "SmartThinQ LGE Sensors"
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "SmartThinQ options",
+        "description": "How often the integration polls the LG cloud (seconds). Default is 300 (5 min). Lower values risk a 24-hour LG account block. Increase if you have many devices or hit bans.",
+        "data": {
+          "scan_interval": "Scan interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "scan_interval": {
+        "name": "Scan interval"
+      }
+    }
   }
 }

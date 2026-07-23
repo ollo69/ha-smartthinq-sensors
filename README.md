@@ -25,6 +25,9 @@ Supported devices are:
 - Washer
 - Water Heater
 
+> [!IMPORTANT]
+> LG has started blocking the use of the APIs used by this integration, and users that poll too frequently (over 300 seconds) are automatically blocked for 24 hours. PR [#965](https://github.com/ollo69/ha-smartthinq-sensors/pull/965) introduced the ability to set the integration's polling interval, setting the default value to 300 seconds (5 minutes). This means that the status of any devices will be updated at this rate, until you decrease the update interval options (but in this case your user will be probably blocked). At this time, it is unknown whether LG will introduce further limitations on the use of the APIs.</br> Alternatively, you can use [Home Assistant native LG ThinQ integration](https://www.home-assistant.io/integrations/lg_thinq/) that offers fewer options for monitoring and controlling devices but does not suffer from the limitations listed above.
+
 **Important**: The component will **not work if you have logged into the ThinQ application and registered your devices using a social network account** (Google, Facebook or Amazon). In order to use the component you need to create a new independent LG account and make sure you log into the ThinQ app and associate your devices with it.
 If during configuration you receive the message "No SmartThinQ devices found", probably your devices are still associated with the social network account. To solve the problem perform the following step:
 

@@ -15,7 +15,7 @@ jobs:
       contents: write
     steps:
       - name: "Checkout the repository"
-        uses: "actions/checkout@v4.1.7"
+        uses: "actions/checkout@v5"
 
       - name: "ZIP the integration directory"
         shell: "bash"
