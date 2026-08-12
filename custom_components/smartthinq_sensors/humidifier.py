@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import entity_adder
 from .wideq import DehumidifierFeatures, DeviceType
 from .wideq.devices.dehumidifier import DeHumidifierDevice
 
@@ -36,6 +37,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up LGE device humidifier based on config_entry."""
+    add_entities = entity_adder(async_add_entities)
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
@@ -54,7 +56,7 @@ async def async_setup_entry(
             for lge_device in lge_devices.get(DeviceType.DEHUMIDIFIER, [])
         ]
 
-        async_add_entities(lge_humidifier)
+        add_entities(lge_humidifier)
 
     _async_discover_device(lge_cfg_devices)
 

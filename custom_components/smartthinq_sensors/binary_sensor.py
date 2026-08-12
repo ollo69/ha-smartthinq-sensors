@@ -34,6 +34,7 @@ from .device_helpers import (
     STATE_LOOKUP,
     WASH_DEVICE_TYPES,
     LGEBaseDevice,
+    entity_adder,
     get_entity_name,
     get_wrapper_device,
 )
@@ -226,6 +227,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE binary sensors."""
+    add_entities = entity_adder(async_add_entities)
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
@@ -248,7 +250,7 @@ async def async_setup_entry(
             if _binary_sensor_exist(lge_device, sensor_desc)
         ]
 
-        async_add_entities(lge_sensors)
+        add_entities(lge_sensors)
 
     _async_discover_device(lge_cfg_devices)
 

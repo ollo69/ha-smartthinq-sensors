@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import entity_adder
 from .wideq import (
     AirConditionerFeatures,
     DeviceType,
@@ -55,6 +56,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up LGE device water heater based on config_entry."""
+    add_entities = entity_adder(async_add_entities)
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
@@ -82,7 +84,7 @@ async def async_setup_entry(
             ]
         )
 
-        async_add_entities(lge_water_heater)
+        add_entities(lge_water_heater)
 
     _async_discover_device(lge_cfg_devices)
 

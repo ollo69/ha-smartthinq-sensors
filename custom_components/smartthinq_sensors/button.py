@@ -19,7 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice
+from .device_helpers import LGEBaseDevice, entity_adder
 from .wideq import WM_DEVICE_TYPES, WashDeviceFeatures
 
 # general button attributes
@@ -87,6 +87,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the LGE buttons."""
+    add_entities = entity_adder(async_add_entities)
     entry_config = hass.data[DOMAIN]
     lge_cfg_devices = entry_config.get(LGE_DEVICES)
 
@@ -107,7 +108,7 @@ async def async_setup_entry(
             if _button_exist(lge_device, button_desc)
         ]
 
-        async_add_entities(lge_button)
+        add_entities(lge_button)
 
     _async_discover_device(lge_cfg_devices)
 

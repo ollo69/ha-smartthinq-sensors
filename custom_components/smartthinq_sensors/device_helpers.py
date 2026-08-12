@@ -1,8 +1,12 @@
 """Helper class for ThinQ devices"""
 
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
+from homeassistant.core import callback
+from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.dt import utcnow
 
 from . import LGEDevice
@@ -55,6 +59,29 @@ WASH_DEVICE_TYPES = [
     DeviceType.DISHWASHER,
     DeviceType.STYLER,
 ]
+
+
+def entity_adder(
+    async_add_entities: AddEntitiesCallback,
+) -> Callable[[Iterable[Entity]], None]:
+    """Wrap async_add_entities so a repeated discovery only adds what is new.
+
+    Discovery runs again for a device we have already set up when it reports
+    features it did not report at startup, so the platform rebuilds every
+    entity for that device. Filtering on unique_id lets the new ones through
+    and drops the rest, instead of adding duplicates.
+    """
+    added: set[str] = set()
+
+    @callback
+    def _async_add_new_entities(entities: Iterable[Entity]) -> None:
+        new_entities = [ent for ent in entities if ent.unique_id not in added]
+        if not new_entities:
+            return
+        added.update(ent.unique_id for ent in new_entities)
+        async_add_entities(new_entities)
+
+    return _async_add_new_entities
 
 
 def get_entity_name(device: LGEDevice, ent_key: str) -> str | None:
