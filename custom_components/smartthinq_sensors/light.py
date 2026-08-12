@@ -21,7 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice
+from .device_helpers import LGEBaseDevice, handle_api_errors
 from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
@@ -173,6 +173,7 @@ class LGELight(CoordinatorEntity, LightEntity):
             return self.effect is not None
         return self._api.state.is_on
 
+    @handle_api_errors
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
         effect = kwargs.get(ATTR_EFFECT)
@@ -190,6 +191,7 @@ class LGELight(CoordinatorEntity, LightEntity):
             await self.entity_description.set_effect_fn(self._api, effect)
         self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the entity off."""
         if not self.is_on:

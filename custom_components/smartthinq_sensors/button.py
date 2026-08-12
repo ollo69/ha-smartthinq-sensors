@@ -19,7 +19,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import LGEBaseDevice
+from .device_helpers import LGEBaseDevice, handle_api_errors
 from .wideq import WM_DEVICE_TYPES, WashDeviceFeatures
 
 # general button attributes
@@ -143,6 +143,7 @@ class LGEButton(CoordinatorEntity, ButtonEntity):
             is_avail = self.entity_description.available_fn(self._wrap_device)
         return self._api.available and is_avail
 
+    @handle_api_errors
     async def async_press(self) -> None:
         """Triggers service."""
         await self.entity_description.press_action_fn(self._wrap_device)

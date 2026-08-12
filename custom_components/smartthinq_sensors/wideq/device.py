@@ -49,6 +49,11 @@ LOCAL_LANG_PACK = {
 }
 
 MIN_TIME_BETWEEN_CLI_REFRESH = 10  # seconds
+# Backstop for a V1 control permission that could not be handed back straight
+# after a command: the first poll this long afterwards releases it. While it is
+# held, the ThinQ app reports the device as controlled elsewhere, so the normal
+# path releases immediately rather than waiting for this.
+CONTROL_PERMISSION_GRACE = 60  # seconds
 MAX_RETRIES = 3
 MAX_UPDATE_FAIL_ALLOWED = 10
 MAX_INVALID_CREDENTIAL_ERR = 3
@@ -416,6 +421,7 @@ class Device:
         self._should_poll = device_info.platform_type == PlatformType.THINQ1
         self._mon = Monitor(client, device_info)
         self._control_set = 0
+        self._control_set_time: datetime | None = None
         self._last_additional_poll: datetime | None = None
         self._available_features = {}
 
@@ -553,14 +559,58 @@ class Device:
             return
 
         if self._should_poll:
-            await self._client.session.set_device_controls(
-                self._device_info.device_id,
-                ctrl_key,
-                command,
-                {key: value} if key and value else value,
-                {key: data} if key and data else data,
-            )
+            device_id = self._device_info.device_id
+            ctrl_value = {key: value} if key and value else value
+            ctrl_data = {key: data} if key and data else data
+            held_permission = self._control_set > 0
+            # Assume the permission is taken the moment a command is issued, so
+            # that a command failing part way through still schedules a release
+            # rather than leaking the lock.
             self._control_set = 2
+            self._control_set_time = datetime.now(timezone.utc)
+            try:
+                await self._client.session.set_device_controls(
+                    device_id, ctrl_key, command, ctrl_value, ctrl_data
+                )
+            except core_exc.ControlPermissionError:
+                # Refused, so no permission was taken.
+                self._control_set = 0
+                self._control_set_time = None
+                # delControlPermission only releases a permission held by this
+                # session. Retrying is worth it when we were holding one, since
+                # it may be stale; when we were not, the holder is another
+                # client and only it can release, so fail without spending a
+                # further call on an API that rate limits hard.
+                if not held_permission:
+                    raise
+                _LOGGER.debug(
+                    "Device %s refused control, dropping our permission and retrying",
+                    device_id,
+                )
+                await self._client.session.delete_permission(device_id)
+                await self._client.session.set_device_controls(
+                    device_id, ctrl_key, command, ctrl_value, ctrl_data
+                )
+                self._control_set = 2
+                self._control_set_time = datetime.now(timezone.utc)
+            except core_exc.DelayedResponseError:
+                # "제품 응답 지연" - the device did not answer in time. Seen when
+                # another client is mid-session with it, and it clears on a
+                # second attempt. Not a permission problem: the app shows this
+                # one without releasing anything, so neither do we. Commands are
+                # absolute value sets, so repeating one is harmless.
+                _LOGGER.debug(
+                    "Device %s did not answer command in time, retrying", device_id
+                )
+                await asyncio.sleep(SLEEP_BETWEEN_RETRIES)
+                await self._client.session.set_device_controls(
+                    device_id, ctrl_key, command, ctrl_value, ctrl_data
+                )
+            # Hand the permission straight back. Holding it gains nothing - the
+            # next command reacquires it implicitly - and for as long as we do,
+            # the ThinQ app tells the user the device is controlled elsewhere.
+            # If this fails, the grace period below is the backstop.
+            await self.release_control_permission()
             return
 
         await self._client.session.device_v2_controls(
@@ -666,9 +716,37 @@ class Device:
             return
         if self._control_set <= 0:
             return
-        if self._control_set == 1:
+        if self._control_set_time is not None:
+            elapsed = (
+                datetime.now(timezone.utc) - self._control_set_time
+            ).total_seconds()
+            if elapsed < CONTROL_PERMISSION_GRACE:
+                return
+        await self._client.session.delete_permission(self._device_info.device_id)
+        self._control_set = 0
+        self._control_set_time = None
+
+    async def release_control_permission(self):
+        """Release a held V1 control permission, ignoring the grace period.
+
+        Called on shutdown: a permission left behind when Home Assistant stops
+        is not recoverable afterwards, since the next session cannot release
+        another session's lock. It would block both the ThinQ app and our own
+        next start until the server expires it.
+        """
+        if not self._should_poll or self._control_set <= 0:
+            return
+        try:
             await self._client.session.delete_permission(self._device_info.device_id)
-        self._control_set -= 1
+        except Exception:  # pylint: disable=broad-except
+            # Shutting down must not fail because of a best-effort release.
+            _LOGGER.debug(
+                "Failed to release control permission for device %s",
+                self._device_info.device_id,
+                exc_info=True,
+            )
+        self._control_set = 0
+        self._control_set_time = None
 
     async def _pre_update_v2(self):
         """

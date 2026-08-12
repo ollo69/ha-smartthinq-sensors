@@ -1,8 +1,10 @@
 """Helper class for ThinQ devices"""
 
 from datetime import datetime, timedelta
+from functools import wraps
 
 from homeassistant.const import STATE_OFF, STATE_ON, UnitOfTemperature
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.util.dt import utcnow
 
 from . import LGEDevice
@@ -25,6 +27,7 @@ from .const import (
     DEFAULT_SENSOR,
 )
 from .wideq import WM_DEVICE_TYPES, DeviceType, StateOptions, TemperatureUnit
+from .wideq.core_exceptions import APIError, ControlPermissionError
 
 STATE_LOOKUP = {
     StateOptions.OFF: STATE_OFF,
@@ -55,6 +58,35 @@ WASH_DEVICE_TYPES = [
     DeviceType.DISHWASHER,
     DeviceType.STYLER,
 ]
+
+
+def handle_api_errors(func):
+    """Report a failed device command as a failed service call.
+
+    Commands fail for reasons the user can act on: a V1 device whose control
+    permission is held by the ThinQ app, a device that is offline, a control
+    the model does not support. wideq signals all of these with APIError, and
+    left unhandled they surface as an internal error with a traceback instead
+    of the reason.
+    """
+
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs):
+        try:
+            return await func(self, *args, **kwargs)
+        except ControlPermissionError as exc:
+            # Refused because another client is driving the device right now,
+            # which makes this the moment our cached state is most likely to be
+            # wrong - it has been changing it without us seeing. Re-read before
+            # reporting, so a refused command does not also leave a stale value
+            # on screen until the next poll. The read does not need the
+            # permission, and the coordinator debounces the request.
+            await self.coordinator.async_request_refresh()
+            raise HomeAssistantError(str(exc)) from exc
+        except APIError as exc:
+            raise HomeAssistantError(str(exc)) from exc
+
+    return wrapper
 
 
 def get_entity_name(device: LGEDevice, ent_key: str) -> str | None:

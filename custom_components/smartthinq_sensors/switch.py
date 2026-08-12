@@ -21,7 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import STATE_LOOKUP, LGEBaseDevice
+from .device_helpers import STATE_LOOKUP, LGEBaseDevice, handle_api_errors
 from .wideq import (
     WM_DEVICE_TYPES,
     AirConditionerFeatures,
@@ -261,6 +261,7 @@ class LGESwitch(LGEBaseSwitch):
             is_avail = self.entity_description.available_fn(self._wrap_device)
         return self._api.available and is_avail
 
+    @handle_api_errors
     async def async_turn_off(self, **kwargs):
         """Turn the entity off."""
         if self.entity_description.turn_off_fn is None:
@@ -269,6 +270,7 @@ class LGESwitch(LGEBaseSwitch):
             await self.entity_description.turn_off_fn(self._wrap_device)
             self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
         if self.entity_description.turn_on_fn is None:

@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import handle_api_errors
 from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
 
 _LOGGER = logging.getLogger(__name__)
@@ -141,6 +142,7 @@ class LGESelect(CoordinatorEntity, SelectEntity):
         self._attr_device_info = api.device_info
         self._attr_options = self.entity_description.options_fn(self._api)
 
+    @handle_api_errors
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
         await self.entity_description.select_option_fn(self._api, option)

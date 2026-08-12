@@ -32,7 +32,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice
+from .device_helpers import TEMP_UNIT_LOOKUP, LGERefrigeratorDevice, handle_api_errors
 from .wideq import AirConditionerFeatures, DeviceType, TemperatureUnit
 from .wideq.devices.ac import (
     AWHP_MAX_TEMP,
@@ -296,6 +296,7 @@ class LGEACClimate(LGEClimate):
         modes = self._available_hvac_modes()
         return modes.get(op_mode, HVACMode.AUTO)
 
+    @handle_api_errors
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""
         if hvac_mode == HVACMode.OFF:
@@ -320,6 +321,7 @@ class LGEACClimate(LGEClimate):
         modes = self._available_hvac_modes()
         return [HVACMode.OFF] + list(modes.values())
 
+    @handle_api_errors
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
         if not (modes := self._available_preset_modes()):
@@ -363,6 +365,7 @@ class LGEACClimate(LGEClimate):
         """Return the temperature we try to reach."""
         return self._api.state.target_temp
 
+    @handle_api_errors
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         if hvac_mode := kwargs.get(ATTR_HVAC_MODE):
@@ -380,6 +383,7 @@ class LGEACClimate(LGEClimate):
         speed = self._api.state.fan_speed
         return FAN_MODE_LOOKUP.get(speed, speed)
 
+    @handle_api_errors
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
         lg_fan_mode = FAN_MODE_REVERSE_LOOKUP.get(fan_mode, fan_mode)
@@ -395,6 +399,7 @@ class LGEACClimate(LGEClimate):
             return self._api.state.horizontal_step_mode
         return self._api.state.vertical_step_mode
 
+    @handle_api_errors
     async def async_set_swing_mode(self, swing_mode: str) -> None:
         """Set new target swing operation."""
         if swing_mode not in (self.swing_modes or []):
@@ -412,6 +417,7 @@ class LGEACClimate(LGEClimate):
         """Return the horizontal swing mode setting."""
         return self._api.state.horizontal_step_mode
 
+    @handle_api_errors
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
         """Set new target horizontal swing operation."""
         if swing_horizontal_mode not in (self.swing_horizontal_modes or []):
@@ -423,11 +429,13 @@ class LGEACClimate(LGEClimate):
             await self._device.set_horizontal_step_mode(swing_horizontal_mode)
             self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_on(self) -> None:
         """Turn the entity on."""
         await self._device.power(True)
         self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_off(self) -> None:
         """Turn the entity off."""
         await self._device.power(False)
@@ -451,6 +459,7 @@ class LGEACClimate(LGEClimate):
             AWHP_MAX_TEMP if self._device.is_air_to_water else DEFAULT_MAX_TEMP
         )
 
+    @handle_api_errors
     async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
         await self._device.set_reservation_sleep_time(sleep_time)
@@ -506,6 +515,7 @@ class LGERefrigeratorClimate(LGEClimate):
         except ValueError:
             return None
 
+    @handle_api_errors
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         if (new_temp := kwargs.get(ATTR_TEMPERATURE)) is not None:

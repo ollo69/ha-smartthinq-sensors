@@ -53,6 +53,7 @@ from .device_helpers import (
     LGEBaseDevice,
     get_entity_name,
     get_wrapper_device,
+    handle_api_errors,
 )
 from .wideq import (
     SET_TIME_DEVICE_TYPES,
@@ -729,18 +730,21 @@ class LGESensor(CoordinatorEntity, SensorEntity):
 
         return None
 
+    @handle_api_errors
     async def async_remote_start(self, course: str | None = None):
         """Call the remote start command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.remote_start(course)
 
+    @handle_api_errors
     async def async_wake_up(self):
         """Call the wakeup command for WM devices."""
         if self._api.type not in WM_DEVICE_TYPES:
             raise NotImplementedError()
         await self._api.device.wake_up()
 
+    @handle_api_errors
     async def async_set_time(self, time_wanted: time | None = None):
         """Call the set time command for Microwave devices."""
         if self._api.type not in SET_TIME_DEVICE_TYPES:

@@ -90,6 +90,12 @@ CLIENT_ID = "LGAO221A02"
 OAUTH_SECRET_KEY = "c053c2a6ddeb7ad97cb0eed0dcb31cf8"
 DATE_FORMAT = "%a, %d %b %Y %H:%M:%S +0000"
 
+# Errors specific to the V1 (THINQ1) API. Checked before API2_ERRORS, since
+# the two namespaces reuse code numbers for unrelated conditions.
+API1_ERRORS = {
+    "0011": exc.ControlPermissionError,
+}
+
 API2_ERRORS = {
     "0101": exc.DeviceNotFound,
     "0102": exc.NotLoggedInError,
@@ -446,6 +452,8 @@ class CoreAsync:
             code = msg["returnCd"]
             if code != "0000":
                 message = msg.get("returnMsg") or "ThinQ APIv1 error"
+                if code in API1_ERRORS:
+                    raise API1_ERRORS[code](message)
                 if code in API2_ERRORS:
                     raise API2_ERRORS[code](message)
                 raise exc.APIError(message, code)

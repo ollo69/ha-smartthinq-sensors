@@ -385,6 +385,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if reload > 0:
             hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: reload}
         if (client := data.get(CLIENT)) is not None:
+            # Hand back any V1 control permission we are holding. Only the
+            # session that took it can release it, so one left behind here
+            # locks the device for the ThinQ app and for our own next start.
+            for devices in data.get(LGE_DEVICES, {}).values():
+                for lge_device in devices:
+                    await lge_device.device.release_control_permission()
             await client.close()
     return unload_ok
 

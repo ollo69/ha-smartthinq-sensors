@@ -21,6 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import handle_api_errors
 from .wideq import (
     AirConditionerFeatures,
     DeviceType,
@@ -163,12 +164,14 @@ class LGEWHWaterHeater(LGEWaterHeater):
             return None
         return list(modes.values())
 
+    @handle_api_errors
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
             await self._device.set_target_temp(int(new_temp))
             self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set operation mode."""
         modes = self._available_modes()
@@ -178,10 +181,12 @@ class LGEWHWaterHeater(LGEWaterHeater):
         await self._device.set_op_mode(new_mode)
         self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water heater on."""
         await self.async_set_operation_mode(STATE_HEAT_PUMP)
 
+    @handle_api_errors
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water heater off."""
         await self.async_set_operation_mode(STATE_OFF)
@@ -240,12 +245,14 @@ class LGEACWaterHeater(LGEWaterHeater):
             return STATE_HEAT_PUMP
         return STATE_OFF
 
+    @handle_api_errors
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
         if new_temp := kwargs.get(ATTR_TEMPERATURE):
             await self._device.set_hot_water_target_temp(int(new_temp))
             self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_set_operation_mode(self, operation_mode: str) -> None:
         """Set operation mode."""
         if operation_mode not in self.operation_list:
@@ -255,10 +262,12 @@ class LGEACWaterHeater(LGEWaterHeater):
         await self._device.hot_water_mode(operation_mode == STATE_HEAT_PUMP)
         self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the water heater on."""
         await self.async_set_operation_mode(STATE_HEAT_PUMP)
 
+    @handle_api_errors
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the water heater off."""
         await self.async_set_operation_mode(STATE_OFF)

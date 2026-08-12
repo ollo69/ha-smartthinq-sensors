@@ -23,6 +23,7 @@ from homeassistant.util.percentage import (
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
+from .device_helpers import handle_api_errors
 from .wideq import DeviceType, HoodFeatures, MicroWaveFeatures
 
 ATTR_FAN_MODE = "fan_mode"
@@ -341,6 +342,7 @@ class LGEFan(LGEBaseFan):
             return None
         return self._wrapper.fan_preset
 
+    @handle_api_errors
     async def async_set_percentage(self, percentage: int) -> None:
         """Set the speed of the fan, as a percentage."""
         if self.speed_count == 0:
@@ -360,6 +362,7 @@ class LGEFan(LGEBaseFan):
             await self._wrapper.async_set_speed(named_speed)
         self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set new preset mode."""
         if self.preset_modes is None:
@@ -370,6 +373,7 @@ class LGEFan(LGEBaseFan):
             await self._wrapper.async_set_preset(preset_mode)
         self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_on(
         self,
         percentage: int | None = None,
@@ -385,6 +389,7 @@ class LGEFan(LGEBaseFan):
             await self._wrapper.async_turn_on()
             self._api.async_set_updated()
 
+    @handle_api_errors
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the entity off."""
         if not self._wrapper.is_on:

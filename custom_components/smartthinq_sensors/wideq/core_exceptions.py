@@ -52,6 +52,32 @@ class DelayedResponseError(APIError):
     """The device delay in the response."""
 
 
+class ControlPermissionError(APIError):
+    """Another client holds the control permission for this V1 device.
+
+    V1 (THINQ1) devices grant control to a single client at a time. The LG
+    ThinQ app acquires the permission when its device page is opened and
+    releases it on exit; a client that quits without releasing leaves the
+    device locked. The server reports this as code 0011, whose generic
+    returnMsg is misleading - the app itself renders it as "<device> is in
+    use, please wait".
+
+    rti/delControlPermission only releases a permission held by the calling
+    session, so a lock held by another client cannot be broken remotely - it
+    has to be released by whoever holds it.
+    """
+
+    def __init__(self, message="", code=None):
+        self.server_message = message
+        text = (
+            "Device is being controlled by another app - close the LG ThinQ app"
+            " (back out of the device page) and try again"
+        )
+        if message:
+            text = f"{text}. Server reported: {message}"
+        super().__init__(text, code)
+
+
 class UseOfficialAPIError(APIError):
     """Requests stop responding suggesting to move to official public API."""
 
