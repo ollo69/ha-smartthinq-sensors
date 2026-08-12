@@ -237,7 +237,7 @@ class LGEFanWrapper:
     async def async_set_preset(self, preset: str) -> None:
         """Set fan preset."""
         if self._description.set_fanpreset_fn is None:
-            return NotImplementedError()
+            raise NotImplementedError()
         await self._description.set_fanpreset_fn(self._api, preset)
 
     async def async_turn_on(
