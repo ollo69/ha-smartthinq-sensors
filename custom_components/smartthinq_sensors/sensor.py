@@ -17,10 +17,10 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     PERCENTAGE,
     STATE_UNAVAILABLE,
     EntityCategory,
+    UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     UnitOfPower,
     UnitOfTime,
 )
@@ -271,21 +271,21 @@ AC_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         name="PM1",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM1,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
         key=AirConditionerFeatures.PM10,
         name="PM10",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM10,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
         key=AirConditionerFeatures.PM25,
         name="PM2.5",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM25,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
         key=AirConditionerFeatures.FILTER_MAIN_LIFE,
@@ -406,21 +406,21 @@ AIR_PURIFIER_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         name="PM1",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM1,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
         key=AirPurifierFeatures.PM10,
         name="PM10",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM10,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
         key=AirPurifierFeatures.PM25,
         name="PM2.5",
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.PM25,
-        native_unit_of_measurement=CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        native_unit_of_measurement=UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
     ),
     ThinQSensorEntityDescription(
         key=AirPurifierFeatures.FILTER_MAIN_LIFE,
