@@ -819,6 +819,7 @@ class AirConditionerDevice(Device):
             return None
         try:
             value = await self._get_config(STATE_POWER_V1)
+            _LOGGER.debug("Device %s instant power: %s W", self.name, value)
             return value[STATE_POWER_V1]
         except (ValueError, InvalidRequestError) as exc:
             # Device does not support whole unit instant power usage
@@ -1158,9 +1159,13 @@ class AirConditionerStatus(DeviceStatus):
         key = self._get_state_key(STATE_POWER)
         if (value := self.to_int_or_none(self._data.get(key))) is None:
             return None
-        if value <= 50 and not self.is_on:
-            # decrease power for devices that always return 50 when standby
-            value = 5
+        if not self.is_on:
+            # A unit that is off draws nothing, but it keeps reporting the last
+            # power it measured while running - the fan speed it was on as it
+            # was switched off, say - and reports it unchanged for as long as
+            # it stays off. Nothing about that reading is current, so report
+            # the only figure that is true of a unit that is off.
+            value = 0
         return self._update_feature(AirConditionerFeatures.ENERGY_CURRENT, value, False)
 
     @property
