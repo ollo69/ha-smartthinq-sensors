@@ -254,9 +254,25 @@ class LGEACClimate(LGEClimate):
         return self._preset_mode_lookup
 
     @property
+    def _is_fan_only(self) -> bool:
+        """Return whether the unit is set to fan-only, on or off.
+
+        Fan-only just moves air, so there is nothing to reach, but the unit
+        keeps reporting the setpoint it last cooled to. Read the mode the unit
+        holds rather than the hvac mode, which is only ever OFF while the unit
+        is off and so would let the stale setpoint back in.
+        """
+        op_mode: str | None = self._api.state.operation_mode
+        if op_mode is None:
+            return False
+        return self._available_hvac_modes().get(op_mode) == HVACMode.FAN_ONLY
+
+    @property
     def supported_features(self) -> ClimateEntityFeature:
         """Return the list of supported features."""
         features = DEFAULT_AC_FEATURES
+        if self._is_fan_only:
+            features &= ~ClimateEntityFeature.TARGET_TEMPERATURE
         if len(self.fan_modes) > 0:
             features |= ClimateEntityFeature.FAN_MODE
         if self.preset_modes:
@@ -359,8 +375,10 @@ class LGEACClimate(LGEClimate):
         return self._api.state.device_features.get(AirConditionerFeatures.HUMIDITY)
 
     @property
-    def target_temperature(self) -> float:
+    def target_temperature(self) -> float | None:
         """Return the temperature we try to reach."""
+        if self._is_fan_only:
+            return None
         return self._api.state.target_temp
 
     async def async_set_temperature(self, **kwargs) -> None:
