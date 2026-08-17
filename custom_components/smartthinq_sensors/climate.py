@@ -14,7 +14,6 @@ from homeassistant.components.climate.const import (
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     FAN_AUTO,
-    FAN_DIFFUSE,
     FAN_HIGH,
     FAN_LOW,
     FAN_MEDIUM,
@@ -64,9 +63,10 @@ FAN_MODE_LOOKUP: dict[str, str] = {
     ACFanSpeed.HIGH.name: FAN_HIGH,
     ACFanSpeed.LOW.name: FAN_LOW,
     ACFanSpeed.MID.name: FAN_MEDIUM,
-    ACFanSpeed.NATURE.name: FAN_DIFFUSE,
+    ACFanSpeed.NATURE.name: FAN_AUTO,
 }
 FAN_MODE_REVERSE_LOOKUP = {v: k for k, v in FAN_MODE_LOOKUP.items()}
+FAN_MODE_REVERSE_LOOKUP[FAN_AUTO] = ACFanSpeed.AUTO.name
 
 PRESET_MODE_LOOKUP: dict[str, dict[str, HVACMode]] = {
     ACMode.ENERGY_SAVING.name: {"preset": PRESET_ECO, "hvac": HVACMode.COOL},
@@ -382,7 +382,10 @@ class LGEACClimate(LGEClimate):
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Set new target fan mode."""
-        lg_fan_mode = FAN_MODE_REVERSE_LOOKUP.get(fan_mode, fan_mode)
+        if fan_mode == FAN_AUTO and ACFanSpeed.NATURE.name in self._device.fan_speeds:
+            lg_fan_mode = ACFanSpeed.NATURE.name
+        else:
+            lg_fan_mode = FAN_MODE_REVERSE_LOOKUP.get(fan_mode, fan_mode)
         if lg_fan_mode not in self._device.fan_speeds:
             raise ValueError(f"Invalid fan mode [{fan_mode}]")
         await self._device.set_fan_speed(lg_fan_mode)
