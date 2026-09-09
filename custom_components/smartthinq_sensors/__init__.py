@@ -60,6 +60,7 @@ from .wideq.core_exceptions import (
     MonitorRefreshError,
     MonitorUnavailableError,
     NotConnectedError,
+    TokenError,
 )
 from .wideq.device import Device as ThinQDevice
 
@@ -263,7 +264,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         client = await lge_auth.create_client_from_token(
             refresh_token, oauth2_url, client_id, _update_clientid_callback
         )
-    except (AuthenticationError, InvalidCredentialError) as exc:
+    except (AuthenticationError, InvalidCredentialError, TokenError) as exc:
         if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
             hass.data.pop(DOMAIN)
             # Launch config entries reauth setup
