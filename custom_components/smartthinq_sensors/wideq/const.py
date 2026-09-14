@@ -117,6 +117,7 @@ class WashDeviceFeatures(StrEnum):
 
     ANTICREASE = "anti_crease"
     AUTODOOR = "auto_door"
+    BUZZERLEVEL = "buzzer_level"
     CHILDLOCK = "child_lock"
     CREASECARE = "crease_care"
     DAMPDRYBEEP = "damp_dry_beep"
