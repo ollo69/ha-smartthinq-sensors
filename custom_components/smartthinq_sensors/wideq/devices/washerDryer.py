@@ -31,6 +31,7 @@ WM_ROOT_DATA = "washerDryer"
 WM_SUB_KEYS = {"mini": "miniState", "Sub": "SubState"}
 
 POWER_STATUS_KEY = ["State", "state"]
+BUZZER_STATUS_KEY = ["Buzzer", "buzzer"]
 
 CMD_POWER_OFF = [[None, "WMControl"], ["PowerOff", "WMOff"], [None, None]]
 CMD_WAKE_UP = [[None, "WMWakeup"], ["OperationWakeUp", "WMWakeup"], [None, None]]
@@ -41,11 +42,28 @@ CMD_REMOTE_START = [
     ["Start", "WMStart"],
 ]
 
+# End-of-cycle chime volume. Keys and order come from the model JSON
+# ("buzzer" valueMapping), index 0 (off) through 4 (loudest); values are the
+# options offered in Home Assistant.
+BUZZER_LEVELS = {
+    "BUZZER_OFF": "Off",
+    "BUZZER_1": "Low",
+    "BUZZER_2": "Medium",
+    "BUZZER_3": "High",
+    "BUZZER_4": "Very High",
+}
+BUZZER_RAW_VALUES = {name: raw for raw, name in BUZZER_LEVELS.items()}
+
 VT_CTRL_CMD = {
     "WMOff": {"cmd": "power", "type": "ABSOLUTE", "value": "POWER_OFF"},
     "WMWakeup": {"cmd": "power", "type": "ABSOLUTE", "value": "POWER_ON"},
     "WMStop": {"cmd": "wmControl", "type": "ABSOLUTE", "value": "PAUSE"},
     "WMStart": {"cmd": "wmControl", "type": "ABSOLUTE", "value": "START"},
+    # one command per level: _prepare_command_vtctrl() looks the frame up by name
+    **{
+        f"WMBuzzer_{level}": {"cmd": "buzzer", "type": "ABSOLUTE", "value": level}
+        for level in BUZZER_LEVELS
+    },
 }
 VT_CTRL_COURSE_INFO = "vt_ctrl_course_info"
 
@@ -738,6 +756,31 @@ class WMDevice(Device):
         await self.set(keys[0], keys[1], key=keys[2])
         self._remote_start_pressed = True
 
+    @cached_property
+    def buzzer_levels(self) -> list[str]:
+        """Return the available chime volume levels."""
+        key = self.getkey(self._get_state_key(BUZZER_STATUS_KEY))
+        if not self.model_info.is_enum_type(key):
+            return []
+        # options maps raw value -> label, and the labels are model specific
+        # (@WM_MP_<model>_BUZZER_n_W), so match on the keys.
+        options = self.model_info.value(key).options
+        return [name for raw, name in BUZZER_LEVELS.items() if raw in options]
+
+    async def set_buzzer_level(self, level: str) -> None:
+        """Set the end-of-cycle chime volume."""
+        if level not in self.buzzer_levels:
+            raise ValueError(f"Invalid chime volume: {level}")
+
+        keys = self._get_cmd_keys(
+            [
+                [None, "WMControl"],
+                [None, f"WMBuzzer_{BUZZER_RAW_VALUES[level]}"],
+                [None, None],
+            ]
+        )
+        await self.set(keys[0], keys[1])
+
     async def pause(self):
         """Pause the device."""
         if not self.pause_enabled:
@@ -1095,6 +1138,18 @@ class WMStatus(DeviceStatus):
         return self._update_feature(WashDeviceFeatures.SPINSPEED, spin_speed)
 
     @property
+    def buzzer_level_option_state(self):
+        """Return chime volume state."""
+        keys = self._getkeys(BUZZER_STATUS_KEY)
+        if not (curr_key := self._get_data_key(keys)):
+            return None
+        # map the raw value (BUZZER_OFF .. BUZZER_4) onto the same option names
+        # WMDevice.buzzer_levels offers, and store it with get_text=False. The
+        # model JSON label is model specific and would never match.
+        buzzer = BUZZER_LEVELS.get(self._data.get(curr_key), StateOptions.NONE)
+        return self._update_feature(WashDeviceFeatures.BUZZERLEVEL, buzzer, False)
+
+    @property
     def water_temp_option_state(self):
         """Return water temperature option state."""
         keys = self._getkeys(["WTemp", "WaterTemp", "temp"])
@@ -1211,6 +1266,7 @@ class WMStatus(DeviceStatus):
             self.process_state,
             self.error_msg,
             self.spin_option_state,
+            self.buzzer_level_option_state,
             self.water_temp_option_state,
             self.rinse_mode_option_state,
             self.dry_level_option_state,

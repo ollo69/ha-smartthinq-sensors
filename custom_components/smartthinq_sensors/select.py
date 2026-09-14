@@ -16,7 +16,12 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import LGEDevice
 from .const import DOMAIN, LGE_DEVICES, LGE_DISCOVERY_NEW
-from .wideq import WM_DEVICE_TYPES, DeviceType, MicroWaveFeatures
+from .wideq import (
+    WM_DEVICE_TYPES,
+    DeviceType,
+    MicroWaveFeatures,
+    WashDeviceFeatures,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,6 +53,14 @@ WASH_DEV_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
         select_option_fn=lambda x, option: x.device.select_start_course(option),
         available_fn=lambda x: x.device.select_course_enabled,
         value_fn=lambda x: x.device.selected_course,
+    ),
+    ThinQSelectEntityDescription(
+        key=WashDeviceFeatures.BUZZERLEVEL,
+        name="Chime volume",
+        icon="mdi:volume-high",
+        entity_category=EntityCategory.CONFIG,
+        options_fn=lambda x: x.device.buzzer_levels,
+        select_option_fn=lambda x, option: x.device.set_buzzer_level(option),
     ),
 )
 MICROWAVE_SELECT: tuple[ThinQSelectEntityDescription, ...] = (
