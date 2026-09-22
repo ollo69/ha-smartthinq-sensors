@@ -280,13 +280,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(msg) from exc
 
     except Exception as exc:  # pylint: disable=broad-except
+        msg = "Connection not available. ThinQ platform not ready"
         if log_info:
-            _LOGGER.warning(
-                "Connection not available. ThinQ platform not ready", exc_info=exc
-            )
-        # Keep the entry loaded so the number entity is usable and the user
-        # can adjust scan_interval; reload the entry once LG is reachable.
-        return True
+            _LOGGER.warning(msg, exc_info=exc)
+        raise ConfigEntryNotReady(msg) from exc
 
     if not client.has_devices:
         _LOGGER.error("No ThinQ devices found. Component setup aborted")
