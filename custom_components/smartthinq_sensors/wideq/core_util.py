@@ -1,5 +1,6 @@
 """Support for LG SmartThinQ device."""
 
+import math
 import uuid
 
 
@@ -66,4 +67,13 @@ class TempUnitConversion:
                     c_num = float(cel)
                 out[c_num] = fah
             self._c2f_map = out
-        return self._c2f_map.get(value, value)
+        if value is None:
+            return None
+        if (fah := self._c2f_map.get(value)) is not None:
+            return fah
+
+        # The LUT only covers the values used for target temperatures, while
+        # room temperatures can be reported with decimals not in the map
+        # (e.g. 22.7). Fall back to a real conversion instead of returning
+        # the Celsius value unchanged.
+        return math.floor(float(value) * 9 / 5 + 32 + 0.5)
