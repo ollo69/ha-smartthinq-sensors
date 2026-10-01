@@ -45,6 +45,7 @@ STATE_ECO_FRIENDLY = ["EcoFriendly", "ecoFriendly"]
 STATE_ICE_PLUS = ["IcePlus", ""]
 STATE_EXPRESS_FRIDGE = ["", "expressFridge"]
 STATE_EXPRESS_MODE = ["", "expressMode"]
+STATE_SABBATH_MODE = ["Sabbath", "sabbathMode"]
 STATE_FRIDGE_TEMP = ["TempRefrigerator", "fridgeTemp"]
 STATE_FREEZER_TEMP = ["TempFreezer", "freezerTemp"]
 
@@ -56,6 +57,7 @@ CMD_STATE_EXPRESS_FRIDGE = [
     STATE_EXPRESS_FRIDGE,
 ]
 CMD_STATE_EXPRESS_MODE = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_EXPRESS_MODE]
+CMD_STATE_SABBATH_MODE = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_SABBATH_MODE]
 CMD_STATE_FRIDGE_TEMP = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_FRIDGE_TEMP]
 CMD_STATE_FREEZER_TEMP = [CTRL_BASIC, ["SetControl", "basicCtrl"], STATE_FREEZER_TEMP]
 
@@ -322,6 +324,14 @@ class RefrigeratorDevice(Device):
             return
         await self._set_feature(turn_on, STATE_EXPRESS_MODE, CMD_STATE_EXPRESS_MODE)
 
+    async def set_sabbath_mode(self, turn_on=False):
+        """Switch the Sabbath mode status."""
+        if not self.model_info.is_info_v2:
+            return
+        if not self.set_values_allowed:
+            return
+        await self._set_feature(turn_on, STATE_SABBATH_MODE, CMD_STATE_SABBATH_MODE)
+
     async def set_fridge_target_temp(self, temp):
         """Set the fridge target temperature."""
         if not self.set_values_allowed:
@@ -386,7 +396,6 @@ class RefrigeratorStatus(DeviceStatus):
         super().__init__(device, data)
         self._temp_unit = None
         self._eco_friendly_state = None
-        self._sabbath_state = None
 
     def _get_eco_friendly_state(self):
         """Get current eco-friendly state."""
@@ -400,13 +409,10 @@ class RefrigeratorStatus(DeviceStatus):
 
     def _get_sabbath_state(self):
         """Get current sabbath-mode state."""
-        if self._sabbath_state is None:
-            state = self.lookup_enum(["Sabbath", "sabbathMode"])
-            if not state:
-                self._sabbath_state = ""
-            else:
-                self._sabbath_state = state
-        return self._sabbath_state
+        # Deliberately not cached: the value must track the latest poll.
+        # A stale cache keeps the switch showing off, and the switch's
+        # turn_off guard (if self.is_on) then skips sending the command.
+        return self.lookup_enum(["Sabbath", "sabbathMode"]) or ""
 
     def _get_default_index(self, key_mode, key_index):
         """Get default model info index key."""
@@ -555,6 +561,13 @@ class RefrigeratorStatus(DeviceStatus):
         return self._update_feature(RefrigeratorFeatures.EXPRESSMODE, status, True, key)
 
     @property
+    def sabbath_mode_status(self):
+        """Return current Sabbath mode status."""
+        key = STATE_SABBATH_MODE[1 if self.is_info_v2 else 0]
+        status = self._get_sabbath_state()
+        return self._update_feature(RefrigeratorFeatures.SABBATH, status, True, key)
+
+    @property
     def smart_saving_state(self):
         """Return current smart saving state."""
         state = self.lookup_enum(["SmartSavingModeStatus", "smartSavingRun"])
@@ -663,6 +676,7 @@ class RefrigeratorStatus(DeviceStatus):
             self.ice_plus_status,
             self.express_fridge_status,
             self.express_mode_status,
+            self.sabbath_mode_status,
             self.smart_saving_mode,
             self.fresh_air_filter_status,
             self.fresh_air_filter_remain_perc,

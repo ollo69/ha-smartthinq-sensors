@@ -14,6 +14,7 @@ from homeassistant.components.switch import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_OFF, STATE_ON
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -72,6 +73,14 @@ REFRIGERATOR_SWITCH: tuple[ThinQSwitchEntityDescription, ...] = (
         turn_off_fn=lambda x: x.device.set_express_fridge(False),
         turn_on_fn=lambda x: x.device.set_express_fridge(True),
         available_fn=lambda x: x.device.set_values_allowed,
+    ),
+    ThinQSwitchEntityDescription(
+        key=RefrigeratorFeatures.SABBATH,
+        name="Sabbath mode",
+        icon="mdi:candle",
+        turn_off_fn=lambda x: x.device.set_sabbath_mode(False),
+        turn_on_fn=lambda x: x.device.set_sabbath_mode(True),
+        available_fn=lambda x: x.is_power_on,
     ),
     ThinQSwitchEntityDescription(
         key=RefrigeratorFeatures.EXPRESSMODE,
@@ -158,6 +167,13 @@ def _switch_exist(
         return True
 
     feature = switch_desc.key
+    # The Sabbath-mode switch is always created for refrigerators. The LG
+    # API intermittently omits the Sabbath field from device snapshots, and
+    # gating on available_features made the switch disappear on every
+    # integration reload that caught a partial snapshot.
+    if feature == RefrigeratorFeatures.SABBATH:
+        return lge_device.type == DeviceType.REFRIGERATOR
+
     if feature in lge_device.available_features:
         return True
 
@@ -266,7 +282,14 @@ class LGESwitch(LGEBaseSwitch):
         if self.entity_description.turn_off_fn is None:
             raise NotImplementedError()
         if self.is_on:
-            await self.entity_description.turn_off_fn(self._wrap_device)
+            try:
+                await self.entity_description.turn_off_fn(self._wrap_device)
+            except HomeAssistantError:
+                raise
+            except Exception as err:
+                raise HomeAssistantError(
+                    f"Failed to turn off {self.name}: {err}"
+                ) from err
             self._api.async_set_updated()
 
     async def async_turn_on(self, **kwargs):
@@ -274,7 +297,14 @@ class LGESwitch(LGEBaseSwitch):
         if self.entity_description.turn_on_fn is None:
             raise NotImplementedError()
         if not self.is_on:
-            await self.entity_description.turn_on_fn(self._wrap_device)
+            try:
+                await self.entity_description.turn_on_fn(self._wrap_device)
+            except HomeAssistantError:
+                raise
+            except Exception as err:
+                raise HomeAssistantError(
+                    f"Failed to turn on {self.name}: {err}"
+                ) from err
             self._api.async_set_updated()
 
     def _get_switch_state(self):
