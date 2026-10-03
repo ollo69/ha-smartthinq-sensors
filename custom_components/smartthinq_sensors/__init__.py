@@ -672,6 +672,24 @@ async def lge_devices_setup(
 
 
 @callback
+def async_get_lg_device(
+    device_registry: dr.DeviceRegistry, device_id: str, entry_id: str
+) -> dr.DeviceEntry | None:
+    """Get the device entry for one LG device, scoped to its config entry.
+
+    async_get_device_by_identifier() was added in HA 2026.8.0. This
+    integration's floor is 2025.7.0 (see hacs.json), so fall back to the
+    deprecated async_get_device() -- removal scheduled for 2027.8 -- on
+    older core.
+    """
+    if hasattr(device_registry, "async_get_device_by_identifier"):
+        return device_registry.async_get_device_by_identifier(
+            (DOMAIN, device_id), entry_id
+        )
+    return device_registry.async_get_device({(DOMAIN, device_id)})
+
+
+@callback
 def cleanup_orphan_lge_devices(
     hass: HomeAssistant, entry_id: str, valid_dev_ids: list[str]
 ) -> None:
@@ -684,7 +702,7 @@ def cleanup_orphan_lge_devices(
     # get list of valid devices
     valid_reg_dev_ids = []
     for device_id in valid_dev_ids:
-        dev = device_registry.async_get_device({(DOMAIN, device_id)})
+        dev = async_get_lg_device(device_registry, device_id, entry_id)
         if dev is not None:
             valid_reg_dev_ids.append(dev.id)
 
