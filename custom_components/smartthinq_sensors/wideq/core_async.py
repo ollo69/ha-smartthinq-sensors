@@ -415,9 +415,14 @@ class CoreAsync:
         return self._manage_lge_result(out, is_api_v2, user_number)
 
     def _manage_lge_result(
-        self, result: dict, is_api_v2=False, user_number: str | None = None
+        self, result: dict | None, is_api_v2=False, user_number: str | None = None
     ) -> dict:
         """Manage the result from a get or a post to lge server."""
+
+        if not isinstance(result, dict):
+            # the server can reply with an empty body (e.g. `null`) instead of
+            # a json object, and this must be managed as an invalid response
+            raise exc.InvalidResponseError(result)
 
         if is_api_v2:
             if "resultCode" in result:
