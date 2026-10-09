@@ -50,7 +50,7 @@ def get_lge_device(
 
     if device_type == DeviceType.AC:
         return [AirConditionerDevice(client, device_info, temp_unit)]
-    if device_type == DeviceType.AIR_PURIFIER:
+    if device_type in (DeviceType.AIR_PURIFIER, DeviceType.AIR_PURIFIER_FAN):
         return [AirPurifierDevice(client, device_info)]
     if device_type == DeviceType.DEHUMIDIFIER:
         return [DeHumidifierDevice(client, device_info)]

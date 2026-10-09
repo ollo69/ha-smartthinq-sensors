@@ -120,6 +120,7 @@ MICROWAVE_DEVICE: tuple[ThinQFanEntityDescription, ...] = (
 FAN_ENTITIES = {
     DeviceType.FAN: FAN_DEVICE,
     DeviceType.AIR_PURIFIER: AIRPURIFIER_DEVICE,
+    DeviceType.AIR_PURIFIER_FAN: AIRPURIFIER_DEVICE,
     DeviceType.HOOD: HOOD_DEVICE,
     DeviceType.MICROWAVE: MICROWAVE_DEVICE,
 }
