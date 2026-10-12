@@ -28,7 +28,7 @@ from homeassistant.helpers.dispatcher import (
     async_dispatcher_send,
 )
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import (
@@ -79,6 +79,7 @@ SMARTTHINQ_PLATFORMS = [
 
 AUTH_RETRY = "auth_retry"
 MAX_AUTH_RETRY = 4
+SETUP_RETRY_DELAY = 300  # seconds between reload attempts after a failed LG connection
 
 MAX_DISC_COUNT = 4
 SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
@@ -285,7 +286,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Connection not available. ThinQ platform not ready", exc_info=exc
             )
         # Keep the entry loaded so the number entity is usable and the user
-        # can adjust scan_interval; reload the entry once LG is reachable.
+        # can adjust scan_interval. Returning True arms no Home Assistant
+        # retry, so schedule a reload ourselves (fixed delay, no backoff:
+        # revisit if LG asks for gentler polling). Cancelled on unload.
+        entry.async_on_unload(
+            async_call_later(
+                hass,
+                SETUP_RETRY_DELAY,
+                lambda _now: hass.config_entries.async_schedule_reload(
+                    entry.entry_id
+                ),
+            )
+        )
         return True
 
     if not client.has_devices:
