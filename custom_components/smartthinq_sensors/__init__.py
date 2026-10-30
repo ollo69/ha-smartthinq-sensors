@@ -60,6 +60,8 @@ from .wideq.core_exceptions import (
     MonitorRefreshError,
     MonitorUnavailableError,
     NotConnectedError,
+    NotLoggedInError,
+    TokenError,
 )
 from .wideq.device import Device as ThinQDevice
 
@@ -261,7 +263,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         client = await lge_auth.create_client_from_token(
             refresh_token, oauth2_url, client_id, _update_clientid_callback
         )
-    except (AuthenticationError, InvalidCredentialError) as exc:
+    except (AuthenticationError, InvalidCredentialError, TokenError, NotLoggedInError) as exc:
         # Auth errors are not transient: LG refused the stored token or
         # credentials (expired token, new Terms of Service to accept in the
         # app). Retrying cannot recover, and the previous retry counter never
@@ -270,8 +272,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # earlier with a platform "already been setup" error. The result was
         # an endless setup retry with no reauth flow ever started (issue
         # #1028). Raise immediately so HA core shows the reauth repair and
-        # the user re-logs in from the UI.
-        hass.data.pop(DOMAIN)
+        # the user re-logs in from the UI. Caveat (code-review 2026-10-30):
+        # AuthenticationError can also surface transient LG-side failures
+        # (get_user_number raises it on any non-OK status), so a stray LG
+        # hiccup leads to a reauth repair; the repair retry button recovers
+        # it, and the alternative (ConfigEntryNotReady) is the silent 24h
+        # blindness the issue reports.
+        reload_marker = hass.data.get(DOMAIN, {}).get(SIGNAL_RELOAD_ENTRY, 0)
+        # pop with default: async_unload_entry pops DOMAIN too and a missing
+        # key would raise KeyError, failing the entry unload after a
+        # successful reauth (code-review 2026-10-30, severe finding 1).
+        hass.data.pop(DOMAIN, None)
+        hass.data[DOMAIN] = {SIGNAL_RELOAD_ENTRY: reload_marker}
+        # Keep the actionable guidance from the old warning: some of these
+        # failures need the LG App (new Terms of Service), not the reauth form.
+        _LOGGER.warning(
+            "ThinQ authentication failed, reauth flow started. Check the LG"
+            " app for pending Terms of Service if the re-login keeps failing",
+            exc_info=exc,
+        )
         # Launch config entries reauth setup
         raise ConfigEntryAuthFailed("ThinQ authentication failed") from exc
 
