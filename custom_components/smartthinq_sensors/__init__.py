@@ -77,8 +77,6 @@ SMARTTHINQ_PLATFORMS = [
     Platform.WATER_HEATER,
 ]
 
-AUTH_RETRY = "auth_retry"
-MAX_AUTH_RETRY = 4
 
 MAX_DISC_COUNT = 4
 SIGNAL_RELOAD_ENTRY = f"{DOMAIN}_reload_entry"
@@ -264,20 +262,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             refresh_token, oauth2_url, client_id, _update_clientid_callback
         )
     except (AuthenticationError, InvalidCredentialError) as exc:
-        if (auth_retry := hass.data[DOMAIN].get(AUTH_RETRY, 0)) >= MAX_AUTH_RETRY:
-            hass.data.pop(DOMAIN)
-            # Launch config entries reauth setup
-            raise ConfigEntryAuthFailed("ThinQ authentication failed") from exc
-
-        hass.data[DOMAIN][AUTH_RETRY] = auth_retry + 1
-        msg = (
-            "Invalid ThinQ credential error, integration setup aborted."
-            " Please use the LG App on your mobile device to ensure your"
-            " credentials are correct or there are new Term of Service to accept"
-        )
-        if log_info:
-            _LOGGER.warning(msg, exc_info=True)
-        raise ConfigEntryNotReady(msg) from exc
+        # Auth errors are not transient: LG refused the stored token or
+        # credentials (expired token, new Terms of Service to accept in the
+        # app). Retrying cannot recover, and the previous retry counter never
+        # reached its limit in practice, because async_unload_entry rebuilds
+        # hass.data without AUTH_RETRY and repeated setup attempts abort
+        # earlier with a platform "already been setup" error. The result was
+        # an endless setup retry with no reauth flow ever started (issue
+        # #1028). Raise immediately so HA core shows the reauth repair and
+        # the user re-logs in from the UI.
+        hass.data.pop(DOMAIN)
+        # Launch config entries reauth setup
+        raise ConfigEntryAuthFailed("ThinQ authentication failed") from exc
 
     except Exception as exc:  # pylint: disable=broad-except
         if log_info:
