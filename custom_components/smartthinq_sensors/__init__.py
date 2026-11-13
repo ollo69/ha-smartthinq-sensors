@@ -232,14 +232,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         return False
 
-    # Forward the scan_interval number entity before any LG call so users can
-    # adjust the polling rate even when the LG cloud is unreachable.
+    # Seed the interval before initializing devices, but defer ALL platform
+    # setup until LG initialization succeeds. A failed attempt must not leave
+    # a forwarded number platform behind for HA's next setup attempt.
     hass.data.setdefault(DOMAIN, {})[CONF_SCAN_INTERVAL] = int(
         entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
     )
-    await hass.config_entries.async_forward_entry_setups(entry, [Platform.NUMBER])
-    entry.async_on_unload(entry.add_update_listener(_options_update_listener))
-
     log_info: bool = hass.data[DOMAIN].get(SIGNAL_RELOAD_ENTRY, 0) < 2
     if log_info:
         hass.data[DOMAIN][SIGNAL_RELOAD_ENTRY] = 2
@@ -284,11 +282,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning(
                 "Connection not available. ThinQ platform not ready", exc_info=exc
             )
-        # Keep the entry loaded so the number entity is usable and the user
-        # can adjust scan_interval; reload the entry once LG is reachable.
-        return True
+        raise ConfigEntryNotReady("ThinQ client initialization failed") from exc
 
     if not client.has_devices:
+        await client.close()
         _LOGGER.error("No ThinQ devices found. Component setup aborted")
         return False
 
@@ -304,12 +301,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Connection not available. ThinQ platform not ready", exc_info=exc
             )
         await client.close()
-        return True
+        raise ConfigEntryNotReady("ThinQ device initialization failed") from exc
 
     if discovered_devices is None:
         await client.close()
-        _LOGGER.warning("ThinQ platform not ready: no devices found")
-        return True
+        raise ConfigEntryNotReady("ThinQ platform not ready: no devices found")
 
     # remove device not available anymore
     dev_ids = [v for ids in discovered_devices.values() for v in ids]
@@ -334,6 +330,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close_lg_client)
     )
 
+    # A successful initialization ends any previous authentication retry streak.
+    hass.data[DOMAIN].pop(AUTH_RETRY, None)
+    entry.async_on_unload(entry.add_update_listener(_options_update_listener))
+
     # update() (not assignment) preserves the CONF_SCAN_INTERVAL seeded earlier.
     hass.data[DOMAIN].update(
         {
@@ -343,9 +343,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DISCOVERED_DEVICES: discovered_devices,
         }
     )
-    await hass.config_entries.async_forward_entry_setups(
-        entry, [p for p in SMARTTHINQ_PLATFORMS if p is not Platform.NUMBER]
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, SMARTTHINQ_PLATFORMS)
 
     start_devices_discovery(hass, entry, client)
 
@@ -375,11 +373,9 @@ async def _options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> N
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    # If LG never connected, only the number platform was forwarded; trying to
-    # unload the LG-dependent platforms in that case errors out per-platform.
-    lg_loaded = CLIENT in hass.data.get(DOMAIN, {})
-    platforms = SMARTTHINQ_PLATFORMS if lg_loaded else [Platform.NUMBER]
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
+    if unload_ok := await hass.config_entries.async_unload_platforms(
+        entry, SMARTTHINQ_PLATFORMS
+    ):
         data = hass.data.pop(DOMAIN)
         reload = data.get(SIGNAL_RELOAD_ENTRY, 0)
         if reload > 0:
