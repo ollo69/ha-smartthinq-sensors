@@ -115,6 +115,8 @@ class RefrigeratorFeatures(StrEnum):
 class WashDeviceFeatures(StrEnum):
     """Features for LG Wash devices."""
 
+    ACCUMULATED_ENERGY_RAW = "accumulated_energy_raw"
+    AI_DD_INDICATOR = "ai_dd_indicator"
     ANTICREASE = "anti_crease"
     AUTODOOR = "auto_door"
     CHILDLOCK = "child_lock"
@@ -125,17 +127,21 @@ class WashDeviceFeatures(StrEnum):
     DETERGENTLOW = "detergent_low"
     DOORLOCK = "door_lock"
     DOOROPEN = "door_open"
+    DOWNLOADED_COURSE = "downloaded_course"
     DRYLEVEL = "dry_level"
     DUALZONE = "dual_zone"
     ECOHYBRID = "eco_hybrid"
     ENERGYSAVER = "energy_saver"
     ERROR_MSG = "error_message"
     EXTRADRY = "extra_dry"
+    EZDISPENSE_DRAWER = "ezdispense_drawer"
+    EZDISPENSE_TYPE = "ezdispense_type"
     HALFLOAD = "half_load"
     HANDIRON = "hand_iron"
     HIGHTEMP = "high_temp"
     MEDICRINSE = "medic_rinse"
     NIGHTDRY = "night_dry"
+    PERIODIC_ENERGY_RAW = "periodic_energy_raw"
     PRESTEAM = "pre_steam"
     PREWASH = "pre_wash"
     PRE_STATE = "pre_state"
@@ -158,6 +164,12 @@ class WashDeviceFeatures(StrEnum):
     TUBCLEAN_COUNT = "tubclean_count"
     TURBOWASH = "turbo_wash"
     WATERTEMP = "water_temp"
+    WASHING_INDEX = "washing_index"
+    WEATHER_DUST = "weather_dust"
+    WEATHER_HUMIDITY = "weather_humidity"
+    WEATHER_PRECIPITATION_PROBABILITY = "weather_precipitation_probability"
+    WEATHER_TEMPERATURE = "weather_temperature"
+    WEATHER_WASHING_INDEX = "weather_washing_index"
 
 
 class WaterHeaterFeatures(StrEnum):

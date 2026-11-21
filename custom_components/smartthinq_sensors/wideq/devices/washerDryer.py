@@ -7,6 +7,7 @@ from copy import deepcopy
 from enum import IntEnum
 import json
 import logging
+import math
 
 from ..backports.functools import cached_property
 from ..const import StateOptions, WashDeviceFeatures
@@ -49,6 +50,37 @@ VT_CTRL_CMD = {
 }
 VT_CTRL_COURSE_INFO = "vt_ctrl_course_info"
 
+SNAPSHOT_ENUM_FEATURES = {
+    WashDeviceFeatures.EZDISPENSE_DRAWER: (
+        "ezDispenseDrawerState",
+        {"ezDisDrawer_OPEN": "open", "ezDisDrawer_CLOSE": "closed"},
+    ),
+    WashDeviceFeatures.EZDISPENSE_TYPE: (
+        "ezDispenseType",
+        {
+            "EZD_DETERGENT_SOFTENER": "detergent_softener",
+            "EZD_DETERGENT_LINK": "detergent_link",
+            "EZD_DETERGENT_MAIN": "detergent_main",
+            "EZD_DETERGENT_SUB": "detergent_sub",
+        },
+    ),
+    WashDeviceFeatures.AI_DD_INDICATOR: (
+        "AIDDLed",
+        {"AIDDLed_ON": StateOptions.ON, "AIDDLed_OFF": StateOptions.OFF},
+    ),
+}
+
+SNAPSHOT_NUMBER_FEATURES = {
+    WashDeviceFeatures.PERIODIC_ENERGY_RAW: "periodicEnergyData",
+    WashDeviceFeatures.ACCUMULATED_ENERGY_RAW: "accumulatedEnergyData",
+    WashDeviceFeatures.WEATHER_TEMPERATURE: "dnn_temp",
+    WashDeviceFeatures.WEATHER_HUMIDITY: "dnn_humidity",
+    WashDeviceFeatures.WEATHER_PRECIPITATION_PROBABILITY: "dnn_precipitationProbability",
+    WashDeviceFeatures.WEATHER_DUST: "dnn_dust",
+    WashDeviceFeatures.WEATHER_WASHING_INDEX: "dnn_washingIndex",
+    WashDeviceFeatures.WASHING_INDEX: "washingIndex",
+}
+
 BIT_FEATURES = {
     WashDeviceFeatures.ANTICREASE: ["AntiCrease", "antiCrease"],
     WashDeviceFeatures.CHILDLOCK: ["ChildLock", "childLock"],
@@ -83,6 +115,7 @@ class CourseType(IntEnum):
     COURSE = 0
     SMARTCOURSE = 1
     OPCOURSE = 2
+    DOWNLOADED = 3
 
 
 _COURSE_KEYS = {
@@ -92,6 +125,7 @@ _COURSE_KEYS = {
         ["SmartCourse"],
         ["smartCourseType", "downloadedCourseType"],
     ],
+    CourseType.DOWNLOADED: [[], ["downloadedCourseType"]],
 }
 _COURSE_TYPE = "courseType"
 _CURRENT_COURSE = "Current course"
@@ -986,21 +1020,25 @@ class WMStatus(DeviceStatus):
             return False
         return True
 
+    def _get_course_name(self, course_type: CourseType) -> str:
+        """Resolve the course stored in the specified program slot."""
+        if not (course_key := self._device.get_course_key(course_type)):
+            return StateOptions.NONE
+        course = self.lookup_reference(course_key, ref_key="name")
+        name = self._device.get_enum_text(course)
+        if course_type is CourseType.DOWNLOADED and name == course:
+            return self.lookup_reference(course_key) or name
+        return name
+
     @property
     def current_course(self):
         """Return current course."""
-        if not (course_key := self._device.get_course_key(CourseType.COURSE)):
-            return StateOptions.NONE
-        course = self.lookup_reference(course_key, ref_key="name")
-        return self._device.get_enum_text(course)
+        return self._get_course_name(CourseType.COURSE)
 
     @property
     def current_smartcourse(self):
         """Return current smartcourse."""
-        if not (course_key := self._device.get_course_key(CourseType.SMARTCOURSE)):
-            return StateOptions.NONE
-        smart_course = self.lookup_reference(course_key, ref_key="name")
-        return self._device.get_enum_text(smart_course)
+        return self._get_course_name(CourseType.SMARTCOURSE)
 
     def _get_time_info(self, keys: list[str]):
         """Return time info for specific key."""
@@ -1194,6 +1232,35 @@ class WMStatus(DeviceStatus):
             status = StateOptions.OFF
         return self._update_feature(WashDeviceFeatures.STANDBY, status)
 
+    def _snapshot_number(self, field: str) -> float | None:
+        """Read a finite number from the snapshot's numeric or string value."""
+        raw = self.lookup_range(self._getkeys(field))
+        if type(raw) not in (int, float, str):
+            return None
+        try:
+            value = float(raw)
+        except (OverflowError, ValueError):
+            return None
+        return value if math.isfinite(value) else None
+
+    def _update_snapshot_features(self) -> None:
+        """Expose additional telemetry from the existing ThinQ2 snapshot."""
+        for feature, (field, states) in SNAPSHOT_ENUM_FEATURES.items():
+            raw = self.lookup_range(self._getkeys(field))
+            if isinstance(raw, str) and raw in states:
+                self._update_feature(feature, states[raw], get_text=False)
+
+        for feature, field in SNAPSHOT_NUMBER_FEATURES.items():
+            value = self._snapshot_number(field)
+            if value is not None:
+                self._update_feature(feature, value, get_text=False)
+
+        course = self._get_course_name(CourseType.DOWNLOADED)
+        if course != StateOptions.NONE:
+            self._update_feature(
+                WashDeviceFeatures.DOWNLOADED_COURSE, course, get_text=False
+            )
+
     def _update_bit_features(self):
         """Update features related to bit status."""
         index = 1 if self.is_info_v2 else 0
@@ -1220,4 +1287,6 @@ class WMStatus(DeviceStatus):
             self.tubclean_count,
             self.standby_state,
         ]
+        if self.is_info_v2 and not self.is_dryer:
+            self._update_snapshot_features()
         self._update_bit_features()
