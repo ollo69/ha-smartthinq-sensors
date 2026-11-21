@@ -111,6 +111,8 @@ In this example, "My [insert thing]" will just be the placeholder
 
 #### Attributes `sensor.my_washer`
 
+Additional snapshot attributes are available on compatible ThinQ2 washers only. A missing reading is omitted or left unknown if the attribute was reported earlier. In particular, ThinQ sometimes reports `-` for weather readings.
+
 Note: When something doesn't apply and/or is off, it may have a `-` as its value. Also, these are for @KTibow's washer, values may differ for yours. Feel free to open an issue/PR.
 <details>
   <summary>
@@ -127,6 +129,13 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | run_state | Current state of washer in words |
 | pre_state | Previous state of washer in words |
 | current_course | Current washing cycle in words |
+| downloaded_course | Program stored in the download slot, when the model identifies that slot. It can differ from the current cycle. |
+| ezdispense_drawer | Dosing drawer position: `open` or `closed`. |
+| ezdispense_type | Dispenser configuration reported by the washer: `detergent_softener`, `detergent_link`, `detergent_main`, or `detergent_sub`. |
+| ai_dd_indicator | State of the AI DD indicator on the washer, `on` or `off`. |
+| periodic_energy_raw, accumulated_energy_raw | Unscaled numeric readings from the washer snapshot. Their units and reset periods are not specified by the snapshot and these attributes are not Energy dashboard sensors. |
+| weather_temperature, weather_humidity, weather_precipitation_probability, weather_dust | Numeric weather inputs from ThinQ, where reported. They are not measurements taken by the washer. |
+| weather_washing_index, washing_index | The two washing indexes reported by ThinQ, exposed independently without scaling. |
 | spin_speed | Current cycle's spin mode in words |
 | water_temp | Current cycle's water temperature in words |
 | dry_level | Unknown attribute, might be used in combined washers and dryers for the current cycle's dry level |
