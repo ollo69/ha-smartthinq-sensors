@@ -73,6 +73,35 @@
       "scan_interval": {
         "name": "Scan interval"
       }
+    },
+    "sensor": {
+      "detergent_dispense_mode": {
+        "name": "Detergent dispense mode",
+        "state": {
+          "off": "Off",
+          "less": "Less",
+          "normal": "Normal",
+          "more": "More"
+        }
+      },
+      "detergent_dose_ml": {
+        "name": "Detergent configured dose"
+      },
+      "softener_dispense_mode": {
+        "name": "Softener dispense mode",
+        "state": {
+          "off": "Off",
+          "less": "Less",
+          "normal": "Normal",
+          "more": "More"
+        }
+      },
+      "softener_dose_ml": {
+        "name": "Softener configured dose"
+      },
+      "wash_mode": {
+        "name": "Wash mode"
+      }
     }
   }
 }

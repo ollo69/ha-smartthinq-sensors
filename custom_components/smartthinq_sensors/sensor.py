@@ -23,6 +23,7 @@ from homeassistant.const import (
     EntityCategory,
     UnitOfPower,
     UnitOfTime,
+    UnitOfVolume,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -67,6 +68,7 @@ from .wideq import (
     WashDeviceFeatures,
     WaterHeaterFeatures,
 )
+from .wideq.devices.washerDryer import EZDISPENSE_FEATURES, EZDISPENSE_MODES
 
 # service definition
 SERVICE_REMOTE_START = "remote_start"
@@ -127,6 +129,32 @@ WASH_DEV_SENSORS: tuple[ThinQSensorEntityDescription, ...] = (
         key=WashDeviceFeatures.RINSEMODE,
         name="Rinse mode",
         icon="mdi:waves",
+    ),
+    ThinQSensorEntityDescription(
+        key=WashDeviceFeatures.WASH_MODE,
+        translation_key=WashDeviceFeatures.WASH_MODE,
+        has_entity_name=True,
+        icon="mdi:washing-machine",
+    ),
+    *(
+        description
+        for mode, _, dose, _ in EZDISPENSE_FEATURES
+        for description in (
+            ThinQSensorEntityDescription(
+                key=mode,
+                translation_key=mode,
+                has_entity_name=True,
+                device_class=SensorDeviceClass.ENUM,
+                options=list(EZDISPENSE_MODES.values()),
+            ),
+            ThinQSensorEntityDescription(
+                key=dose,
+                translation_key=dose,
+                has_entity_name=True,
+                device_class=SensorDeviceClass.VOLUME,
+                native_unit_of_measurement=UnitOfVolume.MILLILITERS,
+            ),
+        )
     ),
     ThinQSensorEntityDescription(
         key=WashDeviceFeatures.TEMPCONTROL,

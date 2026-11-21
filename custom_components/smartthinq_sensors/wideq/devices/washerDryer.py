@@ -14,6 +14,7 @@ from ..core_async import ClientAsync
 from ..core_exceptions import InvalidDeviceStatus
 from ..device import Device, DeviceStatus
 from ..device_info import DeviceInfo, DeviceType
+from ..model_info import TYPE_RANGE, RangeValue
 
 STATE_WM_POWER_OFF = "STATE_POWER_OFF"
 STATE_WM_INITIAL = "STATE_INITIAL"
@@ -73,6 +74,27 @@ BIT_FEATURES = {
 }
 
 INVERTED_BITS = [WashDeviceFeatures.DOOROPEN]
+
+EZDISPENSE_FEATURES = (
+    (
+        WashDeviceFeatures.DETERGENT_DISPENSE_MODE,
+        "ezCSDetergentSetVal",
+        WashDeviceFeatures.DETERGENT_DOSE,
+        "ezDetergentAmount",
+    ),
+    (
+        WashDeviceFeatures.SOFTENER_DISPENSE_MODE,
+        "ezCSSoftenerSetVal",
+        WashDeviceFeatures.SOFTENER_DOSE,
+        "ezSoftenerAmount",
+    ),
+)
+EZDISPENSE_MODES = {
+    "@WM_EDD_NOT_USE_W": "off",
+    "@WM_EDD_LESS_W": "less",
+    "@WM_EDD_NORMAL_W": "normal",
+    "@WM_EDD_MORE_W": "more",
+}
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1204,6 +1226,29 @@ class WMStatus(DeviceStatus):
             )
             self._update_feature(feature, status, False)
 
+    def _ezdispense_dose_ml(self, key: str) -> float | None:
+        """Read a reported metric dose within the model's supported range."""
+        bounds = self._device.model_info.value(key, [TYPE_RANGE])
+        raw = self.lookup_range(key)
+        if not isinstance(bounds, RangeValue) or type(raw) not in (int, float, str):
+            return None
+        try:
+            amount_ml = float(raw)
+        except ValueError:
+            return None
+        return amount_ml if bounds.min <= amount_ml <= bounds.max else None
+
+    def _update_ezdispense_features(self) -> None:
+        # The amount scale for an ounce snapshot has not been verified.
+        metric = self.lookup_enum(self._getkeys("ezDispenseNotation")) == "ml"
+        for mode_feature, mode_field, dose_feature, dose_field in EZDISPENSE_FEATURES:
+            if mode_key := self.get_model_info_key(self._getkeys(mode_field)):
+                mode = EZDISPENSE_MODES.get(self.lookup_enum(mode_key))
+                self._update_feature(mode_feature, mode, False, allow_none=True)
+            if dose_key := self.get_model_info_key(self._getkeys(dose_field)):
+                dose_ml = self._ezdispense_dose_ml(dose_key) if metric else None
+                self._update_feature(dose_feature, dose_ml, False, allow_none=True)
+
     def _update_features(self):
         _ = [
             self.run_state,
@@ -1221,3 +1266,11 @@ class WMStatus(DeviceStatus):
             self.standby_state,
         ]
         self._update_bit_features()
+        if not self.is_dryer:
+            if wash_key := self.get_model_info_key(self._getkeys("soilWash")):
+                self._update_feature(
+                    WashDeviceFeatures.WASH_MODE,
+                    self.lookup_enum(wash_key) or None,
+                    allow_none=True,
+                )
+            self._update_ezdispense_features()

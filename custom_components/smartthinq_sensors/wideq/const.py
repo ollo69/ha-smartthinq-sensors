@@ -122,6 +122,8 @@ class WashDeviceFeatures(StrEnum):
     DAMPDRYBEEP = "damp_dry_beep"
     DELAYSTART = "delay_start"
     DETERGENT = "detergent"
+    DETERGENT_DISPENSE_MODE = "detergent_dispense_mode"
+    DETERGENT_DOSE = "detergent_dose_ml"
     DETERGENTLOW = "detergent_low"
     DOORLOCK = "door_lock"
     DOOROPEN = "door_open"
@@ -148,6 +150,8 @@ class WashDeviceFeatures(StrEnum):
     SALTREFILL = "salt_refill"
     SELFCLEAN = "self_clean"
     SOFTENER = "softener"
+    SOFTENER_DISPENSE_MODE = "softener_dispense_mode"
+    SOFTENER_DOSE = "softener_dose_ml"
     SOFTENERLOW = "softener_low"
     SPINSPEED = "spin_speed"
     STANDBY = "standby"
@@ -157,6 +161,7 @@ class WashDeviceFeatures(StrEnum):
     TIMEDRY = "time_dry"
     TUBCLEAN_COUNT = "tubclean_count"
     TURBOWASH = "turbo_wash"
+    WASH_MODE = "wash_mode"
     WATERTEMP = "water_temp"
 
 
