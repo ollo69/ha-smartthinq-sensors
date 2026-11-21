@@ -140,8 +140,15 @@ Note: When something doesn't apply and/or is off, it may have a `-` as its value
 | steam | Whether steam is enabled on supported washers, on/off |
 | pre_wash | Whether using prewash cycle, on/off |
 | turbo_wash | Whether Turbowash is enabled, on/off |
+| wash_mode | Wash mode reported by the selected course, when supported |
+| detergent_dispense_mode | ezDispense detergent setting: `off`, `less`, `normal`, or `more` |
+| detergent_dose_ml | Configured detergent dose in milliliters when reported in metric notation |
+| softener_dispense_mode | ezDispense softener setting: `off`, `less`, `normal`, or `more` |
+| softener_dose_ml | Configured softener dose in milliliters when reported in metric notation |
 
 </details>
+
+Compatible washers also expose these five values as read-only sensors. The mode and dose describe dispenser settings. The separate refill indicators still describe the tank status.
 
 #### Attributes `sensor.my_dryer`
 
