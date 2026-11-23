@@ -11,7 +11,6 @@ from pycountry import countries as py_countries, languages as py_languages
 import voluptuous as vol
 
 from homeassistant.config_entries import (
-    CONN_CLASS_CLOUD_POLL,
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigEntryState,
@@ -84,10 +83,12 @@ LANGUAGES = {
 
 
 class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
-    """Handle SmartThinQ config flow."""
+    """Handle SmartThinQ config flow.
+
+    The integration's connection type is declared by iot_class in the manifest.
+    """
 
     VERSION = 1
-    CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
 
     @staticmethod
     @callback
