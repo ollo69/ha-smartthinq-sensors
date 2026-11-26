@@ -51,6 +51,7 @@ CLIENT = "client"
 LGE_DEVICES = "lge_devices"
 
 LGE_DISCOVERY_NEW = f"{DOMAIN}_discovery_new"
+LGE_DISCOVERY_NUMBER = f"{DOMAIN}_discovery_number"
 
 DEFAULT_ICON = "def_icon"
 DEFAULT_SENSOR = "default"
