@@ -42,6 +42,7 @@ from .const import (
     DOMAIN,
     LGE_DEVICES,
     LGE_DISCOVERY_NEW,
+    LGE_DISCOVERY_NUMBER,
     MIN_HA_MAJ_VER,
     MIN_HA_MIN_VER,
     STARTUP,
@@ -346,6 +347,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(
         entry, [p for p in SMARTTHINQ_PLATFORMS if p is not Platform.NUMBER]
     )
+    # The number platform was set up before the devices were loaded, so send it
+    # the initial devices now.
+    async_dispatcher_send(hass, LGE_DISCOVERY_NUMBER, lge_devices)
 
     start_devices_discovery(hass, entry, client)
 

@@ -71,3 +71,43 @@ set_sleep_time:
           max: 720
           mode: box
           unit_of_measurement: minutes
+
+set_start_timer:
+  name: Set turn-on timer
+  description: Turn the device on after the given number of minutes (0 cancels the timer).
+  target:
+    entity:
+      integration: smartthinq_sensors
+      domain: climate
+  fields:
+    minutes:
+      name: "Minutes"
+      description: Minutes until the device turns on
+      default: 60
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1440
+          mode: box
+          unit_of_measurement: minutes
+
+set_stop_timer:
+  name: Set turn-off timer
+  description: Turn the device off after the given number of minutes (0 cancels the timer).
+  target:
+    entity:
+      integration: smartthinq_sensors
+      domain: climate
+  fields:
+    minutes:
+      name: "Minutes"
+      description: Minutes until the device turns off
+      default: 60
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1440
+          mode: box
+          unit_of_measurement: minutes

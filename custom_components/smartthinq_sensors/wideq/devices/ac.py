@@ -87,6 +87,8 @@ STATE_PM1 = ["SensorPM1", "airState.quality.PM1"]
 STATE_PM10 = ["SensorPM10", "airState.quality.PM10"]
 STATE_PM25 = ["SensorPM2", "airState.quality.PM2"]
 STATE_RESERVATION_SLEEP_TIME = ["SleepTime", "airState.reservation.sleepTime"]
+STATE_RESERVATION_START_TIME = ["StartTime", "airState.reservation.targetTimeToStart"]
+STATE_RESERVATION_STOP_TIME = ["StopTime", "airState.reservation.targetTimeToStop"]
 
 FILTER_TYPES = [
     [
@@ -116,6 +118,8 @@ CMD_STATE_MODE_POWER_SAVE = [CTRL_BASIC, "Set", STATE_MODE_POWER_SAVE]
 CMD_STATE_MODE_JET = [CTRL_BASIC, "Set", STATE_MODE_JET]
 CMD_STATE_LIGHTING_DISPLAY = [CTRL_BASIC, "Set", STATE_LIGHTING_DISPLAY]
 CMD_RESERVATION_SLEEP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_SLEEP_TIME]
+CMD_RESERVATION_START_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_START_TIME]
+CMD_RESERVATION_STOP_TIME = [CTRL_BASIC, "Set", STATE_RESERVATION_STOP_TIME]
 
 # AWHP Section
 STATE_AWHP_TEMP_MODE = ["AwhpTempSwitch", "airState.miscFuncState.awhpTempSwitch"]
@@ -311,6 +315,8 @@ class AirConditionerDevice(Device):
         self._filter_status_supported = True
 
         self._unit_conv = TempUnitConversion()
+
+        self._fan_speed_before_jet = None
 
     def _f2c(self, value):
         """Convert Fahrenheit to Celsius temperatures for this device if required."""
@@ -619,14 +625,7 @@ class AirConditionerDevice(Device):
     @cached_property
     def is_mode_power_save_supported(self):
         """Return if PowerSave mode is supported."""
-        if self._is_mode_supported(SUPPORT_POWER_SAVE):
-            return True
-        # Some models do not declare it in racMode but expose the state key
-        key = self._get_state_key(STATE_MODE_POWER_SAVE)
-        return (
-            self.model_info.is_enum_type(key)
-            and self.model_info.enum_value(key, MODE_ON) is not None
-        )
+        return self._is_mode_supported(SUPPORT_POWER_SAVE)
 
     @cached_property
     def supported_ligth_modes(self):
@@ -652,6 +651,16 @@ class AirConditionerDevice(Device):
         ):
             return JetModeSupport.BOTH
         return supported
+
+    @cached_property
+    def is_jet_wind_strength(self):
+        """Return if jet mode is the max (POWER) fan speed instead of a wind mode."""
+        return (
+            self._is_mode_supported(SUPPORT_JET_MAX)
+            and not self._is_mode_supported(SUPPORT_JET_COOL)
+            and not self._is_mode_supported(SUPPORT_JET_HEAT)
+            and ACFanSpeed.POWER.name in self.fan_speeds
+        )
 
     @property
     def is_mode_jet_available(self):
@@ -820,6 +829,10 @@ class AirConditionerDevice(Device):
         if not self.is_mode_jet_available:
             raise ValueError("Invalid device status for jet mode")
 
+        if self.is_jet_wind_strength:
+            await self._set_jet_wind_strength(status)
+            return
+
         if status:
             if self._status.operation_mode == ACMode.HEAT.name:
                 jet_key = JetMode.HEAT
@@ -830,6 +843,22 @@ class AirConditionerDevice(Device):
         keys = self._get_cmd_keys(CMD_STATE_MODE_JET)
         jet = self.model_info.enum_value(keys[2], jet_key.value)
         await self.set(keys[0], keys[1], key=keys[2], value=jet)
+
+    async def _set_jet_wind_strength(self, status: bool):
+        """Set jet mode on models where it is the max (POWER) fan speed."""
+        power = ACFanSpeed.POWER.name
+        if status:
+            if (curr_speed := self._status.fan_speed) and curr_speed != power:
+                self._fan_speed_before_jet = curr_speed
+            await self.set_fan_speed(power)
+            return
+
+        speed = self._fan_speed_before_jet
+        if speed not in self.fan_speeds or speed == power:
+            speed = ACFanSpeed.HIGH.name
+            if speed not in self.fan_speeds:
+                speed = next(s for s in self.fan_speeds if s != power)
+        await self.set_fan_speed(speed)
 
     async def set_lighting_display(self, status: bool):
         """Set the lighting display on or off."""
@@ -947,6 +976,43 @@ class AirConditionerDevice(Device):
             )
         keys = self._get_cmd_keys(CMD_RESERVATION_SLEEP_TIME)
         await self.set(keys[0], keys[1], key=keys[2], value=str(value))
+
+    def _reservation_timer_range(self, state_key) -> list[int]:
+        """Return valid range for a turn-on / turn-off timer in minutes."""
+        key = self._get_state_key(state_key)
+        if (range_val := self.model_info.value(key, TYPE_RANGE)) is None:
+            return [0, 1440]
+        return [range_val.min, range_val.max]
+
+    async def _set_reservation_timer(self, feature, state_key, cmd_key, value: int):
+        """Set a turn-on / turn-off timer in minutes (0 cancels the timer)."""
+        if self._status is None or self._status.device_features.get(feature) is None:
+            raise ValueError("Reservation timer is not available")
+        valid_range = self._reservation_timer_range(state_key)
+        if not (valid_range[0] <= value <= valid_range[1]):
+            raise ValueError(
+                f"Invalid timer value. Valid range: {valid_range[0]} - {valid_range[1]}"
+            )
+        keys = self._get_cmd_keys(cmd_key)
+        await self.set(keys[0], keys[1], key=keys[2], value=str(value))
+
+    async def set_reservation_start_time(self, value: int):
+        """Set the turn-on timer in minutes (0 cancels the timer)."""
+        await self._set_reservation_timer(
+            AirConditionerFeatures.RESERVATION_START_TIME,
+            STATE_RESERVATION_START_TIME,
+            CMD_RESERVATION_START_TIME,
+            value,
+        )
+
+    async def set_reservation_stop_time(self, value: int):
+        """Set the turn-off timer in minutes (0 cancels the timer)."""
+        await self._set_reservation_timer(
+            AirConditionerFeatures.RESERVATION_STOP_TIME,
+            STATE_RESERVATION_STOP_TIME,
+            CMD_RESERVATION_STOP_TIME,
+            value,
+        )
 
     async def set(
         self, ctrl_key, command, *, key=None, value=None, data=None, ctrl_path=None
@@ -1282,6 +1348,9 @@ class AirConditionerStatus(DeviceStatus):
         """Return Jet Mode status."""
         if self._device.supported_mode_jet == JetModeSupport.NONE:
             return None
+        if self._device.is_jet_wind_strength:
+            status = self.fan_speed == ACFanSpeed.POWER.name
+            return self._update_feature(AirConditionerFeatures.MODE_JET, status, False)
         key = self._get_state_key(STATE_MODE_JET)
         if (value := self.lookup_enum(key, True)) is None:
             return None
@@ -1476,6 +1545,26 @@ class AirConditionerStatus(DeviceStatus):
             AirConditionerFeatures.RESERVATION_SLEEP_TIME, value, False
         )
 
+    @property
+    def reservation_start_time(self):
+        """Return turn-on timer in minutes."""
+        key = self._get_state_key(STATE_RESERVATION_START_TIME)
+        if (value := self.to_int_or_none(self.lookup_range(key))) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.RESERVATION_START_TIME, value, False
+        )
+
+    @property
+    def reservation_stop_time(self):
+        """Return turn-off timer in minutes."""
+        key = self._get_state_key(STATE_RESERVATION_STOP_TIME)
+        if (value := self.to_int_or_none(self.lookup_range(key))) is None:
+            return None
+        return self._update_feature(
+            AirConditionerFeatures.RESERVATION_STOP_TIME, value, False
+        )
+
     def _update_features(self):
         _ = [
             self.room_temp,
@@ -1495,4 +1584,6 @@ class AirConditionerStatus(DeviceStatus):
             self.mode_awhp_silent,
             self.hot_water_current_temp,
             self.reservation_sleep_time,
+            self.reservation_start_time,
+            self.reservation_stop_time,
         ]

@@ -51,6 +51,8 @@ HVAC_MODE_NONE = "--"
 
 # service definitions
 SERVICE_SET_SLEEP_TIME = "set_sleep_time"
+SERVICE_SET_START_TIMER = "set_start_timer"
+SERVICE_SET_STOP_TIMER = "set_stop_timer"
 
 HVAC_MODE_LOOKUP: dict[str, HVACMode] = {
     ACMode.AI.name: HVACMode.AUTO,
@@ -173,6 +175,16 @@ async def async_setup_entry(
         {vol.Required("sleep_time"): int},
         "async_set_sleep_time",
     )
+    platform.async_register_entity_service(
+        SERVICE_SET_START_TIMER,
+        {vol.Required("minutes"): int},
+        "async_set_start_timer",
+    )
+    platform.async_register_entity_service(
+        SERVICE_SET_STOP_TIMER,
+        {vol.Required("minutes"): int},
+        "async_set_stop_timer",
+    )
 
 
 class LGEClimate(CoordinatorEntity, ClimateEntity):
@@ -193,6 +205,14 @@ class LGEClimate(CoordinatorEntity, ClimateEntity):
 
     async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
+        raise NotImplementedError()
+
+    async def async_set_start_timer(self, minutes: int) -> None:
+        """Call the set turn-on timer command for AC devices."""
+        raise NotImplementedError()
+
+    async def async_set_stop_timer(self, minutes: int) -> None:
+        """Call the set turn-off timer command for AC devices."""
         raise NotImplementedError()
 
 
@@ -487,6 +507,16 @@ class LGEACClimate(LGEClimate):
     async def async_set_sleep_time(self, sleep_time: int) -> None:
         """Call the set sleep time command for AC devices."""
         await self._device.set_reservation_sleep_time(sleep_time)
+
+    async def async_set_start_timer(self, minutes: int) -> None:
+        """Call the set turn-on timer command for AC devices."""
+        await self._device.set_reservation_start_time(minutes)
+        self._api.async_set_updated()
+
+    async def async_set_stop_timer(self, minutes: int) -> None:
+        """Call the set turn-off timer command for AC devices."""
+        await self._device.set_reservation_stop_time(minutes)
+        self._api.async_set_updated()
 
 
 class LGERefrigeratorClimate(LGEClimate):
