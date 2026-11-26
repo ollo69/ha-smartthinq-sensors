@@ -20,6 +20,8 @@ from homeassistant.components.climate.const import (
     FAN_MEDIUM,
     PRESET_ECO,
     PRESET_NONE,
+    SWING_OFF,
+    SWING_ON,
     ClimateEntityFeature,
     HVACMode,
 )
@@ -217,6 +219,20 @@ class LGEACClimate(LGEClimate):
             self._attr_swing_horizontal_modes = None
             self._use_h_mode = True
 
+        # Swing on/off for models without step modes
+        self._swing_v_onoff = False
+        self._swing_h_onoff = False
+        if not self._attr_swing_modes and self._device.is_vertical_swing_supported:
+            self._attr_swing_modes = [SWING_OFF, SWING_ON]
+            self._swing_v_onoff = True
+        if (
+            not self._attr_swing_horizontal_modes
+            and not self._use_h_mode
+            and self._device.is_horizontal_swing_supported
+        ):
+            self._attr_swing_horizontal_modes = [SWING_OFF, SWING_ON]
+            self._swing_h_onoff = True
+
         self._attr_preset_mode = None
 
         self._hvac_mode_lookup: dict[str, HVACMode] | None = None
@@ -391,6 +407,11 @@ class LGEACClimate(LGEClimate):
     @property
     def swing_mode(self) -> str | None:
         """Return the swing mode setting."""
+        if self._swing_v_onoff:
+            is_on = self._api.state.is_vertical_swing_on
+            if is_on is None:
+                return None
+            return SWING_ON if is_on else SWING_OFF
         if self._use_h_mode:
             return self._api.state.horizontal_step_mode
         return self._api.state.vertical_step_mode
@@ -401,7 +422,9 @@ class LGEACClimate(LGEClimate):
             raise ValueError(f"Invalid swing_mode [{swing_mode}].")
 
         if swing_mode != self.swing_mode:
-            if self._use_h_mode:
+            if self._swing_v_onoff:
+                await self._device.vertical_swing_mode(swing_mode == SWING_ON)
+            elif self._use_h_mode:
                 await self._device.set_horizontal_step_mode(swing_mode)
             else:
                 await self._device.set_vertical_step_mode(swing_mode)
@@ -410,6 +433,11 @@ class LGEACClimate(LGEClimate):
     @property
     def swing_horizontal_mode(self) -> str | None:
         """Return the horizontal swing mode setting."""
+        if self._swing_h_onoff:
+            is_on = self._api.state.is_horizontal_swing_on
+            if is_on is None:
+                return None
+            return SWING_ON if is_on else SWING_OFF
         return self._api.state.horizontal_step_mode
 
     async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
@@ -420,7 +448,12 @@ class LGEACClimate(LGEClimate):
             )
 
         if swing_horizontal_mode != self.swing_horizontal_mode:
-            await self._device.set_horizontal_step_mode(swing_horizontal_mode)
+            if self._swing_h_onoff:
+                await self._device.horizontal_swing_mode(
+                    swing_horizontal_mode == SWING_ON
+                )
+            else:
+                await self._device.set_horizontal_step_mode(swing_horizontal_mode)
             self._api.async_set_updated()
 
     async def async_turn_on(self) -> None:
