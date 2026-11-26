@@ -629,21 +629,6 @@ class CoreAsync:
 
         account = account_data["account"]
 
-        # dynamic get secret key for emp signature
-        emp_search_key_url = urljoin(
-            login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP"
-        )
-
-        async with self._get_session().get(
-            url=emp_search_key_url, timeout=self._timeout, raise_for_status=False
-        ) as resp:
-            secret_data = json.loads(
-                await resp.text()
-            )  # this return data as plain/text
-
-        _LOGGER.debug("auth_user_login - secret_data: %s", secret_data)
-        secret_key = secret_data["returnData"]
-
         # get token data
         emp_data = {
             "account_type": account["userIDType"],
@@ -655,7 +640,45 @@ class CoreAsync:
         parse_url = urlparse(V2_EMP_SESS_URL)
         timestamp = datetime.now(timezone.utc).strftime(DATE_FORMAT)
         req_url = f"{parse_url.path}?{urlencode(emp_data)}"
-        signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
+
+        # LOCAL PATCH (issue #1016): LG removed the spx/searchKey endpoint.
+        # The EMP signature is now computed server side by spx/signature,
+        # which returns the base64 HMAC as plain text.
+        sign_url = urljoin(login_base_url, "signature") + "?" + urlencode(
+            {
+                "kind": "oauth2",
+                "key_name": "OAUTH_SECRETKEY",
+                "sever_type": "OP",
+                "timestamp": f"{req_url}\n{timestamp}",
+            }
+        )
+        async with self._get_session().get(
+            url=sign_url, timeout=self._timeout, raise_for_status=False
+        ) as resp:
+            sign_status = resp.status
+            signature = (await resp.text()).strip()
+
+        _LOGGER.debug(
+            "auth_user_login - spx/signature status %s, length %s",
+            sign_status,
+            len(signature),
+        )
+        if sign_status != 200 or not signature or signature.startswith("<"):
+            # fall back to the legacy searchKey flow
+            emp_search_key_url = urljoin(
+                login_base_url, "searchKey?key_name=OAUTH_SECRETKEY&sever_type=OP"
+            )
+            async with self._get_session().get(
+                url=emp_search_key_url, timeout=self._timeout, raise_for_status=False
+            ) as resp:
+                secret_text = await resp.text()
+            try:
+                secret_key = json.loads(secret_text)["returnData"]
+            except Exception as ex:
+                raise exc.AuthenticationError(
+                    f"spx/signature returned HTTP {sign_status} and searchKey is unavailable"
+                ) from ex
+            signature = self._oauth2_signature(f"{req_url}\n{timestamp}", secret_key)
 
         emp_headers = {
             "lgemp-x-app-key": OAUTH_CLIENT_KEY,
@@ -685,6 +708,11 @@ class CoreAsync:
             _LOGGER.debug("auth_user_login - token_data: %s", token_data)
 
         if token_data.get("status", -1) != 1:
+            _LOGGER.error(
+                "auth_user_login - empsession failed: status=%s message=%s",
+                token_data.get("status"),
+                token_data.get("message"),
+            )
             raise exc.TokenError()
 
         return token_data
